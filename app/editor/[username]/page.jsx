@@ -38,7 +38,7 @@ export default function EditPage() {
       const docRef = doc(db, 'users', uid, 'links', 'page');
       await setDoc(docRef, { components });
     };
-    save();
+    if (components.length + 1 > 0) save();
   }, [components, uid]);
 
   const handleAddComponent = (type) => {

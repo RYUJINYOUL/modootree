@@ -2,6 +2,8 @@
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 
 export default function EditorCanvas({ components, setComponents }) {
+  const [dragInfo, setDragInfo] = useState(null); // 모바일 드래그 정보
+
   const handleDropNew = (e) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('component');
@@ -39,12 +41,52 @@ export default function EditorCanvas({ components, setComponents }) {
     }
   };
 
+  // 📱 모바일: 터치 시작
+  const handleTouchStart = (e, idx) => {
+    setDragInfo({ index: idx, component: components[idx] });
+  };
+
+  // 📱 모바일: 움직임 막기
+  const handleTouchMove = (e) => {
+    e.preventDefault(); // prevent scroll while dragging
+  };
+
+  // 📱 모바일: 순서 변경
+  const handleTouchEnd = (targetIdx) => {
+    if (!dragInfo) return;
+
+    setComponents(prev => {
+      const updated = [...prev];
+      const [item] = updated.splice(dragInfo.index, 1);
+      updated.splice(targetIdx, 0, item);
+      return updated;
+    });
+
+    setDragInfo(null);
+  };
+
+  // 📱 모바일: 삭제
+  const handleTouchDelete = () => {
+    if (!dragInfo) return;
+
+    setComponents(prev => {
+      const updated = [...prev];
+      updated.splice(dragInfo.index, 1);
+      return updated;
+    });
+
+    setDragInfo(null);
+  };
+
+
   return (
     <div className="space-y-2">
       <div
         className="border border-white p-2 text-center text-red-600 rounded bg-white"
         onDragOver={e => e.preventDefault()}
-        onDrop={handleDeleteDrop}>
+        onDrop={handleDeleteDrop}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchDelete}>
         🗑️ 여기에 드래그하면 삭제됩니다
       </div>
 
@@ -55,6 +97,10 @@ export default function EditorCanvas({ components, setComponents }) {
           onDragStart={e => handleDragStart(e, idx)}
           onDragOver={e => e.preventDefault()}
           onDrop={e => handleDropReorder(e, idx)}
+          onTouchStart={e => handleTouchStart(e, idx)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={() => handleTouchEnd(idx)}
+
           className="p-2 bg-gray-200 rounded cursor-grab"
         >
           {type}
