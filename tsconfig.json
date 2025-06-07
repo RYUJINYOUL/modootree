@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    },
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/dastory/page.jsx", "app/dastory/layout.jsx", "app/map/page.tsx", "app/login/layout.jsx", "components/useKakaoLoader.jsx", "app/map/layout.jsx", "components/nextJsKakaoMap.tsx", "hooks/useMap.js", "next.config.ts", "app/(site)/layout.jsx", "app/(site)/page.jsx", "components/Menu.jsx", "tailwind.config.js", "app/login/page.jsx", "app/register/page.jsx", "app/register/layout.jsx"],
+  "exclude": ["node_modules"]
+}
