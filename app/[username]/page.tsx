@@ -5,12 +5,10 @@ import { notFound } from 'next/navigation';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 import Link from 'next/link';
 
-type Props = {
-  params: { username: string };
-};
+type Props = Promise<{ username: string }>;
 
-export default async function UserPublicPage({ params }: Props) {
-  const { username } = params;
+export default async function UserPublicPage({ params }: {params :Props}) {
+  const { username } = await params;
 
   // username으로 해당 사용자 UID 찾기
   const userSnap = await getDocs(

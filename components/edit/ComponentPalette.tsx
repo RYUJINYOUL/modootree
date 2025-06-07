@@ -8,7 +8,6 @@ export default function ComponentPalette() {
         <div
           key={type}
           draggable
-          onDragEnter={e => e.dataTransfer.setData('component', type)}
           onDragStart={e => e.dataTransfer.setData('component', type)}
           className="p-2 bg-gray-200 rounded cursor-grab"
         >
