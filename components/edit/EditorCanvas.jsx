@@ -5,8 +5,14 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 import { useSelector } from 'react-redux';
 
-export default function EditorCanvas() {
-  const [components, setComponents] = useState([]);
+
+
+
+
+
+const EditorCanvas = ({ componentss }) => {
+
+  const [components, setComponents] = useState([componentss]);
   const [dragInfo, setDragInfo] = useState(null); // 모바일 드래그 정보
   const { currentUser } = useSelector(state => state.user);
   const uid = currentUser.uid;
@@ -29,7 +35,7 @@ export default function EditorCanvas() {
       const docRef = doc(db, 'users', uid, 'links', 'page');
       await setDoc(docRef, { components });
     };
-    if (components.length > 0) save();
+    if (components.length + 1 > 0) save();
   }, [components, uid]);
 
   // 데스크탑: 새 컴포넌트 드롭
@@ -156,3 +162,5 @@ export default function EditorCanvas() {
     </div>
   );
 }
+
+export default EditorCanvas;
