@@ -15,27 +15,29 @@ export default function EditorCanvas() {
   const [components, setComponents] = useState<string[]>([]);
   const { currentUser } = useSelector((state: any) => state.user);
   const uid = currentUser?.uid;
+  const [loaded, setLoaded] = useState(false); 
 
   // 🔹 Firebase에서 로드
   useEffect(() => {
-    const load = async () => {
-      const docRef = doc(db, 'users', uid, 'links', 'page');
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        setComponents(snapshot.data().components || []);
-      }
-    };
-    if (uid) load();
-  }, [uid]);
+     const load = async () => {
+    const docRef = doc(db, 'users', uid, 'links', 'page');
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      setComponents(snapshot.data().components || []);
+    }
+    setLoaded(true); // 데이터 로딩 완료 표시
+  };
+  if (uid) load();
+}, [uid]);
 
   // 🔹 Firebase에 저장
   useEffect(() => {
-    const save = async () => {
-      const docRef = doc(db, 'users', uid, 'links', 'page');
-      await setDoc(docRef, { components });
-    };
-    if (uid) save();
-  }, [components, uid]);
+  const save = async () => {
+    const docRef = doc(db, 'users', uid, 'links', 'page');
+    await setDoc(docRef, { components });
+  };
+  if (uid && loaded) save();
+}, [components, uid, loaded]);
 
   // 🔹 컴포넌트 추가
   const handleAdd = (type: string) => {
