@@ -1,6 +1,5 @@
-'use client';
-import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 
+import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 
 type ComponentPaletteProps = {
   onAdd: (type: string) => void;
@@ -18,12 +17,13 @@ const ComponentPalette = ({ onAdd }: ComponentPaletteProps) => {
           className="p-2 bg-gray-200 rounded cursor-grab"
         >
           {type}
+
+          {/* button click시 EditorCanvas에 components 보내기 */}
         </div>
       ))}
     </div>
   );
 }
-
 
 
 export default ComponentPalette;
