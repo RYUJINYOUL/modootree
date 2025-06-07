@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 
 export default function EditorCanvas({ components, setComponents }) {
