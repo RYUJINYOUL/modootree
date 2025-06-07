@@ -26,7 +26,7 @@ export default function EditPage() {
    
       <div className="md:w-3/4 w-full">
       <h1 className="font-bold mb-4 text-white">드래그로 위치 변경하세요</h1>
-            <EditorCanvas components={components} />
+            <EditorCanvas componentss={components} />
             <div className='md:hidden fixed bottom-6 right-6'>
             <Popover>
             <PopoverTrigger asChild>
