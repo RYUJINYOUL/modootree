@@ -19,7 +19,7 @@ export default function EditorCanvas() {
 
   // 🔹 Firebase에서 로드
   useEffect(() => {
-     const load = async () => {
+    const load = async () => {
     const docRef = doc(db, 'users', uid, 'links', 'page');
     const snapshot = await getDoc(docRef);
     if (snapshot.exists()) {
@@ -70,7 +70,7 @@ export default function EditorCanvas() {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="md:hidden space-y-2">
 
       {/* 🔹 현재 추가된 컴포넌트 목록 */}
       {components.map((type, idx) => (

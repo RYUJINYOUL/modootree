@@ -36,11 +36,19 @@ const RegisterPage = () => {
             createdAt: serverTimestamp(),
         });
 
+        const userData = {
+            uid: uid,
+            displayName: data.name,
+            photoURL: ""
+        }
+
+        dispatch(setUser(userData));
+
        // 기본 링크 저장 (선택)
-        await setDoc(doc(db, 'users', uid, 'links', 'default'), {
-            title: 'Instagram',
-            url: 'https://instagram.com',
-        });
+        // await setDoc(doc(db, 'users', uid, 'links', 'default'), {
+        //     title: 'Instagram',
+        //     url: 'https://instagram.com',
+        // });
     }
 
 
