@@ -70,22 +70,22 @@ export default function EditorCanvas() {
   };
 
   return (
-    <div className="md:hidden space-y-2">
-
+    
+    <div className="md:hidden space-y-1">
       {/* 🔹 현재 추가된 컴포넌트 목록 */}
       {components.map((type, idx) => (
         <div key={idx} className="p-2 bg-gray-200 rounded flex items-center justify-between gap-2">
-          <span>{type}</span>
+          <span className='text-[15px]'>{type}</span>
           <div className="flex items-center gap-1">
-            <Button onClick={() => moveUp(idx)} size="sm">↑</Button>
-            <Button onClick={() => moveDown(idx)} size="sm">↓</Button>
-            <Button onClick={() => handleRemove(idx)} variant="destructive" size="sm">❌</Button>
+            <Button className='bg-white text-black' onClick={() => moveUp(idx)} size="sm">↑</Button>
+            <Button className='bg-white text-black' onClick={() => moveDown(idx)} size="sm">↓</Button>
+            <Button className='bg-white text-black' onClick={() => handleRemove(idx)} variant="destructive" size="sm">X</Button>
           </div>
         </div>
       ))}
 
       {/* 🔹 미리보기 영역 */}
-      <div className="min-h-[400px] border p-4 bg-white rounded mt-10">
+      <div className="min-h-[400px] border pt-4 bg-white rounded mt-10">
         <h2 className="font-bold text-center mb-5">미리보기</h2>
         {components.map((type, idx) => {
           const Comp = ComponentLibrary[type];

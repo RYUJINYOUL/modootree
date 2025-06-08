@@ -4,6 +4,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { notFound } from 'next/navigation';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 import Link from 'next/link';
+import UserEditButton from '@/components/ui/UserEditButton';
 
 type Props = Promise<{ username: string }>;
 
@@ -27,9 +28,10 @@ export default async function UserPublicPage({ params }: {params :Props}) {
  const components = linksSnap.exists() ? linksSnap.data().components || [] : [];
 
   return (
-    <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative">
-      <h1 className="text-3xl font-bold mb-4">{userData.username}님의 링크트리</h1>
-     <div className="space-y-3 w-full max-w-sm">
+    <main className="min-h-screen bg-white flex flex-col items-center justify-center relative">
+      {/* <h1 className="text-3xl font-bold mb-4">{userData.username}님의 링크트리</h1> */}
+     <div className="md:[1100px] w-full">   
+      {/* max-w-sm */}
       {components.map((type: string, i: number) => {
         const Comp = ComponentLibrary[type as keyof typeof ComponentLibrary];
         return Comp ? <Comp key={i} /> : null;
@@ -37,12 +39,7 @@ export default async function UserPublicPage({ params }: {params :Props}) {
     </div>
 
       {/* ✨ Floating Action Button */}
-      <Link
-        href={`/editor/${username}`}
-        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition"
-      >
-        ✏️
-      </Link>
+      <UserEditButton username={username} ownerUid={uid} />
     </main>
   );
 }

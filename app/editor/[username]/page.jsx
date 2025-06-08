@@ -7,8 +7,10 @@ import EditorCanvas2 from '@/components/edit/EditorCanvas2';
 export default function EditPage() {
  
   return (
-    <div className="p-6 flex gap-10 mt-10 bg-black">
-      <div className="w-1/4 md:block hidden ">
+    <div>
+    <h1 className="font-bold mb-4 text-black text-center pt-3">에디터</h1>
+    <div className="p-0.5 flex gap-10 md:bg-black bg-blend-darken">
+      <div className="w-1/4 md:block hidden pt-6">
         <h1 className="font-bold mb-4 text-white">컴포넌트</h1>
          <ComponentPalette/>
       </div>
@@ -25,5 +27,6 @@ export default function EditPage() {
         <EditorCanvas2 />
       </div>
     </div>
+   </div> 
   );
 }

@@ -1,12 +1,21 @@
 import { createSlice, current } from "@reduxjs/toolkit";
 
+// const initialState = {
+//     currentUser: {
+//        uid: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('uid')) : '',
+//        photoURL: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem("photoURL")) : '',
+//        displayName: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('displayName')) : '',
+//     }
+// }
+
 const initialState = {
-    currentUser: {
-       uid: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('uid')) : '',
-       photoURL: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem("photoURL")) : '',
-       displayName: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('displayName')) : '',
-    }
-}
+  currentUser: {
+    uid: '',
+    photoURL: '',
+    displayName: '',
+  },
+};
+
 
 export const userSlice = createSlice({
     name: 'user',
