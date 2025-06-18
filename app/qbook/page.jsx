@@ -18,7 +18,7 @@ import {
 import { useSelector } from 'react-redux'
 import { Button } from '@/components/ui/button'
 
-export default function GuestbookTemplate({ username, uid }) {
+export default function GuestbookTemplate() {
   const { currentUser } = useSelector((state) => state.user)
 
   const [siteInfo, setSiteInfo] = useState({
