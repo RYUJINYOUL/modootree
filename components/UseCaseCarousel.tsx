@@ -49,7 +49,7 @@ export default function UseCaseCarousel() {
 
   return (
     <>
-      <div className="w-full max-w-5xl mx-auto px-4 mb-8">
+      <div className="w-full md:w-[1100px] mx-auto px-4 mb-8">
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex gap-4 touch-pan-y">
             {cases.map((item, index) => (

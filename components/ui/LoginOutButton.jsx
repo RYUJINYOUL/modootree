@@ -36,7 +36,7 @@ export default function LoginOutButton() {
 
   return (
     <nav className="bg-zinc-900 shadow-lg border-b border-zinc-800">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div className="md:w-[1100px] container mx-auto px-4 py-4 flex justify-between items-center">
         <Link href="/" className="text-xl font-bold text-white hover:text-zinc-200 transition-colors">
           모두트리
         </Link>

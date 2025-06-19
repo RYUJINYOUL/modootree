@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form';
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -17,25 +17,33 @@ import {
 
 
 const LoginPage = () => {
-    const auth = getAuth(app);
-    const {
-            register,
-            watch,
-            setError,
-            setValue,
-            formState: { errors },
-            handleSubmit,
-        } = useForm();
-    const [errorFromSubmit, setErrorFromSubmit] = useState("")
-    const [loading, setLoading] = useState(false);
-    const { currentUser } = useSelector(state => state.user)
-    const { push } = useRouter();
-    const login = useAuth();
-    const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
-    const [googleUsername, setGoogleUsername] = useState("");
-    const [tempGoogleUser, setTempGoogleUser] = useState(null);
-    const [usernameError, setUsernameError] = useState("");
-    const dispatch = useDispatch();
+  const auth = getAuth(app);
+  const {
+    register,
+    watch,
+    setError,
+    setValue,
+    formState: { errors },
+    handleSubmit,
+  } = useForm();
+
+  const [errorFromSubmit, setErrorFromSubmit] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { currentUser } = useSelector((state) => state.user);
+  const { push } = useRouter();
+  const login = useAuth();
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
+  const [googleUsername, setGoogleUsername] = useState("");
+  const [tempGoogleUser, setTempGoogleUser] = useState(null);
+  const [usernameError, setUsernameError] = useState("");
+  const dispatch = useDispatch();
+
+  // ✅ 여기 추가
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.userAgent.includes("KAKAOTALK")) {
+      alert("Google 로그인이 지원되지 않는 브라우저입니다.\n오른쪽 상단의 [...] 버튼을 눌러 '기본 브라우저로 열기'를 선택해 주세요.");
+    }
+  }, []);
     
 
 
@@ -72,10 +80,15 @@ const LoginPage = () => {
             const userSnap = await getDoc(userRef);
 
             if (!userSnap.exists()) {
-            await setDoc(userRef, {
+              await setDoc(userRef, {
                 email: user.email,
                 createdAt: serverTimestamp(),
             });
+
+              await setDoc(doc(db, "users", user.uid, "links", "page"), {
+              components: ["이미지", "링크카드", "달력", "게스트북"],
+            });
+    
             }
             } catch (error) {
             console.error("Google login error", error);

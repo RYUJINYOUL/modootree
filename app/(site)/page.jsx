@@ -64,6 +64,10 @@ export default function Page() {
         username,
       });
 
+      await setDoc(doc(db, "users", user.uid, "links", "page"), {
+        components: ["이미지", "링크카드", "달력", "게스트북"],
+      });
+      
       await setDoc(usernameRef, {
         uid: currentUser.uid,
       });
@@ -124,17 +128,22 @@ export default function Page() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="text-center mb-12">
+    <div>
+      <div className="flex flex-col items-center justify-center py-12 text-center mb-12">
         <h1 className="text-4xl font-bold text-white mb-4">모두트리</h1>
         <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
 
-        <div className="grid gap-3 w-full max-w-sm mx-auto mb-16">
+        <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
           {renderViewSiteButton('main')}
           {renderViewSiteButton('sub')}
         </div>
 
-        <h2 className="text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+          모두트리는 대한민국 5,500만명에게
+          작지만 의미 있는 한페이지를 선물합니다.
+        </h2>
+
+        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
           모두트리는 대한민국 5,500만명에게<br />
           작지만 의미 있는 한페이지를 선물합니다.
         </h2>

@@ -104,6 +104,12 @@ const RegisterPage = () => {
             uid: user.uid,
         });
 
+
+         // usernames 컬렉션 등록
+        await setDoc(doc(db, "users", user.uid, "links", "page"), {
+            components: ["이미지", "링크카드", "달력", "게스트북"],
+        });
+
         // Firebase 사용자 프로필 업데이트
         await updateProfile(user, {
             displayName: data.username,
