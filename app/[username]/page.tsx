@@ -44,6 +44,7 @@ export default async function UserPublicPage({ params }: {params :Props}) {
         return Comp ? <Comp key={i} username={username} uid={uid} /> : null;
       })}
     </div>
+    <div className='h-[50px]'></div>
 
       {/* ✨ Floating Action Button */}
       <UserEditButton username={username} ownerUid={uid} />

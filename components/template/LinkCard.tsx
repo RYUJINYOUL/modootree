@@ -75,7 +75,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
   const handleImageChange = async (index: number, file: File) => {
     try {
        const linkToDelete = links[index];
-        if (linkToDelete.image && !linkToDelete.image.startsWith('/new/upload.png')) {
+        if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
           // Only delete if it's a real uploaded image, not the default placeholder
           await deleteImageFromStorage(linkToDelete.image);
         }
@@ -90,8 +90,8 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   const addNewLink = async () => {
     const newLink: LinkItem = {
-      image: '/new/upload.png',
-      title: '타이틀',
+      image: '/new/defaultLogo.png',
+      title: '제목,링크 등록',
       url: '',
       bgColor: '#ffffff',
       textColor: '#000000',
@@ -120,7 +120,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
       try {
         // 1. Attempt to delete the image from Firebase Storage
-        if (linkToDelete.image && !linkToDelete.image.startsWith('/new/upload.png')) {
+        if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
           // Only delete if it's a real uploaded image, not the default placeholder
           await deleteImageFromStorage(linkToDelete.image);
         }
@@ -157,11 +157,11 @@ export default function LinkCards({ username, uid }: LogoProps) {
   };
 
   return (
-    <section className="space-y-4 p-2">
+    <section className="space-y-4 pt-5 p-2">
       {links.map((link, index) => (
        <div className='flex flex-col' key={index}> {/* Added key to the outer div */}
         <div
-          className={cn("grid grid-cols-2 items-center p-2 rounded-2xl shadow gap-4 transition-all" ,isEditable&&"flex flex-row")}
+          className={cn("flex flex-row items-center p-2 rounded-2xl gap-6 transition-all" ,isEditable&&"flex flex-row")}
            style={{
         // Convert the background color to RGBA with the desired opacity
             backgroundColor: link.bgColor ? `rgba(${parseInt(link.bgColor.slice(1, 3), 16)}, ${parseInt(link.bgColor.slice(3, 5), 16)}, ${parseInt(link.bgColor.slice(5, 7), 16)}, ${link.opacity ?? 1})` : `rgba(255, 255, 255, ${link.opacity ?? 1})`,
@@ -198,13 +198,13 @@ export default function LinkCards({ username, uid }: LogoProps) {
           {/* 제목 링크 */}
         <div className="flex-grow">
           {isEditable ? (
-        <span className="text-[18px] font-semibold">{link.title}</span>
+        <span className="text-[16px] font-semibold">{link.title}</span>
           ) : (
             <a
               href={link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[18px] font-semibold hover:underline"
+              className="text-[16px] font-semibold hover:underline"
               style={{ color: link.textColor || '#000000' }}
             >
               {link.title}

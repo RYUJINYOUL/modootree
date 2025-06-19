@@ -50,11 +50,13 @@ export default function EditPage({ username }: { username: string }) {
 
         <div className="md:hidden w-full">
           <EditorCanvas/>
+          <div className='h-[50px]'></div>
         </div>
 
         <div className="md:w-3/4 md:block hidden">
           <h1 className="md:block hidden font-bold mb-4 text-white">드래그로 위치 변경하세요</h1>
           <EditorCanvas2/>
+          <div className='h-[50px]'></div>
         </div>
       </div>
     </div>

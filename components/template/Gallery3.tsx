@@ -36,7 +36,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
-  const [logoUrl, setLogoUrl] = useState("/Image/mainmiddle.jpeg");
+  const [logoUrl, setLogoUrl] = useState("/new/defaultLogo.png");
   const [bgUrl, setBgUrl] = useState("/Image/bg.jpeg");
   const [name, setName] = useState("제목을 입력하세요");
   const [desc, setDesc] = useState("간단한 설명을 입력하세요");

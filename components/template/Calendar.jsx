@@ -42,6 +42,8 @@ const CalendarWithEvents = ({ username, uid }) => {
     endTime: ''
   });
   const [isMobile, setIsMobile] = useState(false);
+  // --- 새로 추가된 상태 변수 ---
+  const [showAddEventForm, setShowAddEventForm] = useState(false); // 일정 추가 폼 표시 여부
 
   const predefinedTimes = [
     '9:00', '10:00', '11:00', '12:00',
@@ -98,7 +100,7 @@ const CalendarWithEvents = ({ username, uid }) => {
   useEffect(() => {
     const unsubscribe = fetchEventsForMonth();
     return () => unsubscribe();
-  }, [currentDate]);
+  }, [currentDate, finalUid]); // finalUid를 의존성 배열에 추가하여 사용자 변경 시 이벤트 재로드
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -122,32 +124,62 @@ const CalendarWithEvents = ({ username, uid }) => {
   };
 
   const handleAddEvent = async () => {
-    if (!newEvent.title || !newEvent.startTime || !newEvent.endTime || !userRole) return;
+    if (!newEvent.title || !newEvent.startTime || !newEvent.endTime || !userRole) {
+      alert("모든 필드를 채워주세요."); // 사용자에게 알림
+      return;
+    }
 
-    await addDoc(collection(db, 'users', finalUid, 'event'), {
+    const eventToAdd = {
       date: selectedDate.format('YYYY-MM-DD'),
       title: newEvent.title,
       startTime: newEvent.startTime,
       endTime: newEvent.endTime,
-    });
+    };
 
-    setNewEvent({ title: '', startTime: '', endTime: '' });
+    try {
+      const docRef = await addDoc(collection(db, 'users', finalUid, 'event'), eventToAdd);
+      const newEventWithId = {
+        id: docRef.id,
+        ...eventToAdd,
+      };
+
+      // 상태를 직접 업데이트하여 즉시 UI에 반영 (onSnapshot이 다시 가져오기 전)
+      setEvents(prev => [...prev, newEventWithId]);
+      // 현재 선택된 날짜의 이벤트 목록에도 추가
+      setSelectedEvents(prev => [...prev, newEventWithId].sort((a, b) => getSortableHour(a.startTime) - getSortableHour(b.startTime)));
+
+      setNewEvent({ title: '', startTime: '', endTime: '' });
+      alert("일정이 추가되었습니다.");
+      setShowAddEventForm(false); // 일정 추가 후 폼 숨기기
+    } catch (error) {
+      console.error("일정 추가 실패:", error);
+      alert("일정 추가에 실패했습니다.");
+    }
   };
 
   const handleDelete = async (id) => {
     if (!userRole) return;
-    await deleteDoc(doc(db, 'users', finalUid, 'event', id));
+    try {
+      await deleteDoc(doc(db, 'users', finalUid, 'event', id));
+      // 상태를 직접 업데이트하여 즉시 UI에 반영
+      setEvents(prev => prev.filter(e => e.id !== id));
+      setSelectedEvents(prev => prev.filter(e => e.id !== id));
+      alert("일정이 삭제되었습니다.");
+    } catch (error) {
+      console.error("일정 삭제 실패:", error);
+      alert("일정 삭제에 실패했습니다.");
+    }
   };
 
   return (
-    <div className="flex flex-col items-center w-full space-y-10 mt-15 px-4">
+    <div className="flex flex-col items-center w-full space-y-4 mt-8 px-2">
       <div className="flex items-center justify-between md:w-[300px] w-full">
         <button onClick={handlePrevMonth}><ChevronLeft /></button>
         <h2 className="text-xl font-bold">{currentDate.format('YYYY년 MM월')}</h2>
         <button onClick={handleNextMonth}><ChevronRight /></button>
       </div>
 
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto ">
         <div className="mx-auto max-w-[1100px] w-full">
           <table className="table-fixed w-full border-collapse">
             <thead>
@@ -155,7 +187,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                 {days.map((day, idx) => (
                   <th
                     key={day}
-                    className={`p-2 border text-center border-gray-200 font-semibold ${
+                    className={`p-2 border text-start border-white font-semibold text-[12px] ${
                       idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : ''
                     }`}
                   >
@@ -178,7 +210,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                       <td
                         key={dateStr}
                         onClick={() => handleDateClick(date)}
-                        className={`align-top p-2 md:h-20 h-16 border border-gray-200 cursor-pointer
+                        className={`align-top p-2 md:h-20 h-16 border border-white cursor-pointer
                           ${isCurrentMonth ? 'text-black' : 'text-gray-400'}
                           ${isToday ? 'bg-blue-100' : ''}
                           ${isSelected ? 'bg-blue-300' : ''}
@@ -216,54 +248,66 @@ const CalendarWithEvents = ({ username, uid }) => {
         </div>
       </div>
 
-      {/* Add Event */}
-         {canDelete && (
-      <div className="w-full max-w-[1100px]">
-        <h3 className="text-md font-semibold mb-2">
-          {selectedDate.format('YYYY년 MM월 DD일')}
-        </h3>
-          <div className="space-y-2">
-            <input
-              type="text"
-              placeholder="일정 제목"
-              value={newEvent.title}
-              onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full p-2 border rounded"
-            />
-
-            <div className="flex gap-2">
-              <select
-                value={newEvent.startTime}
-                onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
-                className="w-full p-2 border rounded"
-              >
-                <option value="">시작 시간</option>
-                {predefinedTimes.map(time => (
-                  <option key={time} value={time}>{time}</option>
-                ))}
-              </select>
-
-              <select
-                value={newEvent.endTime}
-                onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
-                className="w-full p-2 border rounded"
-              >
-                <option value="">종료 시간</option>
-                {predefinedTimes.map(time => (
-                  <option key={time} value={time}>{time}</option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              onClick={handleAddEvent}
-              className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+      {/* 일정 추가 섹션 */}
+      {canDelete && (
+        <div className="w-full max-w-[1100px] mt-0 p-4 border rounded-lg bg-gray-50">
+          <div className="flex justify-between items-center mb-0">
+            <h3 className="text-md font-semibold">
+              {selectedDate.format('YYYY년 MM월 DD일')} 일정 추가
+            </h3>
+            <Button
+              onClick={() => setShowAddEventForm(prev => !prev)}
+              variant="outline"
+              size="sm"
             >
-              일정 추가
-            </button>
+              {showAddEventForm ? '닫기' : '일정 추가 열기'}
+            </Button>
           </div>
-      </div>
-       )}
+
+          {showAddEventForm && (
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="일정 제목"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                className="w-full p-2 border rounded"
+              />
+
+              <div className="flex gap-2">
+                <select
+                  value={newEvent.startTime}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">시작 시간</option>
+                  {predefinedTimes.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={newEvent.endTime}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">종료 시간</option>
+                  {predefinedTimes.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleAddEvent}
+                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+              >
+                일정 추가
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -285,6 +329,8 @@ const CalendarWithEvents = ({ username, uid }) => {
                       size="sm"
                       onClick={async () => {
                         await handleDelete(e.id);
+                        // 이벤트를 삭제한 후 selectedEvents도 즉시 업데이트
+                        // fetchEventsForMonth가 다시 가져오기 전까지 UI 동기화
                         setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
                       }}
                       className="text-red-500"
@@ -297,6 +343,7 @@ const CalendarWithEvents = ({ username, uid }) => {
             </ul>
           ) : (
             <DialogDescription className="text-gray-500 mt-2">일정이 없습니다.</DialogDescription>
+            
           )}
         </DialogContent>
       </Dialog>

@@ -24,7 +24,10 @@ import {
 } from "@/components/ui/drawer"
 import { IoClose } from "react-icons/io5"
 
-const HeaderDrawer = ({ children, username, uid }) => {
+
+
+
+const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   const pathname = usePathname();
   const isEditable = pathname.startsWith('/editor');
   const { currentUser } = useSelector((state) => state.user)
@@ -159,15 +162,22 @@ const HeaderDrawer = ({ children, username, uid }) => {
 };
 
   return (
-    <Drawer direction="bottom">
-  <DrawerTrigger>{children}</DrawerTrigger>
-  <DrawerContent className="w-full h-[80vh] flex flex-col">
+  //   <Drawer direction="bottom">
+  // <DrawerTrigger>{children}</DrawerTrigger>
+  // <DrawerContent className="w-full h-[80vh] flex flex-col">
+  <Drawer {...props}>
+      <DrawerTrigger asChild>
+        {/* 드로어를 여는 트리거 요소 (버튼, 아이콘 등) */}
+        <button className='bg-white p-4 rounded-lg border border-zinc-300 w-full text-[14px]'>방명록 목록 열기</button>
+      </DrawerTrigger>
+      <DrawerContent className={drawerContentClassName}> {/* className을 DrawerContent에 전달 */}
+        {children}
     <div className="flex-1 overflow-y-auto space-y-4 p-4">
       {entries.map((entry, idx) => (
         <div
           key={entry.id}
           ref={idx === entries.length - 1 ? lastEntryRef : null}
-          className="bg-gray-100 rounded-xl p-4 border border-zinc-700"
+          className="bg-white rounded-xl p-4 border border-zinc-300"
         >
           <div className="flex justify-between items-start mb-2">
             <span className="font-medium text-black">{entry.name}</span>
@@ -269,13 +279,10 @@ export default function GuestbookTemplate({ username, uid }) {
   }, [finalUid])
 
   return (
-    <div className="pt-12">
-    
-    
-      {/* 작성 폼 */}
-      <div className="space-y-4">
-        {previewEntries.map((entry) => (
-          <div key={entry.id} className="bg-gray-100 p-4 rounded-lg border border-zinc-700">
+    <div className='p-2 pt-6'>
+      <div className="space-y-3 pt-3 bg-white p-4 rounded-lg border border-zinc-300">
+        {previewEntries.map((entry, i) => (
+          <div key={entry.id} className="">
             <div className="flex justify-between text-sm">
               <span>{entry.name}</span>
               <span>
@@ -285,17 +292,18 @@ export default function GuestbookTemplate({ username, uid }) {
               </span>
             </div>
             <p className="text-black">{entry.message}</p>
+             {i !== 2 ? <p className='border-1 border-gray-100 mt-2' /> : null}
           </div>
         ))}
    
       </div>
-
-        <HeaderDrawer>
-              <article className='ml-2 pr-10 text-end'>
-               <div className="text-black text-sm">목록보기</div>
-              </article>
+       <div className="pt-3">
+        <HeaderDrawer drawerContentClassName="md:w-[1100px] pt-6 p-2">
+          {/* <div className='p-2'>
+            <div className="bg-white p-4 rounded-lg border border-zinc-300">방명록 목록보기</div>
+          </div> */}
         </HeaderDrawer>
-
+      </div>
     </div>
   )
 }
