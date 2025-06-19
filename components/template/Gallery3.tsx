@@ -6,11 +6,10 @@ import { usePathname } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useSelector } from "react-redux";
-import { uploadLogoImage } from "@/hooks/useUploadImage";
-import { uploadLinkImage } from "@/hooks/useUploadImage";
-import { deleteImageFromStorage } from "@/hooks/useUploadImage";
+import { uploadLogoImage, uploadLinkImage, deleteImageFromStorage } from "@/hooks/useUploadImage"; // deleteImageFromStorage도 필요합니다.
 import imageCompression from "browser-image-compression";
 
+import CropperModal from '@/components/ui/CropperModal';
 
 type LogoProps = {
   username?: string;
@@ -21,10 +20,13 @@ const COLOR_PALETTE = [
   "transparent",
   "#000000", "#FFFFFF", "#F87171", "#FBBF24",
   "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
-  // "#D1D5DB", "#10B981"
 ];
 
 function Gallery3 ({ username, uid }: LogoProps) {
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropType, setCropType] = useState<'logo' | 'background' | null>(null);
+  const [isUploading, setIsUploading] = useState(false); // 업로드 상태 추가
+
   const pathname = usePathname();
   const isEditable = pathname.startsWith("/editor");
   const { currentUser } = useSelector((state: any) => state.user);
@@ -44,7 +46,6 @@ function Gallery3 ({ username, uid }: LogoProps) {
 
   const [showBgColors, setShowBgColors] = useState(false);
   const [showTextColors, setShowTextColors] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   const computedBgColor = bgBaseColor === "transparent"
     ? "transparent"
@@ -52,6 +53,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!finalUid) return; // finalUid가 없으면 데이터 가져오지 않음
       const docRef = doc(db, "users", finalUid, "info", "details");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -66,7 +68,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
       }
     };
     fetchData();
-  }, []);
+  }, [finalUid]); // finalUid가 변경될 때마다 데이터를 가져오도록 의존성 배열에 추가
 
   const handleChangeText = async (label: "name" | "desc") => {
     if (!isEditable) return;
@@ -90,71 +92,114 @@ function Gallery3 ({ username, uid }: LogoProps) {
     }
   };
 
+  // handleFileChange: 파일을 읽어서 CropperModal에 전달하는 역할만 합니다.
   const handleFileChange = async (
-      e: React.ChangeEvent<HTMLInputElement>,
-      type: "logo" | "background"
-    ) => {
-      if (!isEditable || isUploading) return;
-      const file = e.target.files?.[0];
-      if (!file) return;
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: 'logo' | 'background'
+  ) => {
+    if (!isEditable || isUploading) return; // isUploading 상태 추가
+    const file = e.target.files?.[0];
+    if (!file) {
+      console.log("파일이 선택되지 않았습니다.");
+      return;
+    }
 
-      try {
-        setIsUploading(true);
-
-        const options = {
-          maxSizeMB: 0.8,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true,
-        };
-
-        const compressedFile = await imageCompression(file, options);
-        const uploadFn = type === "logo" ? uploadLogoImage : uploadLinkImage;
-
-        // 기존 이미지 삭제
-        const oldUrl = type === "logo" ? logoUrl : bgUrl;
-        if (oldUrl && !oldUrl.startsWith("/Image/")) {
-          await deleteImageFromStorage(oldUrl);
-        }
-
-        const url = await uploadFn(compressedFile, finalUid);
-
-        if (type === "logo") setLogoUrl(url);
-        else setBgUrl(url);
-
-        await saveToFirestore({ [type === "logo" ? "logoUrl" : "bgUrl"]: url });
-      } catch (err) {
-        console.error("이미지 업로드 실패", err);
-      } finally {
-        setIsUploading(false);
-      }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      console.log("FileReader 결과:", result ? "이미지 데이터 로드됨" : "이미지 데이터 없음");
+      console.log("cropImageSrc 및 cropType을 다음으로 설정:", type);
+      setCropImageSrc(result); // 크롭 모달에 넘길 이미지 데이터
+      setCropType(type);       // 크롭 모달에 넘길 타입
     };
+    reader.readAsDataURL(file);
+  };
+
+  // onCrop: CropperModal에서 크롭된 이미지를 받아 업로드하고 상태를 업데이트합니다.
+  const handleCropApply = async (croppedBlob: Blob) => {
+    if (!finalUid || !cropType) {
+      console.error("UID 또는 크롭 타입이 유효하지 않습니다.");
+      setCropImageSrc(null);
+      setCropType(null);
+      return;
+    }
+
+    try {
+      setIsUploading(true); // 업로드 시작
+      console.log("크롭된 이미지 처리 시작 (onCrop)");
+
+      const options = {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      };
+
+      const croppedFile = new File([croppedBlob], `cropped_image.${cropType === 'logo' ? 'jpeg' : 'jpeg'}`, { type: croppedBlob.type });
+
+      const compressedFile = await imageCompression(croppedFile, options);
+      const uploadFn = cropType === "logo" ? uploadLogoImage : uploadLinkImage; // `uploadLinkImage`는 배경 이미지 업로드용으로 가정합니다.
+
+      // 기존 이미지 삭제 로직
+      const oldUrl = cropType === "logo" ? logoUrl : bgUrl;
+      if (oldUrl && !oldUrl.startsWith("/Image/")) { // 기본 이미지는 삭제하지 않음
+        console.log("기존 이미지 삭제 시도:", oldUrl);
+        await deleteImageFromStorage(oldUrl);
+      }
+
+      console.log("새 이미지 업로드 시작");
+      const url = await uploadFn(compressedFile, finalUid);
+      console.log("새 이미지 URL:", url);
+
+      if (cropType === "logo") {
+        setLogoUrl(url);
+        await saveToFirestore({ logoUrl: url });
+      } else {
+        setBgUrl(url);
+        await saveToFirestore({ bgUrl: url });
+      }
+
+      alert("이미지가 성공적으로 업데이트되었습니다.");
+
+    } catch (err) {
+      console.error("이미지 업로드 및 처리 중 오류 발생", err);
+      alert("이미지 업로드에 실패했습니다. 콘솔을 확인해주세요.");
+    } finally {
+      setIsUploading(false); // 업로드 완료 (성공/실패 무관)
+      setCropImageSrc(null); // 모달 닫기
+      setCropType(null);     // 모달 닫기
+      console.log("크롭된 이미지 처리 완료 (onCrop)");
+    }
+  };
+
 
   const saveToFirestore = async (data: Record<string, string>) => {
+    if (!finalUid) {
+      console.error("저장할 UID가 없습니다.");
+      return;
+    }
     await setDoc(doc(db, "users", finalUid, "info", "details"), data, { merge: true });
   };
 
   const handleDeleteBackground = async () => {
     if (!isEditable) return;
     const defaultBg = "/Image/bg.jpeg";
-    setBgUrl(defaultBg);
-    await saveToFirestore({ bgUrl: defaultBg });
-    alert("배경 이미지가 삭제되었습니다.");
+
+    try {
+      if (bgUrl && !bgUrl.startsWith("/Image/")) {
+        await deleteImageFromStorage(bgUrl);
+      }
+      setBgUrl(defaultBg);
+      await saveToFirestore({ bgUrl: defaultBg });
+      alert("배경 이미지가 삭제되었습니다.");
+    } catch (err) {
+      console.error("배경 이미지 삭제 실패", err);
+      alert("배경 이미지 삭제에 실패했습니다.");
+    }
   };
 
   return (
     <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: computedBgColor }}>
-      {isUploading && (
-          <div className="fixed inset-0 z-[9999] bg-black/30 flex items-center justify-center">
-            <div className="bg-white text-black px-6 py-3 rounded shadow-md text-sm">
-              로딩 중...
-            </div>
-          </div>
-        )}
-      <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} 
-       onClick={() => {
-            if (isUploading) return;
-            bgInputRef.current?.click();
-          }}/>
+      <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -166,22 +211,18 @@ function Gallery3 ({ username, uid }: LogoProps) {
           backgroundPosition: "center",
           cursor: isEditable ? "pointer" : "default",
         }}
-        onClick={() => isEditable && bgInputRef.current?.click()}
+        onClick={() => isEditable && !isUploading && bgInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
       />
 
       <div className="relative z-10 flex flex-col items-center pt-12 px-4" style={{ color: textColor }}>
-        <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} 
-        onClick={() => {
-            if (isUploading) return;
-            logoInputRef.current?.click();
-          }}/>
+        <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} />
         <Image
           src={logoUrl}
           alt="로고"
           width={100}
           height={100}
           className="rounded-full border-4 border-white shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
-          onClick={() => isEditable && logoInputRef.current?.click()}
+          onClick={() => isEditable && !isUploading && logoInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
           title={isEditable ? "로고 클릭 시 변경" : ""}
         />
         <h1 className={`text-2xl font-bold mt-4 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
@@ -228,7 +269,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
                     }}
                     className="w-[100px]"
                   />
-                  <button onClick={() => bgInputRef.current?.click()} className="text-xs mt-4 border w-[100px] px-3 py-1 rounded bg-white text-black">배경이미지설정</button>
+                  <button onClick={() => bgInputRef.current?.click()} className="text-xs mt-4 border w-[100px] px-3 py-1 rounded bg-white text-black" disabled={isUploading}>배경이미지설정</button>
                   <button onClick={handleDeleteBackground} className="text-xs mt-2 border w-[100px] px-3 py-1 rounded bg-white text-black">배경이미지삭제</button>
                 </div>
               )}
@@ -263,6 +304,28 @@ function Gallery3 ({ username, uid }: LogoProps) {
           </div>
         )}
       </div>
+
+     
+      {cropImageSrc && cropType && (
+        <CropperModal
+          image={cropImageSrc}
+          type={cropType}
+          onCancel={() => {
+            setCropImageSrc(null);
+            setCropType(null);
+            setIsUploading(false); // 취소 시 업로드 상태도 초기화
+          }}
+          onCrop={handleCropApply} // 새로 만든 handleCropApply 함수 연결
+        />
+      )}
+      {isUploading && !cropImageSrc && ( // 모달이 떠있지 않을 때만 전체 화면 로더 표시
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-md shadow-lg flex flex-col items-center">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-lg font-medium">이미지를 업로드 중입니다...</p>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
