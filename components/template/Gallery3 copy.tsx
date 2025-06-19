@@ -7,9 +7,10 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useSelector } from "react-redux";
 import { uploadLogoImage } from "@/hooks/useUploadImage";
-import { uploadLinkImage } from "@/hooks/useUploadImage";
-import { deleteImageFromStorage } from "@/hooks/useUploadImage";
 import imageCompression from "browser-image-compression";
+
+import CropperModal from '@/components/ui/CropperModal';
+
 
 
 type LogoProps = {
@@ -25,6 +26,9 @@ const COLOR_PALETTE = [
 ];
 
 function Gallery3 ({ username, uid }: LogoProps) {
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropType, setCropType] = useState<'logo' | 'background' | null>(null);
+
   const pathname = usePathname();
   const isEditable = pathname.startsWith("/editor");
   const { currentUser } = useSelector((state: any) => state.user);
@@ -44,7 +48,6 @@ function Gallery3 ({ username, uid }: LogoProps) {
 
   const [showBgColors, setShowBgColors] = useState(false);
   const [showTextColors, setShowTextColors] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   const computedBgColor = bgBaseColor === "transparent"
     ? "transparent"
@@ -90,44 +93,33 @@ function Gallery3 ({ username, uid }: LogoProps) {
     }
   };
 
-  const handleFileChange = async (
-      e: React.ChangeEvent<HTMLInputElement>,
-      type: "logo" | "background"
-    ) => {
-      if (!isEditable || isUploading) return;
-      const file = e.target.files?.[0];
-      if (!file) return;
+ const handleFileChange = async (
+  e: React.ChangeEvent<HTMLInputElement>,
+  type: 'logo' | 'background'
+) => {
+  if (!isEditable) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-      try {
-        setIsUploading(true);
+  const reader = new FileReader();
+  reader.onload = () => {
+    setCropImageSrc(reader.result as string);
+    setCropType(type);
+  };
+  reader.readAsDataURL(file);
+};
 
-        const options = {
-          maxSizeMB: 0.8,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true,
-        };
-
-        const compressedFile = await imageCompression(file, options);
-        const uploadFn = type === "logo" ? uploadLogoImage : uploadLinkImage;
-
-        // 기존 이미지 삭제
-        const oldUrl = type === "logo" ? logoUrl : bgUrl;
-        if (oldUrl && !oldUrl.startsWith("/Image/")) {
-          await deleteImageFromStorage(oldUrl);
-        }
-
-        const url = await uploadFn(compressedFile, finalUid);
-
-        if (type === "logo") setLogoUrl(url);
-        else setBgUrl(url);
-
-        await saveToFirestore({ [type === "logo" ? "logoUrl" : "bgUrl"]: url });
-      } catch (err) {
-        console.error("이미지 업로드 실패", err);
-      } finally {
-        setIsUploading(false);
-      }
-    };
+{cropImageSrc && cropType && (
+ <CropperModal
+  image={cropImageSrc}
+  type={cropType} // 추가
+  onCancel={() => {
+    setCropImageSrc(null);
+    setCropType(null);
+  }}
+  onCrop={async (croppedBlob) => { /* ... */ }}
+/>
+)}
 
   const saveToFirestore = async (data: Record<string, string>) => {
     await setDoc(doc(db, "users", finalUid, "info", "details"), data, { merge: true });
@@ -143,18 +135,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
 
   return (
     <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: computedBgColor }}>
-      {isUploading && (
-          <div className="fixed inset-0 z-[9999] bg-black/30 flex items-center justify-center">
-            <div className="bg-white text-black px-6 py-3 rounded shadow-md text-sm">
-              로딩 중...
-            </div>
-          </div>
-        )}
-      <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} 
-       onClick={() => {
-            if (isUploading) return;
-            bgInputRef.current?.click();
-          }}/>
+      <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -170,11 +151,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
       />
 
       <div className="relative z-10 flex flex-col items-center pt-12 px-4" style={{ color: textColor }}>
-        <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} 
-        onClick={() => {
-            if (isUploading) return;
-            logoInputRef.current?.click();
-          }}/>
+        <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} />
         <Image
           src={logoUrl}
           alt="로고"
