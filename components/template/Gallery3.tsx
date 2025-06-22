@@ -198,49 +198,94 @@ function Gallery3 ({ username, uid }: LogoProps) {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: computedBgColor }}>
-      <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage:
-            bgBaseColor === "transparent"
-              ? `url(${bgUrl})`
-              : `linear-gradient(${computedBgColor}, ${computedBgColor}), url(${bgUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          cursor: isEditable ? "pointer" : "default",
-        }}
-        onClick={() => isEditable && !isUploading && bgInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
-      />
-
-      <div className="relative z-10 flex flex-col items-center pt-12 px-4" style={{ color: textColor }}>
-        <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} />
-        <Image
-          src={logoUrl}
-          alt="로고"
-          width={100}
-          height={100}
-          className="rounded-full border-4 border-white shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
-          onClick={() => isEditable && !isUploading && logoInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
-          title={isEditable ? "로고 클릭 시 변경" : ""}
+    <div className="flex items-center justify-center w-full p-[10px]">
+      <div className="relative w-full md:w-[1000px] overflow-hidden rounded-xl shadow-lg" style={{ backgroundColor: computedBgColor }}>
+        <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage:
+              bgBaseColor === "transparent"
+                ? `url(${bgUrl})`
+                : `linear-gradient(${computedBgColor}, ${computedBgColor}), url(${bgUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            cursor: isEditable ? "pointer" : "default",
+          }}
+          onClick={() => isEditable && !isUploading && bgInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
         />
-        <h1 className={`text-2xl font-bold mt-4 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
-        <p className={`text-sm mt-1 mb-10 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
 
-        {isEditable && (
-          <div className="absolute top-4 left-4 right-4 flex justify-between">
-            <div className="flex flex-col items-start gap-2">
-              <button onClick={() => setShowBgColors(!showBgColors)} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">
-                배경색 {showBgColors ? "닫기" : "열기"}
-              </button>
-              {showBgColors && (
-                <div className="flex flex-col">
-                  <div className="flex gap-2 flex-wrap mt-2 w-[150px]">
+        <div className="relative z-10 flex flex-col items-center pt-12 px-4" style={{ color: textColor }}>
+          <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} />
+          <Image
+            src={logoUrl}
+            alt="로고"
+            width={100}
+            height={100}
+            className="rounded-full border-4 border-white shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
+            onClick={() => isEditable && !isUploading && logoInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
+            title={isEditable ? "로고 클릭 시 변경" : ""}
+          />
+          <h1 className={`text-2xl font-bold mt-4 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
+          <p className={`text-sm mt-1 mb-10 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
+
+          {isEditable && (
+            <div className="absolute top-4 left-4 right-4 flex justify-between">
+              <div className="flex flex-col items-start gap-2">
+                <button onClick={() => setShowBgColors(!showBgColors)} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">
+                  배경색 {showBgColors ? "닫기" : "열기"}
+                </button>
+                {showBgColors && (
+                  <div className="flex flex-col">
+                    <div className="flex gap-2 flex-wrap mt-2 w-[150px]">
+                      {COLOR_PALETTE.map((color) => (
+                        <button
+                          key={`bg-${color}`}
+                          onClick={() => handleColorSelect("bgColor", color)}
+                          className="w-6 h-6 rounded-full border border-gray-300"
+                          style={{
+                            backgroundColor: color === "transparent" ? "white" : color,
+                            backgroundImage:
+                              color === "transparent"
+                                ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
+                                : undefined,
+                            backgroundSize: "8px 8px",
+                            backgroundPosition: "0 0, 4px 4px",
+                          }}
+                          title={color === "transparent" ? "투명" : color}
+                        />
+                      ))}
+                    </div>
+                    <label className="text-xs mt-1 text-gray-700">투명도</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={bgOpacity}
+                      onChange={async (e) => {
+                        const value = parseFloat(e.target.value);
+                        setBgOpacity(value);
+                        await saveToFirestore({ bgOpacity: value.toString() });
+                      }}
+                      className="w-[120px]"
+                    />
+                    <button onClick={() => bgInputRef.current?.click()} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none" disabled={isUploading}>배경이미지설정</button>
+                    <button onClick={handleDeleteBackground} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">배경이미지삭제</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <button onClick={() => setShowTextColors(!showTextColors)} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">
+                  텍스트색 {showTextColors ? "닫기" : "열기"}
+                </button>
+                {showTextColors && (
+                  <div className="flex gap-2 flex-wrap mt-2 justify-end w-[120px]">
                     {COLOR_PALETTE.map((color) => (
                       <button
-                        key={`bg-${color}`}
-                        onClick={() => handleColorSelect("bgColor", color)}
+                        key={`text-${color}`}
+                        onClick={() => handleColorSelect("textColor", color)}
                         className="w-6 h-6 rounded-full border border-gray-300"
                         style={{
                           backgroundColor: color === "transparent" ? "white" : color,
@@ -255,77 +300,34 @@ function Gallery3 ({ username, uid }: LogoProps) {
                       />
                     ))}
                   </div>
-                  <label className="text-xs mt-1 text-gray-700">투명도</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={bgOpacity}
-                    onChange={async (e) => {
-                      const value = parseFloat(e.target.value);
-                      setBgOpacity(value);
-                      await saveToFirestore({ bgOpacity: value.toString() });
-                    }}
-                    className="w-[120px]"
-                  />
-                  <button onClick={() => bgInputRef.current?.click()} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none" disabled={isUploading}>배경이미지설정</button>
-                  <button onClick={handleDeleteBackground} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">배경이미지삭제</button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+          )}
+        </div>
 
-            <div className="flex flex-col items-end gap-2">
-              <button onClick={() => setShowTextColors(!showTextColors)} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">
-                텍스트색 {showTextColors ? "닫기" : "열기"}
-              </button>
-              {showTextColors && (
-                <div className="flex gap-2 flex-wrap mt-2 justify-end w-[120px]">
-                  {COLOR_PALETTE.map((color) => (
-                    <button
-                      key={`text-${color}`}
-                      onClick={() => handleColorSelect("textColor", color)}
-                      className="w-6 h-6 rounded-full border border-gray-300"
-                      style={{
-                        backgroundColor: color === "transparent" ? "white" : color,
-                        backgroundImage:
-                          color === "transparent"
-                            ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
-                            : undefined,
-                        backgroundSize: "8px 8px",
-                        backgroundPosition: "0 0, 4px 4px",
-                      }}
-                      title={color === "transparent" ? "투명" : color}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+       
+        {cropImageSrc && cropType && (
+          <CropperModal
+            image={cropImageSrc}
+            type={cropType}
+            onCancel={() => {
+              setCropImageSrc(null);
+              setCropType(null);
+              setIsUploading(false); // 취소 시 업로드 상태도 초기화
+            }}
+            onCrop={handleCropApply} // 새로 만든 handleCropApply 함수 연결
+          />
+        )}
+        {isUploading && !cropImageSrc && ( // 모달이 떠있지 않을 때만 전체 화면 로더 표시
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+              <div className="bg-white p-6 rounded-md shadow-lg flex flex-col items-center">
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-lg font-medium">이미지를 업로드 중입니다...</p>
+              </div>
           </div>
         )}
       </div>
-
-     
-      {cropImageSrc && cropType && (
-        <CropperModal
-          image={cropImageSrc}
-          type={cropType}
-          onCancel={() => {
-            setCropImageSrc(null);
-            setCropType(null);
-            setIsUploading(false); // 취소 시 업로드 상태도 초기화
-          }}
-          onCrop={handleCropApply} // 새로 만든 handleCropApply 함수 연결
-        />
-      )}
-      {isUploading && !cropImageSrc && ( // 모달이 떠있지 않을 때만 전체 화면 로더 표시
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-md shadow-lg flex flex-col items-center">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-lg font-medium">이미지를 업로드 중입니다...</p>
-            </div>
-        </div>
-      )}
     </div>
   );
 };

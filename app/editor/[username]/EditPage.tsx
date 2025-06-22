@@ -41,7 +41,7 @@ export default function EditPage({ username }: { username: string }) {
 
   return (
     <div className="w-full min-h-screen flex justify-center items-start bg-gray-100">
-      <div className="w-full max-w-6xl md:w-4/5 bg-white rounded-2xl shadow-2xl mt-10 mb-10 p-8 flex flex-col gap-8">
+      <div className="w-full max-w-6xl md:w-4/5 bg-white rounded-2xl shadow-2xl mt-10 mb-10 p-4 flex flex-col gap-8">
         <h1 className="font-bold mb-4 text-3xl text-blue-700 text-center pt-3">에디터</h1>
         <div className="p-0.5 flex gap-10 md:bg-gray-50 bg-blend-darken rounded-xl">
           <div className="w-1/4 md:block hidden pt-6">

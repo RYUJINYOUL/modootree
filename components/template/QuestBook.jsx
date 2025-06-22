@@ -168,7 +168,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   <Drawer {...props}>
       <DrawerTrigger asChild>
         {/* 드로어를 여는 트리거 요소 (버튼, 아이콘 등) */}
-        <button className='p-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold text-center shadow-lg transition hover:bg-gray-50 hover:border-gray-400 hover:scale-105 active:scale-95 select-none'>방명록 목록 열기 · 쓰기</button>
+        <button className='p-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-center transition hover:bg-gray-50 hover:border-gray-400 hover:scale-105 active:scale-95 select-none'>방명록 목록 열기 · 쓰기</button>
       </DrawerTrigger>
       <DrawerContent className={drawerContentClassName}> {/* className을 DrawerContent에 전달 */}
         {/* {children} */}
@@ -177,7 +177,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         <div
           key={entry.id}
           ref={idx === entries.length - 1 ? lastEntryRef : null}
-          className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
         >
           <div className="flex justify-between items-start mb-3">
             <span className="font-bold text-gray-800 text-lg">{entry.name}</span>
@@ -293,8 +293,10 @@ export default function GuestbookTemplate({ username, uid }) {
   }, [finalUid])
 
   return (
-    <div className='p-2 pt-6 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
-      <div className="space-y-4 pt-3 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl border border-gray-200 shadow-xl w-full max-w-[1100px]">
+    <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+      <div className="text-center text-[21px] font-bold md:w-[300px] w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-3 pb-3" >게스트북</div>
+      <div className='h-[15px]'/>
+      <div className="space-y-4 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl border border-gray-200 w-full max-w-[1100px]">
         {previewEntries.map((entry, i) => (
           <div key={entry.id} className="">
             <div className="flex justify-between text-sm mb-2">

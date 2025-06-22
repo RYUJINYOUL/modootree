@@ -37,7 +37,7 @@ export default async function UserPublicPage({ params }: {params :Props}) {
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center relative">
       {/* <h1 className="text-3xl font-bold mb-4">{userData.username}님의 링크트리</h1> */}
-     <div className="md:[1100px] w-full">   
+     <div className="md:w-[1000px] w-full px-[10px]">   
       {/* max-w-sm */}
       {components.map((type: string, i: number) => {
         const Comp = ComponentLibrary[type as keyof typeof ComponentLibrary];

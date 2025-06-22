@@ -144,7 +144,7 @@ const CalendarWithEvents = ({ username, uid }) => {
       };
 
       // 상태를 직접 업데이트하여 즉시 UI에 반영 (onSnapshot이 다시 가져오기 전)
-      setEvents(prev => [...prev, newEventWithId]);
+      // setEvents(prev => [...prev, newEventWithId]);
       // 현재 선택된 날짜의 이벤트 목록에도 추가
       setSelectedEvents(prev => [...prev, newEventWithId].sort((a, b) => getSortableHour(a.startTime) - getSortableHour(b.startTime)));
 
@@ -173,11 +173,11 @@ const CalendarWithEvents = ({ username, uid }) => {
 
   return (
     <div className="flex flex-col items-center w-full space-y-4 mt-8 px-2">
-      <div className="flex items-center justify-between md:w-[300px] w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-3 shadow-lg">
+      <div className="flex items-center justify-between md:w-[300px] w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-3">
         <button onClick={handlePrevMonth} className="p-2 bg-white/60 text-gray-700 rounded-lg font-semibold text-center shadow transition hover:bg-white/80 hover:scale-110 active:bg-white/90 select-none backdrop-blur-sm">
           <ChevronLeft />
         </button>
-        <h2 className="text-xl font-bold text-gray-700 drop-shadow-sm">{currentDate.format('YYYY년 MM월')}</h2>
+        <h2 className="text-xl font-bold text-gray-700 drop-shadow-sm">{currentDate.format('YY년 MM월')}</h2>
         <button onClick={handleNextMonth} className="p-2 bg-white/60 text-gray-700 rounded-lg font-semibold text-center shadow transition hover:bg-white/80 hover:scale-110 active:bg-white/90 select-none backdrop-blur-sm">
           <ChevronRight />
         </button>
@@ -186,91 +186,91 @@ const CalendarWithEvents = ({ username, uid }) => {
       <div className="w-full overflow-x-auto">
         <div className="mx-auto max-w-[1100px] w-full">
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
-            <table className="table-fixed w-full border-collapse">
-              <thead>
+          <table className="table-fixed w-full border-collapse">
+            <thead>
                 <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                  {days.map((day, idx) => (
-                    <th
-                      key={day}
+                {days.map((day, idx) => (
+                  <th
+                    key={day}
                       className={`p-3 border-r border-gray-200 text-start font-bold text-sm ${
                         idx === 0 ? 'text-red-600' : idx === 6 ? 'text-blue-600' : 'text-gray-700'
-                      }`}
-                    >
-                      {day}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: Math.ceil(dates.length / 7) }).map((_, weekIdx) => (
+                    }`}
+                  >
+                    {day}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: Math.ceil(dates.length / 7) }).map((_, weekIdx) => (
                   <tr key={weekIdx} className="hover:bg-gray-50/50 transition-colors">
-                    {dates.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, idx) => {
-                      const dateStr = date.format('YYYY-MM-DD');
-                      const isCurrentMonth = date.month() === currentDate.month();
-                      const isToday = date.isSame(dayjs(), 'day');
-                      const isSelected = date.isSame(selectedDate, 'day');
-                      const dayEvents = events.filter(e => e.date === dateStr);
+                  {dates.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, idx) => {
+                    const dateStr = date.format('YYYY-MM-DD');
+                    const isCurrentMonth = date.month() === currentDate.month();
+                    const isToday = date.isSame(dayjs(), 'day');
+                    const isSelected = date.isSame(selectedDate, 'day');
+                    const dayEvents = events.filter(e => e.date === dateStr);
 
-                      return (
-                        <td
-                          key={dateStr}
-                          onClick={() => handleDateClick(date)}
+                    return (
+                      <td
+                        key={dateStr}
+                        onClick={() => handleDateClick(date)}
                           className={`align-top p-3 md:h-24 h-20 border-r border-b border-gray-100 cursor-pointer transition-all duration-200 hover:bg-blue-50/50 hover:shadow-inner
                             ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
                             ${isToday ? 'bg-gradient-to-br from-blue-300 to-blue-400 text-white rounded-lg shadow-lg transform scale-105' : ''}
                             ${isSelected && !isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg shadow-md' : ''}
                             ${idx === 0 ? 'text-red-600' : idx === 6 ? 'text-blue-600' : ''}
-                          `}
-                        >
+                        `}
+                      >
                           <div className="text-sm font-semibold line-clamp-2">{date.date()}</div>
-                          {isMobile ? (
+                        {isMobile ? (
                             <div className="text-xs mt-1">
-                              {dayEvents.slice(0, 1).map((event, i) => (
+                            {dayEvents.slice(0, 1).map((event, i) => (
                                 <div key={i} className='text-gray-700 truncate font-medium'>
-                                  {event.title}
-                                </div>
-                              ))}
-                              {dayEvents.length > 1 && (
+                                {event.title}
+                              </div>
+                            ))}
+                            {dayEvents.length > 1 && (
                                 <div className="text-gray-500 text-xs font-medium">+ {dayEvents.length - 1}</div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="mt-1 text-xs space-y-1">
-                              {dayEvents.map((event, i) => (
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-xs space-y-1">
+                            {dayEvents.map((event, i) => (
                                 <div key={i} className='text-gray-700 truncate font-medium hover:text-blue-600 transition-colors'>
-                                  {event.title}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                                {event.title}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
         </div>
       </div>
 
       {/* 일정 추가 섹션 */}
       {canDelete && (
-        <div className="w-full max-w-[1100px] mt-0 p-6 border rounded-2xl bg-gradient-to-r from-gray-50 to-white shadow-xl border-gray-200">
+        <div className="w-full max-w-[1100px] mt-0 p-6 border rounded-2xl bg-gradient-to-r from-gray-50 to-white border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-800">
-              {selectedDate.format('YYYY년 MM월 DD일')} 일정 추가
+              {selectedDate.format('YY년 MM월 DD일')}
             </h3>
             <Button
               onClick={() => setShowAddEventForm(prev => !prev)}
               className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold text-center shadow-lg transition hover:from-blue-600 hover:to-blue-700 hover:scale-105 active:scale-95 select-none"
             >
-              {showAddEventForm ? '닫기' : '일정 추가 열기'}
+              {showAddEventForm ? '닫기' : '일정 추가'}
             </Button>
           </div>
 
           {showAddEventForm && (
-            <div className="space-y-4 bg-white p-4 rounded-xl shadow-inner border border-gray-100">
+            <div className="space-y-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <input
                 type="text"
                 placeholder="일정 제목"
@@ -285,7 +285,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                   onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
                   className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 >
-                  <option value="">시작 시간</option>
+                  <option value="">시작</option>
                   {predefinedTimes.map(time => (
                     <option key={time} value={time}>{time}</option>
                   ))}
@@ -296,7 +296,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                   onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
                   className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 >
-                  <option value="">종료 시간</option>
+                  <option value="">종료</option>
                   {predefinedTimes.map(time => (
                     <option key={time} value={time}>{time}</option>
                   ))}

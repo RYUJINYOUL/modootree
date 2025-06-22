@@ -158,11 +158,11 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   return (
     <div className='flex items-center justify-center w-full'>
-    <section className="space-y-4 pt-5 p-2 md:w-[1100px] w-full">
+    <section className="space-y-4 pt-3 p-2 md:w-[1100px] w-full">
       {links.map((link, index) => (
        <div className='flex flex-col' key={index}> {/* Added key to the outer div */}
         <div
-          className={cn("flex flex-row items-center p-2 rounded-2xl gap-6 transition-all" ,isEditable&&"flex flex-row")}
+          className={cn("flex flex-row items-center p-2 rounded-2xl gap-6 transition-all shadow-sm" ,isEditable&&"flex flex-row")}
            style={{
         // Convert the background color to RGBA with the desired opacity
             backgroundColor: link.bgColor ? `rgba(${parseInt(link.bgColor.slice(1, 3), 16)}, ${parseInt(link.bgColor.slice(3, 5), 16)}, ${parseInt(link.bgColor.slice(5, 7), 16)}, ${link.opacity ?? 1})` : `rgba(255, 255, 255, ${link.opacity ?? 1})`,

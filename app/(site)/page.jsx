@@ -64,7 +64,7 @@ export default function Page() {
         username,
       });
 
-      await setDoc(doc(db, "users", user.uid, "links", "page"), {
+      await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
         components: ["이미지", "링크카드", "달력", "게스트북"],
       });
       
