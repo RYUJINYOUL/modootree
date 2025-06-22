@@ -231,12 +231,12 @@ function Gallery3 ({ username, uid }: LogoProps) {
         {isEditable && (
           <div className="absolute top-4 left-4 right-4 flex justify-between">
             <div className="flex flex-col items-start gap-2">
-              <button onClick={() => setShowBgColors(!showBgColors)} className="text-xs border px-3 py-1 rounded bg-white text-black">
+              <button onClick={() => setShowBgColors(!showBgColors)} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">
                 배경색 {showBgColors ? "닫기" : "열기"}
               </button>
               {showBgColors && (
                 <div className="flex flex-col">
-                  <div className="flex gap-2 flex-wrap mt-2 w-[110px]">
+                  <div className="flex gap-2 flex-wrap mt-2 w-[150px]">
                     {COLOR_PALETTE.map((color) => (
                       <button
                         key={`bg-${color}`}
@@ -267,20 +267,20 @@ function Gallery3 ({ username, uid }: LogoProps) {
                       setBgOpacity(value);
                       await saveToFirestore({ bgOpacity: value.toString() });
                     }}
-                    className="w-[100px]"
+                    className="w-[120px]"
                   />
-                  <button onClick={() => bgInputRef.current?.click()} className="text-xs mt-4 border w-[100px] px-3 py-1 rounded bg-white text-black" disabled={isUploading}>배경이미지설정</button>
-                  <button onClick={handleDeleteBackground} className="text-xs mt-2 border w-[100px] px-3 py-1 rounded bg-white text-black">배경이미지삭제</button>
+                  <button onClick={() => bgInputRef.current?.click()} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none" disabled={isUploading}>배경이미지설정</button>
+                  <button onClick={handleDeleteBackground} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">배경이미지삭제</button>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              <button onClick={() => setShowTextColors(!showTextColors)} className="text-xs border px-3 py-1 rounded bg-white text-black">
+              <button onClick={() => setShowTextColors(!showTextColors)} className="p-2 px-4 bg-blue-500/70 text-white rounded-lg font-medium text-sm text-center shadow transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none">
                 텍스트색 {showTextColors ? "닫기" : "열기"}
               </button>
               {showTextColors && (
-                <div className="flex gap-2 flex-wrap mt-2 justify-end w-[110px]">
+                <div className="flex gap-2 flex-wrap mt-2 justify-end w-[120px]">
                   {COLOR_PALETTE.map((color) => (
                     <button
                       key={`text-${color}`}

@@ -168,7 +168,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   <Drawer {...props}>
       <DrawerTrigger asChild>
         {/* 드로어를 여는 트리거 요소 (버튼, 아이콘 등) */}
-        <button className='bg-white p-4 rounded-lg border border-zinc-300 w-full text-[14px]'>방명록 목록 열기</button>
+        <button className='p-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold text-center shadow-lg transition hover:bg-gray-50 hover:border-gray-400 hover:scale-105 active:scale-95 select-none'>방명록 목록 열기 · 쓰기</button>
       </DrawerTrigger>
       <DrawerContent className={drawerContentClassName}> {/* className을 DrawerContent에 전달 */}
         {/* {children} */}
@@ -177,22 +177,36 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         <div
           key={entry.id}
           ref={idx === entries.length - 1 ? lastEntryRef : null}
-          className="bg-white rounded-xl p-4 border border-zinc-300"
+          className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
         >
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-medium text-black">{entry.name}</span>
-            <span className="text-sm text-black">
+          <div className="flex justify-between items-start mb-3">
+            <span className="font-bold text-gray-800 text-lg">{entry.name}</span>
+            <span className="text-sm text-gray-600 font-medium">
               {entry.createdAt?.toDate
-                ? entry.createdAt.toDate().toLocaleString('ko-KR')
-                : new Date(entry.createdAt).toLocaleString('ko-KR')}
+                ? entry.createdAt.toDate().toLocaleString('ko-KR', {
+                    year: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  }).replace(/\./g, '.').replace(/,/g, '')
+                : new Date(entry.createdAt).toLocaleString('ko-KR', {
+                    year: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  }).replace(/\./g, '.').replace(/,/g, '')}
             </span>
           </div>
-          <p className="text-black">{entry.message}</p>
+          <p className="text-gray-700 text-base leading-relaxed">{entry.message}</p>
           {canDelete && (
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-black mt-2"
+              className="text-xs mt-3 p-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold text-center shadow transition hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95 select-none"
               onClick={() => handleDelete(entry.id)}
             >
               삭제
@@ -201,13 +215,13 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         </div>
       ))}
       {!hasMore && entries.length > 0 && (
-        <p className="text-center text-zinc-400">더 이상 항목이 없습니다.</p>
+        <p className="text-center text-gray-500 font-medium py-4">더 이상 항목이 없습니다.</p>
       )}
     </div>
 
     {/* 작성 폼 (항상 하단 고정) */}
-   <div className="rounded-2xl p-4 mt-4 shadow-lg border border-zinc-700">
-      <form className="space-y-3" onSubmit={handleFormToggleOrSubmit}>
+   <div className="rounded-2xl p-6 mt-4 shadow-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+      <form className="space-y-4" onSubmit={handleFormToggleOrSubmit}>
       
 
         {isFormOpen && (
@@ -215,7 +229,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
            <button
         type="button"
         onClick={() => setIsFormOpen(false)}
-        className="top-2 right-2 text-zinc-600 hover:text-black text-lg font-bold"
+        className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 text-xl font-bold transition-colors"
         aria-label="닫기"
       >
         ✕
@@ -223,7 +237,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
             <input
               type="text"
               placeholder="이름을 입력해주세요"
-              className="w-full px-4 py-2 bg-gray-100 border border-zinc-700 rounded-lg text-black"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -231,7 +245,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
             <textarea
               rows={3}
               placeholder="메시지를 입력해주세요"
-              className="w-full px-4 py-2 bg-gray-100 border border-zinc-700 rounded-lg text-black"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
@@ -240,7 +254,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         )}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+          className="w-full p-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold text-center shadow-lg transition hover:bg-gray-50 hover:border-gray-400 hover:scale-105 active:scale-95 select-none"
         >
           {isFormOpen ? '방명록 남기기' : '방명록 쓰기'}
         </button>
@@ -279,20 +293,34 @@ export default function GuestbookTemplate({ username, uid }) {
   }, [finalUid])
 
   return (
-    <div className='p-2 pt-6'>
-      <div className="space-y-3 pt-3 bg-white p-4 rounded-lg border border-zinc-300">
+    <div className='p-2 pt-6 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+      <div className="space-y-4 pt-3 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl border border-gray-200 shadow-xl w-full max-w-[1100px]">
         {previewEntries.map((entry, i) => (
           <div key={entry.id} className="">
-            <div className="flex justify-between text-sm">
-              <span>{entry.name}</span>
-              <span>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="font-bold text-gray-800">{entry.name}</span>
+              <span className="text-gray-600 font-medium">
                 {entry.createdAt?.toDate
-                  ? entry.createdAt.toDate().toLocaleString('ko-KR')
-                  : new Date(entry.createdAt).toLocaleString('ko-KR')}
+                  ? entry.createdAt.toDate().toLocaleString('ko-KR', {
+                      year: '2-digit',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    }).replace(/\./g, '.').replace(/,/g, '')
+                  : new Date(entry.createdAt).toLocaleString('ko-KR', {
+                      year: '2-digit',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    }).replace(/\./g, '.').replace(/,/g, '')}
               </span>
             </div>
-            <p className="text-black">{entry.message}</p>
-             {i !== 2 ? <p className='border-1 border-gray-100 mt-2' /> : null}
+            <p className="text-gray-700 leading-relaxed">{entry.message}</p>
+             {i !== 2 ? <div className='border-b border-gray-200 mt-4 pb-4' /> : null}
           </div>
         ))}
    

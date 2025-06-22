@@ -119,7 +119,7 @@ export default function EditorCanvas2() {
     <div className="space-y-2">
       {/* 삭제 영역 */}
       <div
-        className="border border-white p-2 text-center text-red-600 rounded bg-white"
+        className="border-2 border-blue-500 p-3 text-center text-blue-600 rounded-xl bg-white font-semibold shadow transition hover:bg-blue-50 hover:text-blue-800 select-none cursor-pointer mb-2"
         onDragOver={e => e.preventDefault()}
         onDrop={handleDeleteDrop}
         onTouchMove={handleTouchMove}
@@ -139,7 +139,7 @@ export default function EditorCanvas2() {
           onTouchStart={e => handleTouchStart(e, idx)}
           onTouchMove={handleTouchMove}
           onTouchEnd={() => handleTouchEnd(idx)}
-          className="p-2 bg-gray-200 rounded cursor-grab"
+          className="p-3 bg-blue-500/70 text-white rounded-xl font-semibold text-center shadow cursor-grab transition hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 select-none"
         >
           {type}
         </div>
@@ -149,9 +149,9 @@ export default function EditorCanvas2() {
       <div
         onDragOver={e => e.preventDefault()}
         onDrop={handleDropNew}
-        className="min-h-[400px] border p-4 bg-white rounded mt-20"
+        className="min-h-[400px] border-2 border-dashed border-blue-300 p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl mt-20 shadow-lg"
       >
-        <h2 className="font-bold text-center mb-5">미리보기</h2>
+        <h2 className="font-bold text-center mb-6 text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-wide">미리보기</h2>
         {components.map((type, idx) => {
           const Comp = ComponentLibrary[type];
           return Comp ? <Comp key={idx} /> : null;

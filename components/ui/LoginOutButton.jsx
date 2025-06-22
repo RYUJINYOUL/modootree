@@ -41,6 +41,11 @@ export default function LoginOutButton() {
           모두트리
         </Link>
         <div className="flex gap-4 items-center">
+          {currentUser?.uid && (
+            <span className="text-sm text-blue-300 font-semibold">
+              {currentUser.displayName || currentUser.email}
+            </span>
+          )}
           {currentUser?.uid ? (
             <button
               onClick={handleLogout}
@@ -56,12 +61,14 @@ export default function LoginOutButton() {
               로그인
             </Link>
           )}
-          <Link
-            href="/register"
-            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors font-medium"
-          >
-            회원가입
-          </Link>
+          {!currentUser?.uid && (
+            <Link
+              href="/register"
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors font-medium"
+            >
+              회원가입
+            </Link>
+          )}
         </div>
       </div>
     </nav>

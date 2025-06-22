@@ -157,7 +157,8 @@ export default function LinkCards({ username, uid }: LogoProps) {
   };
 
   return (
-    <section className="space-y-4 pt-5 p-2">
+    <div className='flex items-center justify-center w-full'>
+    <section className="space-y-4 pt-5 p-2 md:w-[1100px] w-full">
       {links.map((link, index) => (
        <div className='flex flex-col' key={index}> {/* Added key to the outer div */}
         <div
@@ -316,5 +317,6 @@ export default function LinkCards({ username, uid }: LogoProps) {
         </button>
       )}
     </section>
+    </div>
   );
 }
