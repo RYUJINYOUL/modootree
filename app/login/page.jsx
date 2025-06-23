@@ -103,7 +103,7 @@ const LoginPage = () => {
         <div className="min-h-screen flex items-center justify-center bg-black">
             <div className="w-full max-w-md bg-white/10 rounded-2xl shadow-lg p-10 flex flex-col items-center">
                 <h1 className="text-3xl font-bold text-white mb-4">로그인</h1>
-                <p className="text-white/80 mb-8">modootree에 오신 것을 환영합니다!</p>
+                <p className="text-white/80 mb-8">모두트리에 오신 것을 환영합니다!</p>
                             <button
                     className="w-full flex items-center justify-center gap-2 py-3 mb-6 rounded-xl bg-white text-black font-semibold shadow hover:bg-gray-100 transition"
                                 onClick={handleGoogleSign}
@@ -129,7 +129,7 @@ const LoginPage = () => {
                         className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
                                 type="email" 
                                 name="Email"
-                                placeholder="Email"
+                                placeholder="이메일"
                                 {...register("email", { required: true, pattern: /^\S+@\S+$/i })}
                                 />
                     {errors.email && <p className="text-red-400 text-xs">이메일은 필수입니다.</p>}

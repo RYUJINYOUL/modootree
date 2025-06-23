@@ -5,25 +5,25 @@ import { useCallback, useEffect, useState } from 'react'
 
 const cases = [
   {
-    title: "카카오톡 연결된\n나를 위한\n응원방명록"
+    title: "SNS 연결된\n나를 위한 응원방명록"
   },
   {
-    title: "교민들과 함께하는\n우리 교회\n일정표"
+    title: "교민들과 함께\n우리 교회 일정표"
   },
   {
-    title: "학부모님과 함께하는\n우리 학원\n일정표"
+    title: "학부모님과 함께\n우리 학원 일정표"
   },
   {
-    title: "우리 회사 일정을\n공유하는\n작은 공지사항"
+    title: "우리 회사 일정\n공유 작은 공지사항"
   },
   {
-    title: "우리 아파트 일정을\n공유하는\n월별 일정표"
+    title: "우리 아파트 일정\n공유하는 월별 일정표"
   },
   {
-    title: "내 상점을 이용한\n고객님의 소중한\n한줄 방명록"
+    title: "내 상점 이용 고객님의\n소중한 한줄 방명록"
   },
   {
-    title: "곧 수확할 농산물과\n고객님의\n이용 후기 모음집"
+    title: "농산물 고객 님의\n 이용 후기 모음집"
   }
 ]
 
@@ -58,7 +58,7 @@ export default function UseCaseCarousel() {
                 className="flex-[0_0_240px]"
               >
                 <div className="aspect-square bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm p-6 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
-                  <p className="text-base text-white/90 leading-relaxed text-center whitespace-pre-line">
+                  <p className="text-lg font-bold text-white/90 leading-relaxed text-center whitespace-pre-line tracking-tight [text-shadow:_0_1px_2px_rgba(0,0,0,0.3)] transition-all hover:scale-105">
                     {item.title}
                   </p>
                 </div>

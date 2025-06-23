@@ -172,120 +172,122 @@ const CalendarWithEvents = ({ username, uid }) => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full space-y-4 mt-8 px-2">
-      <div className="flex items-center justify-between md:w-[300px] w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-3">
-        <button onClick={handlePrevMonth} className="p-2 bg-white/60 text-gray-700 rounded-lg font-semibold text-center shadow transition hover:bg-white/80 hover:scale-110 active:bg-white/90 select-none backdrop-blur-sm">
-          <ChevronLeft />
+    <div className="flex flex-col items-center w-full space-y-6 mt-8 px-2">
+      {/* 월 선택 헤더 */}
+      <div className="flex items-center justify-between md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm">
+        <button onClick={handlePrevMonth} className="p-2.5 bg-white text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-50 hover:scale-105 active:bg-blue-100">
+          <ChevronLeft className="w-5 h-5 text-blue-600" />
         </button>
-        <h2 className="text-xl font-bold text-gray-700 drop-shadow-sm">{currentDate.format('YY년 MM월')}</h2>
-        <button onClick={handleNextMonth} className="p-2 bg-white/60 text-gray-700 rounded-lg font-semibold text-center shadow transition hover:bg-white/80 hover:scale-110 active:bg-white/90 select-none backdrop-blur-sm">
-          <ChevronRight />
+        <h2 className="text-xl font-bold text-gray-800 tracking-tight">{currentDate.format('YY년 MM월')}</h2>
+        <button onClick={handleNextMonth} className="p-2.5 bg-white text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-50 hover:scale-105 active:bg-blue-100">
+          <ChevronRight className="w-5 h-5 text-blue-600" />
         </button>
       </div>
 
+      {/* 캘린더 테이블 */}
       <div className="w-full overflow-x-auto">
         <div className="mx-auto max-w-[1100px] w-full">
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
-          <table className="table-fixed w-full border-collapse">
-            <thead>
-                <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                {days.map((day, idx) => (
-                  <th
-                    key={day}
-                      className={`p-3 border-r border-gray-200 text-start font-bold text-sm ${
-                        idx === 0 ? 'text-red-600' : idx === 6 ? 'text-blue-600' : 'text-gray-700'
-                    }`}
-                  >
-                    {day}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: Math.ceil(dates.length / 7) }).map((_, weekIdx) => (
-                  <tr key={weekIdx} className="hover:bg-gray-50/50 transition-colors">
-                  {dates.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, idx) => {
-                    const dateStr = date.format('YYYY-MM-DD');
-                    const isCurrentMonth = date.month() === currentDate.month();
-                    const isToday = date.isSame(dayjs(), 'day');
-                    const isSelected = date.isSame(selectedDate, 'day');
-                    const dayEvents = events.filter(e => e.date === dateStr);
-
-                    return (
-                      <td
-                        key={dateStr}
-                        onClick={() => handleDateClick(date)}
-                          className={`align-top p-3 md:h-24 h-20 border-r border-b border-gray-100 cursor-pointer transition-all duration-200 hover:bg-blue-50/50 hover:shadow-inner
-                            ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                            ${isToday ? 'bg-gradient-to-br from-blue-300 to-blue-400 text-white rounded-lg shadow-lg transform scale-105' : ''}
-                            ${isSelected && !isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg shadow-md' : ''}
-                            ${idx === 0 ? 'text-red-600' : idx === 6 ? 'text-blue-600' : ''}
-                        `}
-                      >
-                          <div className="text-sm font-semibold line-clamp-2">{date.date()}</div>
-                        {isMobile ? (
-                            <div className="text-xs mt-1">
-                            {dayEvents.slice(0, 1).map((event, i) => (
-                                <div key={i} className='text-gray-700 truncate font-medium'>
-                                {event.title}
-                              </div>
-                            ))}
-                            {dayEvents.length > 1 && (
-                                <div className="text-gray-500 text-xs font-medium">+ {dayEvents.length - 1}</div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-1 text-xs space-y-1">
-                            {dayEvents.map((event, i) => (
-                                <div key={i} className='text-gray-700 truncate font-medium hover:text-blue-600 transition-colors'>
-                                {event.title}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+            <table className="table-fixed w-full border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-gray-50 to-blue-50">
+                  {days.map((day, idx) => (
+                    <th
+                      key={day}
+                      className={`py-4 px-3 text-start font-bold text-sm tracking-wide
+                        ${idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-700'}`}
+                    >
+                      {day}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {Array.from({ length: Math.ceil(dates.length / 7) }).map((_, weekIdx) => (
+                  <tr key={weekIdx} className="hover:bg-blue-50/30 transition-colors">
+                    {dates.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, idx) => {
+                      const dateStr = date.format('YYYY-MM-DD');
+                      const isCurrentMonth = date.month() === currentDate.month();
+                      const isToday = date.isSame(dayjs(), 'day');
+                      const isSelected = date.isSame(selectedDate, 'day');
+                      const dayEvents = events.filter(e => e.date === dateStr);
+
+                      return (
+                        <td
+                          key={dateStr}
+                          onClick={() => handleDateClick(date)}
+                          className={`align-top p-3 md:h-28 h-24 cursor-pointer transition-all duration-200
+                            ${isCurrentMonth ? 'text-gray-800' : 'text-gray-400 bg-gray-50/30'}
+                            ${isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 shadow-inner' : ''}
+                            ${isSelected && !isToday ? 'bg-gradient-to-br from-indigo-50 to-blue-50 shadow-inner' : ''}
+                            ${idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : ''}
+                            hover:bg-blue-50/50 hover:shadow-inner
+                          `}
+                        >
+                          <div className="text-sm font-semibold mb-2">{date.date()}</div>
+                          {isMobile ? (
+                            <div className="text-xs space-y-1">
+                              {dayEvents.slice(0, 1).map((event, i) => (
+                                <div key={i} className="px-2 py-1 rounded-md bg-blue-100/50 text-blue-800 font-medium truncate">
+                                  {event.title}
+                                </div>
+                              ))}
+                              {dayEvents.length > 1 && (
+                                <div className="text-blue-600 text-xs font-medium">+ {dayEvents.length - 1}개</div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {dayEvents.map((event, i) => (
+                                <div key={i} className="px-2 py-1 text-xs rounded-md bg-blue-100/50 text-blue-800 font-medium truncate hover:bg-blue-200/50 transition-colors">
+                                  {event.title}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
       {/* 일정 추가 섹션 */}
       {canDelete && (
-        <div className="w-full max-w-[1100px] mt-0 p-6 border rounded-2xl bg-gradient-to-r from-gray-50 to-white border-gray-200">
+        <div className="w-full max-w-[1100px] mt-2 p-6 rounded-3xl bg-gradient-to-br from-white to-blue-50 border border-blue-100/50 shadow-lg backdrop-blur-sm">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-800">
+            <h3 className="text-lg font-bold text-gray-800 tracking-tight">
               {selectedDate.format('YY년 MM월 DD일')}
             </h3>
             <Button
               onClick={() => setShowAddEventForm(prev => !prev)}
-              className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold text-center shadow-lg transition hover:from-blue-600 hover:to-blue-700 hover:scale-105 active:scale-95 select-none"
+              className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
             >
               {showAddEventForm ? '닫기' : '일정 추가'}
             </Button>
           </div>
 
           {showAddEventForm && (
-            <div className="space-y-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="space-y-4 bg-white p-5 rounded-2xl shadow-lg border border-blue-100/50">
               <input
                 type="text"
                 placeholder="일정 제목"
                 value={newEvent.title}
                 onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800 placeholder-gray-400"
               />
 
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <select
                   value={newEvent.startTime}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
-                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800"
                 >
-                  <option value="">시작</option>
+                  <option value="">시작 시간</option>
                   {predefinedTimes.map(time => (
                     <option key={time} value={time}>{time}</option>
                   ))}
@@ -294,9 +296,9 @@ const CalendarWithEvents = ({ username, uid }) => {
                 <select
                   value={newEvent.endTime}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
-                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800"
                 >
-                  <option value="">종료</option>
+                  <option value="">종료 시간</option>
                   {predefinedTimes.map(time => (
                     <option key={time} value={time}>{time}</option>
                   ))}
@@ -305,7 +307,7 @@ const CalendarWithEvents = ({ username, uid }) => {
 
               <button
                 onClick={handleAddEvent}
-                className="w-full p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold text-center shadow-lg transition hover:from-blue-600 hover:to-blue-700 hover:scale-105 active:scale-95 select-none"
+                className="w-full p-3.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-[1.02] active:scale-98"
               >
                 일정 추가
               </button>
@@ -316,16 +318,16 @@ const CalendarWithEvents = ({ username, uid }) => {
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl shadow-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50">
+        <DialogContent className="max-w-md rounded-3xl shadow-2xl border border-blue-100/50 bg-gradient-to-br from-white to-blue-50/50">
           <DialogHeader>
-            <DialogTitle className="text-gray-800 font-bold">{selectedDate.format('YYYY년 MM월 DD일')} 일정</DialogTitle>
+            <DialogTitle className="text-gray-800 font-bold tracking-tight">{selectedDate.format('YYYY년 MM월 DD일')} 일정</DialogTitle>
           </DialogHeader>
           {selectedEvents.length > 0 ? (
             <ul className="space-y-3 h-full overflow-y-auto mt-4">
               {selectedEvents.map((e) => (
-                <li key={e.id} className="border border-gray-200 p-4 rounded-xl flex justify-between items-center bg-white shadow-sm hover:shadow-md transition-shadow">
+                <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
                   <div>
-                    <div className="text-sm font-bold text-gray-800">{e.startTime} ~ {e.endTime}</div>
+                    <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
                     <div className="text-sm text-gray-600 mt-1">{e.title}</div>
                   </div>
                   {canDelete && (
@@ -336,7 +338,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                         await handleDelete(e.id);
                         setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
                       }}
-                      className="p-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold text-center shadow transition hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95 select-none"
+                      className="p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
                     >
                       삭제
                     </Button>
@@ -345,7 +347,7 @@ const CalendarWithEvents = ({ username, uid }) => {
               ))}
             </ul>
           ) : (
-            <DialogDescription className="text-gray-500 mt-4 text-center py-8">일정이 없습니다.</DialogDescription>
+            <DialogDescription className="text-gray-500 mt-4 text-center py-8">등록된 일정이 없습니다.</DialogDescription>
           )}
         </DialogContent>
       </Dialog>

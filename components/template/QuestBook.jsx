@@ -168,20 +168,22 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   <Drawer {...props}>
       <DrawerTrigger asChild>
         {/* 드로어를 여는 트리거 요소 (버튼, 아이콘 등) */}
-        <button className='p-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-center transition hover:bg-gray-50 hover:border-gray-400 hover:scale-105 active:scale-95 select-none'>방명록 목록 열기 · 쓰기</button>
+        <button className='px-6 py-3.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none'>
+          방명록 목록 열기 · 쓰기
+        </button>
       </DrawerTrigger>
       <DrawerContent className={drawerContentClassName}> {/* className을 DrawerContent에 전달 */}
         {/* {children} */}
-    <div className="flex-1 overflow-y-auto space-y-4 p-4">
+    <div className="flex-1 overflow-y-auto space-y-5 p-6">
       {entries.map((entry, idx) => (
         <div
           key={entry.id}
           ref={idx === entries.length - 1 ? lastEntryRef : null}
-          className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 hover:shadow-xl transition-all duration-200 hover:scale-[1.02]"
+          className="bg-white rounded-2xl p-6 border border-blue-100/50 shadow-md hover:shadow-lg transition-all duration-300"
         >
-          <div className="flex justify-between items-start mb-3">
-            <span className="font-bold text-gray-800 text-lg">{entry.name}</span>
-            <span className="text-sm text-gray-600 font-medium">
+          <div className="flex justify-between items-center mb-3">
+            <span className="font-bold text-gray-800 text-lg tracking-tight">{entry.name}</span>
+            <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
               {entry.createdAt?.toDate
                 ? entry.createdAt.toDate().toLocaleString('ko-KR', {
                     year: '2-digit',
@@ -206,7 +208,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs mt-3 p-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold text-center shadow transition hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95 select-none"
+              className="mt-4 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
               onClick={() => handleDelete(entry.id)}
             >
               삭제
@@ -215,12 +217,12 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         </div>
       ))}
       {!hasMore && entries.length > 0 && (
-        <p className="text-center text-gray-500 font-medium py-4">더 이상 항목이 없습니다.</p>
+        <p className="text-center text-gray-500 font-medium py-6">더 이상 방명록이 없습니다</p>
       )}
     </div>
 
-    {/* 작성 폼 (항상 하단 고정) */}
-   <div className="rounded-2xl p-6 mt-4 shadow-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+    {/* 작성 폼 (하단 고정) */}
+   <div className="rounded-3xl p-6 mt-4 shadow-lg border border-blue-100/50 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
       <form className="space-y-4" onSubmit={handleFormToggleOrSubmit}>
       
 
@@ -229,15 +231,15 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
            <button
         type="button"
         onClick={() => setIsFormOpen(false)}
-        className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 text-xl font-bold transition-colors"
+        className="absolute top-6 right-6 text-gray-500 hover:text-gray-700 transition-colors"
         aria-label="닫기"
       >
-        ✕
+        <IoClose className="w-6 h-6" />
       </button>
             <input
               type="text"
               placeholder="이름을 입력해주세요"
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -245,7 +247,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
             <textarea
               rows={3}
               placeholder="메시지를 입력해주세요"
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all resize-none"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
@@ -254,7 +256,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         )}
         <button
           type="submit"
-          className="w-full p-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold text-center shadow-lg transition hover:bg-gray-50 hover:border-gray-400 hover:scale-105 active:scale-95 select-none"
+          className="w-full p-3.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-[1.02] active:scale-98"
         >
           {isFormOpen ? '방명록 남기기' : '방명록 쓰기'}
         </button>
@@ -294,14 +296,14 @@ export default function GuestbookTemplate({ username, uid }) {
 
   return (
     <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
-      <div className="text-center text-[21px] font-bold md:w-[300px] w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-3 pb-3" >게스트북</div>
-      <div className='h-[15px]'/>
-      <div className="space-y-4 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl border border-gray-200 w-full max-w-[1100px]">
+      <div className="text-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800">게스트북</div>
+      <div className='h-[20px]'/>
+      <div className="space-y-5 bg-gradient-to-br from-white to-blue-50/30 p-8 rounded-3xl border border-blue-100/50 w-full max-w-[1100px] shadow-lg backdrop-blur-sm">
         {previewEntries.map((entry, i) => (
-          <div key={entry.id} className="">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="font-bold text-gray-800">{entry.name}</span>
-              <span className="text-gray-600 font-medium">
+          <div key={entry.id} className="bg-white/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-center mb-3">
+              <span className="font-bold text-gray-800 text-lg tracking-tight">{entry.name}</span>
+              <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
                 {entry.createdAt?.toDate
                   ? entry.createdAt.toDate().toLocaleString('ko-KR', {
                       year: '2-digit',
@@ -322,16 +324,13 @@ export default function GuestbookTemplate({ username, uid }) {
               </span>
             </div>
             <p className="text-gray-700 leading-relaxed">{entry.message}</p>
-             {i !== 2 ? <div className='border-b border-gray-200 mt-4 pb-4' /> : null}
+            {i !== previewEntries.length - 1 && <div className='mt-4' />}
           </div>
         ))}
-   
       </div>
-       <div className="pt-3">
+      <div className="pt-4">
         <HeaderDrawer uid={finalUid} drawerContentClassName="md:w-[1100px] pt-6 p-2">
-          {/* <div className='p-2'>
-            <div className="bg-white p-4 rounded-lg border border-zinc-300">방명록 목록보기</div>
-          </div> */}
+          {/* Drawer 트리거 버튼 스타일 수정은 HeaderDrawer 컴포넌트에서 진행 */}
         </HeaderDrawer>
       </div>
     </div>
