@@ -255,7 +255,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
           {isEditable && openSettingsIndex === index && ( // Only show if isEditable and this link's settings are open
             <div className='flex flex-col gap-2'>
             <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
-              <label className="text-sm font-medium">배경색 :</label>
+              <label className="text-sm font-medium text-gray-500">배경색 :</label>
               {COLOR_PALETTE.map((color) => (
                 <button
                   key={color}
@@ -268,7 +268,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
                   }}
                 />
               ))}
-               <label className="text-sm font-medium ml-4">투명도:</label>
+               <label className="text-sm font-medium ml-4 text-gray-500">투명도:</label>
               <input
                 type="range"
                 min={0.1}
@@ -286,7 +286,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
               </div>
 
               <div className='w-full flex flex-wrap items-center gap-2 mt-2 ml-4'>
-              <label className="text-sm font-medium">텍스트색 :</label>
+              <label className="text-sm font-medium text-gray-500">텍스트색 :</label>
               {COLOR_PALETTE.map((color) => (
                 <button
                   key={color + '-text'}

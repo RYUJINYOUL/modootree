@@ -235,55 +235,69 @@ const RegisterPage = () => {
                             )}
 
 
-          <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-                                <input
-              className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
-                                    type="text"
-              name="name"
-              placeholder="이름(닉네임)"
-              {...register("name", { required: true })}
-            />
-            {errors.name && <p className="text-red-400 text-xs">이름은 필수입니다.</p>}
-            {isAvailable === false && <p className="text-red-400 text-xs">이미 사용 중인 이름입니다.</p>}
-                            <input
-              className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
-                                type="email" 
-              name="email"
-              placeholder="이메일"
-                                {...register("email", { required: true, pattern: /^\S+@\S+$/i })}
-                                />
-            {errors.email && <p className="text-red-400 text-xs">이메일은 필수입니다.</p>}
-                            <input
-              className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
-                                name="password"
-                                type="password"
-              placeholder="비밀번호"
-                                {...register("password", { required: true, minLength: 6 })}
-                                />
-            {errors.password && errors.password.type === "required" && <p className="text-red-400 text-xs">비밀번호는 필수입니다.</p>}
-            {errors.password && errors.password.type === "minLength" && <p className="text-red-400 text-xs">비밀번호 6자 이상입니다.</p>}
-            {errorFromSubmit && <p className="text-red-400 text-xs">{errorFromSubmit}</p>}
-             <input
-              className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
-                                name='passwordConfirm'
-                                type='password'
-                                placeholder="비밀번호 확인"
-                                {...register("passwordConfirm", { required: '비밀번호 확인은 필수입니다.', 
-                                validate: (value) => 
-                                    value === watch('password') || '비밀번호가 일치하지 않습니다'
-                                })}
-                            
-                                    />
-                                    {errors.passwordConfirm && (
-                                <p className="text-red-500 mt-1">{errors.passwordConfirm.message}</p>
-                                )}
-                         <button
-                            type="submit"
-                            disabled={loading}
-              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition"
-            >
-                                회원가입
-                        </button>
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-4">
+                    <input
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+                        type="text"
+                        name="name"
+                        placeholder="이름"
+                        {...register("name", { required: true, maxLength: 10 })}
+                    />
+                    {errors.name && errors.name.type === "required" && (
+                        <p className="text-red-400 text-xs">이름은 필수입니다.</p>
+                    )}
+                    {errors.name && errors.name.type === "maxLength" && (
+                        <p className="text-red-400 text-xs">이름은 10자 이하입니다.</p>
+                    )}
+
+                    <input
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+                        type="email"
+                        name="email"
+                        placeholder="이메일"
+                        {...register("email", { required: true, pattern: /^\S+@\S+$/i })}
+                    />
+                    {errors.email && (
+                        <p className="text-red-400 text-xs">이메일 형식이 올바르지 않습니다.</p>
+                    )}
+
+                    <input
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+                        type="password"
+                        name="password"
+                        placeholder="비밀번호"
+                        {...register("password", { required: true, minLength: 6 })}
+                    />
+                    {errors.password && errors.password.type === "required" && (
+                        <p className="text-red-400 text-xs">비밀번호는 필수입니다.</p>
+                    )}
+                    {errors.password && errors.password.type === "minLength" && (
+                        <p className="text-red-400 text-xs">비밀번호는 6자 이상입니다.</p>
+                    )}
+
+                    <input
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+                        type="password"
+                        name="password_confirm"
+                        placeholder="비밀번호 확인"
+                        {...register("password_confirm", {
+                            required: true,
+                            validate: (value) => value === watch("password"),
+                        })}
+                    />
+                    {errors.password_confirm && (
+                        <p className="text-red-500 mt-1">{errors.password_confirm.message}</p>
+                    )}
+
+                    {errorFromSubmit && <p className="text-red-400 text-xs">{errorFromSubmit}</p>}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition"
+                    >
+                        회원가입
+                    </button>
           </form>
           <div className="w-full flex justify-end mt-4">
                         <button

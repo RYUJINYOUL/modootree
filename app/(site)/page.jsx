@@ -149,6 +149,15 @@ export default function Page() {
         </h2>
 
         <UseCaseCarousel />
+
+        <div className="mt-8">
+          <Link
+            href="/farmtoolceo"
+            className="inline-block px-6 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/30 text-white/80 hover:bg-white/10 hover:border-white/40"
+          >
+            문의하기
+          </Link>
+        </div>
       </div>
 
       {/* 모달 */}

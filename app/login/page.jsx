@@ -126,7 +126,7 @@ const LoginPage = () => {
                             </button>
                 <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
                             <input
-                        className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
                                 type="email" 
                                 name="Email"
                                 placeholder="이메일"
@@ -134,7 +134,7 @@ const LoginPage = () => {
                                 />
                     {errors.email && <p className="text-red-400 text-xs">이메일은 필수입니다.</p>}
                             <input
-                        className="w-full px-4 py-3 rounded-lg bg-white/80 border border-gray-300 placeholder-gray-500 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+                        className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
                                 name="password"
                                 type="password"
                         placeholder="비밀번호"
