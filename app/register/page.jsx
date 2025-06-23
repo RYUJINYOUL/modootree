@@ -32,7 +32,6 @@ const RegisterPage = () => {
     const [googleUsername, setGoogleUsername] = useState("");
     const [checking, setChecking] = useState(false);
     const [isAvailable, setIsAvailable] = useState(null);
-    const [isKakao, setIsKakao] = useState(false);
     // const login = useAuth();
 
     const {
@@ -46,11 +45,6 @@ const RegisterPage = () => {
 
     const username = watch("username");
 
-    useEffect(() => {
-        // 카카오톡 인앱 브라우저 감지
-        const userAgent = navigator.userAgent.toLowerCase();
-        setIsKakao(userAgent.includes('kakaotalk'));
-    }, []);
 
     // 실시간 username 중복 체크
     useEffect(() => {
@@ -132,12 +126,6 @@ const RegisterPage = () => {
 
 
     const handleGoogleSign = async () => {
-        if (isKakao) {
-            alert("Google 로그인이 지원되지 않는 브라우저입니다.\n오른쪽 상단의 [...] 버튼을 눌러 '기본 브라우저로 열기'를 선택해 주세요.");
-            window.open(window.location.href, '_blank');
-            return;
-        }
-
         try {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);

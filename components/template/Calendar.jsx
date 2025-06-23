@@ -283,7 +283,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                   onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
                   className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800"
                 >
-                  <option value="">시작 시간</option>
+                  <option value="">시작</option>
                   {predefinedTimes.map(time => (
                     <option key={time} value={time}>{time}</option>
                   ))}
@@ -294,7 +294,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                   onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
                   className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800"
                 >
-                  <option value="">종료 시간</option>
+                  <option value="">종료</option>
                   {predefinedTimes.map(time => (
                     <option key={time} value={time}>{time}</option>
                   ))}
