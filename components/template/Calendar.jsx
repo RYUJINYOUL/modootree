@@ -224,20 +224,16 @@ const CalendarWithEvents = ({ username, uid }) => {
                             hover:bg-blue-50/50 hover:shadow-inner
                           `}
                         >
-                          <div className="text-sm font-semibold mb-2">{date.date()}</div>
-                          {isMobile ? (
-                            <div className="text-xs space-y-1">
-                              {dayEvents.slice(0, 1).map((event, i) => (
-                                <div key={i} className="px-2 py-1 rounded-md bg-blue-100/50 text-blue-800 font-medium truncate">
-                                  {event.title}
-                                </div>
-                              ))}
-                              {dayEvents.length > 1 && (
-                                <div className="text-blue-600 text-xs font-medium">+ {dayEvents.length - 1}개</div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="text-sm font-semibold">{date.date()}</div>
+                            {dayEvents.length > 0 && isMobile && (
+                              <div className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">
+                                {dayEvents.length}
+                              </div>
+                            )}
+                          </div>
+                          {!isMobile && (
+                            <div className="space-y-1 mt-2">
                               {dayEvents.map((event, i) => (
                                 <div key={i} className="px-2 py-1 text-xs rounded-md bg-blue-100/50 text-blue-800 font-medium truncate hover:bg-blue-200/50 transition-colors">
                                   {event.title}
@@ -320,15 +316,22 @@ const CalendarWithEvents = ({ username, uid }) => {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md rounded-3xl shadow-2xl border border-blue-100/50 bg-gradient-to-br from-white to-blue-50/50">
           <DialogHeader>
-            <DialogTitle className="text-gray-800 font-bold tracking-tight">{selectedDate.format('YYYY년 MM월 DD일')} 일정</DialogTitle>
+            <DialogTitle className="text-gray-800 font-bold tracking-tight">
+              {selectedDate.format('YYYY년 MM월 DD일')} 일정
+              {selectedEvents.length > 0 && (
+                <span className="ml-2 text-sm text-blue-600">
+                  총 {selectedEvents.length}개
+                </span>
+              )}
+            </DialogTitle>
           </DialogHeader>
           {selectedEvents.length > 0 ? (
             <ul className="space-y-3 h-full overflow-y-auto mt-4">
               {selectedEvents.map((e) => (
                 <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
-                  <div>
+                  <div className="flex-1">
                     <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
-                    <div className="text-sm text-gray-600 mt-1">{e.title}</div>
+                    <div className="text-sm text-gray-600 mt-1 break-all">{e.title}</div>
                   </div>
                   {canDelete && (
                     <Button
@@ -338,7 +341,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                         await handleDelete(e.id);
                         setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
                       }}
-                      className="p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
+                      className="ml-4 p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
                     >
                       삭제
                     </Button>

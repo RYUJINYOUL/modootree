@@ -1,10 +1,49 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function Footer() {
   const pathname = usePathname();
   const isMainPage = pathname === '/';
+  const [isKakao, setIsKakao] = useState(false);
+
+  useEffect(() => {
+    // 카카오톡 인앱 브라우저 감지
+    const userAgent = navigator.userAgent.toLowerCase();
+    setIsKakao(userAgent.includes('kakaotalk'));
+  }, []);
+
+  const handleShare = async () => {
+    const currentUrl = window.location.href;
+
+    if (isKakao) {
+      // 카카오톡 인앱 브라우저에서는 새 탭으로 열기 유도
+      window.open(currentUrl, '_blank');
+      alert('기본 브라우저에서 공유 기능을 사용해주세요.');
+      return;
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: '모두트리',
+          url: currentUrl
+        });
+      } catch (error) {
+        console.error('공유 실패:', error);
+        handleCopyLink(); // 공유 API를 지원하지 않는 경우 링크 복사로 대체
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleCopyLink = () => {
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl);
+    alert('링크가 복사되었습니다.');
+  };
 
   return (
     <>
@@ -50,16 +89,16 @@ export default function Footer() {
                     무료시작
                   </Link>
                 )}
-                <Link
-                  href="/farmtoolceo"
+                <button
+                  onClick={handleShare}
                   className={`inline-block px-6 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg border-2 ${
                     isMainPage
                     ? 'border-zinc-600 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500'
                     : 'border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white'
                   }`}
                 >
-                  문의하기
-                </Link>
+                  {isKakao ? '브라우저에서 열기' : '공유하기'}
+                </button>
               </div>
             </div>
 

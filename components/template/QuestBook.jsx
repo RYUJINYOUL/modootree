@@ -134,6 +134,32 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
     }
   }
 
+  // 시간 표시 함수 추가
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const timeStamp = date instanceof Date ? date : date.toDate();
+    const diffInSeconds = Math.floor((now - timeStamp) / 1000);
+    
+    if (diffInSeconds < 60) return '방금 전';
+    
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}시간 전`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}일 전`;
+    
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    if (diffInWeeks < 5) return `${diffInWeeks}주 전`;
+    
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) return `${diffInMonths}개월 전`;
+    
+    const diffInYears = Math.floor(diffInDays / 365);
+    return `${diffInYears}년 전`;
+  };
 
   const handleFormToggleOrSubmit = async (e) => {
   e.preventDefault();
@@ -184,23 +210,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-gray-800 text-lg tracking-tight">{entry.name}</span>
             <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
-              {entry.createdAt?.toDate
-                ? entry.createdAt.toDate().toLocaleString('ko-KR', {
-                    year: '2-digit',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  }).replace(/\./g, '.').replace(/,/g, '')
-                : new Date(entry.createdAt).toLocaleString('ko-KR', {
-                    year: '2-digit',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  }).replace(/\./g, '.').replace(/,/g, '')}
+              {getTimeAgo(entry.createdAt)}
             </span>
           </div>
           <p className="text-gray-700 text-base leading-relaxed">{entry.message}</p>
@@ -276,6 +286,33 @@ export default function GuestbookTemplate({ username, uid }) {
   const { currentUser } = useSelector((state) => state.user)
   const finalUid = uid ?? currentUser?.uid
 
+  // 시간 표시 함수
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const timeStamp = date instanceof Date ? date : date.toDate();
+    const diffInSeconds = Math.floor((now - timeStamp) / 1000);
+    
+    if (diffInSeconds < 60) return '방금 전';
+    
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}시간 전`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}일 전`;
+    
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    if (diffInWeeks < 5) return `${diffInWeeks}주 전`;
+    
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) return `${diffInMonths}개월 전`;
+    
+    const diffInYears = Math.floor(diffInDays / 365);
+    return `${diffInYears}년 전`;
+  };
+
   // 최초 데이터 로드
   useEffect(() => {
     if (!finalUid) return
@@ -304,23 +341,7 @@ export default function GuestbookTemplate({ username, uid }) {
             <div className="flex justify-between items-center mb-3">
               <span className="font-bold text-gray-800 text-lg tracking-tight">{entry.name}</span>
               <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
-                {entry.createdAt?.toDate
-                  ? entry.createdAt.toDate().toLocaleString('ko-KR', {
-                      year: '2-digit',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    }).replace(/\./g, '.').replace(/,/g, '')
-                  : new Date(entry.createdAt).toLocaleString('ko-KR', {
-                      year: '2-digit',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    }).replace(/\./g, '.').replace(/,/g, '')}
+                {getTimeAgo(entry.createdAt)}
               </span>
             </div>
             <p className="text-gray-700 leading-relaxed">{entry.message}</p>
@@ -328,7 +349,7 @@ export default function GuestbookTemplate({ username, uid }) {
           </div>
         ))}
       </div>
-      <div className="pt-4">
+      <div className="pt-4 w-full flex justify-center">
         <HeaderDrawer uid={finalUid} drawerContentClassName="md:w-[1100px] pt-6 p-2">
           {/* Drawer 트리거 버튼 스타일 수정은 HeaderDrawer 컴포넌트에서 진행 */}
         </HeaderDrawer>
