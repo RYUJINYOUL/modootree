@@ -216,7 +216,7 @@ const CalendarWithEvents = ({ username, uid }) => {
                         <td
                           key={dateStr}
                           onClick={() => handleDateClick(date)}
-                          className={`align-top p-3 h-24 cursor-pointer transition-all duration-200
+                          className={`align-top p-2 md:p-3 h-16 md:h-24 cursor-pointer transition-all duration-200
                             ${isCurrentMonth ? 'text-gray-800' : 'text-gray-400 bg-gray-50/30'}
                             ${isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 shadow-inner rounded-2xl' : ''}
                             ${isSelected && !isToday ? 'bg-gradient-to-br from-indigo-50 to-blue-50 shadow-inner rounded-2xl' : ''}
@@ -224,10 +224,10 @@ const CalendarWithEvents = ({ username, uid }) => {
                             hover:bg-blue-50/50 hover:shadow-inner hover:rounded-2xl
                           `}
                         >
-                          <div className="flex flex-col items-center gap-2">
+                          <div className="flex flex-col items-center gap-1.5 md:gap-2">
                             <div className="text-sm font-semibold">{date.date()}</div>
                             {dayEvents.length > 0 && (
-                              <div className="flex items-center justify-center w-7 h-7 bg-blue-500 text-white text-[14px] font-bold rounded-full">
+                              <div className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-blue-500 text-white text-[13px] md:text-[14px] font-bold rounded-full">
                                 {dayEvents.length}
                               </div>
                             )}
