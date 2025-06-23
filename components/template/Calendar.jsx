@@ -216,31 +216,22 @@ const CalendarWithEvents = ({ username, uid }) => {
                         <td
                           key={dateStr}
                           onClick={() => handleDateClick(date)}
-                          className={`align-top p-3 md:h-28 h-24 cursor-pointer transition-all duration-200
+                          className={`align-top p-3 h-24 cursor-pointer transition-all duration-200
                             ${isCurrentMonth ? 'text-gray-800' : 'text-gray-400 bg-gray-50/30'}
-                            ${isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 shadow-inner' : ''}
-                            ${isSelected && !isToday ? 'bg-gradient-to-br from-indigo-50 to-blue-50 shadow-inner' : ''}
+                            ${isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 shadow-inner rounded-2xl' : ''}
+                            ${isSelected && !isToday ? 'bg-gradient-to-br from-indigo-50 to-blue-50 shadow-inner rounded-2xl' : ''}
                             ${idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : ''}
-                            hover:bg-blue-50/50 hover:shadow-inner
+                            hover:bg-blue-50/50 hover:shadow-inner hover:rounded-2xl
                           `}
                         >
-                          <div className="flex flex-col items-center gap-1">
+                          <div className="flex flex-col items-center gap-2">
                             <div className="text-sm font-semibold">{date.date()}</div>
-                            {dayEvents.length > 0 && isMobile && (
-                              <div className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">
+                            {dayEvents.length > 0 && (
+                              <div className="flex items-center justify-center w-7 h-7 bg-blue-500 text-white text-[14px] font-bold rounded-full">
                                 {dayEvents.length}
                               </div>
                             )}
                           </div>
-                          {!isMobile && (
-                            <div className="space-y-1 mt-2">
-                              {dayEvents.map((event, i) => (
-                                <div key={i} className="px-2 py-1 text-xs rounded-md bg-blue-100/50 text-blue-800 font-medium truncate hover:bg-blue-200/50 transition-colors">
-                                  {event.title}
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </td>
                       );
                     })}

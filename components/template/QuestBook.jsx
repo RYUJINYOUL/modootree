@@ -23,6 +23,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 import { IoClose } from "react-icons/io5"
+import Link from 'next/link'
 
 
 
@@ -285,6 +286,7 @@ export default function GuestbookTemplate({ username, uid }) {
   const [previewEntries, setPreviewEntries] = useState([])
   const { currentUser } = useSelector((state) => state.user)
   const finalUid = uid ?? currentUser?.uid
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   // 시간 표시 함수
   const getTimeAgo = (date) => {
@@ -333,11 +335,23 @@ export default function GuestbookTemplate({ username, uid }) {
 
   return (
     <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
-      <div className="text-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800">게스트북</div>
+      <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800">
+        <button onClick={() => setIsDrawerOpen(true)} className="absolute left-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+        </button>
+        게스트북
+        <button onClick={() => setIsDrawerOpen(true)} className="absolute right-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+      </div>
       <div className='h-[20px]'/>
-      <div className="space-y-5 bg-gradient-to-br from-white to-blue-50/30 p-8 rounded-3xl border border-blue-100/50 w-full max-w-[1100px] shadow-lg backdrop-blur-sm">
+      <div className="w-full flex flex-col items-center gap-6">
         {previewEntries.map((entry, i) => (
-          <div key={entry.id} className="bg-white/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <div key={entry.id} className="w-full max-w-[1100px] bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-blue-100/50">
             <div className="flex justify-between items-center mb-3">
               <span className="font-bold text-gray-800 text-lg tracking-tight">{entry.name}</span>
               <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
@@ -345,12 +359,16 @@ export default function GuestbookTemplate({ username, uid }) {
               </span>
             </div>
             <p className="text-gray-700 leading-relaxed">{entry.message}</p>
-            {i !== previewEntries.length - 1 && <div className='mt-4' />}
           </div>
         ))}
       </div>
       <div className="pt-4 w-full flex justify-center">
-        <HeaderDrawer uid={finalUid} drawerContentClassName="md:w-[1100px] pt-6 p-2">
+        <HeaderDrawer 
+          uid={finalUid} 
+          drawerContentClassName="md:w-[1100px] pt-6 p-2"
+          open={isDrawerOpen}
+          onOpenChange={setIsDrawerOpen}
+        >
           {/* Drawer 트리거 버튼 스타일 수정은 HeaderDrawer 컴포넌트에서 진행 */}
         </HeaderDrawer>
       </div>
