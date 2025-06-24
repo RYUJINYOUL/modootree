@@ -37,7 +37,7 @@ export default function RootLayout({
             {/* <FabButton /> */}
         </ClientLayout>
         <Toast />
-      </body>
+          </body>
     </html>
   );
 }

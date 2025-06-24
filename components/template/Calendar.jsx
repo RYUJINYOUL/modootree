@@ -349,12 +349,12 @@ const CalendarWithEvents = ({ username, uid }) => {
           {selectedEvents.length > 0 ? (
             <div className="space-y-4">
               <ul className="space-y-3 h-full max-h-[300px] overflow-y-auto mt-4">
-                {selectedEvents.map((e) => (
-                  <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
-                    <div className="flex-1">
-                      <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
-                      <div className="text-sm text-gray-600 mt-1 break-all">{e.title}</div>
-                    </div>
+              {selectedEvents.map((e) => (
+                <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
+                    <div className="text-sm text-gray-600 mt-1 break-all">{e.title}</div>
+                  </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-600">
                         확인: <span className="text-blue-600 font-bold">{e.confirmCount || 0}</span>
@@ -365,23 +365,23 @@ const CalendarWithEvents = ({ username, uid }) => {
                       >
                         확인
                       </Button>
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            await handleDelete(e.id);
-                            setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
-                          }}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        await handleDelete(e.id);
+                        setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
+                      }}
                           className="ml-2 p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
-                        >
-                          삭제
-                        </Button>
-                      )}
+                    >
+                      삭제
+                    </Button>
+                  )}
                     </div>
-                  </li>
-                ))}
-              </ul>
+                </li>
+              ))}
+            </ul>
               <div className="flex justify-end pt-4 border-t border-blue-100/50">
                 <Button
                   onClick={() => setModalOpen(false)}
@@ -393,7 +393,7 @@ const CalendarWithEvents = ({ username, uid }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              <DialogDescription className="text-gray-500 mt-4 text-center py-8">등록된 일정이 없습니다.</DialogDescription>
+            <DialogDescription className="text-gray-500 mt-4 text-center py-8">등록된 일정이 없습니다.</DialogDescription>
               <div className="flex justify-end pt-4 border-t border-blue-100/50">
                 <Button
                   onClick={() => setModalOpen(false)}

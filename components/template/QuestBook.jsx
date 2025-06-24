@@ -180,16 +180,16 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         setReplyTo(null)
       } else {
         // 새 댓글 추가
-        await addDoc(collection(db, 'users', finalUid, 'comments'), {
-          name,
-          message,
-          createdAt: new Date(),
-          uid: currentUser?.uid || null,
-          profileImage: currentUser?.photoURL || null,
+      await addDoc(collection(db, 'users', finalUid, 'comments'), {
+        name,
+        message,
+        createdAt: new Date(),
+        uid: currentUser?.uid || null,
+        profileImage: currentUser?.photoURL || null,
           likes: 0,
           likedBy: [],
           replies: []
-        })
+      })
       }
       setName('')
       setMessage('')
@@ -247,14 +247,14 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
       }
       
       showToast("좋아요", "반영되었습니다.", 1000);
-    } catch (error) {
+  } catch (error) {
       console.error('좋아요 처리 실패:', error)
       showToast("오류", "좋아요 처리에 실패했습니다.");
     }
   }
 
   return (
-    <Drawer {...props}>
+  <Drawer {...props}>
       <DrawerTrigger asChild>
         <button className='px-6 py-3.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none'>
           방명록 목록 열기 · 쓰기
@@ -301,31 +301,28 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
           {/* 방명록 목록 */}
           <div className="space-y-4">
             {entries.map((entry, index) => (
-              <div
-                key={entry.id}
+        <div
+          key={entry.id}
                 ref={index === entries.length - 1 ? lastEntryRef : null}
                 className="bg-white p-4 rounded-xl shadow-sm"
-              >
+        >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
-                    {entry.profileImage ? (
-                      <img src={entry.profileImage} alt="" className="w-8 h-8 rounded-full" />
-                    ) : (
-                      <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                    )}
-                    <span className="font-semibold">{entry.name}</span>
-                  </div>
+                    <div className="text-sm text-gray-600">
+                      {entry.name || '익명'}
+                    </div>
+          </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-500">{getTimeAgo(entry.createdAt)}</span>
-                    {canDelete && (
+          {canDelete && (
                       <button
-                        onClick={() => handleDelete(entry.id)}
+              onClick={() => handleDelete(entry.id)}
                         className="text-red-500 hover:text-red-700"
-                      >
+            >
                         <IoClose size={20} />
                       </button>
-                    )}
-                  </div>
+          )}
+        </div>
                 </div>
                 <p className="mt-2 text-gray-700 whitespace-pre-wrap">{entry.message}</p>
                 <div className="mt-3 flex items-center space-x-4">
@@ -340,13 +337,13 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                     )}
                     <span>{entry.likes || 0}</span>
                   </button>
-                  <button
+           <button
                     onClick={() => setReplyTo({ commentId: entry.id, name: entry.name })}
                     className="flex items-center space-x-1 text-gray-500 hover:text-blue-500"
-                  >
+      >
                     <FaReply />
                     <span>답글</span>
-                  </button>
+      </button>
                 </div>
 
                 {/* 답글 목록 */}
@@ -356,18 +353,15 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                       <div key={replyIndex} className="bg-gray-50 p-3 rounded-lg">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-2">
-                            {reply.profileImage ? (
-                              <img src={reply.profileImage} alt="" className="w-6 h-6 rounded-full" />
-                            ) : (
-                              <div className="w-6 h-6 bg-gray-200 rounded-full" />
-                            )}
-                            <span className="font-semibold text-sm">{reply.name}</span>
+                            <div className="text-sm text-gray-600">
+                              {reply.name || '익명'}
+                            </div>
                           </div>
                           <span className="text-xs text-gray-500">{getTimeAgo(reply.createdAt)}</span>
                         </div>
                         <p className="mt-1 text-sm text-gray-700">{reply.message}</p>
                         <div className="mt-2">
-                          <button
+        <button
                             onClick={() => handleLike(entry.id, true, replyIndex)}
                             className="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-500"
                           >
@@ -377,7 +371,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                               <FaRegHeart size={12} />
                             )}
                             <span>{reply.likes || 0}</span>
-                          </button>
+        </button>
                         </div>
                       </div>
                     ))}
@@ -394,9 +388,9 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
           {!isLoading && entries.length === 0 && (
             <div className="text-center py-4 text-gray-500">아직 방명록이 없습니다</div>
           )}
-        </div>
-      </DrawerContent>
-    </Drawer>
+    </div>
+  </DrawerContent>
+</Drawer>
   )
 }
 
@@ -479,12 +473,9 @@ export default function GuestbookTemplate({ username, uid }) {
           <div key={entry.id} className="w-full max-w-[1100px] bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-blue-100/50">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-2">
-                {entry.profileImage ? (
-                  <img src={entry.profileImage} alt="" className="w-8 h-8 rounded-full" />
-                ) : (
-                  <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                )}
-                <span className="font-bold text-gray-800 text-lg tracking-tight">{entry.name}</span>
+                <div className="text-sm text-gray-600">
+                  {entry.name || '익명'}
+                </div>
               </div>
               <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
                 {getTimeAgo(entry.createdAt)}
