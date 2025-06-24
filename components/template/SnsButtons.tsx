@@ -6,7 +6,7 @@ import { useSelector } from 'react-redux';
 import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { FaInstagram, FaFacebook, FaYoutube, FaShoppingBag, FaBlogger, FaLink, FaHeart } from 'react-icons/fa';
-import { BsPhone, BsGlobe2, BsEyeFill } from 'react-icons/bs';
+import { BsPhone, BsGlobe2, BsEyeFill, BsThreeDots } from 'react-icons/bs';
 import { IoLocationSharp } from 'react-icons/io5';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 import { SiNaver } from 'react-icons/si';
@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
+import { IconType } from 'react-icons';
 
 interface ContactButtonsProps {
   username?: string;
@@ -52,25 +53,25 @@ const DEFAULT_CONTACT: ContactInfo = {
   likedBy: []
 };
 
+interface ButtonConfig {
+  field: string;
+  icon: IconType;
+  label: string;
+  color: string;
+  onClick?: () => void;
+  count?: number;
+  isActive?: boolean;
+}
+
 export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   const [contactInfo, setContactInfo] = useState<ContactInfo>(DEFAULT_CONTACT);
-  const [isMobile, setIsMobile] = useState(false);
+  const [showAllButtons, setShowAllButtons] = useState(false);
   const pathname = usePathname();
   const isEditable = pathname.startsWith('/editor');
   const { currentUser } = useSelector((state: any) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const [hasLiked, setHasLiked] = useState(false);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -228,249 +229,75 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
 
   const renderButtons = () => {
     const buttons = [
-      // 조회수 버튼
-      <div key="views" className="px-[5px]">
-        <button
-          className="w-14 h-14 md:w-16 md:h-16 flex flex-col items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-all duration-200 shadow-md hover:shadow-lg"
-          title="조회수"
-        >
-          <BsEyeFill className="text-xl md:text-2xl mb-1 text-white" />
-          <span className="text-xs font-medium text-white">{(contactInfo?.views || 0).toLocaleString()}</span>
-        </button>
-      </div>,
+      ...((!isEditable) ? [
+        { field: 'views', icon: BsEyeFill, label: '조회수', color: 'bg-blue-500 hover:bg-blue-600', count: contactInfo.views || 0 },
+        { field: 'likes', icon: FaHeart, label: hasLiked ? "좋아요 취소" : "좋아요", color: 'bg-blue-500 hover:bg-blue-600', onClick: handleLike, count: contactInfo.likes || 0, isActive: hasLiked }
+      ] : []),
+      { field: 'phone', icon: BsPhone, label: '전화번호', color: 'bg-blue-500 hover:bg-blue-600', onClick: () => handleButtonClick('phone') },
+      { field: 'location', icon: IoLocationSharp, label: '위치', color: 'bg-blue-500 hover:bg-blue-600', onClick: () => handleButtonClick('location') },
+      { field: 'instagram', icon: FaInstagram, label: '인스타그램', color: 'from-purple-600 via-pink-500 to-orange-400', onClick: () => handleButtonClick('instagram') },
+      { field: 'kakao', icon: RiKakaoTalkFill, label: '카카오톡', color: 'bg-yellow-400 hover:bg-yellow-500 text-black', onClick: () => handleButtonClick('kakao') },
+      { field: 'facebook', icon: FaFacebook, label: '페이스북', color: 'bg-blue-600 hover:bg-blue-700', onClick: () => handleButtonClick('facebook') },
+      { field: 'youtube', icon: FaYoutube, label: '유튜브', color: 'bg-red-600 hover:bg-red-700', onClick: () => handleButtonClick('youtube') },
+      { field: 'naver', icon: SiNaver, label: '네이버', color: 'bg-green-500 hover:bg-green-600', onClick: () => handleButtonClick('naver') },
+      { field: 'website', icon: BsGlobe2, label: '웹사이트', color: 'bg-gray-600 hover:bg-gray-700', onClick: () => handleButtonClick('website') },
+      { field: 'shop', icon: FaShoppingBag, label: '쇼핑몰', color: 'bg-pink-500 hover:bg-pink-600', onClick: () => handleButtonClick('shop') },
+      { field: 'blog', icon: FaBlogger, label: '블로그', color: 'bg-orange-500 hover:bg-orange-600', onClick: () => handleButtonClick('blog') },
+    ] as ButtonConfig[];
 
-      // 좋아요 버튼
-      <div key="likes" className="px-[5px]">
+    // 모바일에서는 4개, 데스크톱에서는 모든 버튼 표시
+    const mainButtons = buttons.slice(0, 4);
+    const extraButtons = buttons.slice(4);
+
+    const renderButton = (button: ButtonConfig) => (
+      (button.field === 'likes' || button.field === 'views' || contactInfo[button.field as keyof ContactInfo]) && (
         <button
-          onClick={handleLike}
-          className={`w-14 h-14 md:w-16 md:h-16 flex flex-col items-center justify-center 
-            ${hasLiked 
-              ? 'bg-blue-500 hover:bg-blue-600' 
-              : 'bg-blue-500 hover:bg-blue-600'
-            } text-white rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-          title={hasLiked ? "좋아요 취소" : "좋아요"}
-          disabled={isEditable}
+          key={button.field}
+          onClick={button.onClick}
+          className={`w-16 h-16 md:w-[4.5rem] md:h-[4.5rem] flex flex-col items-center justify-center ${
+            button.color.includes('from') ? `bg-gradient-to-br ${button.color}` : button.color
+          } rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 my-1`}
+          title={button.label}
         >
-          <FaHeart className={`text-xl md:text-2xl mb-1 ${
-            hasLiked ? 'text-red-400' : 'text-white'
-          }`} />
-          <span className="text-xs font-medium text-white">{(contactInfo?.likes || 0).toLocaleString()}</span>
+          <button.icon className={`text-2xl md:text-3xl ${button.count !== undefined ? 'mb-1' : ''} ${button.isActive ? 'text-red-400' : ''}`} />
+          {button.count !== undefined && (
+            <span className="text-sm font-medium">{button.count}</span>
+          )}
         </button>
+      )
+    );
+
+    return (
+      <div className="w-full mt-4">
+        {/* 모바일 뷰 */}
+        <div className="w-full md:hidden">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {mainButtons.map(renderButton)}
+            {extraButtons.some(({ field }) => contactInfo[field as keyof ContactInfo]) && (
+              <button
+                onClick={() => setShowAllButtons(!showAllButtons)}
+                className="w-16 h-16 flex-shrink-0 flex items-center justify-center bg-white hover:bg-gray-100 text-gray-600 rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 border border-gray-200"
+                title="더보기"
+              >
+                <BsThreeDots className="text-2xl" />
+              </button>
+            )}
+          </div>
+          
+          {showAllButtons && (
+            <div className="flex items-center gap-2 overflow-x-auto mt-2 pb-2">
+              {extraButtons.map(renderButton)}
+            </div>
+          )}
+        </div>
+
+        {/* 데스크톱 뷰 */}
+        <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2">
+          {buttons.map(renderButton)}
+        </div>
       </div>
-    ];
-
-    // 전화번호 버튼
-    if (isEditable || contactInfo.phone) {
-      buttons.push(
-        <div key="phone" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('phone')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.phone ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.phone ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.phone ? "전화번호 수정" : "전화번호 추가") : contactInfo.phone}
-          >
-            <BsPhone className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 위치 버튼
-    if (isEditable || contactInfo.location) {
-      buttons.push(
-        <div key="location" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('location')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.location ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.location ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.location ? "위치 수정" : "위치 추가") : "위치 보기"}
-          >
-            <IoLocationSharp className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 인스타그램 버튼
-    if (isEditable || contactInfo.instagram) {
-      buttons.push(
-        <div key="instagram" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('instagram')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.instagram ? 'bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.instagram ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.instagram ? "인스타그램 수정" : "인스타그램 추가") : "인스타그램으로 이동"}
-          >
-            <FaInstagram className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 페이스북 버튼
-    if (isEditable || contactInfo.facebook) {
-      buttons.push(
-        <div key="facebook" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('facebook')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.facebook ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.facebook ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.facebook ? "페이스북 수정" : "페이스북 추가") : "페이스북으로 이동"}
-          >
-            <FaFacebook className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 유튜브 버튼
-    if (isEditable || contactInfo.youtube) {
-      buttons.push(
-        <div key="youtube" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('youtube')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.youtube ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.youtube ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.youtube ? "유튜브 수정" : "유튜브 추가") : "유튜브로 이동"}
-          >
-            <FaYoutube className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 카카오톡 버튼
-    if (isEditable || contactInfo.kakao) {
-      buttons.push(
-        <div key="kakao" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('kakao')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.kakao ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.kakao ? 'text-black' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.kakao ? "카카오톡 수정" : "카카오톡 추가") : "카카오톡으로 이동"}
-          >
-            <RiKakaoTalkFill className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 네이버 버튼
-    if (isEditable || contactInfo.naver) {
-      buttons.push(
-        <div key="naver" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('naver')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.naver ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.naver ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.naver ? "네이버 수정" : "네이버 추가") : "네이버로 이동"}
-          >
-            <SiNaver className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 웹사이트 버튼
-    if (isEditable || contactInfo.website) {
-      buttons.push(
-        <div key="website" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('website')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.website ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.website ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.website ? "웹사이트 수정" : "웹사이트 추가") : "웹사이트로 이동"}
-          >
-            <BsGlobe2 className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 쇼핑몰 버튼
-    if (isEditable || contactInfo.shop) {
-      buttons.push(
-        <div key="shop" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('shop')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.shop ? 'bg-pink-500 hover:bg-pink-600' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.shop ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.shop ? "쇼핑몰 수정" : "쇼핑몰 추가") : "쇼핑몰로 이동"}
-          >
-            <FaShoppingBag className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    // 블로그 버튼
-    if (isEditable || contactInfo.blog) {
-      buttons.push(
-        <div key="blog" className="px-[5px]">
-          <button
-            onClick={() => handleButtonClick('blog')}
-            className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center ${
-              contactInfo.blog ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-200 hover:bg-gray-300'
-            } ${contactInfo.blog ? 'text-white' : 'text-gray-600'} rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110`}
-            title={isEditable ? (contactInfo.blog ? "블로그 수정" : "블로그 추가") : "블로그로 이동"}
-          >
-            <FaBlogger className="text-2xl md:text-3xl" />
-          </button>
-        </div>
-      );
-    }
-
-    return buttons;
+    );
   };
 
-  return (
-    <div className="w-full max-w-[1100px] mx-auto p-4">
-      {isMobile ? (
-        <Slider
-          dots={false}
-          arrows={false}
-          infinite={false}
-          speed={500}
-          slidesToScroll={3}
-          variableWidth={true}
-          autoplay={true}
-          autoplaySpeed={3000}
-          className="sns-carousel"
-        >
-          {renderButtons()}
-        </Slider>
-      ) : (
-        <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-          {renderButtons()}
-        </div>
-      )}
-
-      <style jsx global>{`
-        .sns-carousel {
-          margin: 0 -5px;
-        }
-        .sns-carousel .slick-track {
-          display: flex;
-          align-items: center;
-          padding: 20px 0;
-        }
-        .sns-carousel .slick-slide {
-          display: flex;
-          justify-content: center;
-        }
-        .sns-carousel .slick-list {
-          overflow: visible;
-        }
-      `}</style>
-    </div>
-  );
+  return renderButtons();
 } 
