@@ -12,6 +12,8 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
+  updateDoc,
+  increment,
 } from 'firebase/firestore';
 import app from '@/firebase';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -36,6 +38,7 @@ const CalendarWithEvents = ({ username, uid }) => {
   const [events, setEvents] = useState([]);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmCount, setConfirmCount] = useState(0); // 확인 버튼 클릭 횟수
   const [newEvent, setNewEvent] = useState({
     title: '',
     startTime: '',
@@ -92,6 +95,7 @@ const CalendarWithEvents = ({ username, uid }) => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        confirmCount: doc.data().confirmCount || 0
       }));
       setEvents(list);
     });
@@ -134,6 +138,7 @@ const CalendarWithEvents = ({ username, uid }) => {
       title: newEvent.title,
       startTime: newEvent.startTime,
       endTime: newEvent.endTime,
+      confirmCount: 0, // 확인 횟수 초기값
     };
 
     try {
@@ -168,6 +173,31 @@ const CalendarWithEvents = ({ username, uid }) => {
     } catch (error) {
       console.error("일정 삭제 실패:", error);
       alert("일정 삭제에 실패했습니다.");
+    }
+  };
+
+  const handleConfirm = async (eventId) => {
+    try {
+      const eventRef = doc(db, 'users', finalUid, 'event', eventId);
+      const currentEvent = events.find(e => e.id === eventId);
+      
+      if (currentEvent) {
+        const newCount = (currentEvent.confirmCount || 0) + 1;
+        await updateDoc(eventRef, {
+          confirmCount: newCount
+        });
+
+        // 로컬 상태도 즉시 업데이트
+        setEvents(prev => prev.map(e => 
+          e.id === eventId ? { ...e, confirmCount: newCount } : e
+        ));
+        setSelectedEvents(prev => prev.map(e => 
+          e.id === eventId ? { ...e, confirmCount: newCount } : e
+        ));
+      }
+    } catch (error) {
+      console.error("확인 횟수 업데이트 실패:", error);
+      alert("확인 횟수 업데이트에 실패했습니다.");
     }
   };
 
@@ -317,31 +347,62 @@ const CalendarWithEvents = ({ username, uid }) => {
             </DialogTitle>
           </DialogHeader>
           {selectedEvents.length > 0 ? (
-            <ul className="space-y-3 h-full overflow-y-auto mt-4">
-              {selectedEvents.map((e) => (
-                <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
-                    <div className="text-sm text-gray-600 mt-1 break-all">{e.title}</div>
-                  </div>
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        await handleDelete(e.id);
-                        setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
-                      }}
-                      className="ml-4 p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
-                    >
-                      삭제
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-4">
+              <ul className="space-y-3 h-full max-h-[300px] overflow-y-auto mt-4">
+                {selectedEvents.map((e) => (
+                  <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
+                    <div className="flex-1">
+                      <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
+                      <div className="text-sm text-gray-600 mt-1 break-all">{e.title}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        확인: <span className="text-blue-600 font-bold">{e.confirmCount || 0}</span>
+                      </span>
+                      <Button
+                        onClick={() => handleConfirm(e.id)}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
+                      >
+                        확인
+                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await handleDelete(e.id);
+                            setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
+                          }}
+                          className="ml-2 p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
+                        >
+                          삭제
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex justify-end pt-4 border-t border-blue-100/50">
+                <Button
+                  onClick={() => setModalOpen(false)}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
+                >
+                  닫기
+                </Button>
+              </div>
+            </div>
           ) : (
-            <DialogDescription className="text-gray-500 mt-4 text-center py-8">등록된 일정이 없습니다.</DialogDescription>
+            <div className="space-y-4">
+              <DialogDescription className="text-gray-500 mt-4 text-center py-8">등록된 일정이 없습니다.</DialogDescription>
+              <div className="flex justify-end pt-4 border-t border-blue-100/50">
+                <Button
+                  onClick={() => setModalOpen(false)}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
+                >
+                  닫기
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

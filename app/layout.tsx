@@ -3,6 +3,7 @@ import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/themeProvider";
 import ClientLayout from "@/components/ClientLayout";
+import { Toast } from '@/components/ui/use-toast';
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -35,7 +36,8 @@ export default function RootLayout({
           </ThemeProvider>
             {/* <FabButton /> */}
         </ClientLayout>
-          </body>
+        <Toast />
+      </body>
     </html>
   );
 }

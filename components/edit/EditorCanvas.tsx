@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { db } from '../../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
+import { ComponentLibrary } from './ComponentLibrary';
 import { useSelector } from 'react-redux';
 import { Button } from "@/components/ui/button"
 import {

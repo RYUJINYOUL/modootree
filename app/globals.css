@@ -3,7 +3,7 @@
 
 body{
   /* <!--높이가 화면 꽉차게--> */
-  height: 100vh;
+  height: 100vh; 
 }
 
 @custom-variant dark (&:is(.dark *));
