@@ -14,7 +14,7 @@ import React from 'react';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
-  if (!url) return '';
+  if (!url) return null;
   
   // 일반 YouTube URL
   const normalMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
@@ -36,7 +36,7 @@ const getVideoUrl = (url: string, type: string) => {
     const videoId = getYouTubeVideoId(url);
     return {
       type: 'youtube',
-      url: videoId
+      url: videoId || ''
     };
   }
   
@@ -61,6 +61,21 @@ export default function UserPublicPage() {
 
   const [userData, setUserData] = useState<any>(null);
   const [components, setComponents] = useState<string[]>([]);
+
+  const handleBackgroundChange = async (type: string, value: string) => {
+    if (!userData?.uid) {
+      console.error('사용자 ID를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      const settingsDocRef = doc(db, 'users', userData.uid, 'settings', 'background');
+      await setDoc(settingsDocRef, { type, value }, { merge: true });
+      setContextBackground(type, value);
+    } catch (error) {
+      console.error('배경 설정 저장 중 오류 발생:', error);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -89,23 +104,7 @@ export default function UserPublicPage() {
     }
 
     fetchData();
-  }, [username, setContextBackground]);
-
-  // 배경 설정 변경 시 Firebase에 저장
-  const handleBackgroundChange = async (type: string, value: string) => {
-    if (!userData?.uid) {
-      console.error('사용자 ID를 찾을 수 없습니다.');
-      return;
-    }
-
-    try {
-      const settingsDocRef = doc(db, 'users', userData.uid, 'settings', 'background');
-      await setDoc(settingsDocRef, { type, value }, { merge: true });
-      setContextBackground(type, value);
-    } catch (error) {
-      console.error('배경 설정 저장 중 오류 발생:', error);
-    }
-  };
+  }, [username]);
 
   if (!userData) return null;
 
@@ -145,6 +144,7 @@ export default function UserPublicPage() {
               return (
                 <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
                   <iframe
+                    key={videoId}
                     src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     className="w-[300%] h-[300%] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-[100%] min-h-[100%]"
@@ -163,18 +163,14 @@ export default function UserPublicPage() {
                     loop
                     muted
                     playsInline
-                    preload="auto"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const video = e.target as HTMLVideoElement;
-                      console.error('비디오 에러:', {
-                        error: video.error,
-                        src: video.src
-                      });
-                    }}
+                    controls={false}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ objectFit: 'cover' }}
                   >
-                    <source src={videoInfo.url} type="video/mp4" />
-                    <source src={videoInfo.url.replace('_large', '_medium')} type="video/mp4" />
+                    <source 
+                      src={videoInfo.url} 
+                      type="video/mp4"
+                    />
                   </video>
                 </div>
               );
