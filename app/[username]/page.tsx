@@ -11,6 +11,7 @@ import BackgroundSelector from '@/components/template/BackgroundSelector';
 import { useBackground } from '@/components/providers';
 import { useState, useEffect } from 'react';
 import React from 'react';
+import Footer from '@/components/ui/Footer';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
@@ -184,17 +185,22 @@ export default function UserPublicPage() {
           />
         </>
       )}
-      <div className="fixed top-4 right-4 z-50">
-        <BackgroundSelector onBackgroundChange={handleBackgroundChange} username={username} />
+      <div className="flex-grow flex flex-col items-center justify-center w-full">
+        <div className="md:w-[1000px] w-full px-[10px]">   
+          {components.map((type: string, i: number) => {
+            const Component = ComponentLibrary[type as keyof typeof ComponentLibrary];
+            return Component && <Component key={i} username={username} uid={userData.uid} />;
+          })}
+        </div>
       </div>
-      <div className="md:w-[1000px] w-full px-[10px]">   
-        {components.map((type: string, i: number) => {
-          const Component = ComponentLibrary[type as keyof typeof ComponentLibrary];
-          return Component && <Component key={i} username={username} uid={userData.uid} />;
-        })}
+      <div className="w-full">
+        <div className="fixed top-4 right-4 z-50">
+          <BackgroundSelector onBackgroundChange={handleBackgroundChange} username={username} />
+        </div>
+        <div className="h-[50px]"></div>
+        <Footer />
+        <UserEditButton username={username} ownerUid={userData.uid} />
       </div>
-      <div className='h-[50px]'></div>
-      <UserEditButton username={username} ownerUid={userData.uid} />
     </main>
   );
 }

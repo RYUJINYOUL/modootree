@@ -11,38 +11,38 @@ export default function Footer() {
   if (isMainPage || isAuthPage) return null;
 
   return (
-    <footer className="w-full py-8 mt-auto bg-gradient-to-r from-blue-50 to-indigo-50">
+    <footer className="w-full py-6 mt-auto backdrop-blur-sm bg-black/10">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-4">
           {/* 로고 섹션 */}
           <div className="flex items-center gap-2">
             <Image
               src="/Image/logo.png"
               alt="모두트리 로고"
-              width={40}
-              height={40}
+              width={30}
+              height={30}
               className="rounded-lg"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-lg font-bold text-white/90">
               모두트리
             </span>
           </div>
 
           {/* CTA 섹션 */}
           <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">
+            <h3 className="text-sm font-medium mb-2 text-white/80">
               나만의 특별한 한 페이지를 만들어보세요
             </h3>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-3">
               <Link
                 href="/"
-                className="inline-block px-6 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600"
+                className="inline-block px-4 py-1.5 text-sm rounded-full transition-all duration-300 bg-white/20 hover:bg-white/30 text-white"
               >
                 무료시작
               </Link>
               <Link
                 href="/farmtoolceo"
-                className="inline-block px-6 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg border-2 border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white"
+                className="inline-block px-4 py-1.5 text-sm rounded-full transition-all duration-300 border border-white/30 text-white/90 hover:bg-white/10"
               >
                 문의하기
               </Link>
@@ -50,7 +50,7 @@ export default function Footer() {
           </div>
 
           {/* 카피라이트 */}
-          <div className="text-sm mt-4 text-gray-500">
+          <div className="text-xs text-white/60">
             © {new Date().getFullYear()} 모두트리. All rights reserved.
           </div>
         </div>
