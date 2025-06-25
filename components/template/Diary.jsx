@@ -26,8 +26,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTrigger,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 
 const db = getFirestore(app);
+
+const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
+  const { currentUser } = useSelector((state) => state.user);
+  const finalUid = uid ?? currentUser?.uid;
+
+  return (
+    <Drawer>
+      <DrawerTrigger asChild>
+        {children}
+      </DrawerTrigger>
+      <DrawerContent className={`w-full h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
+        <DrawerHeader>
+          <DrawerTitle>일기장</DrawerTitle>
+        </DrawerHeader>
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* 일기 작성 폼이 여기에 들어갈 수 있습니다 */}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+};
 
 const Diary = ({ username, uid }) => {
   const pathname = usePathname();
@@ -140,15 +168,41 @@ const Diary = ({ username, uid }) => {
 
   return (
     <div className="w-full max-w-[1000px] mx-auto p-4 space-y-6">
-      {/* 일기 작성 버튼 */}
-      {canEdit && !isWriting && !editingDiary && (
-        <Button
-          onClick={() => setIsWriting(true)}
-          className="w-full p-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-2xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600"
-        >
-          새 일기 작성하기
-        </Button>
-      )}
+      <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800 mx-auto">
+        <HeaderDrawer uid={finalUid}>
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (canEdit) {
+                setIsWriting(true);
+              }
+            }}
+            className="absolute left-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
+        </HeaderDrawer>
+        일기장
+        <HeaderDrawer uid={finalUid}>
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (canEdit) {
+                setIsWriting(true);
+              }
+            }}
+            className="absolute right-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        </HeaderDrawer>
+      </div>
 
       {/* 일기 작성 폼 */}
       {isWriting && (
@@ -163,7 +217,10 @@ const Diary = ({ username, uid }) => {
             />
             <Button
               type="button"
-              onClick={() => setNewDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }))}
+              onClick={(e) => {
+                e.preventDefault();
+                setNewDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }));
+              }}
               className={`ml-4 p-3 rounded-xl transition-all ${
                 newDiary.isPrivate 
                 ? 'bg-red-100 text-red-600 hover:bg-red-200' 
@@ -218,7 +275,10 @@ const Diary = ({ username, uid }) => {
             />
             <Button
               type="button"
-              onClick={() => setEditingDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }))}
+              onClick={(e) => {
+                e.preventDefault();
+                setEditingDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }));
+              }}
               className={`ml-4 p-3 rounded-xl transition-all ${
                 editingDiary.isPrivate 
                 ? 'bg-red-100 text-red-600 hover:bg-red-200' 

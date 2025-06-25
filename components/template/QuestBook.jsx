@@ -254,11 +254,9 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   }
 
   return (
-  <Drawer {...props}>
+  <Drawer>
       <DrawerTrigger asChild>
-        <button className='px-6 py-3.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none'>
-          방명록 목록 열기 · 쓰기
-        </button>
+        {children}
       </DrawerTrigger>
       <DrawerContent className={`w-full h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
         <DrawerHeader>
@@ -455,17 +453,32 @@ export default function GuestbookTemplate({ username, uid }) {
   return (
     <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
       <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800">
-        <button className="absolute left-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-          </svg>
-        </button>
+        <HeaderDrawer uid={finalUid}>
+          <button className="absolute left-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
+        </HeaderDrawer>
         게스트북
-        <button className="absolute right-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
+        <HeaderDrawer uid={finalUid}>
+          <button 
+            onClick={() => {
+              const drawerContent = document.querySelector('[role="dialog"]');
+              if (drawerContent) {
+                const form = drawerContent.querySelector('form');
+                if (form) {
+                  form.scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+            }}
+            className="absolute right-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        </HeaderDrawer>
       </div>
       <div className='h-[20px]'/>
       <div className="w-full flex flex-col items-center gap-6">
@@ -501,12 +514,7 @@ export default function GuestbookTemplate({ username, uid }) {
         ))}
       </div>
       <div className="pt-4 w-full flex justify-center">
-        <HeaderDrawer uid={finalUid} drawerContentClassName="md:w-[1100px] pt-6 p-2">
-          <div className="text-center">
-            <h2 className="text-xl font-bold mb-2">방명록</h2>
-            <p className="text-gray-600">방문 기록을 남겨주세요</p>
-          </div>
-        </HeaderDrawer>
+        <div className="h-[40px]" />
       </div>
     </div>
   )
