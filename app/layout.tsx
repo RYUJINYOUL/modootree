@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR } from "next/font/google";
+import { Inter } from 'next/font/google';
 import "./globals.css";
-import { ThemeProvider } from "@/providers/themeProvider";
-import ClientLayout from "@/components/ClientLayout";
-import { Toast } from '@/components/ui/use-toast';
+import { Providers } from '@/components/providers';
+import { Toaster } from 'sonner';
+import { cn } from '@/lib/utils';
 
-const notoSansKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "700", "900"],
-  display: "swap",
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: '모두트리 - 나의 특별한 페이지',
@@ -18,26 +14,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="ko"
-     suppressHydrationWarning>
-      <body className={notoSansKr.className}>
-      <ClientLayout>
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
+    <html lang="ko" suppressHydrationWarning>
+      <body
+        className={cn(
+          inter.className,
+          'min-h-screen bg-background antialiased transition-colors duration-300'
+        )}
+        suppressHydrationWarning
+      >
+        <Providers>
+          <main className="relative min-h-screen">
             {children}
-          </ThemeProvider>
-            {/* <FabButton /> */}
-        </ClientLayout>
-        <Toast />
-          </body>
+          </main>
+          <Toaster />
+        </Providers>
+      </body>
     </html>
   );
 }

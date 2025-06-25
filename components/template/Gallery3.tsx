@@ -222,6 +222,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
             alt="로고"
             width={100}
             height={100}
+            priority
             className="rounded-full border-4 border-white shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
             onClick={() => isEditable && !isUploading && logoInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
             title={isEditable ? "로고 클릭 시 변경" : ""}
