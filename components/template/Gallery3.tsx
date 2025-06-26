@@ -199,7 +199,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
 
   return (
     <div className="flex items-center justify-center w-full p-[10px]">
-      <div className="relative w-full md:w-[1000px] overflow-hidden rounded-xl shadow-lg" style={{ backgroundColor: computedBgColor }}>
+      <div className="relative w-full md:w-[1000px] overflow-hidden rounded-xl shadow-lg" style={{ backgroundColor: computedBgColor, minHeight: "250px" }}>
         <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
         <div
           className="absolute inset-0 z-0"
@@ -212,7 +212,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
             backgroundPosition: "center",
             cursor: isEditable ? "pointer" : "default",
           }}
-          onClick={() => isEditable && !isUploading && bgInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
+          onClick={() => isEditable && !isUploading && bgInputRef.current?.click()}
         />
 
         <div className="relative z-10 flex flex-col items-center pt-12 px-4" style={{ color: textColor }}>
@@ -223,12 +223,14 @@ function Gallery3 ({ username, uid }: LogoProps) {
             width={100}
             height={100}
             priority
-            className="rounded-full border-4 border-white shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
-            onClick={() => isEditable && !isUploading && logoInputRef.current?.click()} // isUploading 중에는 클릭 비활성화
+            className="rounded-full border-4 border-black/20 backdrop-blur-[2px] shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
+            onClick={() => isEditable && !isUploading && logoInputRef.current?.click()}
             title={isEditable ? "로고 클릭 시 변경" : ""}
           />
-          <h1 className={`text-2xl font-bold mt-4 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
-          <p className={`text-sm mt-1 mb-10 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
+          <div className="mt-4 px-4 py-2 rounded-lg bg-black/10 backdrop-blur-[2px]">
+            <h1 className={`text-2xl font-bold ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
+            <p className={`text-sm mt-1 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
+          </div>
 
           {isEditable && (
             <div className="absolute top-4 left-4 right-4 flex justify-between">
