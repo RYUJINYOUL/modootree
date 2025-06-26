@@ -40,8 +40,7 @@ export default function Footer() {
             <div className="flex items-center justify-center gap-3">
               <Link
                 href="/"
-                className="inline-block px-4 py-1.5 rounded-full transition-all duration-300 bg-white/10 hover:bg-white/20 text-white/90 text-sm"
-              >
+                className="inline-block px-4 py-1.5 rounded-full transition-all duration-300 bg-white/10 hover:bg-white/20 text-white/90 text-sm">
                 무료시작
               </Link>
               <Link
@@ -55,7 +54,9 @@ export default function Footer() {
 
           {/* 카피라이트 */}
           <div className="text-xs text-white/60">
+
             © {new Date().getFullYear()} 모두트리
+
           </div>
         </div>
       </div>
