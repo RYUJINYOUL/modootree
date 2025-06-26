@@ -207,64 +207,70 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     }
 
     const url = contactInfo[field];
-    if (!url || typeof url !== 'string') return;
+    if (!url || url === '') {
+      return;
+    }
 
     switch (field) {
       case 'phone':
         window.location.href = `tel:${url}`;
         break;
       case 'location':
-      case 'instagram':
-      case 'facebook':
-      case 'youtube':
-      case 'website':
-      case 'shop':
-      case 'blog':
-      case 'kakao':
-      case 'naver':
-        window.open(url, '_blank');
+        window.open(String(url) || '#', '_blank', 'noopener,noreferrer');
         break;
+      default:
+        window.open(String(url) || '#', '_blank', 'noopener,noreferrer');
     }
   };
 
   const renderButtons = () => {
-    const buttons = [
+    const buttons: ButtonConfig[] = [
       ...((!isEditable) ? [
-        { field: 'views', icon: BsEyeFill, label: '조회수', color: 'bg-blue-500 hover:bg-blue-600', count: contactInfo.views || 0 },
-        { field: 'likes', icon: FaHeart, label: hasLiked ? "좋아요 취소" : "좋아요", color: 'bg-blue-500 hover:bg-blue-600', onClick: handleLike, count: contactInfo.likes || 0, isActive: hasLiked }
+        { field: 'views', icon: BsEyeFill, label: '조회수', color: 'text-blue-400/80', count: contactInfo.views || 0 },
+        { field: 'likes', icon: FaHeart, label: hasLiked ? "좋아요 취소" : "좋아요", color: 'text-blue-400/80', onClick: handleLike, count: contactInfo.likes || 0, isActive: hasLiked }
       ] : []),
-      { field: 'phone', icon: BsPhone, label: '전화번호', color: 'bg-blue-500 hover:bg-blue-600', onClick: () => handleButtonClick('phone') },
-      { field: 'location', icon: IoLocationSharp, label: '위치', color: 'bg-blue-500 hover:bg-blue-600', onClick: () => handleButtonClick('location') },
-      { field: 'instagram', icon: FaInstagram, label: '인스타그램', color: 'from-purple-600 via-pink-500 to-orange-400', onClick: () => handleButtonClick('instagram') },
-      { field: 'kakao', icon: RiKakaoTalkFill, label: '카카오톡', color: 'bg-yellow-400 hover:bg-yellow-500 text-black', onClick: () => handleButtonClick('kakao') },
-      { field: 'facebook', icon: FaFacebook, label: '페이스북', color: 'bg-blue-600 hover:bg-blue-700', onClick: () => handleButtonClick('facebook') },
-      { field: 'youtube', icon: FaYoutube, label: '유튜브', color: 'bg-red-600 hover:bg-red-700', onClick: () => handleButtonClick('youtube') },
-      { field: 'naver', icon: SiNaver, label: '네이버', color: 'bg-green-500 hover:bg-green-600', onClick: () => handleButtonClick('naver') },
-      { field: 'website', icon: BsGlobe2, label: '웹사이트', color: 'bg-gray-600 hover:bg-gray-700', onClick: () => handleButtonClick('website') },
-      { field: 'shop', icon: FaShoppingBag, label: '쇼핑몰', color: 'bg-pink-500 hover:bg-pink-600', onClick: () => handleButtonClick('shop') },
-      { field: 'blog', icon: FaBlogger, label: '블로그', color: 'bg-orange-500 hover:bg-orange-600', onClick: () => handleButtonClick('blog') },
-    ] as ButtonConfig[];
+      { field: 'phone', icon: BsPhone, label: '전화번호', color: 'text-gray-100/90' },
+      { field: 'location', icon: IoLocationSharp, label: '위치', color: 'text-red-500/90' },
+      { field: 'instagram', icon: FaInstagram, label: '인스타그램', color: 'text-pink-500/90' },
+      { field: 'facebook', icon: FaFacebook, label: '페이스북', color: 'text-blue-600/90' },
+      { field: 'youtube', icon: FaYoutube, label: '유튜브', color: 'text-red-600/90' },
+      { field: 'kakao', icon: RiKakaoTalkFill, label: '카카오톡', color: 'text-yellow-400/90' },
+      { field: 'naver', icon: SiNaver, label: '네이버', color: 'text-green-500/90' },
+      { field: 'website', icon: BsGlobe2, label: '웹사이트', color: 'text-blue-400/90' },
+      { field: 'shop', icon: FaShoppingBag, label: '쇼핑몰', color: 'text-purple-500/90' },
+      { field: 'blog', icon: FaBlogger, label: '블로그', color: 'text-orange-500/90' },
+    ];
+
+    // 에디터 모드가 아닐 때는 링크가 있는 버튼만 표시
+    const filteredButtons = isEditable 
+      ? buttons 
+      : buttons.filter(button => {
+          if (button.field === 'views' || button.field === 'likes') return true;
+          return contactInfo[button.field as keyof ContactInfo] && contactInfo[button.field as keyof ContactInfo] !== '';
+        });
 
     // 모바일에서는 4개, 데스크톱에서는 모든 버튼 표시
-    const mainButtons = buttons.slice(0, 4);
-    const extraButtons = buttons.slice(4);
+    const mainButtons = filteredButtons.slice(0, 4);
+    const extraButtons = filteredButtons.slice(4);
 
     const renderButton = (button: ButtonConfig) => (
-      (button.field === 'likes' || button.field === 'views' || contactInfo[button.field as keyof ContactInfo]) && (
-        <button
-          key={button.field}
-          onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
-          className={`w-16 h-16 md:w-[4.5rem] md:h-[4.5rem] flex flex-col items-center justify-center ${
-            button.color.includes('from') ? `bg-gradient-to-br ${button.color}` : button.color
-          } rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 my-1`}
-          title={button.label}
-        >
-          {React.createElement(button.icon, { className: `text-2xl md:text-3xl text-white ${button.count !== undefined ? 'mb-1' : ''} ${button.isActive ? 'text-red-400' : ''}` })}
-          {button.count !== undefined && (
-            <span className="text-sm font-medium text-white">{button.count}</span>
-          )}
-        </button>
-      )
+      <button
+        key={button.field}
+        onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
+        className={`w-16 h-16 md:w-[4.5rem] md:h-[4.5rem] flex flex-col items-center justify-center 
+          bg-black/30 backdrop-blur-sm
+          rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 my-1
+          ${button.isActive ? 'bg-black/40' : ''}`}
+        title={button.label}
+      >
+        {React.createElement(button.icon, { 
+          className: `text-2xl md:text-3xl ${button.color} ${button.count !== undefined ? 'mb-1' : ''} 
+          ${button.isActive ? 'text-red-400' : ''}` 
+        })}
+        {button.count !== undefined && (
+          <span className="text-sm font-medium text-blue-400/80">{button.count}</span>
+        )}
+      </button>
     );
 
     return (
@@ -273,10 +279,10 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
         <div className="w-full md:hidden">
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {mainButtons.map(renderButton)}
-            {extraButtons.some(({ field }) => contactInfo[field as keyof ContactInfo]) && (
+            {extraButtons.length > 0 && (
               <button
                 onClick={() => setShowAllButtons(!showAllButtons)}
-                className="w-16 h-16 flex-shrink-0 flex items-center justify-center bg-white hover:bg-gray-100 text-gray-600 rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 border border-gray-200"
+                className="w-16 h-16 flex-shrink-0 flex items-center justify-center bg-black/30 backdrop-blur-sm hover:bg-black/40 text-white/90 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1"
                 title="더보기"
               >
                 <BsThreeDots className="text-2xl" />
@@ -293,7 +299,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
 
         {/* 데스크톱 뷰 */}
         <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2">
-          {buttons.map(renderButton)}
+          {filteredButtons.map(renderButton)}
         </div>
       </div>
     );

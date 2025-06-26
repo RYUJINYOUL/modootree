@@ -15,8 +15,6 @@ export default function Footer() {
     return null;
   }
 
-  console.log('Footer shown');
-
   return (
     <footer className="w-full py-6 mt-auto bg-black/40 backdrop-blur-sm">
       <div className="container mx-auto px-4">
