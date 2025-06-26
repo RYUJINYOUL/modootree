@@ -11,7 +11,6 @@ import BackgroundSelector from '@/components/template/BackgroundSelector';
 import { useBackground } from '@/components/providers';
 import { useState, useEffect } from 'react';
 import React from 'react';
-import Footer from '@/components/ui/Footer';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
@@ -198,7 +197,6 @@ export default function UserPublicPage() {
           <BackgroundSelector onBackgroundChange={handleBackgroundChange} username={username} />
         </div>
         <div className="h-[50px]"></div>
-        <Footer />
         <UserEditButton username={username} ownerUid={userData.uid} />
       </div>
     </main>
