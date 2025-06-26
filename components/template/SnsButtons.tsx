@@ -136,24 +136,20 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
       if (hasLiked) {
         // 좋아요 취소
         await updateDoc(docRef, {
-          likes: increment(-1),
           likedBy: currentLikedBy.filter(id => id !== userId)
         });
         setContactInfo(prev => ({
           ...prev,
-          likes: Math.max(0, (prev.likes || 0) - 1),
           likedBy: currentLikedBy.filter(id => id !== userId)
         }));
         setHasLiked(false);
       } else {
         // 좋아요 추가
         await updateDoc(docRef, {
-          likes: increment(1),
           likedBy: [...currentLikedBy, userId]
         });
         setContactInfo(prev => ({
           ...prev,
-          likes: (prev.likes || 0) + 1,
           likedBy: [...currentLikedBy, userId]
         }));
         setHasLiked(true);
@@ -227,7 +223,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     const buttons: ButtonConfig[] = [
       ...((!isEditable) ? [
         { field: 'views', icon: BsEyeFill, label: '조회수', color: 'text-blue-400/80', count: contactInfo.views || 0 },
-        { field: 'likes', icon: FaHeart, label: hasLiked ? "좋아요 취소" : "좋아요", color: 'text-blue-400/80', onClick: handleLike, count: contactInfo.likes || 0, isActive: hasLiked }
+        { field: 'likes', icon: FaHeart, label: hasLiked ? "좋아요 취소" : "좋아요", color: 'text-blue-400/80', onClick: handleLike, count: contactInfo.likedBy?.length || 0, isActive: hasLiked }
       ] : []),
       { field: 'phone', icon: BsPhone, label: '전화번호', color: 'text-gray-100/90' },
       { field: 'location', icon: IoLocationSharp, label: '위치', color: 'text-red-500/90' },

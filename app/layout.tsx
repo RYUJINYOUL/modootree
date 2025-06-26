@@ -30,8 +30,8 @@ export default function RootLayout({
         <Providers>
           <div className="flex flex-col min-h-screen">
             <main className="flex-1">
-              {children}
-            </main>
+            {children}
+          </main>
             <Footer />
           </div>
           <Toaster />
