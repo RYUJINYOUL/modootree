@@ -250,23 +250,23 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     const extraButtons = filteredButtons.slice(4);
 
     const renderButton = (button: ButtonConfig) => (
-      <button
-        key={button.field}
-        onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
+        <button
+          key={button.field}
+          onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
         className={`w-16 h-16 md:w-[4.5rem] md:h-[4.5rem] flex flex-col items-center justify-center 
           bg-black/30 backdrop-blur-sm
           rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 my-1
           ${button.isActive ? 'bg-black/40' : ''}`}
-        title={button.label}
-      >
+          title={button.label}
+        >
         {React.createElement(button.icon, { 
           className: `text-2xl md:text-3xl ${button.color} ${button.count !== undefined ? 'mb-1' : ''} 
           ${button.isActive ? 'text-red-400' : ''}` 
         })}
-        {button.count !== undefined && (
+          {button.count !== undefined && (
           <span className="text-sm font-medium text-blue-400/80">{button.count}</span>
-        )}
-      </button>
+          )}
+        </button>
     );
 
     return (

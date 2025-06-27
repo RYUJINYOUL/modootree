@@ -5,6 +5,7 @@ import { Providers } from '@/components/providers';
 import { Toaster } from 'sonner';
 import { cn } from '@/lib/utils';
 import Footer from '@/components/ui/Footer';
+import Header from '@/components/Header';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,10 +29,11 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
+          <Header />
           <div className="flex flex-col min-h-screen">
             <main className="flex-1">
-            {children}
-          </main>
+              {children}
+            </main>
             <Footer />
           </div>
           <Toaster />

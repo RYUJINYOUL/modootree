@@ -43,7 +43,7 @@
     "embla-carousel-react": "^8.6.0",
     "emoji-mart": "5.5.2",
     "firebase": "^10.12.4",
-    "firebase-admin": "^12.2.0",
+    "firebase-admin": "^12.7.0",
     "framer-motion": "^12.9.2",
     "lucide-react": "^0.503.0",
     "md5": "^2.3.0",

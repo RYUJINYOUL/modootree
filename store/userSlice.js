@@ -1,12 +1,23 @@
-import { createSlice, current } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
+
+const getLocalStorageItem = (key) => {
+    if (typeof window === 'undefined') return '';
+    const item = localStorage.getItem(key);
+    if (!item) return '';
+    try {
+        return JSON.parse(item);
+    } catch {
+        return '';
+    }
+};
 
 const initialState = {
     currentUser: {
-       uid: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('uid')) : '',
-       photoURL: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem("photoURL")) : '',
-       displayName: (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('displayName')) : '',
+        uid: getLocalStorageItem('uid'),
+        photoURL: getLocalStorageItem('photoURL'),
+        displayName: getLocalStorageItem('displayName'),
     }
-}
+};
 
 // const initialState = {
 //   currentUser: {
@@ -16,29 +27,17 @@ const initialState = {
 //   },
 // };
 
-
-export const userSlice = createSlice({
+const userSlice = createSlice({
     name: 'user',
     initialState,
     reducers: {
         setUser: (state, action) => {
-            state.currentUser.uid = action.payload.uid;
-            state.currentUser.photoURL = action.payload.photoURL;
-            state.currentUser.displayName = action.payload.displayName;
-
-
-            let uid = JSON.stringify(state.currentUser.uid);
-            let photoURL = JSON.stringify(state.currentUser.photoURL);
-            let displayName = JSON.stringify(state.currentUser.displayName);
-
-            localStorage.setItem("uid", uid);
-            localStorage.setItem("photoURL", photoURL);
-            localStorage.setItem("displayName", displayName);
-
-
-            // localStorage.setItem("uid", action.payload.uid);
-            // localStorage.setItem("photoURL", action.payload.photoURL || '');
-            // localStorage.setItem("displayName", action.payload.displayName || '');
+            state.currentUser = action.payload;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('uid', JSON.stringify(action.payload.uid));
+                localStorage.setItem('photoURL', JSON.stringify(action.payload.photoURL));
+                localStorage.setItem('displayName', JSON.stringify(action.payload.displayName));
+            }
         },
         clearUser: (state) => {
             state.currentUser = {
@@ -47,9 +46,9 @@ export const userSlice = createSlice({
                 displayName: '',
             };
             if (typeof window !== 'undefined') {
-                localStorage.removeItem("uid");
-                localStorage.removeItem("photoURL");
-                localStorage.removeItem("displayName");
+                localStorage.removeItem('uid');
+                localStorage.removeItem('photoURL');
+                localStorage.removeItem('displayName');
             }
         },
         setPhotoUrl: (state, action) => {
