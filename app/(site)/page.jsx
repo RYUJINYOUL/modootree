@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
 import { useSelector } from 'react-redux';
 import UseCaseCarousel from '@/components/UseCaseCarousel';
+import Image from 'next/image';
 
 export default function Page() {
   const { currentUser } = useSelector((state) => state.user);
@@ -130,7 +131,16 @@ export default function Page() {
   return (
     <div>
       <div className="flex flex-col items-center justify-center py-12 text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">모두트리</h1>
+        <div className="animate-swing mb-4">
+          <Image
+            src="/Image/logo.png"
+            alt="모두트리"
+            width={120}
+            height={120}
+            className="w-auto h-auto"
+            priority
+          />
+        </div>
         <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
 
         <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">

@@ -3,7 +3,7 @@
 import { useSelector } from 'react-redux';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, signOut } from 'firebase/auth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 export default function Header() {
@@ -11,6 +11,11 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -24,7 +29,7 @@ export default function Header() {
 
   // 로그인 상태가 아니거나 메인 페이지가 아닐 경우 표시하지 않음
   const isMainPage = pathname === '/' || pathname === '/(site)' || pathname === '/(site)/page';
-  if (!user?.currentUser?.uid || !isMainPage) return null;
+  if (!mounted || !user?.currentUser?.uid || !isMainPage) return null;
 
   const handleInquiry = () => {
     window.open('http://pf.kakao.com/_pGNPn/chat', '_blank', 'noopener,noreferrer');
