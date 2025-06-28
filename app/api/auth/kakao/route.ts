@@ -14,6 +14,7 @@ export async function POST(request: Request) {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID!,
+        client_secret: process.env.KAKAO_CLIENT_SECRET!, // 추가된 부분
         redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/kakao/callback`,
         code,
       }),
