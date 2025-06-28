@@ -4,22 +4,14 @@ if (!admin.apps.length) {
   try {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
 
-    if (!projectId || !clientEmail || !privateKey) {
+    if (!projectId || !clientEmail || !privateKeyBase64) {
       throw new Error('Missing Firebase Admin credentials');
     }
 
-    // 디버깅을 위한 로그
-    console.log('Credentials check:');
-    console.log('Project ID:', projectId);
-    console.log('Client Email:', clientEmail);
-    console.log('Private Key exists:', !!privateKey);
-
-    // PEM 형식 확인
-    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-      throw new Error('Invalid private key format');
-    }
+    // Base64 디코딩
+    const privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
 
     admin.initializeApp({
       credential: admin.credential.cert({
