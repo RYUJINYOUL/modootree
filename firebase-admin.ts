@@ -10,10 +10,15 @@ if (!admin.apps.length) {
       throw new Error('Missing Firebase Admin credentials');
     }
 
-    // Vercel에서 환경 변수의 따옴표를 제대로 처리하지 못하는 문제 해결
-    privateKey = privateKey.replace(/\\n/g, '\n');
-    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-      privateKey = privateKey.slice(1, -1);
+    // 디버깅을 위한 로그
+    console.log('Credentials check:');
+    console.log('Project ID:', projectId);
+    console.log('Client Email:', clientEmail);
+    console.log('Private Key exists:', !!privateKey);
+
+    // PEM 형식 확인
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      throw new Error('Invalid private key format');
     }
 
     admin.initializeApp({
@@ -25,9 +30,9 @@ if (!admin.apps.length) {
     });
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
-    // 디버깅을 위한 로그 추가
     if (error instanceof Error) {
       console.error('Error details:', {
+        name: error.name,
         message: error.message,
         stack: error.stack,
       });
