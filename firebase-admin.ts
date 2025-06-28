@@ -6,6 +6,7 @@ if (!admin.apps.length) {
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
+
     if (!projectId || !clientEmail || !privateKey) {
       throw new Error('Missing Firebase Admin credentials');
     }
@@ -19,7 +20,8 @@ if (!admin.apps.length) {
     });
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
+    throw error;
   }
 }
 
-export default admin; 
+export default admin;
