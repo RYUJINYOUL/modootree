@@ -10,11 +10,9 @@ if (!admin.apps.length) {
       throw new Error('Missing Firebase Admin credentials');
     }
 
-    // private key 처리
-    if (privateKey.includes('\\n')) {
-      privateKey = privateKey.replace(/\\n/g, '\n');
-    }
-    
+    // Vercel에서 환경 변수의 따옴표를 이스케이프 처리하는 문제 해결
+    privateKey = privateKey.replace(/"/g, '').replace(/\\n/g, '\n');
+
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId,
