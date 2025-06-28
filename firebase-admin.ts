@@ -10,8 +10,11 @@ if (!admin.apps.length) {
       throw new Error('Missing Firebase Admin credentials');
     }
 
-    // Vercel에서 환경 변수의 따옴표를 이스케이프 처리하는 문제 해결
-    privateKey = privateKey.replace(/"/g, '').replace(/\\n/g, '\n');
+    // Vercel에서 환경 변수의 따옴표를 제대로 처리하지 못하는 문제 해결
+    privateKey = privateKey.replace(/\\n/g, '\n');
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+      privateKey = privateKey.slice(1, -1);
+    }
 
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -22,6 +25,13 @@ if (!admin.apps.length) {
     });
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
+    // 디버깅을 위한 로그 추가
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+      });
+    }
     throw error;
   }
 }
