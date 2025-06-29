@@ -146,6 +146,12 @@ export default function Page() {
         <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
           {renderViewSiteButton('main')}
           {renderViewSiteButton('sub')}
+          <Link
+            href="/likes/all"
+            className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
+          >
+            공감 한 조각
+          </Link>
         </div>
 
         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">

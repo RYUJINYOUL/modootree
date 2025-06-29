@@ -16,7 +16,7 @@ import {
 import app from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import { Lock, Unlock, Pencil, Trash2, Check, X } from 'lucide-react';
@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Drawer,
@@ -33,6 +34,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const db = getFirestore(app);
 
@@ -57,8 +65,11 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   );
 };
 
+const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
+
 const Diary = ({ username, uid }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const isEditable = pathname.startsWith('/editor');
   const [diaries, setDiaries] = useState([]);
   const [newDiary, setNewDiary] = useState({
@@ -69,7 +80,11 @@ const Diary = ({ username, uid }) => {
   const [isWriting, setIsWriting] = useState(false);
   const [editingDiary, setEditingDiary] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [likeModalOpen, setLikeModalOpen] = useState(false);
   const [selectedDiary, setSelectedDiary] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [isLiking, setIsLiking] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
@@ -164,6 +179,42 @@ const Diary = ({ username, uid }) => {
     }
     setSelectedDiary(diary);
     setModalOpen(true);
+  };
+
+  const handleLike = async () => {
+    if (!selectedDiary || !selectedCategory) {
+      alert('카테고리를 선택해주세요.');
+      return;
+    }
+
+    setIsLiking(true);
+    try {
+      await addDoc(collection(db, 'likes'), {
+        content: selectedDiary.content,
+        category: selectedCategory,
+        createdAt: new Date(),
+        diaryId: selectedDiary.id,
+      });
+
+      setLikeModalOpen(false);
+      setSelectedCategory('');
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('공감 저장 실패:', error);
+      alert('공감 저장에 실패했습니다.');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleLikeClick = (e, diary) => {
+    e.stopPropagation();
+    if (diary.isPrivate) {
+      alert('비공개 게시물은 공감할 수 없습니다.');
+      return;
+    }
+    setSelectedDiary(diary);
+    setLikeModalOpen(true);
   };
 
   return (
@@ -344,28 +395,51 @@ const Diary = ({ username, uid }) => {
                   </div>
                   <p className="mt-2 text-gray-600 line-clamp-2">{diary.content}</p>
                 </div>
-                {canEdit && (
-                  <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 ml-4">
+                  {canEdit && (
+                    <>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingDiary(diary);
+                        }}
+                        className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(diary.id);
+                        }}
+                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                  {!diary.isPrivate && (
                     <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingDiary(diary);
-                      }}
-                      className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                      onClick={(e) => handleLikeClick(e, diary)}
+                      className="p-2 bg-violet-100 text-violet-600 rounded-lg hover:bg-violet-200"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="w-4 h-4" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                        />
+                      </svg>
                     </Button>
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(diary.id);
-                      }}
-                      className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               <div className="mt-4 text-sm text-gray-500">
                 {dayjs(diary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
@@ -377,28 +451,89 @@ const Diary = ({ username, uid }) => {
 
       {/* 일기 상세 보기 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl rounded-3xl shadow-2xl border border-blue-100">
-          {selectedDiary && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
-                  {selectedDiary.isPrivate && <Lock className="w-5 h-5" />}
-                  {selectedDiary.title}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="mt-4 space-y-4">
-                <p className="text-gray-600 whitespace-pre-wrap">{selectedDiary.content}</p>
-                <div className="text-sm text-gray-500">
-                  작성: {dayjs(selectedDiary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
-                  {selectedDiary.updatedAt !== selectedDiary.createdAt && (
-                    <div>
-                      수정: {dayjs(selectedDiary.updatedAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{selectedDiary?.title}</span>
+              <span className="text-sm text-gray-500">
+                {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).locale('ko').format('YYYY년 MM월 DD일')}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {selectedDiary?.content}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공감하기 모달 */}
+      <Dialog open={likeModalOpen} onOpenChange={setLikeModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>공감하기</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-gray-700 whitespace-pre-wrap mb-6">
+              {selectedDiary?.content}
+            </p>
+            <div className="flex items-center gap-4">
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="카테고리 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleLike}
+                disabled={isLiking || !selectedCategory}
+                className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
+              >
+                {isLiking ? '저장 중...' : '공감하기'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공감 완료 모달 */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>공감이 저장되었습니다</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <p className="text-gray-600">
+              공감 한 조각 페이지에서 확인하시겠습니까?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowSuccessModal(false)}
+              >
+                닫기
+              </Button>
+              <Button
+                className="bg-violet-500 hover:bg-violet-600 text-white"
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push('/likes/all');
+                }}
+              >
+                공감 한 조각으로 이동
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

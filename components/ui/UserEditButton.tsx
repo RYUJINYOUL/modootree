@@ -1,10 +1,10 @@
 // components/EditButton.tsx
 'use client';
 
-import { useSelector } from 'react-redux';
-import Link from 'next/link';
 import { useState } from 'react';
-import { Share, Copy, Edit } from 'lucide-react';
+import Link from 'next/link';
+import { useSelector } from 'react-redux';
+import { Share, Copy, Edit, Hand } from 'lucide-react';
 
 export default function UserEditButton({ username, ownerUid }: { username: string; ownerUid: string }) {
   const { currentUser } = useSelector((state: any) => state.user);
@@ -61,6 +61,13 @@ export default function UserEditButton({ username, ownerUid }: { username: strin
           <Edit className="w-5 h-5" />
         </Link>
       )}
+
+      <Link
+        href="/likes/all"
+        className="bg-rose-400 text-white p-4 rounded-full shadow-lg hover:bg-rose-500 transition-all hover:scale-110 flex items-center justify-center"
+      >
+        <Hand className="w-5 h-5" />
+      </Link>
     </div>
   );
 }

@@ -20,8 +20,7 @@ export default function KakaoCallbackContent() {
       const code = searchParams.get('code');
       
       if (!code) {
-        setErrorMessage('인증 코드가 없습니다');
-        return;
+        throw new Error('인증 코드가 없습니다');
       }
 
       const response = await fetch('/api/auth/kakao', {
@@ -33,15 +32,27 @@ export default function KakaoCallbackContent() {
         body: JSON.stringify({ code }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API 요청 실패: ${response.status} ${errorText}`);
+      const contentType = response.headers.get('content-type');
+      let responseData;
+
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        const textResponse = await response.text();
+        console.error('서버 응답 형식 오류');
+        throw new Error('서버 응답 형식이 올바르지 않습니다.');
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.details || `인증 처리 중 오류가 발생했습니다.`);
+      }
+
+      if (!responseData.customToken) {
+        throw new Error('인증 토큰이 없습니다.');
+      }
 
       // Firebase Custom Token으로 로그인
-      const userCredential = await signInWithCustomToken(auth, data.customToken);
+      const userCredential = await signInWithCustomToken(auth, responseData.customToken);
       const user = userCredential.user;
 
       // Firestore에서 사용자 정보 확인
@@ -51,8 +62,8 @@ export default function KakaoCallbackContent() {
       if (!userDoc.exists()) {
         // 신규 사용자인 경우 기본 정보만 저장
         await setDoc(userRef, {
-          email: data.kakaoUserInfo.email || null,
-          photoURL: data.kakaoUserInfo.profile_image || null,
+          email: responseData.kakaoUserInfo.email || null,
+          photoURL: responseData.kakaoUserInfo.profile_image || null,
           provider: 'kakao',
           createdAt: serverTimestamp(),
         });
@@ -61,14 +72,18 @@ export default function KakaoCallbackContent() {
       // Redux 상태 업데이트
       dispatch(setUser({
         uid: user.uid,
-        email: data.kakaoUserInfo.email || null,
-        photoURL: data.kakaoUserInfo.profile_image || null,
+        email: responseData.kakaoUserInfo.email || null,
+        photoURL: responseData.kakaoUserInfo.profile_image || null,
       }));
 
       router.push('/');
     } catch (error) {
-      console.error('카카오 로그인 처리 중 오류가 발생했습니다.');
-      setErrorMessage('로그인 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      console.error('인증 처리 중 오류가 발생했습니다.');
+      setErrorMessage(
+        error instanceof Error 
+          ? error.message 
+          : '인증 처리 중 오류가 발생했습니다. 다시 시도해 주세요.'
+      );
     }
   }, [searchParams, router, auth, dispatch]);
 
@@ -76,15 +91,17 @@ export default function KakaoCallbackContent() {
     const code = searchParams.get('code');
     if (code) {
       handleKakaoCallback();
+    } else {
+      setErrorMessage('인증 코드가 없습니다. 다시 로그인해 주세요.');
     }
   }, [handleKakaoCallback, searchParams]);
 
   if (errorMessage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center">
+        <div className="text-center max-w-md mx-auto px-4">
           <h2 className="text-2xl font-bold mb-4 text-white">로그인 오류</h2>
-          <p className="text-red-500 mb-4">{errorMessage}</p>
+          <p className="text-red-500 mb-4 break-words">{errorMessage}</p>
           <button
             onClick={() => router.push('/login')}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

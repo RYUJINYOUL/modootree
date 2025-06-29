@@ -7,11 +7,21 @@ if (!admin.apps.length) {
     const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
 
     if (!projectId || !clientEmail || !privateKeyBase64) {
-      throw new Error('Missing Firebase Admin credentials');
+      throw new Error(
+        '필수 Firebase Admin 환경 변수가 누락되었습니다:\n' +
+        (!projectId ? '- NEXT_PUBLIC_FIREBASE_PROJECT_ID\n' : '') +
+        (!clientEmail ? '- FIREBASE_CLIENT_EMAIL\n' : '') +
+        (!privateKeyBase64 ? '- FIREBASE_PRIVATE_KEY_BASE64\n' : '')
+      );
     }
 
     // Base64 디코딩
-    const privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
+    let privateKey;
+    try {
+      privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
+    } catch (error) {
+      throw new Error('FIREBASE_PRIVATE_KEY_BASE64가 올바른 Base64 형식이 아닙니다.');
+    }
 
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -20,10 +30,12 @@ if (!admin.apps.length) {
         privateKey,
       }),
     });
+
+    console.log('Firebase Admin SDK가 성공적으로 초기화되었습니다.');
   } catch (error) {
-    console.error('Firebase admin initialization error:', error);
+    console.error('Firebase Admin 초기화 오류:', error);
     if (error instanceof Error) {
-      console.error('Error details:', {
+      console.error('오류 상세:', {
         name: error.name,
         message: error.message,
         stack: error.stack,
