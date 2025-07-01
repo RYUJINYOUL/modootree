@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useSelector } from 'react-redux';
 import ComponentPalette from '@/components/edit/ComponentPalette';
@@ -13,32 +13,71 @@ import EditorCanvas2 from '@/components/edit/EditorCanvas2';
 export default function EditPage({ username }: { username: string }) {
   const { currentUser } = useSelector((state: any) => state.user);
   const [ownerUid, setOwnerUid] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // 🔹 username → uid 확인
   useEffect(() => {
-    console.log(username)
     const load = async () => {
-      const ref = doc(db, 'usernames', username);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const uid = snap.data()?.uid;
-        if (!uid || uid !== currentUser?.uid) {
+      try {
+        setIsLoading(true);
+        
+        // 사용자가 로그인하지 않은 경우
+        if (!currentUser?.uid) {
           router.push('/login');
+          return;
+        }
+
+        const usernameRef = doc(db, 'usernames', username);
+        const usernameSnap = await getDoc(usernameRef);
+
+        // username 문서가 없는 경우 (새 사이트 생성)
+        if (!usernameSnap.exists()) {
+          // username 문서 생성
+          await setDoc(usernameRef, {
+            uid: currentUser.uid
+          });
+
+          // 기본 컴포넌트 설정
+          await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
+            components: ["이미지", "링크카드", "달력", "게스트북"],
+          });
+
+          // 기본 배경 설정
+          await setDoc(doc(db, "users", currentUser.uid, "settings", "background"), {
+            type: 'video',
+            value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+          });
+
+          setOwnerUid(currentUser.uid);
         } else {
+          // username 문서가 있는 경우
+          const uid = usernameSnap.data()?.uid;
+          if (uid !== currentUser.uid) {
+            router.push('/');
+            return;
+          }
           setOwnerUid(uid);
         }
-      } else {
-        router.push('/login');
+      } catch (error) {
+        console.error('Error in load:', error);
+        router.push('/');
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (username && currentUser?.uid) {
-      load();
-    }
+    load();
   }, [username, currentUser, router]);
 
-  if (!ownerUid) return null; // 로딩 중이거나 리디렉션 중
+  if (isLoading) {
+    return (
+      <div className="w-full h-screen flex justify-center items-center bg-gray-100">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (!ownerUid) return null;
 
   return (
     <div className="w-full min-h-screen flex justify-center items-start bg-gray-100">

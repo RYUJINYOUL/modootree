@@ -73,6 +73,26 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   const [hasLiked, setHasLiked] = useState(false);
   const { showToast } = useToast();
 
+  // 슬라이더 설정
+  const sliderSettings = {
+    dots: true,
+    infinite: false,
+    speed: 500,
+    slidesToShow: 4,
+    slidesToScroll: 4,
+    responsive: [
+      {
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 4,
+          slidesToScroll: 4,
+          dots: true,
+          arrows: false,
+        }
+      }
+    ]
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!finalUid) return;
@@ -222,8 +242,8 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   const renderButtons = () => {
     const buttons: ButtonConfig[] = [
       ...((!isEditable) ? [
-        { field: 'views', icon: BsEyeFill, label: '조회수', color: 'text-blue-400/80', count: contactInfo.views || 0 },
-        { field: 'likes', icon: FaHeart, label: hasLiked ? "좋아요 취소" : "좋아요", color: 'text-blue-400/80', onClick: handleLike, count: contactInfo.likedBy?.length || 0, isActive: hasLiked }
+        { field: 'views', icon: BsEyeFill, label: '', color: 'text-blue-400/80', count: contactInfo.views || 0 },
+        { field: 'likes', icon: FaHeart, label: '', color: 'text-blue-400/80', onClick: handleLike, count: contactInfo.likedBy?.length || 0, isActive: hasLiked }
       ] : []),
       { field: 'phone', icon: BsPhone, label: '전화번호', color: 'text-gray-100/90' },
       { field: 'location', icon: IoLocationSharp, label: '위치', color: 'text-red-500/90' },
@@ -245,61 +265,49 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
           return contactInfo[button.field as keyof ContactInfo] && contactInfo[button.field as keyof ContactInfo] !== '';
         });
 
-    // 모바일에서는 4개, 데스크톱에서는 모든 버튼 표시
-    const mainButtons = filteredButtons.slice(0, 4);
-    const extraButtons = filteredButtons.slice(4);
-
-    const renderButton = (button: ButtonConfig) => (
-        <button
-          key={button.field}
-          onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
-        className={`w-16 h-16 md:w-[4.5rem] md:h-[4.5rem] flex flex-col items-center justify-center 
-          bg-black/30 backdrop-blur-sm
-          rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1 my-1
-          ${button.isActive ? 'bg-black/40' : ''}`}
-          title={button.label}
-        >
-        {React.createElement(button.icon, { 
-          className: `text-2xl md:text-3xl ${button.color} ${button.count !== undefined ? 'mb-1' : ''} 
-          ${button.isActive ? 'text-red-400' : ''}` 
-        })}
-          {button.count !== undefined && (
-          <span className="text-sm font-medium text-blue-400/80">{button.count}</span>
-          )}
-        </button>
-    );
-
     return (
-      <div className="w-full mt-4">
-        {/* 모바일 뷰 */}
-        <div className="w-full md:hidden">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {mainButtons.map(renderButton)}
-            {extraButtons.length > 0 && (
-              <button
-                onClick={() => setShowAllButtons(!showAllButtons)}
-                className="w-16 h-16 flex-shrink-0 flex items-center justify-center bg-black/30 backdrop-blur-sm hover:bg-black/40 text-white/90 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 mx-1"
-                title="더보기"
-              >
-                <BsThreeDots className="text-2xl" />
-              </button>
-            )}
-          </div>
-          
-          {showAllButtons && (
-            <div className="flex items-center gap-2 overflow-x-auto mt-2 pb-2">
-              {extraButtons.map(renderButton)}
-            </div>
-          )}
+      <div className="w-full my-4">
+        {/* 데스크톱 뷰 */}
+        <div className="hidden md:grid grid-cols-10 gap-3">
+          {filteredButtons.map((button, index) => renderButton(button))}
         </div>
 
-        {/* 데스크톱 뷰 */}
-        <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2">
-          {filteredButtons.map(renderButton)}
+        {/* 모바일 뷰 - 캐러셀 */}
+        <div className="md:hidden">
+          <Slider {...sliderSettings}>
+            {filteredButtons.map((button, index) => (
+              <div key={button.field} className="px-1">
+                {renderButton(button)}
+              </div>
+            ))}
+          </Slider>
         </div>
       </div>
     );
   };
 
-  return renderButtons();
+  const renderButton = (button: ButtonConfig) => (
+    <button
+      key={button.field}
+      onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
+      className={`
+        w-full h-[70px] flex flex-col items-center justify-center gap-1 p-2 rounded-xl
+        ${button.isActive ? 'bg-blue-500/30' : 'bg-blue-500/20'} 
+        backdrop-blur-sm hover:bg-blue-500/30 transition-all
+        ${isEditable ? 'cursor-pointer' : contactInfo[button.field as keyof ContactInfo] ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}
+      `}
+    >
+      <button.icon className={`text-2xl ${button.color}`} />
+      <span className="text-xs text-white/80">{button.label}</span>
+      {button.count !== undefined && (
+        <span className="text-xs text-white/60">{button.count}</span>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="w-full px-4 py-2">
+      {renderButtons()}
+    </div>
+  );
 } 

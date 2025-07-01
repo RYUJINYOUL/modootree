@@ -245,7 +245,7 @@ const Calendar2 = ({ username, uid }) => {
             <div className="text-2xl font-bold text-gray-800">{monthStats.total}개</div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-100">
-            <div className="text-sm text-gray-500">완료된 일정</div>
+            <div className="text-sm text-gray-500">완료 일정</div>
             <div className="text-2xl font-bold text-green-600">{monthStats.completed}개</div>
           </div>
         </div>

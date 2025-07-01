@@ -67,6 +67,18 @@ export default function KakaoCallbackContent() {
           provider: 'kakao',
           createdAt: serverTimestamp(),
         });
+
+          // 기본 배경 설정 저장 (추가)
+      await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+        type: 'video',
+        value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+      });
+
+      // 기본 컴포넌트 설정 (이미 있는 코드)
+      await setDoc(doc(db, "users", user.uid, "links", "page"), {
+        components: ["이미지", "링크카드", "달력", "게스트북"],
+      });
+      
       }
 
       // Redux 상태 업데이트

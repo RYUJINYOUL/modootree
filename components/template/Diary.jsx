@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   getFirestore,
   collection,
@@ -13,6 +13,13 @@ import {
   doc,
   updateDoc,
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+} from 'firebase/storage';
 import app from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
@@ -41,8 +48,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   const { currentUser } = useSelector((state) => state.user);
@@ -72,10 +82,13 @@ const Diary = ({ username, uid }) => {
   const router = useRouter();
   const isEditable = pathname.startsWith('/editor');
   const [diaries, setDiaries] = useState([]);
+  const [currentDate, setCurrentDate] = useState(dayjs());
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [newDiary, setNewDiary] = useState({
     title: '',
     content: '',
     isPrivate: false,
+    images: [],
   });
   const [isWriting, setIsWriting] = useState(false);
   const [editingDiary, setEditingDiary] = useState(null);
@@ -85,11 +98,49 @@ const Diary = ({ username, uid }) => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isLiking, setIsLiking] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [currentWeek, setCurrentWeek] = useState(dayjs());
+  const [crop, setCrop] = useState();
+  const [completedCrop, setCompletedCrop] = useState();
+  const [croppingImage, setCroppingImage] = useState(null);
+  const [croppingImageUrl, setCroppingImageUrl] = useState('');
+  const imgRef = useRef(null);
+  const [selectedDateDiaries, setSelectedDateDiaries] = useState([]);
+  const [showDiaryPopup, setShowDiaryPopup] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;
   const canEdit = isEditable ? finalUid : userRole === uid;
+
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  
+  const startOfMonth = currentDate.startOf('month');
+  const endOfMonth = currentDate.endOf('month');
+  const startDate = startOfMonth.startOf('week');
+  const endDate = endOfMonth.endOf('week');
+
+  const dates = [];
+  let current = startDate;
+
+  while (current.isBefore(endDate) || current.isSame(endDate)) {
+    dates.push(current);
+    current = current.add(1, 'day');
+  }
+
+  const handlePrevMonth = () => setCurrentDate(prev => prev.subtract(1, 'month'));
+  const handleNextMonth = () => setCurrentDate(prev => prev.add(1, 'month'));
+
+  // 주간 날짜 계산
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    return currentWeek.startOf('week').add(i, 'day');
+  });
+
+  const handlePrevWeek = () => setCurrentWeek(prev => prev.subtract(1, 'week'));
+  const handleNextWeek = () => setCurrentWeek(prev => prev.add(1, 'week'));
 
   useEffect(() => {
     if (!finalUid) return;
@@ -112,6 +163,107 @@ const Diary = ({ username, uid }) => {
     return () => unsubscribe();
   }, [finalUid, canEdit]);
 
+  // 이미지 크롭 관련 함수들
+  function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
+    return centerCrop(
+      makeAspectCrop(
+        {
+          unit: '%',
+          width: 90,
+        },
+        aspect,
+        mediaWidth,
+        mediaHeight
+      ),
+      mediaWidth,
+      mediaHeight
+    );
+  }
+
+  const onImageLoad = (e) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 16 / 9));
+  };
+
+  const handleImageUpload = async (files) => {
+    const file = files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCroppingImageUrl(reader.result);
+        setCroppingImage(file);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getCroppedImg = async (image, crop) => {
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width,
+      crop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(new File([blob], croppingImage.name, { type: 'image/jpeg' }));
+      }, 'image/jpeg');
+    });
+  };
+
+  const handleCropComplete = async () => {
+    if (!completedCrop || !imgRef.current) return;
+
+    try {
+      const croppedImage = await getCroppedImg(imgRef.current, completedCrop);
+      setSelectedImages(prev => [...prev, croppedImage]);
+      setCroppingImage(null);
+      setCroppingImageUrl('');
+      setCrop(undefined);
+      setCompletedCrop(undefined);
+    } catch (error) {
+      console.error('이미지 크롭 실패:', error);
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImagesToStorage = async () => {
+    if (selectedImages.length === 0) return [];
+    
+    setUploadingImages(true);
+    try {
+      const uploadPromises = selectedImages.map(async (file) => {
+        const imageRef = ref(storage, `diary/${finalUid}/${Date.now()}_${file.name}`);
+        await uploadBytes(imageRef, file);
+        return getDownloadURL(imageRef);
+      });
+
+      const imageUrls = await Promise.all(uploadPromises);
+      return imageUrls;
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      throw error;
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newDiary.title || !newDiary.content || !userRole) {
@@ -120,13 +272,17 @@ const Diary = ({ username, uid }) => {
     }
 
     try {
+      const imageUrls = await uploadImagesToStorage();
+      
       await addDoc(collection(db, 'users', finalUid, 'diary'), {
         ...newDiary,
+        images: imageUrls,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
 
-      setNewDiary({ title: '', content: '', isPrivate: false });
+      setNewDiary({ title: '', content: '', isPrivate: false, images: [] });
+      setSelectedImages([]);
       setIsWriting(false);
       alert('일기가 저장되었습니다.');
     } catch (error) {
@@ -135,11 +291,21 @@ const Diary = ({ username, uid }) => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, images = []) => {
     if (!canEdit) return;
     if (!window.confirm('정말로 삭제하시겠습니까?')) return;
 
     try {
+      const deletePromises = images.map(async (imageUrl) => {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error('이미지 삭제 실패:', error);
+        }
+      });
+
+      await Promise.all(deletePromises);
       await deleteDoc(doc(db, 'users', finalUid, 'diary', id));
       alert('일기가 삭제되었습니다.');
     } catch (error) {
@@ -217,325 +383,638 @@ const Diary = ({ username, uid }) => {
     setLikeModalOpen(true);
   };
 
+  // 선택된 날짜의 일기들을 필터링하는 함수
+  const getDiariesForDate = (date) => {
+    return diaries.filter(diary => 
+      dayjs(diary.createdAt).format('YYYY-MM-DD') === date.format('YYYY-MM-DD')
+    );
+  };
+
+  // 날짜 클릭 핸들러 수정
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+    const filteredDiaries = getDiariesForDate(date);
+    if (filteredDiaries.length > 0) {
+      setSelectedDateDiaries(filteredDiaries);
+      setShowDiaryPopup(true);
+    }
+  };
+
+  // 페이지네이션된 일기 목록을 반환하는 함수
+  const getPaginatedDiaries = () => {
+    return diaries.slice(0, currentPage * itemsPerPage);
+  };
+
+  // 더보기 버튼 표시 여부
+  const hasMoreDiaries = diaries.length > currentPage * itemsPerPage;
+
+  // 더보기 버튼 클릭 핸들러
+  const handleLoadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+
   return (
-    <div className="w-full max-w-[1000px] mx-auto p-4 space-y-6">
-      <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800 mx-auto">
-        <HeaderDrawer uid={finalUid}>
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (canEdit) {
-                setIsWriting(true);
-              }
-            }}
-            className="absolute left-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-          </button>
-        </HeaderDrawer>
-        일기장
-        <HeaderDrawer uid={finalUid}>
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (canEdit) {
-                setIsWriting(true);
-              }
-            }}
-            className="absolute right-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
-        </HeaderDrawer>
-      </div>
-
-      {/* 일기 작성 폼 */}
-      {isWriting && (
-        <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-2xl shadow-lg border border-blue-100">
-          <div className="flex justify-between items-center">
-            <input
-              type="text"
-              value={newDiary.title}
-              onChange={(e) => setNewDiary(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="제목"
-              className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-gray-50 text-gray-900 placeholder-gray-500"
-            />
-            <Button
-              type="button"
+    <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+      {/* 일기장 제목 */}
+      <div className="w-full max-w-[1000px] mx-auto p-4 space-y-6">
+        <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white mx-auto">
+          <HeaderDrawer uid={finalUid}>
+            <button 
               onClick={(e) => {
                 e.preventDefault();
-                setNewDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }));
+                e.stopPropagation();
+                if (canEdit) {
+                  setIsWriting(true);
+                }
               }}
-              className={`ml-4 p-3 rounded-xl transition-all ${
-                newDiary.isPrivate 
-                ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                : 'bg-green-100 text-green-600 hover:bg-green-200'
-              }`}
+              className="absolute left-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all"
             >
-              <div className="flex items-center gap-2">
-                {newDiary.isPrivate ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                <span className="text-sm font-medium">
-                  {newDiary.isPrivate ? '비공개' : '공개'}
-                </span>
-              </div>
-            </Button>
-          </div>
-          <textarea
-            value={newDiary.content}
-            onChange={(e) => setNewDiary(prev => ({ ...prev, content: e.target.value }))}
-            placeholder="내용을 입력하세요..."
-            className="w-full h-48 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none bg-gray-50 text-gray-900 placeholder-gray-500"
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              onClick={() => {
-                setNewDiary({ title: '', content: '', isPrivate: false });
-                setIsWriting(false);
-              }}
-              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200"
-            >
-              취소
-            </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600"
-            >
-              저장
-            </Button>
-          </div>
-        </form>
-      )}
-
-      {/* 일기 수정 폼 */}
-      {editingDiary && (
-        <form onSubmit={handleEdit} className="space-y-4 bg-white p-6 rounded-2xl shadow-lg border border-blue-100">
-          <div className="flex justify-between items-center">
-            <input
-              type="text"
-              value={editingDiary.title}
-              onChange={(e) => setEditingDiary(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="제목"
-              className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-gray-50 text-gray-900 placeholder-gray-500"
-            />
-            <Button
-              type="button"
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+            </button>
+          </HeaderDrawer>
+          일기장
+          <HeaderDrawer uid={finalUid}>
+            <button 
               onClick={(e) => {
                 e.preventDefault();
-                setEditingDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }));
+                e.stopPropagation();
+                if (canEdit) {
+                  setIsWriting(true);
+                }
               }}
-              className={`ml-4 p-3 rounded-xl transition-all ${
-                editingDiary.isPrivate 
-                ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                : 'bg-green-100 text-green-600 hover:bg-green-200'
-              }`}
+              className="absolute right-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all"
             >
-              <div className="flex items-center gap-2">
-                {editingDiary.isPrivate ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                <span className="text-sm font-medium">
-                  {editingDiary.isPrivate ? '비공개' : '공개'}
-                </span>
-              </div>
-            </Button>
-          </div>
-          <textarea
-            value={editingDiary.content}
-            onChange={(e) => setEditingDiary(prev => ({ ...prev, content: e.target.value }))}
-            placeholder="내용을 입력하세요..."
-            className="w-full h-48 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none bg-gray-50 text-gray-900 placeholder-gray-500"
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              onClick={() => setEditingDiary(null)}
-              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200"
-            >
-              취소
-            </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600"
-            >
-              수정
-            </Button>
-          </div>
-        </form>
-      )}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          </HeaderDrawer>
+        </div>
 
-      {/* 일기 목록 */}
-      <div className="space-y-4">
-        {diaries.length === 0 ? (
-          <div className="p-6 bg-white rounded-2xl shadow-md text-center text-gray-500">
-            등록된 일기가 없습니다.
-          </div>
-        ) : (
-          diaries.map((diary) => (
-            <div
-              key={diary.id}
-              onClick={() => handleDiaryClick(diary)}
-              className={`p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer border ${
-                diary.isPrivate ? 'border-red-100' : 'border-blue-100'
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-gray-800">
-                      {diary.isPrivate ? '🔒 ' : ''}{diary.title}
-                    </h3>
-                    {diary.isPrivate && !canEdit && (
-                      <span className="text-sm text-red-500">비공개</span>
+        {/* 달력 섹션 - 주간 뷰로 변경 */}
+        <div className="w-full max-w-[1000px] mb-4">
+          <div className="bg-blue-500/20 rounded-3xl p-4 shadow-lg backdrop-blur-sm">
+            {/* 주 선택 헤더 */}
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={handlePrevWeek} className="p-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h2 className="text-lg font-bold text-white">
+                {currentWeek.format('YY년 MM월')}
+              </h2>
+              <button onClick={handleNextWeek} className="p-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 주간 달력 그리드 */}
+            <div className="grid grid-cols-7 gap-1">
+              {weekDates.map((date, idx) => {
+                const isToday = date.isSame(dayjs(), 'day');
+                const isSelected = date.isSame(selectedDate, 'day');
+                const hasDiary = diaries.some(diary => 
+                  dayjs(diary.createdAt).format('YYYY-MM-DD') === date.format('YYYY-MM-DD')
+                );
+                const isSunday = idx === 0;
+                const isSaturday = idx === 6;
+
+                return (
+                  <button
+                    key={date.format('YYYY-MM-DD')}
+                    onClick={() => handleDateClick(date)}
+                    className={`
+                      relative aspect-square p-1 rounded-lg
+                      ${isSunday ? 'bg-red-500/30' : ''}
+                      ${isSaturday ? 'bg-blue-500/40' : ''}
+                      ${!isSunday && !isSaturday ? 'bg-blue-500/20' : ''}
+                      ${isSelected ? 'ring-2 ring-white/50' : ''}
+                      ${isToday ? 'font-bold' : ''}
+                      hover:bg-opacity-40 transition-all
+                      text-white text-lg
+                    `}
+                  >
+                    <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      {date.date()}
+                    </span>
+                    {hasDiary && (
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 border-yellow-500/70 bg-yellow-500/30"></div>
                     )}
-                  </div>
-                  <p className="mt-2 text-gray-600 line-clamp-2">{diary.content}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 일기 작성 폼 */}
+        {isWriting && (
+          <form onSubmit={handleSubmit} className="space-y-4 bg-blue-500/20 p-6 rounded-2xl shadow-lg backdrop-blur-sm">
+            <div className="flex justify-between items-center">
+              <input
+                type="text"
+                value={newDiary.title}
+                onChange={(e) => setNewDiary(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="제목"
+                className="flex-1 p-3 bg-blue-500/20 rounded-xl focus:ring-2 focus:ring-blue-400 border-none text-white placeholder-white/50"
+              />
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setNewDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }));
+                }}
+                className={`ml-4 p-3 rounded-xl transition-all ${
+                  newDiary.isPrivate 
+                  ? 'bg-red-500/20 text-white hover:bg-red-500/30' 
+                  : 'bg-green-500/20 text-white hover:bg-green-500/30'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {newDiary.isPrivate ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                  <span className="text-sm font-medium">
+                    {newDiary.isPrivate ? '비공개' : '공개'}
+                  </span>
                 </div>
-                <div className="flex gap-2 ml-4">
+              </Button>
+            </div>
+            <textarea
+              value={newDiary.content}
+              onChange={(e) => setNewDiary(prev => ({ ...prev, content: e.target.value }))}
+              placeholder="내용을 입력하세요..."
+              className="w-full h-48 p-3 bg-blue-500/20 rounded-xl focus:ring-2 focus:ring-blue-400 border-none resize-none text-white placeholder-white/50"
+            />
+            
+            {/* 이미지 업로드 섹션 */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer">
+                  <div className="px-4 py-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30 transition-all flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    사진 첨부
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e.target.files)}
+                  />
+                </label>
+                {uploadingImages && <span className="text-white">업로드 중...</span>}
+              </div>
+              
+              {/* 선택된 이미지 미리보기 */}
+              {selectedImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedImages.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`미리보기 ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute top-1 right-1 p-1 bg-red-500/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setNewDiary({ title: '', content: '', isPrivate: false, images: [] });
+                  setSelectedImages([]);
+                  setIsWriting(false);
+                }}
+                className="px-6 py-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30"
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                disabled={uploadingImages}
+                className="px-6 py-2 bg-blue-500/30 text-white rounded-xl hover:bg-blue-500/40 disabled:opacity-50"
+              >
+                저장
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* 일기 수정 폼 */}
+        {editingDiary && (
+          <form onSubmit={handleEdit} className="space-y-4 bg-blue-500/20 p-6 rounded-2xl shadow-lg backdrop-blur-sm">
+            <div className="flex justify-between items-center">
+              <input
+                type="text"
+                value={editingDiary.title}
+                onChange={(e) => setEditingDiary(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="제목"
+                className="flex-1 p-3 bg-blue-500/20 rounded-xl focus:ring-2 focus:ring-blue-400 border-none text-white placeholder-white/50"
+              />
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setEditingDiary(prev => ({ ...prev, isPrivate: !prev.isPrivate }));
+                }}
+                className={`ml-4 p-3 rounded-xl transition-all ${
+                  editingDiary.isPrivate 
+                  ? 'bg-red-500/20 text-white hover:bg-red-500/30' 
+                  : 'bg-green-500/20 text-white hover:bg-green-500/30'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {editingDiary.isPrivate ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                  <span className="text-sm font-medium">
+                    {editingDiary.isPrivate ? '비공개' : '공개'}
+                  </span>
+                </div>
+              </Button>
+            </div>
+            <textarea
+              value={editingDiary.content}
+              onChange={(e) => setEditingDiary(prev => ({ ...prev, content: e.target.value }))}
+              placeholder="내용을 입력하세요..."
+              className="w-full h-48 p-3 bg-blue-500/20 rounded-xl focus:ring-2 focus:ring-blue-400 border-none resize-none text-white placeholder-white/50"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => setEditingDiary(null)}
+                className="px-6 py-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30"
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                className="px-6 py-2 bg-blue-500/30 text-white rounded-xl hover:bg-blue-500/40"
+              >
+                수정
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* 일기 목록 */}
+        <div className="space-y-4">
+          {diaries.length === 0 ? (
+            <div className="p-6 bg-blue-500/20 rounded-2xl shadow-md text-center text-white backdrop-blur-sm">
+              등록된 일기가 없습니다.
+            </div>
+          ) : (
+            <>
+              {getPaginatedDiaries().map((diary) => (
+                <div
+                  key={diary.id}
+                  onClick={() => handleDiaryClick(diary)}
+                  className="flex flex-col bg-blue-500/20 rounded-2xl shadow-md backdrop-blur-sm overflow-hidden"
+                >
+                  {/* 1번 row: 제목과 버튼들 */}
+                  <div className="flex justify-between items-center p-4 border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-white flex items-center gap-1">
+                        {diary.isPrivate && <Lock className="w-4 h-4" />}
+                        {diary.title}
+                      </h3>
+                    </div>
+                    <div className="flex gap-2">
+                      {canEdit && (
+                        <>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingDiary(diary);
+                            }}
+                            className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(diary.id, diary.images);
+                            }}
+                            className="p-2 bg-red-500/30 text-white rounded-lg hover:bg-red-500/40"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                      {!diary.isPrivate && (
+                        <Button
+                          onClick={(e) => handleLikeClick(e, diary)}
+                          className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="w-4 h-4" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                            />
+                          </svg>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2번 row: 내용 */}
+                  <div className="p-4 border-b border-white/10">
+                    <p className="text-white/80 line-clamp-3 whitespace-pre-wrap">
+                      {diary.content}
+                    </p>
+                  </div>
+
+                  {/* 3번 row: 이미지 */}
+                  {diary.images && diary.images.length > 0 && (
+                    <div className="p-4 border-b border-white/10">
+                      <div className="grid grid-cols-3 gap-2">
+                        {diary.images.slice(0, 3).map((imageUrl, index) => (
+                          <img
+                            key={index}
+                            src={imageUrl}
+                            alt={`일기 이미지 ${index + 1}`}
+                            className="w-full h-24 md:h-40 lg:h-48 object-cover rounded-lg"
+                          />
+                        ))}
+                        {diary.images.length > 3 && (
+                          <div className="relative h-24 md:h-40 lg:h-48">
+                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center text-white">
+                              +{diary.images.length - 3}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4번 row: 날짜 */}
+                  <div className="p-4 text-sm text-white/70">
+                    {dayjs(diary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
+                  </div>
+                </div>
+              ))}
+
+              {/* 더보기 버튼 */}
+              {hasMoreDiaries && (
+                <div className="flex justify-center mt-6">
+                  <Button
+                    onClick={handleLoadMore}
+                    className="px-6 py-2 bg-blue-500/30 text-white rounded-xl hover:bg-blue-500/40"
+                  >
+                    더보기
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* 일기 상세 보기 모달 */}
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>{selectedDiary?.title}</span>
+                <span className="text-sm text-gray-500">
+                  {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).locale('ko').format('YYYY년 MM월 DD일')}
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {selectedDiary?.content}
+              </p>
+              
+              {/* 이미지 갤러리 */}
+              {selectedDiary?.images && selectedDiary.images.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {selectedDiary.images.map((imageUrl, index) => (
+                    <img
+                      key={index}
+                      src={imageUrl}
+                      alt={`일기 이미지 ${index + 1}`}
+                      className="w-full rounded-lg"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 공감하기 모달 */}
+        <Dialog open={likeModalOpen} onOpenChange={setLikeModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>공감하기</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <p className="text-gray-700 whitespace-pre-wrap mb-6">
+                {selectedDiary?.content}
+              </p>
+              <div className="flex items-center gap-4">
+                <Select
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="카테고리 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleLike}
+                  disabled={isLiking || !selectedCategory}
+                  className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
+                >
+                  {isLiking ? '저장 중...' : '공감하기'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 공감 완료 모달 */}
+        <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>공감이 저장되었습니다</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 space-y-4">
+              <p className="text-gray-600">
+                공감 한 조각 페이지에서 확인하시겠습니까?
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSuccessModal(false)}
+                >
+                  닫기
+                </Button>
+                <Button
+                  className="bg-violet-500 hover:bg-violet-600 text-white"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    router.push('/likes/all');
+                  }}
+                >
+                  공감 한 조각으로 이동
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 이미지 크롭 모달 */}
+        <Dialog open={!!croppingImage} onOpenChange={() => {
+          setCroppingImage(null);
+          setCroppingImageUrl('');
+          setCrop(undefined);
+          setCompletedCrop(undefined);
+        }}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>이미지 자르기</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              {croppingImageUrl && (
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={16 / 9}
+                >
+                  <img
+                    ref={imgRef}
+                    alt="크롭할 이미지"
+                    src={croppingImageUrl}
+                    onLoad={onImageLoad}
+                  />
+                </ReactCrop>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                onClick={() => {
+                  setCroppingImage(null);
+                  setCroppingImageUrl('');
+                  setCrop(undefined);
+                  setCompletedCrop(undefined);
+                }}
+                className="bg-blue-500/20 text-white hover:bg-blue-500/30"
+              >
+                취소
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCropComplete}
+                className="bg-blue-500/30 text-white hover:bg-blue-500/40"
+                disabled={!completedCrop}
+              >
+                적용
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* 일기 팝업 모달 */}
+        <Dialog open={showDiaryPopup} onOpenChange={setShowDiaryPopup}>
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">
+                {selectedDate?.format('YYYY년 MM월 DD일')}의 일기
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedDateDiaries.map((diary) => (
+                <div
+                  key={diary.id}
+                  className="bg-blue-500/20 p-4 rounded-xl backdrop-blur-sm"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      {diary.isPrivate && <Lock className="w-4 h-4" />}
+                      {diary.title}
+                    </h3>
+                    <span className="text-sm text-white/70">
+                      {dayjs(diary.createdAt).format('HH:mm')}
+                    </span>
+                  </div>
+                  <p className="text-white/90 whitespace-pre-wrap">{diary.content}</p>
+                  
+                  {/* 이미지가 있는 경우 표시 */}
+                  {diary.images && diary.images.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      {diary.images.map((imageUrl, index) => (
+                        <img
+                          key={index}
+                          src={imageUrl}
+                          alt={`일기 이미지 ${index + 1}`}
+                          className="w-full rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 수정/삭제 버튼 */}
                   {canEdit && (
-                    <>
+                    <div className="flex justify-end gap-2 mt-4">
                       <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           setEditingDiary(diary);
+                          setShowDiaryPopup(false);
                         }}
-                        className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                        className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(diary.id);
+                        onClick={() => {
+                          handleDelete(diary.id, diary.images);
+                          setShowDiaryPopup(false);
                         }}
-                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                        className="p-2 bg-red-500/30 text-white rounded-lg hover:bg-red-500/40"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                    </>
-                  )}
-                  {!diary.isPrivate && (
-                    <Button
-                      onClick={(e) => handleLikeClick(e, diary)}
-                      className="p-2 bg-violet-100 text-violet-600 rounded-lg hover:bg-violet-200"
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className="w-4 h-4" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
-                        />
-                      </svg>
-                    </Button>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-500">
-                {dayjs(diary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
-              </div>
+              ))}
             </div>
-          ))
-        )}
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* 일기 상세 보기 모달 */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{selectedDiary?.title}</span>
-              <span className="text-sm text-gray-500">
-                {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).locale('ko').format('YYYY년 MM월 DD일')}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            <p className="text-gray-700 whitespace-pre-wrap">
-              {selectedDiary?.content}
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 공감하기 모달 */}
-      <Dialog open={likeModalOpen} onOpenChange={setLikeModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>공감하기</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            <p className="text-gray-700 whitespace-pre-wrap mb-6">
-              {selectedDiary?.content}
-            </p>
-            <div className="flex items-center gap-4">
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="카테고리 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleLike}
-                disabled={isLiking || !selectedCategory}
-                className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
-              >
-                {isLiking ? '저장 중...' : '공감하기'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 공감 완료 모달 */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>공감이 저장되었습니다</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4 space-y-4">
-            <p className="text-gray-600">
-              공감 한 조각 페이지에서 확인하시겠습니까?
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowSuccessModal(false)}
-              >
-                닫기
-              </Button>
-              <Button
-                className="bg-violet-500 hover:bg-violet-600 text-white"
-                onClick={() => {
-                  setShowSuccessModal(false);
-                  router.push('/likes/all');
-                }}
-              >
-                공감 한 조각으로 이동
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

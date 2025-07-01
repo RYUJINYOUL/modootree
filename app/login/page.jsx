@@ -72,11 +72,19 @@ const LoginPage = () => {
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
+        // 기본 사용자 정보 저장
         await setDoc(userRef, {
           email: user.email,
           createdAt: serverTimestamp(),
         });
 
+        // 기본 배경 설정 저장
+        await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+          type: 'video',
+          value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+        });
+
+        // 기본 컴포넌트 설정
         await setDoc(doc(db, "users", user.uid, "links", "page"), {
           components: ["이미지", "링크카드", "달력", "게스트북"],
         });
@@ -84,7 +92,7 @@ const LoginPage = () => {
     } catch (error) {
       console.error("Google login error", error);
     }
-  };
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">

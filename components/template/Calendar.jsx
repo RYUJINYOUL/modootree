@@ -204,28 +204,28 @@ const CalendarWithEvents = ({ username, uid }) => {
   return (
     <div className="flex flex-col items-center w-full space-y-6 mt-8 px-2">
       {/* 월 선택 헤더 */}
-      <div className="flex items-center justify-between md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm">
-        <button onClick={handlePrevMonth} className="p-2.5 bg-white text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-50 hover:scale-105 active:bg-blue-100">
-          <ChevronLeft className="w-5 h-5 text-blue-600" />
+      <div className="flex items-center justify-between md:w-[320px] w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <button onClick={handlePrevMonth} className="p-2.5 bg-blue-500/20 text-white rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-500/30">
+          <ChevronLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold text-gray-800 tracking-tight">{currentDate.format('YY년 MM월')}</h2>
-        <button onClick={handleNextMonth} className="p-2.5 bg-white text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-50 hover:scale-105 active:bg-blue-100">
-          <ChevronRight className="w-5 h-5 text-blue-600" />
+        <h2 className="text-xl font-bold text-white tracking-tight">{currentDate.format('YY년 MM월')}</h2>
+        <button onClick={handleNextMonth} className="p-2.5 bg-blue-500/20 text-white rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-500/30">
+          <ChevronRight className="w-5 h-5" />
         </button>
       </div>
 
       {/* 캘린더 테이블 */}
       <div className="w-full overflow-x-auto">
         <div className="mx-auto max-w-[1100px] w-full">
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+          <div className="bg-blue-500/20 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
             <table className="table-fixed w-full border-collapse">
               <thead>
-                <tr className="bg-gradient-to-r from-gray-50 to-blue-50">
+                <tr className="bg-blue-500/10">
                   {days.map((day, idx) => (
                     <th
                       key={day}
                       className={`py-4 px-3 text-start font-bold text-sm tracking-wide
-                        ${idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-700'}`}
+                        ${idx === 0 ? 'text-red-300' : idx === 6 ? 'text-blue-300' : 'text-white'}`}
                     >
                       {day}
                     </th>
@@ -234,7 +234,7 @@ const CalendarWithEvents = ({ username, uid }) => {
               </thead>
               <tbody>
                 {Array.from({ length: Math.ceil(dates.length / 7) }).map((_, weekIdx) => (
-                  <tr key={weekIdx} className="hover:bg-blue-50/30 transition-colors">
+                  <tr key={weekIdx} className="hover:bg-blue-500/30 transition-colors">
                     {dates.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, idx) => {
                       const dateStr = date.format('YYYY-MM-DD');
                       const isCurrentMonth = date.month() === currentDate.month();
@@ -247,19 +247,19 @@ const CalendarWithEvents = ({ username, uid }) => {
                           key={dateStr}
                           onClick={() => handleDateClick(date)}
                           className={`align-top p-2 md:p-3 h-16 md:h-24 cursor-pointer transition-all duration-200
-                            ${isCurrentMonth ? 'text-gray-800' : 'text-gray-400 bg-gray-50/30'}
-                            ${isToday ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-900 shadow-inner rounded-2xl' : ''}
-                            ${isSelected && !isToday ? 'bg-gradient-to-br from-indigo-50 to-blue-50 shadow-inner rounded-2xl' : ''}
-                            ${idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : ''}
-                            hover:bg-blue-50/50 hover:shadow-inner hover:rounded-2xl
-                          `}
+                            ${isCurrentMonth ? 'text-white' : 'text-white/50'}
+                            ${isToday ? 'bg-blue-500/30' : ''}
+                            ${isSelected ? 'bg-blue-500/40' : ''}`}
                         >
-                          <div className="flex flex-col items-center gap-1.5 md:gap-2">
-                            <div className="text-sm font-semibold">{date.date()}</div>
+                          <div className="flex flex-col h-full items-center gap-2">
+                            <span className={`inline-block w-7 h-7 rounded-full text-center leading-7
+                              ${isToday ? 'bg-blue-500/40 text-white' : ''}`}>
+                              {date.date()}
+                            </span>
                             {dayEvents.length > 0 && (
-                              <div className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-blue-500 text-white text-[13px] md:text-[14px] font-bold rounded-full">
+                              <span className="flex items-center justify-center w-8 h-8 bg-blue-500/50 rounded-full text-sm font-semibold text-white shadow-lg hover:bg-blue-500/60 transition-colors">
                                 {dayEvents.length}
-                              </div>
+                              </span>
                             )}
                           </div>
                         </td>
@@ -275,56 +275,56 @@ const CalendarWithEvents = ({ username, uid }) => {
 
       {/* 일정 추가 섹션 */}
       {canDelete && (
-        <div className="w-full max-w-[1100px] mt-2 p-6 rounded-3xl bg-gradient-to-br from-white to-blue-50 border border-blue-100/50 shadow-lg backdrop-blur-sm">
+        <div className="w-full max-w-[1100px] mt-2 p-6 rounded-3xl bg-blue-500/20 backdrop-blur-sm">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-800 tracking-tight">
+            <h3 className="text-lg font-bold text-white tracking-tight">
               {selectedDate.format('YY년 MM월 DD일')}
             </h3>
             <Button
               onClick={() => setShowAddEventForm(prev => !prev)}
-              className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
+              className="px-4 py-2.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-105 active:scale-95"
             >
               {showAddEventForm ? '닫기' : '일정 추가'}
             </Button>
           </div>
 
           {showAddEventForm && (
-            <div className="space-y-4 bg-white p-5 rounded-2xl shadow-lg border border-blue-100/50">
+            <div className="space-y-4 bg-blue-500/20 p-5 rounded-2xl shadow-lg">
               <input
                 type="text"
                 placeholder="일정 제목"
                 value={newEvent.title}
                 onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800 placeholder-gray-400"
+                className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white placeholder-white/50"
               />
 
               <div className="flex gap-4">
                 <select
                   value={newEvent.startTime}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
-                  className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800"
+                  className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white"
                 >
-                  <option value="">시작</option>
+                  <option value="" className="bg-blue-500">시작</option>
                   {predefinedTimes.map(time => (
-                    <option key={time} value={time}>{time}</option>
+                    <option key={time} value={time} className="bg-blue-500">{time}</option>
                   ))}
                 </select>
 
                 <select
                   value={newEvent.endTime}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
-                  className="w-full p-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800"
+                  className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white"
                 >
-                  <option value="">종료</option>
+                  <option value="" className="bg-blue-500">종료</option>
                   {predefinedTimes.map(time => (
-                    <option key={time} value={time}>{time}</option>
+                    <option key={time} value={time} className="bg-blue-500">{time}</option>
                   ))}
                 </select>
               </div>
 
               <button
                 onClick={handleAddEvent}
-                className="w-full p-3.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-[1.02] active:scale-98"
+                className="w-full p-3.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-[1.02] active:scale-98"
               >
                 일정 추가
               </button>
@@ -335,73 +335,111 @@ const CalendarWithEvents = ({ username, uid }) => {
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md rounded-3xl shadow-2xl border border-blue-100/50 bg-gradient-to-br from-white to-blue-50/50">
+        <DialogContent className="bg-blue-500/20 backdrop-blur-sm border-none">
           <DialogHeader>
-            <DialogTitle className="text-gray-800 font-bold tracking-tight">
-              {selectedDate.format('YYYY년 MM월 DD일')} 일정
-              {selectedEvents.length > 0 && (
-                <span className="ml-2 text-sm text-blue-600">
-                  총 {selectedEvents.length}개
-                </span>
-              )}
+            <DialogTitle className="text-white">
+              {selectedDate.format('YYYY년 MM월 DD일')}
             </DialogTitle>
+            <DialogDescription className="text-white/80">
+              일정을 확인하거나 추가할 수 있습니다.
+            </DialogDescription>
           </DialogHeader>
-          {selectedEvents.length > 0 ? (
-            <div className="space-y-4">
-              <ul className="space-y-3 h-full max-h-[300px] overflow-y-auto mt-4">
-              {selectedEvents.map((e) => (
-                <li key={e.id} className="border border-blue-100/50 p-4 rounded-xl flex justify-between items-center bg-white shadow-md hover:shadow-lg transition-all">
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-blue-900">{e.startTime} ~ {e.endTime}</div>
-                    <div className="text-sm text-gray-600 mt-1 break-all">{e.title}</div>
+
+          {/* 일정 목록 */}
+          <div className="space-y-4">
+            {selectedEvents.map(event => (
+              <div
+                key={event.id}
+                className="bg-blue-500/30 rounded-lg p-4 text-white"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold">{event.title}</h3>
+                    <p className="text-sm text-white/80">
+                      {event.startTime} - {event.endTime}
+                    </p>
                   </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-600">
-                        확인: <span className="text-blue-600 font-bold">{e.confirmCount || 0}</span>
-                      </span>
-                      <Button
-                        onClick={() => handleConfirm(e.id)}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
-                      >
-                        확인
-                      </Button>
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        await handleDelete(e.id);
-                        setSelectedEvents((prev) => prev.filter((ev) => ev.id !== e.id));
-                      }}
-                          className="ml-2 p-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-red-600 hover:to-red-700 hover:scale-105 active:scale-95"
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleConfirm(event.id)}
+                      className="text-xs bg-blue-500/30 hover:bg-blue-500/40 px-2 py-1 rounded transition-colors"
                     >
-                      삭제
+                      확인 ({event.confirmCount || 0})
+                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="text-xs bg-red-500/30 hover:bg-red-500/40 px-2 py-1 rounded transition-colors"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 일정 추가 폼 */}
+          {canDelete && (
+            <div className="mt-4">
+              {!showAddEventForm ? (
+                <Button
+                  onClick={() => setShowAddEventForm(true)}
+                  className="w-full bg-blue-500/30 hover:bg-blue-500/40 text-white border-none"
+                >
+                  + 일정 추가
+                </Button>
+              ) : (
+                <div className="space-y-4 bg-blue-500/30 p-4 rounded-lg">
+                  <input
+                    type="text"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                    placeholder="일정 제목"
+                    className="w-full p-2 rounded bg-blue-500/20 text-white placeholder-white/50 border-none"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      value={newEvent.startTime}
+                      onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
+                      className="p-2 rounded bg-blue-500/20 text-white border-none"
+                    >
+                      <option value="">시작 시간</option>
+                      {predefinedTimes.map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={newEvent.endTime}
+                      onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+                      className="p-2 rounded bg-blue-500/20 text-white border-none"
+                    >
+                      <option value="">종료 시간</option>
+                      {predefinedTimes.map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      onClick={() => {
+                        setShowAddEventForm(false);
+                        setNewEvent({ title: '', startTime: '', endTime: '' });
+                      }}
+                      className="bg-transparent hover:bg-blue-500/20 text-white"
+                    >
+                      취소
                     </Button>
-                  )}
-                    </div>
-                </li>
-              ))}
-            </ul>
-              <div className="flex justify-end pt-4 border-t border-blue-100/50">
-                <Button
-                  onClick={() => setModalOpen(false)}
-                  className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
-                >
-                  닫기
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-            <DialogDescription className="text-gray-500 mt-4 text-center py-8">등록된 일정이 없습니다.</DialogDescription>
-              <div className="flex justify-end pt-4 border-t border-blue-100/50">
-                <Button
-                  onClick={() => setModalOpen(false)}
-                  className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg transition-all hover:from-blue-600 hover:to-indigo-600 hover:scale-105 active:scale-95"
-                >
-                  닫기
-                </Button>
-              </div>
+                    <Button
+                      onClick={handleAddEvent}
+                      className="bg-blue-500/30 hover:bg-blue-500/40 text-white border-none"
+                    >
+                      추가
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

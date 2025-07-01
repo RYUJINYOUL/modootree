@@ -178,4 +178,24 @@ body{
   color: rgba(0, 0, 0, 0);
 }
 
+/* SNS 버튼 슬라이더 스타일 */
+.slick-dots {
+  bottom: -25px;
+}
+
+.slick-dots li button:before {
+  color: white !important;
+  opacity: 0.5;
+}
+
+.slick-dots li.slick-active button:before {
+  color: white !important;
+  opacity: 1;
+}
+
+.slick-prev:before,
+.slick-next:before {
+  color: white !important;
+}
+
 

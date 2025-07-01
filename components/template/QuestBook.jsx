@@ -452,10 +452,11 @@ export default function GuestbookTemplate({ username, uid }) {
 
   return (
     <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
-      <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 shadow-lg border border-blue-100/50 backdrop-blur-sm tracking-tight text-gray-800">
+      {/* 게스트북 제목 */}
+      <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white">
         <HeaderDrawer uid={finalUid}>
-          <button className="absolute left-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button className="absolute left-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
           </button>
@@ -472,40 +473,41 @@ export default function GuestbookTemplate({ username, uid }) {
                 }
               }
             }}
-            className="absolute right-4 bg-white p-2 rounded-lg shadow-sm hover:text-blue-600 hover:shadow-md transition-all"
+            className="absolute right-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
         </HeaderDrawer>
       </div>
       <div className='h-[20px]'/>
+      {/* 메인 리스트 */}
       <div className="w-full flex flex-col items-center gap-6">
         {previewEntries.map((entry) => (
-          <div key={entry.id} className="w-full max-w-[1100px] bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-blue-100/50">
+          <div key={entry.id} className="w-full max-w-[1100px] bg-blue-500/20 rounded-2xl p-6 shadow-lg hover:bg-blue-500/30 transition-all duration-300 backdrop-blur-sm">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-white">
                   {entry.name || '익명'}
                 </div>
               </div>
-              <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
+              <span className="text-sm text-white/70 font-medium bg-blue-500/20 px-3 py-1.5 rounded-full">
                 {getTimeAgo(entry.createdAt)}
               </span>
             </div>
-            <p className="text-gray-700 leading-relaxed">{entry.message}</p>
+            <p className="text-white leading-relaxed">{entry.message}</p>
             <div className="mt-3 flex items-center space-x-4">
               <button
                 onClick={() => handleMainLike(entry.id)}
-                className="flex items-center space-x-1 text-gray-500 hover:text-red-500 transition-colors"
+                className="flex items-center space-x-1 text-white/70 hover:text-white transition-colors"
               >
-                <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : "text-gray-300"} />
+                <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : "text-white/50"} />
                 <span>{entry.likes || 0}</span>
               </button>
               {entry.replies?.length > 0 && (
-                <div className="flex items-center space-x-1 text-gray-500">
-                  <FaReply className="text-gray-300" />
+                <div className="flex items-center space-x-1 text-white/70">
+                  <FaReply className="text-white/50" />
                   <span>{entry.replies.length}</span>
                 </div>
               )}
