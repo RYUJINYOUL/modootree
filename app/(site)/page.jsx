@@ -178,38 +178,50 @@ export default function Page() {
 
       {/* 모달 */}
       <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
 
-        <Dialog.Panel className="bg-gray-100 p-8 rounded-2xl shadow-lg z-50 max-w-sm w-full relative">
+        <Dialog.Panel className="bg-blue-900/90 p-8 rounded-2xl shadow-lg z-50 max-w-sm w-full relative border border-blue-500/30 backdrop-blur-lg">
           <button
             onClick={() => setIsOpen(false)}
-            className="absolute top-4 right-4 text-gray-400 hover:text-black text-xl"
+            className="absolute top-4 right-4 text-blue-200 hover:text-white text-xl transition-colors"
             aria-label="닫기"
           >
             &times;
           </button>
 
-          <div className="flex items-center bg-white rounded-full shadow-md p-4 border border-gray-200 focus-within:border-blue-400 transition-all">
-            <span className="text-gray-500 text-lg mr-1">modootree.com/</span>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value.trim());
-                setError('');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSaveUsername();
-                }
-              }}
-              placeholder="ID"
-              className="flex-grow text-red-500 text-lg outline-none bg-transparent"
-            />
+          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">새 페이지 만들기</h2>
+          
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex items-center bg-blue-950/50 rounded-xl shadow-inner p-4 border border-blue-400/20 focus-within:border-blue-400 transition-all w-full">
+              <span className="text-blue-200 text-lg mr-1">modootree.com/</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.trim());
+                  setError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveUsername();
+                  }
+                }}
+                placeholder="ID"
+                className="flex-grow text-blue-200 text-lg outline-none bg-transparent placeholder-blue-300/30"
+              />
+            </div>
+
+            <p className="text-blue-200/80 text-sm">
+              ID 입력 후 Enter를 눌러주세요
+            </p>
           </div>
 
-          {error && <p className="text-red-500 text-sm pt-2 text-right">{error}</p>}
+          {error && (
+            <p className="text-red-300 text-sm mt-4 text-center animate-pulse">
+              {error}
+            </p>
+          )}
         </Dialog.Panel>
       </Dialog>
     </div>

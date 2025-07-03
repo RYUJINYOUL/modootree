@@ -360,6 +360,8 @@ const Diary = ({ username, uid }) => {
         category: selectedCategory,
         createdAt: new Date(),
         diaryId: selectedDiary.id,
+        images: selectedDiary.images || [],
+        userId: currentUser.uid
       });
 
       setLikeModalOpen(false);
@@ -375,10 +377,6 @@ const Diary = ({ username, uid }) => {
 
   const handleLikeClick = (e, diary) => {
     e.stopPropagation();
-    if (diary.isPrivate) {
-      alert('비공개 게시물은 공감할 수 없습니다.');
-      return;
-    }
     setSelectedDiary(diary);
     setLikeModalOpen(true);
   };
@@ -414,10 +412,10 @@ const Diary = ({ username, uid }) => {
   };
 
   return (
-    <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+    <div className='pt-16 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
       {/* 일기장 제목 */}
-      <div className="w-full max-w-[1000px] mx-auto p-4 space-y-6">
-        <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white mx-auto">
+      <div className="w-full max-w-[1200px] space-y-6">
+        <div className="relative flex items-center justify-center text-[21px] font-bold w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white">
           <HeaderDrawer uid={finalUid}>
             <button 
               onClick={(e) => {
@@ -454,7 +452,7 @@ const Diary = ({ username, uid }) => {
         </div>
 
         {/* 달력 섹션 - 주간 뷰로 변경 */}
-        <div className="w-full max-w-[1000px] mb-4">
+        <div className="w-full max-w-[1200px] mb-4">
           <div className="bg-blue-500/20 rounded-3xl p-4 shadow-lg backdrop-blur-sm">
             {/* 주 선택 헤더 */}
             <div className="flex items-center justify-between mb-4">
@@ -478,9 +476,10 @@ const Diary = ({ username, uid }) => {
               {weekDates.map((date, idx) => {
                 const isToday = date.isSame(dayjs(), 'day');
                 const isSelected = date.isSame(selectedDate, 'day');
-                const hasDiary = diaries.some(diary => 
+                const dayDiaries = diaries.filter(diary => 
                   dayjs(diary.createdAt).format('YYYY-MM-DD') === date.format('YYYY-MM-DD')
                 );
+                const hasDiary = dayDiaries.length > 0;
                 const isSunday = idx === 0;
                 const isSaturday = idx === 6;
 
@@ -489,7 +488,7 @@ const Diary = ({ username, uid }) => {
                     key={date.format('YYYY-MM-DD')}
                     onClick={() => handleDateClick(date)}
                     className={`
-                      relative aspect-square p-1 rounded-lg
+                      relative aspect-square p-1 rounded-lg flex flex-col items-center justify-center
                       ${isSunday ? 'bg-red-500/30' : ''}
                       ${isSaturday ? 'bg-blue-500/40' : ''}
                       ${!isSunday && !isSaturday ? 'bg-blue-500/20' : ''}
@@ -499,11 +498,13 @@ const Diary = ({ username, uid }) => {
                       text-white text-lg
                     `}
                   >
-                    <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <span className="text-lg">
                       {date.date()}
                     </span>
                     {hasDiary && (
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 border-yellow-500/70 bg-yellow-500/30"></div>
+                      <span className="text-sm bg-yellow-500/70 text-white px-2 py-1 rounded-full mt-1">
+                        {dayDiaries.length}
+                      </span>
                     )}
                   </button>
                 );
@@ -672,7 +673,7 @@ const Diary = ({ username, uid }) => {
         )}
 
         {/* 일기 목록 */}
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-[1200px]">
           {diaries.length === 0 ? (
             <div className="p-6 bg-blue-500/20 rounded-2xl shadow-md text-center text-white backdrop-blur-sm">
               등록된 일기가 없습니다.
@@ -714,28 +715,26 @@ const Diary = ({ username, uid }) => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
-                        </>
-                      )}
-                      {!diary.isPrivate && (
-                        <Button
-                          onClick={(e) => handleLikeClick(e, diary)}
-                          className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
-                        >
-                          <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className="w-4 h-4" 
-                            fill="none" 
-                            viewBox="0 0 24 24" 
-                            stroke="currentColor"
+                          <Button
+                            onClick={(e) => handleLikeClick(e, diary)}
+                            className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
                           >
-                            <path 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round" 
-                              strokeWidth={2} 
-                              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
-                            />
-                          </svg>
-                        </Button>
+                            <svg 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              className="w-4 h-4" 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                              />
+                            </svg>
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -835,6 +834,18 @@ const Diary = ({ username, uid }) => {
               <p className="text-gray-700 whitespace-pre-wrap mb-6">
                 {selectedDiary?.content}
               </p>
+              {selectedDiary?.images && selectedDiary.images.length > 0 && (
+                <div className="mb-6 grid grid-cols-2 gap-2">
+                  {selectedDiary.images.map((imageUrl, index) => (
+                    <img
+                      key={index}
+                      src={imageUrl}
+                      alt={`일기 이미지 ${index + 1}`}
+                      className="w-full rounded-lg"
+                    />
+                  ))}
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <Select
                   value={selectedCategory}

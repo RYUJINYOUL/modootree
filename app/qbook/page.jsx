@@ -92,7 +92,6 @@ export default function GuestbookTemplate() {
       if (isLoading || !hasMore) return
       if (observer.current) observer.current.disconnect()
       observer.current = new IntersectionObserver((entries) => {
-        console.log(entries[0])
         if (entries[0].isIntersecting) {
           loadMore()
         }
@@ -129,6 +128,13 @@ export default function GuestbookTemplate() {
       console.error('삭제 실패:', error)
     }
   }
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  const messageEntries = Object.entries(groupedMessages);
+  const sortedMessageEntries = messageEntries.sort((a, b) => b[0].localeCompare(a[0]));
 
   return (
     <div className="min-h-screen bg-zinc-900 pt-12">

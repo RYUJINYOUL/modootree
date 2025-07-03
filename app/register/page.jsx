@@ -58,7 +58,22 @@ const RegisterPage = () => {
             push("/");
         } catch (error) {
             console.error("가입 실패:", error.message);
-            setErrorFromSubmit("회원가입 중 오류가 발생했습니다.");
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    setErrorFromSubmit("이미 사용 중인 이메일입니다. 다른 이메일을 사용하시거나 로그인해주세요.");
+                    break;
+                case 'auth/invalid-email':
+                    setErrorFromSubmit("유효하지 않은 이메일 형식입니다.");
+                    break;
+                case 'auth/operation-not-allowed':
+                    setErrorFromSubmit("이메일/비밀번호 회원가입이 비활성화되어 있습니다.");
+                    break;
+                case 'auth/weak-password':
+                    setErrorFromSubmit("비밀번호가 너무 약합니다. 더 강력한 비밀번호를 사용해주세요.");
+                    break;
+                default:
+                    setErrorFromSubmit("회원가입 중 오류가 발생했습니다. 다시 시도해주세요.");
+            }
         } finally {
             setLoading(false);
         }
@@ -91,9 +106,21 @@ const RegisterPage = () => {
             );
 
             push("/");
-        } catch (err) {
-            console.error(err);
-            setErrorFromSubmit("구글 로그인 중 오류가 발생했습니다.");
+        } catch (error) {
+            console.error("구글 로그인 실패:", error);
+            switch (error.code) {
+                case 'auth/popup-closed-by-user':
+                    setErrorFromSubmit("로그인 창이 닫혔습니다. 다시 시도해주세요.");
+                    break;
+                case 'auth/popup-blocked':
+                    setErrorFromSubmit("팝업이 차단되었습니다. 팝업 차단을 해제해주세요.");
+                    break;
+                case 'auth/cancelled-popup-request':
+                    setErrorFromSubmit("진행 중인 로그인이 취소되었습니다.");
+                    break;
+                default:
+                    setErrorFromSubmit("구글 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+            }
         }
     };
 

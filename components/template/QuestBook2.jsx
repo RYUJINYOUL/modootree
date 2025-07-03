@@ -15,6 +15,7 @@ import {
   updateDoc,
   where,
   serverTimestamp,
+  onSnapshot,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -147,11 +148,24 @@ const QuestBook2 = ({ username, uid }) => {
   };
 
   useEffect(() => {
-    console.log('QuestBook2 mounted with finalUid:', finalUid);
-    if (finalUid) {
-      fetchMessages(true);
-    }
-  }, [finalUid, sortBy]);
+    if (!finalUid) return;
+
+    const q = query(
+      collection(db, 'users', finalUid, 'comments'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const messageList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      }));
+      setMessages(messageList);
+    });
+
+    return () => unsubscribe();
+  }, [finalUid]);
 
   const handleImageUpload = async (file) => {
     if (!file) return null;

@@ -10,6 +10,14 @@ import { uploadLogoImage, uploadLinkImage, deleteImageFromStorage } from "@/hook
 import imageCompression from "browser-image-compression";
 
 import CropperModal from '@/components/ui/CropperModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Copy, Share2 } from "lucide-react";
 
 type LogoProps = {
   username?: string;
@@ -26,6 +34,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropType, setCropType] = useState<'logo' | 'background' | null>(null);
   const [isUploading, setIsUploading] = useState(false); // 업로드 상태 추가
+  const [showProfileModal, setShowProfileModal] = useState(false); // 프로필 팝업 상태 추가
 
   const pathname = usePathname();
   const isEditable = pathname.startsWith("/editor");
@@ -92,41 +101,37 @@ function Gallery3 ({ username, uid }: LogoProps) {
     }
   };
 
-  // handleFileChange: 파일을 읽어서 CropperModal에 전달하는 역할만 합니다.
   const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     type: 'logo' | 'background'
   ) => {
-    if (!isEditable || isUploading) return; // isUploading 상태 추가
+    if (!isEditable || isUploading) return;
+    
     const file = e.target.files?.[0];
     if (!file) {
-      console.log("파일이 선택되지 않았습니다.");
+      alert("파일을 선택해주세요.");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      console.log("FileReader 결과:", result ? "이미지 데이터 로드됨" : "이미지 데이터 없음");
-      console.log("cropImageSrc 및 cropType을 다음으로 설정:", type);
-      setCropImageSrc(result); // 크롭 모달에 넘길 이미지 데이터
-      setCropType(type);       // 크롭 모달에 넘길 타입
+      setCropImageSrc(result);
+      setCropType(type);
     };
     reader.readAsDataURL(file);
   };
 
-  // onCrop: CropperModal에서 크롭된 이미지를 받아 업로드하고 상태를 업데이트합니다.
   const handleCropApply = async (croppedBlob: Blob) => {
     if (!finalUid || !cropType) {
-      console.error("UID 또는 크롭 타입이 유효하지 않습니다.");
+      alert("이미지 처리를 위한 정보가 부족합니다.");
       setCropImageSrc(null);
       setCropType(null);
       return;
     }
 
     try {
-      setIsUploading(true); // 업로드 시작
-      console.log("크롭된 이미지 처리 시작 (onCrop)");
+      setIsUploading(true);
 
       const options = {
         maxSizeMB: 0.8,
@@ -135,21 +140,16 @@ function Gallery3 ({ username, uid }: LogoProps) {
       };
 
       const croppedFile = new File([croppedBlob], `cropped_image.${cropType === 'logo' ? 'jpeg' : 'jpeg'}`, { type: croppedBlob.type });
-
       const compressedFile = await imageCompression(croppedFile, options);
-      const uploadFn = cropType === "logo" ? uploadLogoImage : uploadLinkImage; // `uploadLinkImage`는 배경 이미지 업로드용으로 가정합니다.
+      const uploadFn = cropType === "logo" ? uploadLogoImage : uploadLinkImage;
 
-      // 기존 이미지 삭제 로직
       const oldUrl = cropType === "logo" ? logoUrl : bgUrl;
-      if (oldUrl && !oldUrl.startsWith("/Image/")) { // 기본 이미지는 삭제하지 않음
-        console.log("기존 이미지 삭제 시도:", oldUrl);
+      if (oldUrl && !oldUrl.startsWith("/Image/")) {
         await deleteImageFromStorage(oldUrl);
       }
 
-      console.log("새 이미지 업로드 시작");
       const url = await uploadFn(compressedFile, finalUid);
-      console.log("새 이미지 URL:", url);
-
+      
       if (cropType === "logo") {
         setLogoUrl(url);
         await saveToFirestore({ logoUrl: url });
@@ -160,24 +160,13 @@ function Gallery3 ({ username, uid }: LogoProps) {
 
       alert("이미지가 성공적으로 업데이트되었습니다.");
 
-    } catch (err) {
-      console.error("이미지 업로드 및 처리 중 오류 발생", err);
-      alert("이미지 업로드에 실패했습니다. 콘솔을 확인해주세요.");
+    } catch (error) {
+      alert("이미지 업로드에 실패했습니다.");
     } finally {
-      setIsUploading(false); // 업로드 완료 (성공/실패 무관)
-      setCropImageSrc(null); // 모달 닫기
-      setCropType(null);     // 모달 닫기
-      console.log("크롭된 이미지 처리 완료 (onCrop)");
+      setIsUploading(false);
+      setCropImageSrc(null);
+      setCropType(null);
     }
-  };
-
-
-  const saveToFirestore = async (data: Record<string, string>) => {
-    if (!finalUid) {
-      console.error("저장할 UID가 없습니다.");
-      return;
-    }
-    await setDoc(doc(db, "users", finalUid, "info", "details"), data, { merge: true });
   };
 
   const handleDeleteBackground = async () => {
@@ -191,15 +180,52 @@ function Gallery3 ({ username, uid }: LogoProps) {
       setBgUrl(defaultBg);
       await saveToFirestore({ bgUrl: defaultBg });
       alert("배경 이미지가 삭제되었습니다.");
-    } catch (err) {
-      console.error("배경 이미지 삭제 실패", err);
+    } catch (error) {
       alert("배경 이미지 삭제에 실패했습니다.");
+    }
+  };
+
+  const handleProfileClick = () => {
+    if (isEditable) {
+      // 편집 모드에서는 파일 업로드
+      logoInputRef.current?.click();
+    } else {
+      // 일반 모드에서는 팝업 표시
+      setShowProfileModal(true);
+    }
+  };
+
+  const handleCopyAddress = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      alert('주소가 복사되었습니다!');
+    } catch (error) {
+      alert('주소 복사에 실패했습니다.');
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: name,
+          text: desc,
+          url: window.location.href,
+        });
+      } else {
+        // 공유 API를 지원하지 않는 경우 주소 복사
+        await handleCopyAddress();
+      }
+    } catch (error) {
+      console.error('공유 실패:', error);
+      // 공유가 취소된 경우는 에러로 처리하지 않음
     }
   };
 
   return (
     <div className="flex items-center justify-center w-full p-[10px]">
-      <div className="relative w-full md:w-[1000px] overflow-hidden rounded-xl shadow-lg" style={{ backgroundColor: computedBgColor, minHeight: "250px" }}>
+      <div className="relative w-full md:w-[1000px] overflow-hidden rounded-xl shadow-lg" style={{ backgroundColor: computedBgColor, minHeight: "300px" }}>
         <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
         <div
           className="absolute inset-0 z-0"
@@ -215,21 +241,21 @@ function Gallery3 ({ username, uid }: LogoProps) {
           onClick={() => isEditable && !isUploading && bgInputRef.current?.click()}
         />
 
-        <div className="relative z-10 flex flex-col items-center pt-12 px-4" style={{ color: textColor }}>
+        <div className="relative z-10 flex flex-col items-center pt-16 px-4" style={{ color: textColor }}>
           <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} />
           <Image
             src={logoUrl}
             alt="로고"
-            width={100}
-            height={100}
+            width={120}
+            height={120}
             priority
             className="rounded-full border-4 border-black/20 backdrop-blur-[2px] shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
-            onClick={() => isEditable && !isUploading && logoInputRef.current?.click()}
-            title={isEditable ? "로고 클릭 시 변경" : ""}
+            onClick={handleProfileClick}
+            title={isEditable ? "로고 클릭 시 변경" : "프로필 사진 클릭 시 상세보기"}
           />
-          <div className="mt-4 px-4 py-2 rounded-lg bg-black/10 backdrop-blur-[2px]">
+          <div className="mt-6 px-6 py-3 mb-8 rounded-lg bg-blue-500/30 backdrop-blur-[2px]">
             <h1 className={`text-2xl font-bold ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
-            <p className={`text-sm mt-1 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
+            <p className={`text-sm mt-2 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
           </div>
 
           {isEditable && (
@@ -319,7 +345,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
               setCropType(null);
               setIsUploading(false); // 취소 시 업로드 상태도 초기화
             }}
-            onCrop={handleCropApply} // 새로 만든 handleCropApply 함수 연결
+            onCrop={handleCropApply}
           />
         )}
         {isUploading && !cropImageSrc && ( // 모달이 떠있지 않을 때만 전체 화면 로더 표시
@@ -330,6 +356,53 @@ function Gallery3 ({ username, uid }: LogoProps) {
               </div>
           </div>
         )}
+
+        {/* 프로필 사진 팝업 모달 */}
+        <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
+          <DialogContent className="sm:max-w-[500px] bg-white">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl font-bold text-gray-800">
+                {name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              {/* 프로필 사진 */}
+              <div className="flex justify-center">
+                <Image
+                  src={logoUrl}
+                  alt="프로필 사진"
+                  width={200}
+                  height={200}
+                  priority
+                  className="rounded-full border-4 border-gray-200 shadow-lg"
+                />
+              </div>
+              
+              {/* 설명 */}
+              <div className="text-center">
+                <p className="text-gray-600 text-lg">{desc}</p>
+              </div>
+
+              {/* 버튼들 */}
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={handleCopyAddress}
+                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors"
+                >
+                  <Copy className="w-5 h-5" />
+                  주소 복사
+                </Button>
+                <Button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-colors"
+                >
+                  <Share2 className="w-5 h-5" />
+                  공유하기
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

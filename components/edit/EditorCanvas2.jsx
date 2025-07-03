@@ -149,7 +149,7 @@ export default function EditorCanvas2() {
       <div
         onDragOver={e => e.preventDefault()}
         onDrop={handleDropNew}
-        className="min-h-[400px] border-2 border-dashed border-blue-300 p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl mt-20 shadow-lg"
+        className="min-h-[400px] border-2 border-dashed border-blue-300 p-6 bg-gray-600 from-gray-50 to-white rounded-2xl mt-20 shadow-lg"
       >
         <h2 className="font-bold text-center mb-6 text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-wide">미리보기</h2>
         {components.map((type, idx) => {

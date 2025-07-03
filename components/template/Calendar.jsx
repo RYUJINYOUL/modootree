@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import {
@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
 import { usePathname } from 'next/navigation';
+import Script from 'next/script';
 
 const db = getFirestore(app);
 
@@ -38,15 +39,14 @@ const CalendarWithEvents = ({ username, uid }) => {
   const [events, setEvents] = useState([]);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [confirmCount, setConfirmCount] = useState(0); // 확인 버튼 클릭 횟수
+  const [confirmCount, setConfirmCount] = useState(0);
   const [newEvent, setNewEvent] = useState({
     title: '',
     startTime: '',
     endTime: ''
   });
   const [isMobile, setIsMobile] = useState(false);
-  // --- 새로 추가된 상태 변수 ---
-  const [showAddEventForm, setShowAddEventForm] = useState(false); // 일정 추가 폼 표시 여부
+  const [showAddEventForm, setShowAddEventForm] = useState(false);
 
   const predefinedTimes = [
     '9:00', '10:00', '11:00', '12:00',
@@ -67,9 +67,7 @@ const CalendarWithEvents = ({ username, uid }) => {
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;
-  const canDelete = isEditable
-  ? finalUid
-  : userRole === uid;
+  const canDelete = isEditable ? finalUid : userRole === uid;
 
   const dates = [];
   let current = startDate;
@@ -104,13 +102,94 @@ const CalendarWithEvents = ({ username, uid }) => {
   useEffect(() => {
     const unsubscribe = fetchEventsForMonth();
     return () => unsubscribe();
-  }, [currentDate, finalUid]); // finalUid를 의존성 배열에 추가하여 사용자 변경 시 이벤트 재로드
+  }, [currentDate, finalUid]);
+
+  useEffect(() => {
+    // 초기 로드 시 오늘 날짜의 일정을 보여줌
+    const today = dayjs();
+    setSelectedDate(today);
+    const todayEvents = events
+      .filter(e => e.date === today.format('YYYY-MM-DD'))
+      .sort((a, b) => getSortableHour(a.startTime) - getSortableHour(b.startTime));
+    setSelectedEvents(todayEvents);
+  }, [events]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    // 기존 Google 번역 요소들 제거
+    const removeExistingElements = () => {
+      const elements = document.querySelectorAll('.goog-te-banner-frame, .skiptranslate');
+      elements.forEach(el => el.remove());
+      
+      const scripts = document.querySelectorAll('script[src*="translate.google.com"]');
+      scripts.forEach(script => script.remove());
+    };
+
+    // Google 번역 위젯 초기화
+    const initTranslate = () => {
+      if (!window.google?.translate?.TranslateElement) return;
+      
+      try {
+        removeExistingElements();
+        new window.google.translate.TranslateElement(
+          {
+            pageLanguage: 'ko',
+            includedLanguages: 'ko,zh-CN,vi,ne,uz,km,id,tl,my,th,en,ja,mn',
+            layout: google.translate.TranslateElement.InlineLayout.VERTICAL,
+            autoDisplay: false,
+            multilanguagePage: true,
+            uiLanguage: "en"
+          },
+          'google_translate_element'
+        );
+
+        // 스타일 조정
+        setTimeout(() => {
+          const selectElement = document.querySelector('.goog-te-combo');
+          if (selectElement) {
+            selectElement.style.backgroundColor = '#ffffff';
+            selectElement.style.color = '#000000';
+            selectElement.style.border = 'none';
+            selectElement.style.borderRadius = '4px';
+            selectElement.style.padding = '4px 8px';
+            selectElement.style.fontSize = '14px';
+            selectElement.style.outline = 'none';
+            selectElement.style.width = '120px';
+          }
+
+          // 컨테이너 스타일 조정
+          const container = document.querySelector('.goog-te-gadget');
+          if (container) {
+            container.style.fontSize = '12px';
+            container.style.whiteSpace = 'nowrap';
+          }
+        }, 1000);
+      } catch (error) {
+        console.error('Google 번역 위젯 초기화 실패:', error);
+      }
+    };
+
+    // 스크립트 로드 및 초기화
+    if (!document.querySelector('script[src*="translate.google.com"]')) {
+      window.googleTranslateElementInit = initTranslate;
+      const script = document.createElement('script');
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.head.appendChild(script);
+    } else if (window.google?.translate) {
+      initTranslate();
+    }
+
+    return () => {
+      removeExistingElements();
+      delete window.googleTranslateElementInit;
+    };
   }, []);
 
   const getSortableHour = (timeStr) => {
@@ -129,35 +208,30 @@ const CalendarWithEvents = ({ username, uid }) => {
 
   const handleAddEvent = async () => {
     if (!newEvent.title || !newEvent.startTime || !newEvent.endTime || !userRole) {
-      alert("모든 필드를 채워주세요."); // 사용자에게 알림
+      alert("모든 필드를 채워주세요.");
       return;
     }
 
-    const eventToAdd = {
-      date: selectedDate.format('YYYY-MM-DD'),
-      title: newEvent.title,
-      startTime: newEvent.startTime,
-      endTime: newEvent.endTime,
-      confirmCount: 0, // 확인 횟수 초기값
-    };
-
     try {
-      const docRef = await addDoc(collection(db, 'users', finalUid, 'event'), eventToAdd);
-      const newEventWithId = {
-        id: docRef.id,
-        ...eventToAdd,
+      const eventToAdd = {
+        date: selectedDate.format('YYYY-MM-DD'),
+        title: newEvent.title,
+        startTime: newEvent.startTime,
+        endTime: newEvent.endTime,
+        confirmCount: 0,
       };
 
-      // 상태를 직접 업데이트하여 즉시 UI에 반영 (onSnapshot이 다시 가져오기 전)
-      // setEvents(prev => [...prev, newEventWithId]);
-      // 현재 선택된 날짜의 이벤트 목록에도 추가
-      setSelectedEvents(prev => [...prev, newEventWithId].sort((a, b) => getSortableHour(a.startTime) - getSortableHour(b.startTime)));
+      const docRef = await addDoc(collection(db, 'users', finalUid, 'event'), eventToAdd);
+      const newEventWithId = { id: docRef.id, ...eventToAdd };
+
+      setSelectedEvents(prev => [...prev, newEventWithId].sort((a, b) => 
+        getSortableHour(a.startTime) - getSortableHour(b.startTime))
+      );
 
       setNewEvent({ title: '', startTime: '', endTime: '' });
       alert("일정이 추가되었습니다.");
-      setShowAddEventForm(false); // 일정 추가 후 폼 숨기기
-    } catch (error) {
-      console.error("일정 추가 실패:", error);
+      setShowAddEventForm(false);
+    } catch {
       alert("일정 추가에 실패했습니다.");
     }
   };
@@ -166,12 +240,10 @@ const CalendarWithEvents = ({ username, uid }) => {
     if (!userRole) return;
     try {
       await deleteDoc(doc(db, 'users', finalUid, 'event', id));
-      // 상태를 직접 업데이트하여 즉시 UI에 반영
       setEvents(prev => prev.filter(e => e.id !== id));
       setSelectedEvents(prev => prev.filter(e => e.id !== id));
       alert("일정이 삭제되었습니다.");
-    } catch (error) {
-      console.error("일정 삭제 실패:", error);
+    } catch {
       alert("일정 삭제에 실패했습니다.");
     }
   };
@@ -234,7 +306,7 @@ const CalendarWithEvents = ({ username, uid }) => {
               </thead>
               <tbody>
                 {Array.from({ length: Math.ceil(dates.length / 7) }).map((_, weekIdx) => (
-                  <tr key={weekIdx} className="hover:bg-blue-500/30 transition-colors">
+                  <tr key={weekIdx}>
                     {dates.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, idx) => {
                       const dateStr = date.format('YYYY-MM-DD');
                       const isCurrentMonth = date.month() === currentDate.month();
@@ -246,14 +318,14 @@ const CalendarWithEvents = ({ username, uid }) => {
                         <td
                           key={dateStr}
                           onClick={() => handleDateClick(date)}
-                          className={`align-top p-2 md:p-3 h-16 md:h-24 cursor-pointer transition-all duration-200
+                          className={`align-top p-2 md:p-3 h-16 md:h-24 cursor-pointer transition-all duration-200 hover:bg-blue-500/30
                             ${isCurrentMonth ? 'text-white' : 'text-white/50'}
-                            ${isToday ? 'bg-blue-500/30' : ''}
+                            ${isToday ? 'bg-blue-500/30 rounded-xl' : ''}
                             ${isSelected ? 'bg-blue-500/40' : ''}`}
                         >
                           <div className="flex flex-col h-full items-center gap-2">
-                            <span className={`inline-block w-7 h-7 rounded-full text-center leading-7
-                              ${isToday ? 'bg-blue-500/40 text-white' : ''}`}>
+                            <span className={`inline-block w-7 h-7 text-center leading-7
+                              ${isToday ? 'text-white' : ''}`}>
                               {date.date()}
                             </span>
                             {dayEvents.length > 0 && (
@@ -269,6 +341,57 @@ const CalendarWithEvents = ({ username, uid }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      {/* 일정 리스트 섹션 */}
+      <div className="w-full max-w-[1100px] mt-2">
+        <div className="p-6 rounded-3xl bg-blue-500/20 backdrop-blur-sm space-y-4">
+          {/* 헤더 영역 */}
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold text-white pl-2">
+              {selectedDate.format('M월 D일')}
+            </h3>
+            <div id="google_translate_element"></div>
+          </div>
+
+          {/* 구분선 */}
+          <div className="border-t border-white/10"></div>
+
+          {/* 일정 목록 */}
+          <div className="space-y-4">
+            {selectedEvents.map(event => (
+              <div
+                key={event.id}
+                className="bg-blue-500/30 rounded-lg p-4 text-white"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold">{event.title}</h3>
+                    <p className="text-sm text-white/80">
+                      {event.startTime} - {event.endTime}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleConfirm(event.id)}
+                      className="text-xs bg-blue-500/30 hover:bg-blue-500/40 px-2 py-1 rounded transition-colors"
+                    >
+                      확인 ({event.confirmCount || 0})
+                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="text-xs bg-red-500/30 hover:bg-red-500/40 px-2 py-1 rounded transition-colors"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
