@@ -32,6 +32,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -61,6 +63,7 @@ const ImageCarousel = ({ username, uid }) => {
   const previewCanvasRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
@@ -241,21 +244,27 @@ const ImageCarousel = ({ username, uid }) => {
     setModalOpen(true);
   };
 
-  const handleCaptionSave = async () => {
+  const handleCaptionSave = () => {
+    setSaveDialogOpen(true);
+  };
+
+  const confirmSave = async () => {
     if (!selectedImage || !canEdit) return;
 
     try {
-      const imageRef = doc(db, 'users', finalUid, 'carousel', selectedImage.id);
-      await updateDoc(imageRef, {
-        caption,
-        title,
-        description,
-        link
+      await updateDoc(doc(db, 'users', finalUid, 'carousel', selectedImage.id), {
+        caption: caption,
+        title: title,
+        description: description,
+        link: link
       });
       setEditingCaption(false);
+      setSaveDialogOpen(false);
+      setModalOpen(false);
     } catch (error) {
       console.error('정보 수정 실패:', error);
       alert('정보 수정에 실패했습니다.');
+      setSaveDialogOpen(false);
     }
   };
 
@@ -568,6 +577,34 @@ const ImageCarousel = ({ username, uid }) => {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 저장 확인 다이얼로그 */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent 
+          className="sm:max-w-[425px]"
+          aria-describedby="save-dialog-description"
+        >
+          <DialogHeader>
+            <DialogTitle>이미지 설명 저장</DialogTitle>
+            <DialogDescription id="save-dialog-description">
+              변경된 이미지 설명을 저장하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSaveDialogOpen(false)}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={confirmSave}
+            >
+              저장
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
