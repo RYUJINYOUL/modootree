@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useSelector } from "react-redux";
 import { uploadLogoImage, uploadLinkImage, deleteImageFromStorage } from "@/hooks/useUploadImage"; // deleteImageFromStorage도 필요합니다.
@@ -59,6 +59,18 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const computedBgColor = bgBaseColor === "transparent"
     ? "transparent"
     : `${bgBaseColor}${Math.round(bgOpacity * 255).toString(16).padStart(2, "0").toUpperCase()}`;
+
+  // saveToFirestore 함수 정의 추가
+  const saveToFirestore = async (data: any) => {
+    if (!finalUid) return;
+    const docRef = doc(db, 'users', finalUid, 'info', 'details');
+    try {
+      await updateDoc(docRef, data);
+    } catch (error) {
+      console.error('Firestore 저장 실패:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
