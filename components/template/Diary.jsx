@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   getFirestore,
   collection,
@@ -12,6 +12,7 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  getDoc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -54,6 +55,22 @@ import 'react-image-crop/dist/ReactCrop.css';
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// 이메일 마스킹 함수 추가
+const maskEmail = (email) => {
+  if (!email) return '';
+  if (!email.includes('@')) return email;
+  
+  const [username, domain] = email.split('@');
+  const domainParts = domain.split('.');
+  const lastPart = domainParts[domainParts.length - 1];
+  
+  if (lastPart.length >= 2) {
+    domainParts[domainParts.length - 1] = lastPart.slice(0, -2) + '**';
+  }
+  
+  return `${username}@${domainParts.join('.')}`;
+};
+
 const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
@@ -77,10 +94,9 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 
 const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
 
-const Diary = ({ username, uid }) => {
+const Diary = ({ username, uid, isEditable, isAllowed }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const isEditable = pathname.startsWith('/editor');
   const [diaries, setDiaries] = useState([]);
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -110,11 +126,48 @@ const Diary = ({ username, uid }) => {
   const [showDiaryPopup, setShowDiaryPopup] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-
+  const [allowedUsers, setAllowedUsers] = useState([]);
+  const [usernames, setUsernames] = useState({});
+  
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;
-  const canEdit = isEditable ? finalUid : userRole === uid;
+
+  // 현재 사용자 정보를 메모이제이션
+  const currentUserInfo = useMemo(() => {
+    return {
+      email: currentUser?.email || '',
+      displayName: username || currentUser?.displayName || '',  // username을 우선 사용
+      uid: currentUser?.uid || '',
+      username: username || ''  // username 추가
+    };
+  }, [currentUser, username]);
+
+  // 권한 체크 함수 수정
+  const canWrite = useMemo(() => {
+    if (!currentUser) return false;
+    if (isEditable || currentUser.uid === uid) return true;
+    return isAllowed;  // isAllowed prop 사용
+  }, [currentUser, isEditable, uid, isAllowed]);
+
+  // canEdit 수정 (삭제 권한용)
+  const canEdit = isEditable || userRole === uid;  // 소유자와 편집 모드만 수정/삭제 가능
+
+  // 허용된 사용자 목록 가져오기
+  useEffect(() => {
+    if (!finalUid) return;
+    
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', finalUid, 'settings', 'permissions'),
+      (doc) => {
+        if (doc.exists()) {
+          setAllowedUsers(doc.data().allowedUsers || []);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, [finalUid]);
 
   const days = ['일', '월', '화', '수', '목', '금', '토'];
   
@@ -264,22 +317,61 @@ const Diary = ({ username, uid }) => {
     }
   };
 
+  // 사용자 이름을 가져오는 함수
+  const fetchUsername = async (uid) => {
+    if (!uid) return null;
+    
+    try {
+      // 이미 캐시된 username이 있다면 반환
+      if (usernames[uid]) return usernames[uid];
+
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const username = userDoc.data().username;
+        // 캐시에 저장
+        setUsernames(prev => ({ ...prev, [uid]: username }));
+        return username;
+      }
+      return null;
+    } catch (error) {
+      console.error('사용자 이름 가져오기 실패:', error);
+      return null;
+    }
+  };
+
+  // 작성자 정보 표시 함수 수정
+  const renderAuthorInfo = (diary) => {
+    if (!diary.authorUid) return '사용자';
+    return usernames[diary.authorUid] || diary.authorName || maskEmail(diary.authorEmail) || '사용자';
+  };
+
+  // 일기 작성 시 username도 함께 저장
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newDiary.title || !newDiary.content || !userRole) {
+    if (!newDiary.title || !newDiary.content || !currentUser) {
       alert('제목과 내용을 모두 입력해주세요.');
       return;
     }
 
     try {
       const imageUrls = await uploadImagesToStorage();
+      const now = new Date().toISOString();
+      const user = currentUser;
+
+      // 현재 사용자의 username 가져오기
+      const username = await fetchUsername(user.uid);
       
-      await addDoc(collection(db, 'users', finalUid, 'diary'), {
+      const diaryData = {
         ...newDiary,
         images: imageUrls,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+        createdAt: now,
+        updatedAt: now,
+        authorUid: user.uid,
+        authorEmail: user.email || '',
+        authorName: username || user.displayName || user.email?.split('@')[0] || '사용자',
+      };
+
+      await addDoc(collection(db, 'users', finalUid, 'diary'), diaryData);
 
       setNewDiary({ title: '', content: '', isPrivate: false, images: [] });
       setSelectedImages([]);
@@ -411,6 +503,123 @@ const Diary = ({ username, uid }) => {
     setCurrentPage(prev => prev + 1);
   };
 
+  // 일기 목록 표시 부분 수정
+  const renderDiaryList = () => {
+    return getPaginatedDiaries().map((diary) => (
+      <div
+        key={diary.id}
+        onClick={() => handleDiaryClick(diary)}
+        className="flex flex-col bg-blue-500/20 rounded-2xl shadow-md backdrop-blur-sm overflow-hidden"
+      >
+        {/* 1번 row: 제목과 버튼들 */}
+        <div className="flex justify-between items-center p-4 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-white flex items-center gap-1">
+              {diary.isPrivate && <Lock className="w-4 h-4" />}
+              {diary.title}
+            </h3>
+            <span className="text-sm text-white/70">
+              {renderAuthorInfo(diary)}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            {canEdit && (
+              <>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingDiary(diary);
+                  }}
+                  className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(diary.id, diary.images);
+                  }}
+                  className="p-2 bg-red-500/30 text-white rounded-lg hover:bg-red-500/40"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={(e) => handleLikeClick(e, diary)}
+                  className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="w-4 h-4" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                    />
+                  </svg>
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 2번 row: 내용 */}
+        <div className="p-4 border-b border-white/10">
+          <p className="text-white/80 line-clamp-3 whitespace-pre-wrap">
+            {diary.content}
+          </p>
+        </div>
+
+        {/* 3번 row: 이미지 */}
+        {diary.images && diary.images.length > 0 && (
+          <div className="p-4 border-b border-white/10">
+            <div className="grid grid-cols-3 gap-2">
+              {diary.images.slice(0, 3).map((imageUrl, index) => (
+                <img
+                  key={index}
+                  src={imageUrl}
+                  alt={`일기 이미지 ${index + 1}`}
+                  className="w-full h-24 md:h-40 lg:h-48 object-cover rounded-lg"
+                />
+              ))}
+              {diary.images.length > 3 && (
+                <div className="relative h-24 md:h-40 lg:h-48">
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center text-white">
+                    +{diary.images.length - 3}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 4번 row: 날짜 */}
+        <div className="p-4 text-sm text-white/70">
+          {dayjs(diary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
+        </div>
+      </div>
+    ));
+  };
+
+  // 일기 목록이 변경될 때마다 username 가져오기
+  useEffect(() => {
+    const loadUsernames = async () => {
+      if (!diaries.length) return;
+
+      const uniqueUids = [...new Set(diaries.map(diary => diary.authorUid).filter(Boolean))];
+      
+      // 모든 UID에 대해 동시에 username 가져오기
+      const promises = uniqueUids.map(uid => fetchUsername(uid));
+      await Promise.all(promises);
+    };
+
+    loadUsernames();
+  }, [diaries]);
+
   return (
     <div className='pt-16 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
       {/* 일기장 제목 */}
@@ -421,7 +630,7 @@ const Diary = ({ username, uid }) => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (canEdit) {
+                if (canWrite) {
                   setIsWriting(true);
                 }
               }}
@@ -438,7 +647,7 @@ const Diary = ({ username, uid }) => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (canEdit) {
+                if (canWrite) {
                   setIsWriting(true);
                 }
               }}
@@ -680,101 +889,7 @@ const Diary = ({ username, uid }) => {
             </div>
           ) : (
             <>
-              {getPaginatedDiaries().map((diary) => (
-                <div
-                  key={diary.id}
-                  onClick={() => handleDiaryClick(diary)}
-                  className="flex flex-col bg-blue-500/20 rounded-2xl shadow-md backdrop-blur-sm overflow-hidden"
-                >
-                  {/* 1번 row: 제목과 버튼들 */}
-                  <div className="flex justify-between items-center p-4 border-b border-white/10">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-white flex items-center gap-1">
-                        {diary.isPrivate && <Lock className="w-4 h-4" />}
-                        {diary.title}
-                      </h3>
-                    </div>
-                    <div className="flex gap-2">
-                      {canEdit && (
-                        <>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingDiary(diary);
-                            }}
-                            className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(diary.id, diary.images);
-                            }}
-                            className="p-2 bg-red-500/30 text-white rounded-lg hover:bg-red-500/40"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            onClick={(e) => handleLikeClick(e, diary)}
-                            className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
-                          >
-                            <svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              className="w-4 h-4" 
-                              fill="none" 
-                              viewBox="0 0 24 24" 
-                              stroke="currentColor"
-                            >
-                              <path 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                strokeWidth={2} 
-                                d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
-                              />
-                            </svg>
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 2번 row: 내용 */}
-                  <div className="p-4 border-b border-white/10">
-                    <p className="text-white/80 line-clamp-3 whitespace-pre-wrap">
-                      {diary.content}
-                    </p>
-                  </div>
-
-                  {/* 3번 row: 이미지 */}
-                  {diary.images && diary.images.length > 0 && (
-                    <div className="p-4 border-b border-white/10">
-                      <div className="grid grid-cols-3 gap-2">
-                        {diary.images.slice(0, 3).map((imageUrl, index) => (
-                          <img
-                            key={index}
-                            src={imageUrl}
-                            alt={`일기 이미지 ${index + 1}`}
-                            className="w-full h-24 md:h-40 lg:h-48 object-cover rounded-lg"
-                          />
-                        ))}
-                        {diary.images.length > 3 && (
-                          <div className="relative h-24 md:h-40 lg:h-48">
-                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center text-white">
-                              +{diary.images.length - 3}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 4번 row: 날짜 */}
-                  <div className="p-4 text-sm text-white/70">
-                    {dayjs(diary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
-                  </div>
-                </div>
-              ))}
+              {renderDiaryList()}
 
               {/* 더보기 버튼 */}
               {hasMoreDiaries && (
@@ -796,7 +911,12 @@ const Diary = ({ username, uid }) => {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span>{selectedDiary?.title}</span>
+                <div className="flex flex-col">
+                  <span>{selectedDiary?.title}</span>
+                  <span className="text-sm text-gray-500">
+                    작성자: {selectedDiary ? renderAuthorInfo(selectedDiary) : ''}
+                  </span>
+                </div>
                 <span className="text-sm text-gray-500">
                   {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).locale('ko').format('YYYY년 MM월 DD일')}
                 </span>

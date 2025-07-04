@@ -2,41 +2,123 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '../../firebase';
+import { getAuth } from 'firebase/auth';
 import {
   doc,
   getDoc,
   setDoc,
   updateDoc,
+  collection,
+  getDocs
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
 import { useSelector } from 'react-redux';
 import UseCaseCarousel from '@/components/UseCaseCarousel';
 import Image from 'next/image';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function Page() {
-  const { currentUser } = useSelector((state) => state.user);
+  const user = useSelector((state) => state.user);
+  const { currentUser } = user;
+  const [authUser, setAuthUser] = useState(null);
+  const auth = getAuth();
+  
+  console.log('Redux User State:', user);
+  console.log('Current User:', currentUser);
+  
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Firebase Auth User:', user);
+      setAuthUser(user);
+    });
+
+    return () => unsubscribe();
+  }, [auth]);
+
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [allowedSites, setAllowedSites] = useState([]);
+  const [showAllowedSites, setShowAllowedSites] = useState(false);
   const { push } = useRouter();
 
   useEffect(() => {
     const loadUserData = async () => {
-      if (!currentUser?.uid) {
+      const user = authUser || currentUser;
+      if (!user?.uid) {
         setLoading(false);
         return;
       }
 
       try {
-        const userRef = doc(db, 'users', currentUser.uid);
+        const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           setUserData(userSnap.data());
         }
+
+        // 허용된 사이트 목록 가져오기
+        const usernamesRef = collection(db, 'usernames');
+        const usernamesSnap = await getDocs(usernamesRef);
+        const usernames = [];
+        
+        console.log('=== 디버깅 시작 ===');
+        console.log('현재 사용자 정보:', {
+          email: user.email,
+          uid: user.uid
+        });
+        console.log('전체 사용자네임 문서 수:', usernamesSnap.docs.length);
+
+        for (const docSnapshot of usernamesSnap.docs) {
+          const data = docSnapshot.data();
+          console.log('검사 중인 사용자:', {
+            username: docSnapshot.id,
+            uid: data.uid
+          });
+          
+          const uid = data.uid;
+          if (uid) {
+            const permissionsRef = doc(db, 'users', uid, 'settings', 'permissions');
+            const permissionsSnap = await getDoc(permissionsRef);
+            
+            if (permissionsSnap.exists()) {
+              const permissionsData = permissionsSnap.data();
+              console.log('권한 데이터:', {
+                username: docSnapshot.id,
+                allowedUsers: permissionsData.allowedUsers || []
+              });
+              
+              const allowedUsers = permissionsData.allowedUsers || [];
+              const isAllowed = allowedUsers.some(allowedUser => allowedUser.email === user.email);
+              console.log('권한 확인 결과:', {
+                username: docSnapshot.id,
+                isAllowed: isAllowed,
+                currentUserEmail: user.email
+              });
+              
+              if (isAllowed) {
+                usernames.push({
+                  username: docSnapshot.id,
+                  uid: uid
+                });
+                console.log('허용된 사이트에 추가됨:', docSnapshot.id);
+              }
+            } else {
+              console.log('권한 문서 없음:', docSnapshot.id);
+            }
+          } else {
+            console.log('uid 없음:', docSnapshot.id);
+          }
+        }
+
+        console.log('=== 최종 결과 ===');
+        console.log('허용된 사이트 목록:', usernames);
+        setAllowedSites(usernames);
       } catch (e) {
         console.error(e);
       } finally {
@@ -45,7 +127,7 @@ export default function Page() {
     };
 
     loadUserData();
-  }, [currentUser]);
+  }, [authUser, currentUser]);
 
   const handleSaveUsername = async () => {
     if (!username) {
@@ -152,6 +234,36 @@ export default function Page() {
           >
             공감 한 조각
           </Link>
+          {(authUser || currentUser) && allowedSites.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowAllowedSites(!showAllowedSites)}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center relative"
+              >
+                <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">초대 페이지 목록 {allowedSites.length}개</span>
+                <span className="absolute right-4">
+                  {showAllowedSites ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </span>
+              </button>
+              {showAllowedSites && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-emerald-600/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg z-10">
+                  {allowedSites.map((site) => (
+                    <Link
+                      key={site.username}
+                      href={`/${site.username}`}
+                      className="block px-6 py-3 hover:bg-emerald-700/80 text-white text-[15px] text-left border-b border-white/10 last:border-none"
+                    >
+                      modootree.com/{site.username}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">

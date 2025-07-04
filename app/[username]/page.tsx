@@ -2,7 +2,7 @@
 
 // app/[username]/page.tsx
 import { db } from '../../firebase';
-import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { notFound, useParams } from 'next/navigation';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 import Link from 'next/link';
@@ -11,6 +11,9 @@ import BackgroundSelector from '@/components/template/BackgroundSelector';
 import { useBackground } from '@/components/providers';
 import { useState, useEffect } from 'react';
 import React from 'react';
+import { useSelector } from 'react-redux';
+import { getAuth } from 'firebase/auth';
+import ComponentRenderer from '@/components/ComponentRenderer';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
@@ -58,9 +61,13 @@ export default function UserPublicPage() {
   const params = useParams();
   const username = params.username as string;
   const { background, setBackground: setContextBackground } = useBackground();
+  const { currentUser } = useSelector((state: any) => state.user);
+  const auth = getAuth();
 
   const [userData, setUserData] = useState<any>(null);
   const [components, setComponents] = useState<string[]>([]);
+  const [allowedUsers, setAllowedUsers] = useState<Array<{uid: string, email: string}>>([]);
+  const [isAllowed, setIsAllowed] = useState(false);
 
   const handleBackgroundChange = async (type: string, value: string) => {
     if (!userData?.uid) {
@@ -79,32 +86,58 @@ export default function UserPublicPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const userSnap = await getDoc(doc(db, 'usernames', username));
-      
-      if (!userSnap.exists()) {
-        notFound();
-        return;
-      }
+      try {
+        const userSnap = await getDoc(doc(db, 'usernames', username));
+        
+        if (!userSnap.exists()) {
+          notFound();
+          return;
+        }
 
-      const data = userSnap.data();
-      const uid = data?.uid;
-      setUserData({ ...data, uid });
-      
-      // 배경 설정 불러오기
-      const settingsDocRef = doc(db, 'users', uid, 'settings', 'background');
-      const settingsSnap = await getDoc(settingsDocRef);
-      if (settingsSnap.exists()) {
-        const backgroundData = settingsSnap.data();
-        setContextBackground(backgroundData.type, backgroundData.value);
+        const data = userSnap.data();
+        const uid = data?.uid;
+        setUserData({ ...data, uid });
+        
+        // 배경 설정 불러오기
+        const settingsDocRef = doc(db, 'users', uid, 'settings', 'background');
+        const settingsSnap = await getDoc(settingsDocRef);
+        if (settingsSnap.exists()) {
+          const backgroundData = settingsSnap.data();
+          setContextBackground(backgroundData.type, backgroundData.value);
+        }
+        
+        const linksDocRef = doc(db, 'users', uid, 'links', 'page');
+        const linksSnap = await getDoc(linksDocRef);
+        setComponents(linksSnap.exists() ? linksSnap.data().components || [] : []);
+
+        // 허용된 사용자 목록 실시간 업데이트
+        const unsubscribe = onSnapshot(
+          doc(db, 'users', uid, 'settings', 'permissions'),
+          (doc) => {
+            if (doc.exists()) {
+              const allowedUsersData = doc.data().allowedUsers || [];
+              setAllowedUsers(allowedUsersData);
+              
+              // 현재 사용자가 허용된 사용자인지 확인
+              const user = auth.currentUser || currentUser;
+              if (user) {
+                const isUserAllowed = allowedUsersData.some(
+                  (allowedUser: { email: string }) => allowedUser.email === user.email
+                );
+                setIsAllowed(isUserAllowed);
+              }
+            }
+          }
+        );
+
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('데이터 로딩 중 오류 발생:', error);
       }
-      
-      const linksDocRef = doc(db, 'users', uid, 'links', 'page');
-      const linksSnap = await getDoc(linksDocRef);
-      setComponents(linksSnap.exists() ? linksSnap.data().components || [] : []);
     }
 
     fetchData();
-  }, [username]);
+  }, [username, currentUser]);
 
   if (!userData) return null;
 
@@ -186,10 +219,16 @@ export default function UserPublicPage() {
       )}
       <div className="flex-grow flex flex-col items-center justify-center w-full">
         <div className="md:w-[1000px] w-full px-[10px]">   
-          {components.map((type: string, i: number) => {
-            const Component = ComponentLibrary[type as keyof typeof ComponentLibrary];
-            return Component && <Component key={i} username={username} uid={userData.uid} />;
-          })}
+          {components.map((component, index) => (
+            <ComponentRenderer
+              key={index}
+              type={component}
+              uid={userData.uid}
+              username={username}
+              isEditable={false}
+              isAllowed={isAllowed}
+            />
+          ))}
         </div>
       </div>
       <div className="w-full">

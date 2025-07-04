@@ -17,6 +17,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import Link from 'next/link';
 import CategoryCarousel from '../../components/CategoryCarousel';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,22 @@ const REACTIONS = [
   },
 ];
 
+// 이메일 마스킹 함수 추가
+const maskEmail = (email) => {
+  if (!email) return '';
+  if (!email.includes('@')) return email;
+  
+  const [username, domain] = email.split('@');
+  const domainParts = domain.split('.');
+  const lastPart = domainParts[domainParts.length - 1];
+  
+  if (lastPart.length >= 2) {
+    domainParts[domainParts.length - 1] = lastPart.slice(0, -2) + '**';
+  }
+  
+  return `${username}@${domainParts.join('.')}`;
+};
+
 export default function LikesPage() {
   const [likes, setLikes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +92,7 @@ export default function LikesPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedLike, setSelectedLike] = useState(null);
   const { currentUser } = useSelector((state) => state.user);
+  const auth = getAuth();
   
   // 답글 관련 상태 추가
   const [comments, setComments] = useState({});
@@ -197,10 +215,31 @@ export default function LikesPage() {
     return ADMIN_UIDS.includes(currentUser.email) || like.userId === currentUser.uid;
   };
 
-  // 답글 관련 함수들 추가
+  // 현재 사용자 정보를 가져오는 함수
+  const getCurrentUserInfo = () => {
+    const user = auth.currentUser || currentUser;
+    console.log('Auth current user:', auth.currentUser);
+    console.log('Redux current user:', currentUser);
+    
+    if (!user) return null;
+
+    // providerData에서 첫 번째 항목 가져오기 (소셜 로그인 정보)
+    const providerData = user.providerData && user.providerData[0];
+    
+    return {
+      uid: user.uid,
+      email: user.email || providerData?.email || '',
+      displayName: user.displayName || providerData?.displayName || '',
+      photoURL: user.photoURL || providerData?.photoURL || ''
+    };
+  };
+
+  // 답글 관련 함수들 수정
   const handleAddComment = async (likeId) => {
-    // 로그인 상태 엄격하게 체크
-    if (!currentUser?.uid) {
+    const userInfo = getCurrentUserInfo();
+    console.log('Full user info:', userInfo);
+
+    if (!userInfo?.uid) {
       alert('답글을 작성하려면 로그인이 필요합니다.');
       return;
     }
@@ -210,11 +249,21 @@ export default function LikesPage() {
     }
     
     try {
+      // 사용자 정보 처리
+      const commentUserInfo = {
+        userId: userInfo.uid,
+        userName: userInfo.displayName || (userInfo.email ? userInfo.email.split('@')[0] : ''),
+        userEmail: userInfo.email || ''
+      };
+
+      console.log('Comment user info:', commentUserInfo);
+
       const commentData = {
         likeId,
         content: newComment.trim(),
-        userId: currentUser.uid,
-        userEmail: currentUser.email || currentUser.displayName || currentUser.uid,
+        userId: commentUserInfo.userId,
+        userName: commentUserInfo.userName,
+        userEmail: commentUserInfo.userEmail,
         createdAt: new Date(),
       };
 
@@ -288,6 +337,100 @@ export default function LikesPage() {
   const filteredLikes = selectedCategory === '전체' 
     ? likes 
     : likes.filter(like => like.category === selectedCategory);
+
+  // 사용자 정보 표시 함수 수정
+  const getUserDisplayName = (comment) => {
+    console.log('Getting display name for comment:', comment);
+    
+    // 기존 데이터 호환성 (userEmail이 username으로 사용된 경우)
+    if (comment.userEmail && !comment.userEmail.includes('@')) {
+      return comment.userEmail;
+    }
+
+    // userName이 있는 경우
+    if (comment.userName && comment.userName.trim() !== '') {
+      return comment.userName;
+    }
+
+    // userEmail이 있는 경우
+    if (comment.userEmail && comment.userEmail.includes('@')) {
+      return comment.userEmail.split('@')[0];
+    }
+
+    // userId가 있고 현재 사용자인 경우
+    const userInfo = getCurrentUserInfo();
+    if (userInfo && comment.userId === userInfo.uid) {
+      return userInfo.displayName || userInfo.email?.split('@')[0] || '사용자';
+    }
+
+    return '알 수 없음';
+  };
+
+  // 답글 렌더링 부분 수정
+  const renderComment = (comment) => {
+    console.log('Rendering comment with data:', comment);
+    
+    return (
+      <div key={comment.id} className="flex items-start space-x-2 p-2 rounded-lg bg-blue-500/10">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-white">
+              {getUserDisplayName(comment)}
+            </span>
+            <span className="text-xs text-white/50">
+              {comment.createdAt?.toDate().toLocaleString()}
+            </span>
+          </div>
+          {editingComment?.id === comment.id ? (
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="text"
+                value={editCommentText}
+                onChange={(e) => setEditCommentText(e.target.value)}
+                className="flex-1 bg-blue-500/20 rounded px-2 py-1 text-white"
+              />
+              <button
+                onClick={() => handleEditComment(comment)}
+                className="text-sm text-blue-300 hover:text-blue-400"
+              >
+                저장
+              </button>
+              <button
+                onClick={() => {
+                  setEditingComment(null);
+                  setEditCommentText('');
+                }}
+                className="text-sm text-red-300 hover:text-red-400"
+              >
+                취소
+              </button>
+            </div>
+          ) : (
+            <p className="mt-1 text-white/90">{comment.content}</p>
+          )}
+        </div>
+        {(currentUser?.uid === comment.userId || ADMIN_UIDS.includes(currentUser?.email)) && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                setEditingComment(comment);
+                setEditCommentText(comment.content);
+              }}
+              className="p-1 text-blue-300 hover:text-blue-400"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleDeleteComment(comment)}
+              className="p-1 text-red-300 hover:text-red-400"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8">
@@ -418,65 +561,7 @@ export default function LikesPage() {
                   {showComments[like.id] && (
                     <div className="space-y-3">
                       {/* 답글 목록 */}
-                      {comments[like.id]?.map((comment) => (
-                        <div key={comment.id} className="flex flex-col gap-1">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-400">{comment.userEmail}</span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(comment.createdAt?.toDate()).toLocaleDateString()}
-                              </span>
-                            </div>
-                            {(currentUser?.uid === comment.userId || ADMIN_UIDS.includes(currentUser?.email)) && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  className="h-6 w-6 p-0 text-gray-400 hover:text-blue-400 bg-transparent"
-                                  onClick={() => {
-                                    setEditingComment(comment.id);
-                                    setEditCommentText(comment.content);
-                                  }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </button>
-                                <button
-                                  className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 bg-transparent"
-                                  onClick={() => handleDeleteComment(comment)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {editingComment === comment.id ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={editCommentText}
-                                onChange={(e) => setEditCommentText(e.target.value)}
-                                className="flex-1 bg-gray-700 rounded px-2 py-1 text-sm"
-                              />
-                              <button
-                                className="h-7 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-                                onClick={() => handleEditComment(comment)}
-                              >
-                                수정
-                              </button>
-                              <button
-                                className="h-7 px-3 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm"
-                                onClick={() => {
-                                  setEditingComment(null);
-                                  setEditCommentText('');
-                                }}
-                              >
-                                취소
-                              </button>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-300">{comment.content}</p>
-                          )}
-                        </div>
-                      ))}
+                      {comments[like.id]?.map(renderComment)}
 
                       {/* 답글 입력 폼 */}
                       {currentUser?.uid ? (

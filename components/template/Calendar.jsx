@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import {
@@ -14,6 +14,7 @@ import {
   doc,
   updateDoc,
   increment,
+  getDoc,
 } from 'firebase/firestore';
 import app from '@/firebase';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -31,9 +32,8 @@ import Script from 'next/script';
 
 const db = getFirestore(app);
 
-const CalendarWithEvents = ({ username, uid }) => {
+const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [events, setEvents] = useState([]);
@@ -47,6 +47,8 @@ const CalendarWithEvents = ({ username, uid }) => {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [allowedUsers, setAllowedUsers] = useState([]);
+  const [usernames, setUsernames] = useState({});
 
   const predefinedTimes = [
     '9:00', '10:00', '11:00', '12:00',
@@ -67,7 +69,32 @@ const CalendarWithEvents = ({ username, uid }) => {
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;
-  const canDelete = isEditable ? finalUid : userRole === uid;
+
+  // 권한 체크 함수 수정
+  const canWrite = useMemo(() => {
+    if (!currentUser) return false;
+    if (isEditable || currentUser.uid === uid) return true;
+    return isAllowed;  // isAllowed prop 사용
+  }, [currentUser, isEditable, uid, isAllowed]);
+
+  // canDelete 수정
+  const canDelete = isEditable || userRole === uid;  // 소유자와 편집 모드만 삭제 가능
+
+  // 허용된 사용자 목록 가져오기
+  useEffect(() => {
+    if (!finalUid) return;
+    
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', finalUid, 'settings', 'permissions'),
+      (doc) => {
+        if (doc.exists()) {
+          setAllowedUsers(doc.data().allowedUsers || []);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, [finalUid]);
 
   const dates = [];
   let current = startDate;
@@ -199,26 +226,99 @@ const CalendarWithEvents = ({ username, uid }) => {
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
+    const dateStr = date.format('YYYY-MM-DD');
     const filtered = events
-      .filter(e => e.date === date.format('YYYY-MM-DD'))
+      .filter(e => e.date === dateStr)
       .sort((a, b) => getSortableHour(a.startTime) - getSortableHour(b.startTime));
     setSelectedEvents(filtered);
     setModalOpen(true);
   };
 
+  // 사용자 이름을 가져오는 함수
+  const fetchUsername = async (uid) => {
+    if (!uid) return null;
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const username = userDoc.data().username;
+        setUsernames(prev => ({ ...prev, [uid]: username }));
+        return username;
+      }
+      return null;
+    } catch (error) {
+      console.error('사용자 이름 가져오기 실패:', error);
+      return null;
+    }
+  };
+
+  // 이벤트 목록이 변경될 때마다 username 가져오기
+  useEffect(() => {
+    const loadUsernames = async () => {
+      if (!events.length) return;
+
+      const uniqueUids = [...new Set(events.map(event => event.authorUid).filter(Boolean))];
+      
+      // 모든 UID에 대해 동시에 username 가져오기
+      const promises = uniqueUids.map(uid => fetchUsername(uid));
+      await Promise.all(promises);
+    };
+
+    loadUsernames();
+  }, [events]);
+
+  // 이메일 마스킹 함수
+  const maskEmail = (email) => {
+    if (!email) return '';
+    if (!email.includes('@')) return email;
+    
+    const [username, domain] = email.split('@');
+    const domainParts = domain.split('.');
+    const lastPart = domainParts[domainParts.length - 1];
+    
+    if (lastPart.length >= 2) {
+      domainParts[domainParts.length - 1] = lastPart.slice(0, -2) + '**';
+    }
+    
+    return `${username}@${domainParts.join('.')}`;
+  };
+
+  // 작성자 정보 표시 함수
+  const renderAuthorInfo = async (event) => {
+    if (!event.authorUid) return '사용자';
+    
+    try {
+      const username = await fetchUsername(event.authorUid);
+      if (username) return username;
+      
+      if (event.authorName) return event.authorName;
+      if (event.authorEmail) return maskEmail(event.authorEmail);
+      return '사용자';
+    } catch (error) {
+      console.error('작성자 정보 가져오기 실패:', error);
+      return '사용자';
+    }
+  };
+
   const handleAddEvent = async () => {
-    if (!newEvent.title || !newEvent.startTime || !newEvent.endTime || !userRole) {
+    if (!newEvent.title || !newEvent.startTime || !newEvent.endTime || !currentUser) {
       alert("모든 필드를 채워주세요.");
       return;
     }
 
     try {
+      // 현재 사용자의 username 가져오기
+      const username = await fetchUsername(currentUser.uid);
+
       const eventToAdd = {
         date: selectedDate.format('YYYY-MM-DD'),
         title: newEvent.title,
         startTime: newEvent.startTime,
         endTime: newEvent.endTime,
         confirmCount: 0,
+        authorUid: currentUser.uid,
+        authorEmail: currentUser.email || '',
+        authorName: username || currentUser.displayName || currentUser.email?.split('@')[0] || '사용자'
       };
 
       const docRef = await addDoc(collection(db, 'users', finalUid, 'event'), eventToAdd);
@@ -231,7 +331,8 @@ const CalendarWithEvents = ({ username, uid }) => {
       setNewEvent({ title: '', startTime: '', endTime: '' });
       alert("일정이 추가되었습니다.");
       setShowAddEventForm(false);
-    } catch {
+    } catch (error) {
+      console.error("일정 추가 실패:", error);
       alert("일정 추가에 실패했습니다.");
     }
   };
@@ -271,6 +372,54 @@ const CalendarWithEvents = ({ username, uid }) => {
       console.error("확인 횟수 업데이트 실패:", error);
       alert("확인 횟수 업데이트에 실패했습니다.");
     }
+  };
+
+  // 일정 렌더링 부분 수정
+  const renderEventList = (events) => {
+    if (!events || events.length === 0) {
+      return (
+        <div className="text-white/70 text-center py-4">
+          등록된 일정이 없습니다.
+        </div>
+      );
+    }
+
+    return events.map(event => (
+      <div
+        key={event.id}
+        className="bg-blue-500/30 rounded-lg p-4 text-white"
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">{event.title}</h3>
+              <span className="text-sm text-white/70">
+                ({usernames[event.authorUid] || '사용자'})
+              </span>
+            </div>
+            <p className="text-sm text-white/80">
+              {event.startTime} - {event.endTime}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleConfirm(event.id)}
+              className="text-xs bg-blue-500/30 hover:bg-blue-500/40 px-2 py-1 rounded transition-colors"
+            >
+              확인 ({event.confirmCount || 0})
+            </button>
+            {(canDelete || event.authorUid === currentUser?.uid) && (
+              <button
+                onClick={() => handleDelete(event.id)}
+                className="text-xs bg-red-500/30 hover:bg-red-500/40 px-2 py-1 rounded transition-colors"
+              >
+                삭제
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    ));
   };
 
   return (
@@ -361,43 +510,13 @@ const CalendarWithEvents = ({ username, uid }) => {
 
           {/* 일정 목록 */}
           <div className="space-y-4">
-            {selectedEvents.map(event => (
-              <div
-                key={event.id}
-                className="bg-blue-500/30 rounded-lg p-4 text-white"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold">{event.title}</h3>
-                    <p className="text-sm text-white/80">
-                      {event.startTime} - {event.endTime}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleConfirm(event.id)}
-                      className="text-xs bg-blue-500/30 hover:bg-blue-500/40 px-2 py-1 rounded transition-colors"
-                    >
-                      확인 ({event.confirmCount || 0})
-                    </button>
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDelete(event.id)}
-                        className="text-xs bg-red-500/30 hover:bg-red-500/40 px-2 py-1 rounded transition-colors"
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+            {renderEventList(selectedEvents)}
           </div>
         </div>
       </div>
 
       {/* 일정 추가 섹션 */}
-      {canDelete && (
+      {canWrite && (
         <div className="w-full max-w-[1100px] mt-2 p-6 rounded-3xl bg-blue-500/20 backdrop-blur-sm">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-white tracking-tight">
