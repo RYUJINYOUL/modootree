@@ -599,7 +599,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 4번 row: 날짜 */}
         <div className="p-4 text-sm text-white/70">
-          {dayjs(diary.createdAt).locale('ko').format('YYYY년 MM월 DD일 HH:mm')}
+          {dayjs(diary.createdAt).locale('ko').format('YY년 MM월 DD일 HH:mm')}
         </div>
       </div>
     ));

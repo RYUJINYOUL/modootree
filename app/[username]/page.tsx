@@ -59,6 +59,9 @@ const getVideoUrl = (url: string, type: string) => {
 
 export default function UserPublicPage() {
   const params = useParams();
+  if (!params || !params.username) {
+    return null;
+  }
   const username = params.username as string;
   const { background, setBackground: setContextBackground } = useBackground();
   const { currentUser } = useSelector((state: any) => state.user);
