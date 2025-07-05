@@ -67,7 +67,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;
   const canDelete = isEditable ? finalUid : userRole === uid;
-  const { toast } = useToast();
+  const toast = useToast();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [entries, setEntries] = useState([])
@@ -148,7 +148,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   }, [isLoading, hasMore, loadMore])
 
   const showToast = (title, description, duration = 2000) => {
-    toast({
+    toast.toast({
       title,
       description,
       duration,
@@ -399,7 +399,7 @@ export default function GuestbookTemplate({ username, uid }) {
   const { toast } = useToast();
 
   const showToast = (title, description, duration = 2000) => {
-    toast({
+    toast.toast({
       title,
       description,
       duration,

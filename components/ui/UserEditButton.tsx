@@ -32,7 +32,7 @@ export default function UserEditButton({ username, ownerUid }: { username: strin
   };
 
   return (
-    <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+    <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
       {showCopyMessage && (
         <div className="absolute -top-12 right-0 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap">
           주소가 복사되었습니다
@@ -43,14 +43,14 @@ export default function UserEditButton({ username, ownerUid }: { username: strin
         onClick={handleShare}
         className="bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-all hover:scale-110"
       >
-        <Share className="w-5 h-5" />
+        <Share className="w-4 h-4" />
       </button>
 
       <button
         onClick={handleCopyLink}
         className="bg-indigo-500 text-white p-4 rounded-full shadow-lg hover:bg-indigo-600 transition-all hover:scale-110"
       >
-        <Copy className="w-5 h-5" />
+        <Copy className="w-4 h-4" />
       </button>
 
       {currentUser?.uid === ownerUid && (
@@ -58,7 +58,7 @@ export default function UserEditButton({ username, ownerUid }: { username: strin
           href={`/editor/${username}`}
           className="bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-all hover:scale-110 flex items-center justify-center"
         >
-          <Edit className="w-5 h-5" />
+          <Edit className="w-4 h-4" />
         </Link>
       )}
 
@@ -66,7 +66,7 @@ export default function UserEditButton({ username, ownerUid }: { username: strin
         href="/likes/all"
         className="bg-rose-400 text-white p-4 rounded-full shadow-lg hover:bg-rose-500 transition-all hover:scale-110 flex items-center justify-center"
       >
-        <Hand className="w-5 h-5" />
+        <Hand className="w-4 h-4" />
       </Link>
     </div>
   );

@@ -244,7 +244,7 @@ export default function EditPage({ username }: { username: string }) {
                 href={`/${username}`} 
                 className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none"
               >
-                수정완료 · 미리보기
+                수정완료 · 배경설정
               </Link>
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function EditPage({ username }: { username: string }) {
                 href={`/${username}`} 
                 className="px-8 py-4 mb-10 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none"
               >
-                수정완료 · 미리보기
+                수정완료 · 배경설정
               </Link>
             </div>
           </div>

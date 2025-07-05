@@ -107,14 +107,11 @@ const QuestBook2 = ({ username, uid }) => {
         );
       }
 
-      console.log('Fetching messages for uid:', finalUid);
       const snapshot = await getDocs(q);
-      console.log('Fetched messages:', snapshot.docs.length);
       
       const messageList = await Promise.all(
         snapshot.docs.map(async (doc) => {
           const message = { id: doc.id, ...doc.data() };
-          console.log('Message data:', message);
           
           // 답글 가져오기
           const repliesQuery = query(
@@ -131,8 +128,6 @@ const QuestBook2 = ({ username, uid }) => {
           return message;
         })
       );
-
-      console.log('Final message list:', messageList);
 
       if (isFirstPage) {
         setMessages(messageList);

@@ -37,7 +37,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const [showProfileModal, setShowProfileModal] = useState(false); // 프로필 팝업 상태 추가
 
   const pathname = usePathname();
-  const isEditable = pathname.startsWith("/editor");
+  const isEditable = pathname?.startsWith("/editor") ?? false;
   const { currentUser } = useSelector((state: any) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const finalUsername = username ?? currentUser?.username ?? "사이트";
@@ -65,7 +65,14 @@ function Gallery3 ({ username, uid }: LogoProps) {
     if (!finalUid) return;
     const docRef = doc(db, 'users', finalUid, 'info', 'details');
     try {
-      await updateDoc(docRef, data);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        // 문서가 없으면 새로 생성
+        await setDoc(docRef, data);
+      } else {
+        // 문서가 있으면 업데이트
+        await updateDoc(docRef, data);
+      }
     } catch (error) {
       console.error('Firestore 저장 실패:', error);
       throw error;
@@ -161,7 +168,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
       }
 
       const url = await uploadFn(compressedFile, finalUid);
-      
+
       if (cropType === "logo") {
         setLogoUrl(url);
         await saveToFirestore({ logoUrl: url });
@@ -265,7 +272,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
             onClick={handleProfileClick}
             title={isEditable ? "로고 클릭 시 변경" : "프로필 사진 클릭 시 상세보기"}
           />
-          <div className="mt-6 px-6 py-3 mb-8 rounded-lg bg-blue-500/30 backdrop-blur-[2px]">
+          <div className="mt-6 px-6 py-3 mb-8 rounded-lg bg-blue-500/30 backdrop-blur-[2px] text-center">
             <h1 className={`text-2xl font-bold ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
             <p className={`text-sm mt-2 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
           </div>

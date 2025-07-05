@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import {
@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
 import { usePathname } from 'next/navigation';
-import Script from 'next/script';
+import Image from 'next/image';
 
 const db = getFirestore(app);
 
@@ -42,6 +42,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const [confirmCount, setConfirmCount] = useState(0);
   const [newEvent, setNewEvent] = useState({
     title: '',
+    content: '',
     startTime: '',
     endTime: ''
   });
@@ -49,6 +50,8 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const [showAddEventForm, setShowAddEventForm] = useState(false);
   const [allowedUsers, setAllowedUsers] = useState([]);
   const [usernames, setUsernames] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const predefinedTimes = [
     '9:00', '10:00', '11:00', '12:00',
@@ -107,7 +110,9 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const handlePrevMonth = () => setCurrentDate(prev => prev.subtract(1, 'month'));
   const handleNextMonth = () => setCurrentDate(prev => prev.add(1, 'month'));
 
-  const fetchEventsForMonth = () => {
+  useEffect(() => {
+    if (!finalUid) return;
+    
     const start = startOfMonth.format('YYYY-MM-DD');
     const end = endOfMonth.format('YYYY-MM-DD');
 
@@ -116,18 +121,26 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
       where('date', '>=', start),
       where('date', '<=', end)
     );
-    return onSnapshot(q, snapshot => {
+
+    // 이벤트 리스너 등록
+    const unsubscribe = onSnapshot(q, snapshot => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         confirmCount: doc.data().confirmCount || 0
       }));
-      setEvents(list);
-    });
-  };
+      
+      // 중복 제거를 위해 id 기준으로 필터링
+      const uniqueEvents = list.reduce((acc, current) => {
+        if (!acc.find(item => item.id === current.id)) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
 
-  useEffect(() => {
-    const unsubscribe = fetchEventsForMonth();
+      setEvents(uniqueEvents);
+    });
+
     return () => unsubscribe();
   }, [currentDate, finalUid]);
 
@@ -148,77 +161,6 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  useEffect(() => {
-    // 기존 Google 번역 요소들 제거
-    const removeExistingElements = () => {
-      const elements = document.querySelectorAll('.goog-te-banner-frame, .skiptranslate');
-      elements.forEach(el => el.remove());
-      
-      const scripts = document.querySelectorAll('script[src*="translate.google.com"]');
-      scripts.forEach(script => script.remove());
-    };
-
-    // Google 번역 위젯 초기화
-    const initTranslate = () => {
-      if (!window.google?.translate?.TranslateElement) return;
-      
-      try {
-        removeExistingElements();
-        new window.google.translate.TranslateElement(
-          {
-            pageLanguage: 'ko',
-            includedLanguages: 'ko,zh-CN,vi,ne,uz,km,id,tl,my,th,en,ja,mn',
-            layout: google.translate.TranslateElement.InlineLayout.VERTICAL,
-            autoDisplay: false,
-            multilanguagePage: true,
-            uiLanguage: "en"
-          },
-          'google_translate_element'
-        );
-
-        // 스타일 조정
-        setTimeout(() => {
-          const selectElement = document.querySelector('.goog-te-combo');
-          if (selectElement) {
-            selectElement.style.backgroundColor = '#ffffff';
-            selectElement.style.color = '#000000';
-            selectElement.style.border = 'none';
-            selectElement.style.borderRadius = '4px';
-            selectElement.style.padding = '4px 8px';
-            selectElement.style.fontSize = '14px';
-            selectElement.style.outline = 'none';
-            selectElement.style.width = '120px';
-          }
-
-          // 컨테이너 스타일 조정
-          const container = document.querySelector('.goog-te-gadget');
-          if (container) {
-            container.style.fontSize = '12px';
-            container.style.whiteSpace = 'nowrap';
-          }
-        }, 1000);
-      } catch (error) {
-        console.error('Google 번역 위젯 초기화 실패:', error);
-      }
-    };
-
-    // 스크립트 로드 및 초기화
-    if (!document.querySelector('script[src*="translate.google.com"]')) {
-      window.googleTranslateElementInit = initTranslate;
-      const script = document.createElement('script');
-      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      document.head.appendChild(script);
-    } else if (window.google?.translate) {
-      initTranslate();
-    }
-
-    return () => {
-      removeExistingElements();
-      delete window.googleTranslateElementInit;
-    };
-  }, []);
-
   const getSortableHour = (timeStr) => {
     const hour = parseInt(timeStr.split(':')[0], 10);
     return hour < 9 ? hour + 24 : hour;
@@ -234,34 +176,40 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     setModalOpen(true);
   };
 
-  // 사용자 이름을 가져오는 함수
+  // username 캐시 객체
+  const usernameCache = {};
+
+  // username을 가져오는 함수
   const fetchUsername = async (uid) => {
-    if (!uid) return null;
+    if (!uid) return '사용자';
+    
+    // 캐시에 있으면 캐시된 값 반환
+    if (usernameCache[uid]) return usernameCache[uid];
     
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         const username = userDoc.data().username;
-        setUsernames(prev => ({ ...prev, [uid]: username }));
+        // 캐시에 저장
+        usernameCache[uid] = username;
         return username;
       }
-      return null;
+      return '사용자';
     } catch (error) {
-      console.error('사용자 이름 가져오기 실패:', error);
-      return null;
+      console.error('username 가져오기 실패:', error);
+      return '사용자';
     }
   };
 
   // 이벤트 목록이 변경될 때마다 username 가져오기
   useEffect(() => {
     const loadUsernames = async () => {
-      if (!events.length) return;
-
-      const uniqueUids = [...new Set(events.map(event => event.authorUid).filter(Boolean))];
-      
-      // 모든 UID에 대해 동시에 username 가져오기
-      const promises = uniqueUids.map(uid => fetchUsername(uid));
-      await Promise.all(promises);
+      const uniqueUids = [...new Set(events.map(event => event.authorUid))];
+      for (const uid of uniqueUids) {
+        await fetchUsername(uid);
+      }
+      // 상태 업데이트를 통해 리렌더링 트리거
+      setUsernames({...usernameCache});
     };
 
     loadUsernames();
@@ -313,6 +261,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
       const eventToAdd = {
         date: selectedDate.format('YYYY-MM-DD'),
         title: newEvent.title,
+        content: newEvent.content || '',
         startTime: newEvent.startTime,
         endTime: newEvent.endTime,
         confirmCount: 0,
@@ -328,7 +277,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
         getSortableHour(a.startTime) - getSortableHour(b.startTime))
       );
 
-      setNewEvent({ title: '', startTime: '', endTime: '' });
+      setNewEvent({ title: '', content: '', startTime: '', endTime: '' });
       alert("일정이 추가되었습니다.");
       setShowAddEventForm(false);
     } catch (error) {
@@ -374,7 +323,180 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     }
   };
 
-  // 일정 렌더링 부분 수정
+  // 수정 핸들러 함수 추가
+  const handleEdit = async (updatedEvent) => {
+    if (!currentUser) return;
+    
+    try {
+      const eventRef = doc(db, 'users', finalUid, 'event', updatedEvent.id);
+      await updateDoc(eventRef, {
+        title: updatedEvent.title,
+        content: updatedEvent.content,
+        startTime: updatedEvent.startTime,
+        endTime: updatedEvent.endTime,
+        lastModified: new Date().toISOString(),
+        lastModifiedBy: currentUser.uid
+      });
+
+      setEditingEvent(null);
+      alert("일정이 수정되었습니다.");
+    } catch (error) {
+      console.error("일정 수정 실패:", error);
+      alert("일정 수정에 실패했습니다.");
+    }
+  };
+
+  // EventForm 컴포넌트 수정
+  const EventForm = ({ event }) => {
+    const [formState, setFormState] = useState({
+      title: event?.title || '',
+      content: event?.content || '',
+      startTime: event?.startTime || '',
+      endTime: event?.endTime || ''
+    });
+
+    const [authorUsername, setAuthorUsername] = useState('사용자');
+
+    useEffect(() => {
+      const fetchCurrentUsername = async () => {
+        if (!currentUser?.uid) return;
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            const username = userDoc.data().username;
+            setAuthorUsername(username || '사용자');
+          }
+        } catch (error) {
+          console.error('username 가져오기 실패:', error);
+        }
+      };
+
+      fetchCurrentUsername();
+    }, [currentUser?.uid]);
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormState(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!formState.title || !formState.startTime || !formState.endTime || !currentUser) {
+        alert("모든 필드를 채워주세요.");
+        return;
+      }
+
+      if (event) {
+        // 수정 모드
+        await handleEdit({
+          id: event.id,
+          ...formState
+        });
+      } else {
+        // 새로운 일정 추가 모드
+        try {
+          const eventToAdd = {
+            date: selectedDate.format('YYYY-MM-DD'),
+            title: formState.title,
+            content: formState.content || '',
+            startTime: formState.startTime,
+            endTime: formState.endTime,
+            confirmCount: 0,
+            authorUid: currentUser.uid,
+            authorEmail: currentUser.email || '',
+            authorName: authorUsername
+          };
+
+          await addDoc(collection(db, 'users', finalUid, 'event'), eventToAdd);
+          setFormState({
+            title: '',
+            content: '',
+            startTime: '',
+            endTime: ''
+          });
+          alert("일정이 추가되었습니다.");
+          setShowAddEventForm(false);
+        } catch (error) {
+          console.error("일정 추가 실패:", error);
+          alert("일정 추가에 실패했습니다.");
+        }
+      }
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4 bg-blue-500/20 p-5 rounded-2xl shadow-lg">
+        <div className="flex gap-4">
+          <input
+            type="text"
+            name="title"
+            placeholder="일정 제목"
+            value={formState.title}
+            onChange={handleChange}
+            className="w-[70%] p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white placeholder-white/50"
+          />
+          <div className="w-[30%] p-3.5 bg-blue-500/20 rounded-xl text-white/50 text-center truncate">
+            {authorUsername}
+          </div>
+        </div>
+
+        <textarea
+          name="content"
+          placeholder="일정 내용"
+          value={formState.content}
+          onChange={handleChange}
+          className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white placeholder-white/50 min-h-[80px] resize-none"
+        />
+
+        <div className="flex gap-4">
+          <select
+            name="startTime"
+            value={formState.startTime}
+            onChange={handleChange}
+            className="w-1/2 p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white"
+          >
+            <option value="" className="bg-blue-500">시작 시간</option>
+            {predefinedTimes.map(time => (
+              <option key={time} value={time} className="bg-blue-500">{time}</option>
+            ))}
+          </select>
+
+          <select
+            name="endTime"
+            value={formState.endTime}
+            onChange={handleChange}
+            className="w-1/2 p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white"
+          >
+            <option value="" className="bg-blue-500">종료 시간</option>
+            {predefinedTimes.map(time => (
+              <option key={time} value={time} className="bg-blue-500">{time}</option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full p-3.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-[1.02] active:scale-98"
+        >
+          {event ? '일정 수정' : '일정 추가'}
+        </button>
+
+        {event && (
+          <button
+            type="button"
+            onClick={() => setEditingEvent(null)}
+            className="w-full p-3.5 bg-gray-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-gray-500/40 hover:scale-[1.02] active:scale-98"
+          >
+            취소
+          </button>
+        )}
+      </form>
+    );
+  };
+
+  // renderEventList 함수 수정
   const renderEventList = (events) => {
     if (!events || events.length === 0) {
       return (
@@ -387,40 +509,88 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     return events.map(event => (
       <div
         key={event.id}
-        className="bg-blue-500/30 rounded-lg p-4 text-white"
+        className="bg-gray-600/50 rounded-lg p-4 text-white space-y-3"
       >
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold">{event.title}</h3>
-              <span className="text-sm text-white/70">
-                ({usernames[event.authorUid] || '사용자'})
-              </span>
+        {editingEvent?.id === event.id ? (
+          <EventForm event={event} />
+        ) : (
+          <>
+            <div className="flex justify-between items-start">
+              <h3 className="font-semibold text-lg">{event.title}</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleConfirm(event.id)}
+                  className="text-xs bg-gray-500/50 hover:bg-gray-500/70 px-2 py-1 rounded transition-colors"
+                >
+                  확인 ({event.confirmCount || 0})
+                </button>
+                {(canDelete || event.authorUid === currentUser?.uid) && (
+                  <>
+                    <button
+                      onClick={() => setEditingEvent(event)}
+                      className="text-xs bg-blue-500/30 hover:bg-blue-500/50 px-2 py-1 rounded transition-colors"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDelete(event.id)}
+                      className="text-xs bg-red-500/30 hover:bg-red-500/50 px-2 py-1 rounded transition-colors"
+                    >
+                      삭제
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-white/80">
-              {event.startTime} - {event.endTime}
+
+            <p className="text-sm text-white/90 min-h-[1.5em]">
+              {event.content || '내용 없음'}
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleConfirm(event.id)}
-              className="text-xs bg-blue-500/30 hover:bg-blue-500/40 px-2 py-1 rounded transition-colors"
-            >
-              확인 ({event.confirmCount || 0})
-            </button>
-            {(canDelete || event.authorUid === currentUser?.uid) && (
-              <button
-                onClick={() => handleDelete(event.id)}
-                className="text-xs bg-red-500/30 hover:bg-red-500/40 px-2 py-1 rounded transition-colors"
-              >
-                삭제
-              </button>
-            )}
-          </div>
-        </div>
+
+            <div className="flex justify-between items-center text-sm text-white/70">
+              <span>{event.startTime} - {event.endTime}</span>
+              <span>{usernames[event.authorUid] || event.authorName || '사용자'}</span>
+            </div>
+          </>
+        )}
       </div>
     ));
   };
+
+  // 모달 내용 컴포넌트
+  const ModalContent = () => (
+    <div className="space-y-4">
+      {selectedImage && (
+        <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
+          <Image
+            src={selectedImage.url}
+            alt={selectedImage.caption || '이미지'}
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
+      )}
+      {canWrite ? (
+        <EventForm />
+      ) : (
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">{selectedImage.title || '제목 없음'}</h3>
+          <p className="text-sm text-gray-600">{selectedImage.description || '설명 없음'}</p>
+          {selectedImage.link && (
+            <a
+              href={selectedImage.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-500 hover:text-blue-600"
+            >
+              자세히 보기
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex flex-col items-center w-full space-y-6 mt-8 px-2">
@@ -502,7 +672,6 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
             <h3 className="text-xl font-bold text-white pl-2">
               {selectedDate.format('M월 D일')}
             </h3>
-            <div id="google_translate_element"></div>
           </div>
 
           {/* 구분선 */}
@@ -531,53 +700,14 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
           </div>
 
           {showAddEventForm && (
-            <div className="space-y-4 bg-blue-500/20 p-5 rounded-2xl shadow-lg">
-              <input
-                type="text"
-                placeholder="일정 제목"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white placeholder-white/50"
-              />
-
-              <div className="flex gap-4">
-                <select
-                  value={newEvent.startTime}
-                  onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
-                  className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white"
-                >
-                  <option value="" className="bg-blue-500">시작</option>
-                  {predefinedTimes.map(time => (
-                    <option key={time} value={time} className="bg-blue-500">{time}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={newEvent.endTime}
-                  onChange={(e) => setNewEvent(prev => ({ ...prev, endTime: e.target.value }))}
-                  className="w-full p-3.5 bg-blue-500/20 border-none rounded-xl focus:ring-2 focus:ring-blue-400 transition-all text-white"
-                >
-                  <option value="" className="bg-blue-500">종료</option>
-                  {predefinedTimes.map(time => (
-                    <option key={time} value={time} className="bg-blue-500">{time}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                onClick={handleAddEvent}
-                className="w-full p-3.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-[1.02] active:scale-98"
-              >
-                일정 추가
-              </button>
-            </div>
+            <EventForm />
           )}
         </div>
       )}
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-blue-500/20 backdrop-blur-sm border-none">
+        <DialogContent className="max-h-[80vh] overflow-y-auto bg-gray-700 border-none">
           <DialogHeader>
             <DialogTitle className="text-white">
               {selectedDate.format('YYYY년 MM월 DD일')}
@@ -588,99 +718,62 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
           </DialogHeader>
 
           {/* 일정 목록 */}
-          <div className="space-y-4">
-            {selectedEvents.map(event => (
-              <div
-                key={event.id}
-                className="bg-blue-500/30 rounded-lg p-4 text-white"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold">{event.title}</h3>
-                    <p className="text-sm text-white/80">
-                      {event.startTime} - {event.endTime}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleConfirm(event.id)}
-                      className="text-xs bg-blue-500/30 hover:bg-blue-500/40 px-2 py-1 rounded transition-colors"
-                    >
-                      확인 ({event.confirmCount || 0})
-                    </button>
-                    {canDelete && (
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+            {selectedEvents.length === 0 ? (
+              <div className="text-white/70 text-center py-4">
+                등록된 일정이 없습니다.
+              </div>
+            ) : (
+              selectedEvents.map(event => (
+                <div
+                  key={event.id}
+                  className="bg-gray-600/50 rounded-lg p-4 text-white space-y-3"
+                >
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold text-lg">{event.title}</h3>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleDelete(event.id)}
-                        className="text-xs bg-red-500/30 hover:bg-red-500/40 px-2 py-1 rounded transition-colors"
+                        onClick={() => handleConfirm(event.id)}
+                        className="text-xs bg-gray-500/50 hover:bg-gray-500/70 px-2 py-1 rounded transition-colors"
                       >
-                        삭제
+                        확인 ({event.confirmCount || 0})
                       </button>
-                    )}
+                      {(canDelete || event.authorUid === currentUser?.uid) && (
+                        <button
+                          onClick={() => handleDelete(event.id)}
+                          className="text-xs bg-red-500/30 hover:bg-red-500/50 px-2 py-1 rounded transition-colors"
+                        >
+                          삭제
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-white/90 min-h-[1.5em]">
+                    {event.content || '내용 없음'}
+                  </p>
+
+                  <div className="flex justify-between items-center text-sm text-white/70">
+                    <span>{event.startTime} - {event.endTime}</span>
+                    <span>{usernames[event.authorUid] || event.authorName || '사용자'}</span>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* 일정 추가 폼 */}
           {canDelete && (
-            <div className="mt-4">
+            <div className="mt-4 pt-4 border-t border-gray-600">
               {!showAddEventForm ? (
                 <Button
                   onClick={() => setShowAddEventForm(true)}
-                  className="w-full bg-blue-500/30 hover:bg-blue-500/40 text-white border-none"
+                  className="w-full bg-gray-600/50 hover:bg-gray-600/70 text-white border-none"
                 >
                   + 일정 추가
                 </Button>
               ) : (
-                <div className="space-y-4 bg-blue-500/30 p-4 rounded-lg">
-                  <input
-                    type="text"
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="일정 제목"
-                    className="w-full p-2 rounded bg-blue-500/20 text-white placeholder-white/50 border-none"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <select
-                      value={newEvent.startTime}
-                      onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
-                      className="p-2 rounded bg-blue-500/20 text-white border-none"
-                    >
-                      <option value="">시작 시간</option>
-                      {predefinedTimes.map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={newEvent.endTime}
-                      onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
-                      className="p-2 rounded bg-blue-500/20 text-white border-none"
-                    >
-                      <option value="">종료 시간</option>
-                      {predefinedTimes.map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      onClick={() => {
-                        setShowAddEventForm(false);
-                        setNewEvent({ title: '', startTime: '', endTime: '' });
-                      }}
-                      className="bg-transparent hover:bg-blue-500/20 text-white"
-                    >
-                      취소
-                    </Button>
-                    <Button
-                      onClick={handleAddEvent}
-                      className="bg-blue-500/30 hover:bg-blue-500/40 text-white border-none"
-                    >
-                      추가
-                    </Button>
-                  </div>
-                </div>
+                <EventForm />
               )}
             </div>
           )}

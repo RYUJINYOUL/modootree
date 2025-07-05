@@ -31,6 +31,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import Header from '@/components/Header';
 
 const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
 // 관리자 UID 목록 추가
@@ -218,8 +219,6 @@ export default function LikesPage() {
   // 현재 사용자 정보를 가져오는 함수
   const getCurrentUserInfo = () => {
     const user = auth.currentUser || currentUser;
-    console.log('Auth current user:', auth.currentUser);
-    console.log('Redux current user:', currentUser);
     
     if (!user) return null;
 
@@ -237,7 +236,6 @@ export default function LikesPage() {
   // 답글 관련 함수들 수정
   const handleAddComment = async (likeId) => {
     const userInfo = getCurrentUserInfo();
-    console.log('Full user info:', userInfo);
 
     if (!userInfo?.uid) {
       alert('답글을 작성하려면 로그인이 필요합니다.');
@@ -255,8 +253,6 @@ export default function LikesPage() {
         userName: userInfo.displayName || (userInfo.email ? userInfo.email.split('@')[0] : ''),
         userEmail: userInfo.email || ''
       };
-
-      console.log('Comment user info:', commentUserInfo);
 
       const commentData = {
         likeId,
@@ -340,8 +336,6 @@ export default function LikesPage() {
 
   // 사용자 정보 표시 함수 수정
   const getUserDisplayName = (comment) => {
-    console.log('Getting display name for comment:', comment);
-    
     // 기존 데이터 호환성 (userEmail이 username으로 사용된 경우)
     if (comment.userEmail && !comment.userEmail.includes('@')) {
       return comment.userEmail;
@@ -368,8 +362,6 @@ export default function LikesPage() {
 
   // 답글 렌더링 부분 수정
   const renderComment = (comment) => {
-    console.log('Rendering comment with data:', comment);
-    
     return (
       <div key={comment.id} className="flex items-start space-x-2 p-2 rounded-lg bg-blue-500/10">
         <div className="flex-1">
@@ -433,193 +425,196 @@ export default function LikesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold">공감 한 조각</h1>
-          <Link href="/" className="text-blue-400 hover:text-blue-300">
-            홈으로
-          </Link>
-        </div>
-
-        {/* 카테고리 필터 */}
-        {isMobile ? (
-          <div className="mb-8">
-            <CategoryCarousel
-              categories={['전체', ...CATEGORIES]}
-              selectedCategory={selectedCategory}
-              onSelect={setSelectedCategory}
-            />
+    <>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white/90 pt-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-bold">공감 한 조각</h1>
+            <Link href="/" className="text-blue-400 hover:text-blue-300">
+              홈으로
+            </Link>
           </div>
-        ) : (
-          <div className="flex flex-wrap gap-2 mb-8">
-            <button
-              onClick={() => setSelectedCategory('전체')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                selectedCategory === '전체'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-black/50 text-white/70 hover:bg-white/10'
-              }`}
-            >
-              전체
-            </button>
-            {CATEGORIES.map((category) => (
+
+          {/* 카테고리 필터 */}
+          {isMobile ? (
+            <div className="mb-8">
+              <CategoryCarousel
+                categories={['전체', ...CATEGORIES]}
+                selectedCategory={selectedCategory}
+                onSelect={setSelectedCategory}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2 mb-8">
               <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory('전체')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
-                  selectedCategory === category
+                  selectedCategory === '전체'
                     ? 'bg-white/20 text-white'
                     : 'bg-black/50 text-white/70 hover:bg-white/10'
                 }`}
               >
-                {category}
+                전체
               </button>
-            ))}
-          </div>
-        )}
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    selectedCategory === category
+                      ? 'bg-white/20 text-white'
+                      : 'bg-black/50 text-white/70 hover:bg-white/10'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {filteredLikes.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400">아직 공감한 조각이 없습니다.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredLikes.map((like) => (
-              <div key={like.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700/80 transition-colors">
-                <div className="mb-3 flex justify-between items-center">
-                  <span className="text-sm text-gray-400">{like.category}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                      {like.createdAt?.toLocaleDateString()}
-                    </span>
-                    {canDelete(like) && (
+          {filteredLikes.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400">아직 공감한 조각이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredLikes.map((like) => (
+                <div key={like.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700/80 transition-colors">
+                  <div className="mb-3 flex justify-between items-center">
+                    <span className="text-sm text-gray-400">{like.category}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">
+                        {like.createdAt?.toLocaleDateString()}
+                      </span>
+                      {canDelete(like) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLike(like);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-gray-300 text-sm whitespace-pre-wrap mb-4">{like.content}</p>
+                  
+                  {/* 이미지 갤러리 */}
+                  {like.images && like.images.length > 0 && (
+                    <div className="mb-4 grid grid-cols-2 gap-2">
+                      {like.images.map((imageUrl, index) => (
+                        <img
+                          key={index}
+                          src={imageUrl}
+                          alt={`공감 이미지 ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {REACTIONS.map((reaction) => (
                       <Button
+                        key={reaction.id}
+                        onClick={() => handleReaction(like.id, reaction.id)}
+                        disabled={reacting === `${like.id}:${reaction.id}`}
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedLike(like);
-                          setDeleteConfirmOpen(true);
-                        }}
+                        className={`flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg text-sm transition-colors
+                          ${reacting === `${like.id}:${reaction.id}`
+                            ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                            : `${reaction.bgColor} ${reaction.textColor}`
+                          }`}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <span>{reaction.text}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${reaction.countBgColor}`}>
+                          {like.reactions[reaction.id] || 0}
+                        </span>
                       </Button>
+                    ))}
+                  </div>
+
+                  {/* 답글 섹션 추가 */}
+                  <div className="mt-4 border-t border-gray-700 pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageCircle className="w-4 h-4 text-gray-400" />
+                      <button 
+                        onClick={() => setShowComments(prev => ({ ...prev, [like.id]: !prev[like.id] }))}
+                        className="text-sm text-gray-400 hover:text-gray-300"
+                      >
+                        답글 {comments[like.id]?.length || 0}개
+                      </button>
+                    </div>
+
+                    {showComments[like.id] && (
+                      <div className="space-y-3">
+                        {/* 답글 목록 */}
+                        {comments[like.id]?.map(renderComment)}
+
+                        {/* 답글 입력 폼 */}
+                        {currentUser?.uid ? (
+                          <div className="flex items-center gap-2 mt-2">
+                            <input
+                              type="text"
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              placeholder="답글을 입력하세요"
+                              className="flex-1 bg-gray-700 rounded px-3 py-1.5 text-sm placeholder-gray-400"
+                            />
+                            <button
+                              className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm flex items-center gap-1"
+                              onClick={() => handleAddComment(like.id)}
+                            >
+                              <Send className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">답글을 작성하려면 로그인이 필요합니다.</p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
-                <p className="text-gray-300 text-sm whitespace-pre-wrap mb-4">{like.content}</p>
-                
-                {/* 이미지 갤러리 */}
-                {like.images && like.images.length > 0 && (
-                  <div className="mb-4 grid grid-cols-2 gap-2">
-                    {like.images.map((imageUrl, index) => (
-                      <img
-                        key={index}
-                        src={imageUrl}
-                        alt={`공감 이미지 ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                )}
+              ))}
+            </div>
+          )}
+        </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  {REACTIONS.map((reaction) => (
-                    <Button
-                      key={reaction.id}
-                      onClick={() => handleReaction(like.id, reaction.id)}
-                      disabled={reacting === `${like.id}:${reaction.id}`}
-                      variant="ghost"
-                      className={`flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg text-sm transition-colors
-                        ${reacting === `${like.id}:${reaction.id}`
-                          ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                          : `${reaction.bgColor} ${reaction.textColor}`
-                        }`}
-                    >
-                      <span>{reaction.text}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${reaction.countBgColor}`}>
-                        {like.reactions[reaction.id] || 0}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-
-                {/* 답글 섹션 추가 */}
-                <div className="mt-4 border-t border-gray-700 pt-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="w-4 h-4 text-gray-400" />
-                    <button 
-                      onClick={() => setShowComments(prev => ({ ...prev, [like.id]: !prev[like.id] }))}
-                      className="text-sm text-gray-400 hover:text-gray-300"
-                    >
-                      답글 {comments[like.id]?.length || 0}개
-                    </button>
-                  </div>
-
-                  {showComments[like.id] && (
-                    <div className="space-y-3">
-                      {/* 답글 목록 */}
-                      {comments[like.id]?.map(renderComment)}
-
-                      {/* 답글 입력 폼 */}
-                      {currentUser?.uid ? (
-                        <div className="flex items-center gap-2 mt-2">
-                          <input
-                            type="text"
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="답글을 입력하세요"
-                            className="flex-1 bg-gray-700 rounded px-3 py-1.5 text-sm placeholder-gray-400"
-                          />
-                          <button
-                            className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm flex items-center gap-1"
-                            onClick={() => handleAddComment(like.id)}
-                          >
-                            <Send className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-400">답글을 작성하려면 로그인이 필요합니다.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* 삭제 확인 다이얼로그 */}
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <DialogContent 
+            className="sm:max-w-[425px]"
+            aria-describedby="delete-dialog-description"
+          >
+            <DialogHeader>
+              <DialogTitle>공감 삭제</DialogTitle>
+              <DialogDescription id="delete-dialog-description">
+                이 공감을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmOpen(false)}
+              >
+                취소
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+              >
+                삭제
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* 삭제 확인 다이얼로그 */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent 
-          className="sm:max-w-[425px]"
-          aria-describedby="delete-dialog-description"
-        >
-          <DialogHeader>
-            <DialogTitle>공감 삭제</DialogTitle>
-            <DialogDescription id="delete-dialog-description">
-              이 공감을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
-            >
-              취소
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-            >
-              삭제
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </>
   );
 } 

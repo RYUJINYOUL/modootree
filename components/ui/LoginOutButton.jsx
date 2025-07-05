@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { getAuth, signOut } from 'firebase/auth';
 import app from '../../firebase';
-import { clearUser } from '../../store/userSlice'; // ✅ 경로는 상황에 맞게 조정
+import { clearUser } from '../../store/userSlice';
 
 export default function LoginOutButton() {
   const [hasMounted, setHasMounted] = useState(false);

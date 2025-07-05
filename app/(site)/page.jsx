@@ -19,6 +19,7 @@ import { useSelector } from 'react-redux';
 import UseCaseCarousel from '@/components/UseCaseCarousel';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import MainHeader from '@/components/MainHeader';
 
 export default function Page() {
   const user = useSelector((state) => state.user);
@@ -26,12 +27,8 @@ export default function Page() {
   const [authUser, setAuthUser] = useState(null);
   const auth = getAuth();
   
-  console.log('Redux User State:', user);
-  console.log('Current User:', currentUser);
-  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('Firebase Auth User:', user);
       setAuthUser(user);
     });
 
@@ -66,21 +63,9 @@ export default function Page() {
         const usernamesRef = collection(db, 'usernames');
         const usernamesSnap = await getDocs(usernamesRef);
         const usernames = [];
-        
-        console.log('=== 디버깅 시작 ===');
-        console.log('현재 사용자 정보:', {
-          email: user.email,
-          uid: user.uid
-        });
-        console.log('전체 사용자네임 문서 수:', usernamesSnap.docs.length);
 
         for (const docSnapshot of usernamesSnap.docs) {
           const data = docSnapshot.data();
-          console.log('검사 중인 사용자:', {
-            username: docSnapshot.id,
-            uid: data.uid
-          });
-          
           const uid = data.uid;
           if (uid) {
             const permissionsRef = doc(db, 'users', uid, 'settings', 'permissions');
@@ -88,36 +73,19 @@ export default function Page() {
             
             if (permissionsSnap.exists()) {
               const permissionsData = permissionsSnap.data();
-              console.log('권한 데이터:', {
-                username: docSnapshot.id,
-                allowedUsers: permissionsData.allowedUsers || []
-              });
-              
               const allowedUsers = permissionsData.allowedUsers || [];
               const isAllowed = allowedUsers.some(allowedUser => allowedUser.email === user.email);
-              console.log('권한 확인 결과:', {
-                username: docSnapshot.id,
-                isAllowed: isAllowed,
-                currentUserEmail: user.email
-              });
               
               if (isAllowed) {
                 usernames.push({
                   username: docSnapshot.id,
                   uid: uid
                 });
-                console.log('허용된 사이트에 추가됨:', docSnapshot.id);
               }
-            } else {
-              console.log('권한 문서 없음:', docSnapshot.id);
             }
-          } else {
-            console.log('uid 없음:', docSnapshot.id);
           }
         }
 
-        console.log('=== 최종 결과 ===');
-        console.log('허용된 사이트 목록:', usernames);
         setAllowedSites(usernames);
       } catch (e) {
         console.error(e);
@@ -212,17 +180,19 @@ export default function Page() {
 
   return (
     <div>
-      <div className="flex flex-col items-center justify-center py-12 text-center mb-12">
+      <MainHeader />
+      <div className="flex flex-col items-center justify-center pt-6 pb-8 md:py-12 text-center mb-12">
         <div className="animate-swing mb-4">
           <Image
             src="/Image/logo.png"
-            alt="모두트리"
-            width={120}
-            height={120}
-            className="w-auto h-auto"
+            alt="ModooTree Logo"
+            width={300}
+            height={100}
             priority
+            className="h-24 w-auto md:h-32"
           />
         </div>
+        <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
         <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
 
         <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">

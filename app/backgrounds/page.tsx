@@ -1,0 +1,851 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, deleteField, addDoc } from 'firebase/firestore';
+import Header from '@/components/Header';
+import { useSelector } from 'react-redux';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface Background {
+  id: string;
+  type: 'image' | 'youtube' | 'pixabay';
+  url: string;
+  title: string;
+}
+
+interface UserBackground {
+  type: 'image' | 'youtube' | 'pixabay' | 'custom' | 'color' | 'gradient' | 'video';
+  url?: string;
+  color?: string;
+  gradient?: {
+    color1: string;
+    color2: string;
+    direction: string;
+  };
+}
+
+export default function BackgroundGallery() {
+  const router = useRouter();
+  const { currentUser } = useSelector((state: any) => state.user);
+  const [backgrounds, setBackgrounds] = useState<Background[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState<'all' | 'image' | 'video' | 'color'>('all');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // 현재 배경 설정 관련 상태
+  const [currentBackground, setCurrentBackground] = useState<UserBackground | null>(null);
+  const [customUrl, setCustomUrl] = useState('');
+  const [backgroundColor, setBackgroundColor] = useState('#000000');
+  const [gradientColor1, setGradientColor1] = useState('#ffffff');
+  const [gradientColor2, setGradientColor2] = useState('#000000');
+  const [gradientDirection, setGradientDirection] = useState('to bottom');
+  const [backgroundType, setBackgroundType] = useState<'url' | 'color' | 'gradient'>('url');
+  const [saving, setSaving] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+  
+  // 관리자 관련 상태
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newBackground, setNewBackground] = useState({
+    title: '',
+    type: 'image',
+    url: '',
+    isActive: true
+  });
+
+  const gradientDirections = [
+    { value: 'to right', label: '→ 왼쪽에서 오른쪽' },
+    { value: 'to left', label: '← 오른쪽에서 왼쪽' },
+    { value: 'to bottom', label: '↓ 위에서 아래' },
+    { value: 'to top', label: '↑ 아래서 위' },
+    { value: 'to bottom right', label: '↘ 대각선 (좌상단 → 우하단)' },
+    { value: 'to bottom left', label: '↙ 대각선 (우상단 → 좌하단)' },
+    { value: 'to top right', label: '↗ 대각선 (좌하단 → 우상단)' },
+    { value: 'to top left', label: '↖ 대각선 (우하단 → 좌상단)' },
+  ];
+
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    const q = query(
+      collection(db, 'backgrounds'),
+      where('isActive', '==', true)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const backgroundsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Background[];
+      setBackgrounds(backgroundsData);
+      setLoading(false);
+    });
+
+    // 현재 배경 설정 가져오기
+    const fetchCurrentBackground = async () => {
+      try {
+        const settingsDocRef = doc(db, 'users', currentUser.uid, 'settings', 'background');
+        const settingsDoc = await getDoc(settingsDocRef);
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          if (data.type === 'color') {
+            setBackgroundType('color');
+            setBackgroundColor(data.value);
+            setCurrentBackground({
+              type: 'color',
+              color: data.value
+            });
+          } else if (data.type === 'gradient') {
+            setBackgroundType('gradient');
+            const match = data.value.match(/linear-gradient\((.*?), (.*?), (.*?)\)/);
+            if (match) {
+              setGradientDirection(match[1]);
+              setGradientColor1(match[2]);
+              setGradientColor2(match[3]);
+              setCurrentBackground({
+                type: 'gradient',
+                gradient: {
+                  direction: match[1],
+                  color1: match[2],
+                  color2: match[3]
+                }
+              });
+            }
+          } else if (data.type === 'video') {
+            setBackgroundType('url');
+            setCustomUrl(data.value);
+            setCurrentBackground({
+              type: data.value.includes('youtube.com') || data.value.includes('youtu.be') ? 'youtube' : 'pixabay',
+              url: data.value
+            });
+          } else {
+            setBackgroundType('url');
+            setCustomUrl(data.value);
+            setCurrentBackground({
+              type: 'image',
+              url: data.value
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching current background:', error);
+      }
+    };
+
+    fetchCurrentBackground();
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          setUsername(userDoc.data().username);
+        }
+      } catch (error) {
+        console.error('Error fetching username:', error);
+      }
+    };
+
+    fetchUsername();
+  }, [currentUser?.uid]);
+
+  const copyUrl = async (background: Background) => {
+    try {
+      setBackgroundType('url');
+      setCustomUrl(background.url);
+      setCopiedId(background.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Error copying URL:', error);
+      alert('URL 복사 중 오류가 발생했습니다.');
+    }
+  };
+
+  const saveBackground = async () => {
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      const settingsDocRef = doc(db, 'users', currentUser.uid, 'settings', 'background');
+      let backgroundData: UserBackground;
+      let type: string;
+      let value: string;
+
+      if (backgroundType === 'color') {
+        backgroundData = {
+          type: 'color',
+          color: backgroundColor
+        };
+        type = 'color';
+        value = backgroundColor;
+      } else if (backgroundType === 'gradient') {
+        backgroundData = {
+          type: 'gradient',
+          gradient: {
+            color1: gradientColor1,
+            color2: gradientColor2,
+            direction: gradientDirection
+          }
+        };
+        type = 'gradient';
+        value = `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`;
+      } else {
+        if (!customUrl.trim()) {
+          alert('URL을 입력해주세요.');
+          setSaving(false);
+          return;
+        }
+
+        const url = customUrl.trim();
+        // YouTube URL 체크
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+          type = 'video';
+          backgroundData = {
+            type: 'youtube',
+            url: url
+          };
+        }
+        // Pixabay 비디오 URL 체크
+        else if (url.includes('pixabay.com') && url.includes('.mp4')) {
+          type = 'video';
+          backgroundData = {
+            type: 'pixabay',
+            url: url
+          };
+        }
+        // 일반 이미지 URL
+        else {
+          type = 'image';
+          backgroundData = {
+            type: 'image',
+            url: url
+          };
+        }
+        value = url;
+      }
+
+      // 사용자 문서 존재 여부 확인
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // 사용자 문서가 없으면 새로 생성
+        await setDoc(userRef, {
+          background: null,
+          createdAt: new Date()
+        });
+      }
+
+      // 배경 설정 저장
+      await setDoc(settingsDocRef, {
+        type: type,
+        value: value
+      }, { merge: true });
+      
+      setCurrentBackground(backgroundData);
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error('Error saving background:', error);
+      alert('배경 저장 중 오류가 발생했습니다.');
+    }
+    setSaving(false);
+  };
+
+  const handleViewPage = () => {
+    setShowSuccessDialog(false);
+    if (username) {
+      router.push(`/${username}`);
+    } else {
+      alert('사용자 페이지를 찾을 수 없습니다.');
+    }
+  };
+
+  const filteredBackgrounds = backgrounds.filter(bg => {
+    if (selectedType === 'all') return true;
+    if (selectedType === 'image') return bg.type === 'image';
+    if (selectedType === 'video') return bg.type === 'youtube' || bg.type === 'pixabay';
+    return false;
+  });
+
+  const renderPreview = (background: Background) => {
+    if (background.type === 'image') {
+      return (
+        <div className="relative pt-[56.25%] group">
+          <img
+            src={background.url}
+            alt={background.title}
+            className="absolute inset-0 w-full h-full object-cover rounded"
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <button
+              onClick={() => copyUrl(background)}
+              className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 transform hover:scale-105 transition-all duration-300"
+            >
+              URL 선택하기
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="relative pt-[56.25%] bg-gray-100 rounded group">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-3">
+              <div className="text-lg font-medium">
+                {background.type === 'youtube' ? '유튜브 영상' : '픽사베이 영상'}
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => window.open(background.url, '_blank')}
+                  className="block w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  미리보기
+                </button>
+                <button
+                  onClick={() => copyUrl(background)}
+                  className="block w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  URL 선택하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  const renderCurrentBackgroundPreview = () => {
+    if (!currentBackground) return null;
+
+    if (currentBackground.type === 'color') {
+      return (
+        <div 
+          className="h-40 rounded"
+          style={{ backgroundColor: currentBackground.color }}
+        />
+      );
+    } else if (currentBackground.type === 'gradient') {
+      return (
+        <div 
+          className="h-40 rounded"
+          style={{ 
+            background: `linear-gradient(${currentBackground.gradient?.direction}, ${currentBackground.gradient?.color1}, ${currentBackground.gradient?.color2})`
+          }}
+        />
+      );
+    } else if (currentBackground.type === 'image' || currentBackground.type === 'custom') {
+      return (
+        <div className="relative h-40 bg-gray-100 rounded overflow-hidden">
+          <img
+            src={currentBackground.url}
+            alt="Current background"
+            className="w-full h-full object-cover"
+          />
+        </div>
+      );
+    } else {
+      return (
+        <div className="bg-gray-100 rounded p-4 text-center">
+          {currentBackground.type === 'youtube' ? '유튜브 영상' : '픽사베이 영상'}
+          <div className="mt-2">
+            <button
+              onClick={() => window.open(currentBackground.url, '_blank')}
+              className="text-blue-500 hover:underline"
+            >
+              영상 보기
+            </button>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  // 관리자 권한 확인
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!currentUser?.uid) return;
+
+      try {
+        const adminRef = doc(db, 'admin', 'settings');
+        const adminDoc = await getDoc(adminRef);
+        
+        // 이전 비밀번호 방식 제거
+        if (adminDoc.exists() && adminDoc.data().password) {
+          await updateDoc(adminRef, {
+            password: deleteField()
+          });
+        }
+
+        if (adminDoc.exists() && adminDoc.data().adminUid === currentUser.uid) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [currentUser?.uid]);
+
+  // 새 배경 추가 함수
+  const handleAddBackground = async () => {
+    if (!newBackground.title.trim() || !newBackground.url.trim()) {
+      alert('제목과 URL을 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'backgrounds'), {
+        ...newBackground,
+        createdAt: new Date()
+      });
+
+      setShowAddDialog(false);
+      setNewBackground({
+        title: '',
+        type: 'image',
+        url: '',
+        isActive: true
+      });
+      alert('배경이 추가되었습니다.');
+    } catch (error) {
+      console.error('Error adding background:', error);
+      alert('배경 추가 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 배경 삭제 함수
+  const handleDeleteBackground = async (backgroundId: string) => {
+    if (!window.confirm('이 배경을 삭제하시겠습니까?')) return;
+
+    try {
+      await updateDoc(doc(db, 'backgrounds', backgroundId), {
+        isActive: false
+      });
+      alert('배경이 삭제되었습니다.');
+    } catch (error) {
+      console.error('Error deleting background:', error);
+      alert('배경 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-[#E8ECF2] flex items-center justify-center">
+          <div className="text-gray-700">로딩중...</div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <div className="min-h-screen bg-[#1E1E1E] md:pt-[100px] pt-[70px] pb-[100px] p-4">
+        {/* 페이지 제목 */}
+        <div className="container mx-auto max-w-[1100px] mb-12">
+          <h1 className="text-3xl font-bold text-center text-white mb-2">
+            배경 관리
+          </h1>
+          <p className="text-center text-gray-400">
+            배경 이미지와 영상을 관리할 수 있습니다
+          </p>
+        </div>
+
+        {/* 관리자 상태 표시 */}
+        <div className="container mx-auto max-w-[1100px] mb-8">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-medium text-gray-200">관리자 설정</h2>
+              <div className="flex items-center gap-3">
+                {isAdmin ? (
+                  <>
+                    <span className="text-green-400 text-sm">관리자 로그인</span>
+                    <Button
+                      onClick={() => setShowAddDialog(true)}
+                      className="bg-blue-500 text-white hover:bg-blue-600"
+                    >
+                      배경 추가
+                    </Button>
+                  </>
+                ) : (
+                  <span className="text-gray-400 text-sm">관리자 권한이 없습니다</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 배경 설정 섹션 */}
+        <div className="container mx-auto max-w-[1100px] mb-8">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-8">
+            <h2 className="text-xl font-bold mb-6 text-gray-200">배경 설정</h2>
+            <div className="space-y-6">
+              {/* 배경 타입 선택 */}
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  배경 타입
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setBackgroundType('url')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl ${
+                      backgroundType === 'url'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    이미지/영상
+                  </button>
+                  <button
+                    onClick={() => setBackgroundType('color')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl ${
+                      backgroundType === 'color'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    단색
+                  </button>
+                  <button
+                    onClick={() => setBackgroundType('gradient')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl ${
+                      backgroundType === 'gradient'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    그라데이션
+                  </button>
+                </div>
+              </div>
+
+              {/* URL 입력 필드 */}
+              {backgroundType === 'url' && (
+                <div className="bg-gray-50 rounded-2xl p-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    배경 URL
+                  </label>
+                  <input
+                    type="text"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    placeholder="배경 URL을 입력하거나 아래 갤러리에서 선택하세요"
+                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              {/* 단색 선택 */}
+              {backgroundType === 'color' && (
+                <div className="bg-gray-50 rounded-2xl p-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    배경색
+                  </label>
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="h-12 w-24 rounded-lg"
+                    />
+                    <input
+                      type="text"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="flex-1 p-3 border border-gray-200 rounded-xl"
+                      placeholder="#ffffff"
+                    />
+                  </div>
+                  <div 
+                    className="mt-4 h-24 rounded-xl border border-gray-200"
+                    style={{ backgroundColor: backgroundColor }}
+                  />
+                </div>
+              )}
+
+              {/* 그라데이션 설정 */}
+              {backgroundType === 'gradient' && (
+                <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      시작 색상
+                    </label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="color"
+                        value={gradientColor1}
+                        onChange={(e) => setGradientColor1(e.target.value)}
+                        className="h-12 w-24 rounded-lg"
+                      />
+                      <input
+                        type="text"
+                        value={gradientColor1}
+                        onChange={(e) => setGradientColor1(e.target.value)}
+                        className="flex-1 p-3 border border-gray-200 rounded-xl"
+                        placeholder="#ffffff"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      끝 색상
+                    </label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="color"
+                        value={gradientColor2}
+                        onChange={(e) => setGradientColor2(e.target.value)}
+                        className="h-12 w-24 rounded-lg"
+                      />
+                      <input
+                        type="text"
+                        value={gradientColor2}
+                        onChange={(e) => setGradientColor2(e.target.value)}
+                        className="flex-1 p-3 border border-gray-200 rounded-xl"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      방향
+                    </label>
+                    <select
+                      value={gradientDirection}
+                      onChange={(e) => setGradientDirection(e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-xl"
+                    >
+                      {gradientDirections.map(dir => (
+                        <option key={dir.value} value={dir.value}>
+                          {dir.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div 
+                    className="h-24 rounded-xl border border-gray-200"
+                    style={{ 
+                      background: `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* 저장 버튼 */}
+              <div>
+                <button
+                  onClick={saveBackground}
+                  disabled={saving}
+                  className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl hover:bg-blue-600 disabled:bg-gray-400 font-medium"
+                >
+                  {saving ? '저장중...' : '저장'}
+                </button>
+              </div>
+
+              {/* 현재 배경 미리보기 */}
+              {currentBackground && (
+                <div className="bg-gray-50 rounded-2xl p-6">
+                  <p className="text-sm font-medium text-gray-700 mb-3">현재 설정된 배경:</p>
+                  {renderCurrentBackgroundPreview()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 배경 갤러리 섹션 */}
+        <div className="container mx-auto max-w-[1100px]">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-8">
+            <h2 className="text-xl font-bold mb-6 text-gray-200">배경 갤러리</h2>
+            <div className="bg-[#333333] rounded-2xl p-6">
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setSelectedType('all')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl ${
+                    selectedType === 'all'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
+                  }`}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setSelectedType('image')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl ${
+                    selectedType === 'image'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
+                  }`}
+                >
+                  이미지
+                </button>
+                <button
+                  onClick={() => setSelectedType('video')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl ${
+                    selectedType === 'video'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
+                  }`}
+                >
+                  영상
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredBackgrounds.map((background) => (
+                  <div key={background.id} className="bg-[#2A2A2A] rounded-xl shadow-sm overflow-hidden border border-gray-800">
+                    {renderPreview(background)}
+                    <div className="p-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium text-gray-200">{background.title}</h3>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteBackground(background.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                          >
+                            삭제
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {filteredBackgrounds.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-400">
+                    선택한 유형의 배경이 없습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 배경 추가 다이얼로그 */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>새 배경 추가</DialogTitle>
+              <DialogDescription>
+                갤러리에 새로운 배경을 추가합니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">제목</Label>
+                <Input
+                  id="title"
+                  value={newBackground.title}
+                  onChange={(e) => setNewBackground({...newBackground, title: e.target.value})}
+                  placeholder="배경 제목을 입력하세요"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="type">타입</Label>
+                <select
+                  id="type"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={newBackground.type}
+                  onChange={(e) => setNewBackground({...newBackground, type: e.target.value as 'image' | 'youtube' | 'pixabay'})}
+                >
+                  <option value="image">이미지</option>
+                  <option value="youtube">YouTube 영상</option>
+                  <option value="pixabay">Pixabay 영상</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="url">URL</Label>
+                <Input
+                  id="url"
+                  value={newBackground.url}
+                  onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
+                  placeholder="배경 URL을 입력하세요"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddDialog(false);
+                  setNewBackground({
+                    title: '',
+                    type: 'image',
+                    url: '',
+                    isActive: true
+                  });
+                }}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleAddBackground}
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                추가
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* 성공 다이얼로그 */}
+        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>배경 저장 완료</DialogTitle>
+              <DialogDescription>
+                배경이 성공적으로 저장되었습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowSuccessDialog(false)}
+              >
+                계속 수정하기
+              </Button>
+              <Button
+                onClick={handleViewPage}
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                내 사이트 보기
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
+  );
+} 

@@ -14,6 +14,10 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { getAuth } from 'firebase/auth';
 import ComponentRenderer from '@/components/ComponentRenderer';
+import Header from '@/components/Header';
+import { ref, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../firebase';
+import TranslateBanner from '@/components/ui/TranslateBanner';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
@@ -44,7 +48,7 @@ const getVideoUrl = (url: string, type: string) => {
   }
   
   // Pixabay URL 처리
-  if (url.includes('pixabay.com')) {
+  if (url.includes('pixabay.com') || url.endsWith('.mp4')) {
     return {
       type: 'pixabay',
       url: url
@@ -74,7 +78,6 @@ export default function UserPublicPage() {
 
   const handleBackgroundChange = async (type: string, value: string) => {
     if (!userData?.uid) {
-      console.error('사용자 ID를 찾을 수 없습니다.');
       return;
     }
 
@@ -90,6 +93,7 @@ export default function UserPublicPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // 사용자 데이터 로드
         const userSnap = await getDoc(doc(db, 'usernames', username));
         
         if (!userSnap.exists()) {
@@ -100,17 +104,42 @@ export default function UserPublicPage() {
         const data = userSnap.data();
         const uid = data?.uid;
         setUserData({ ...data, uid });
-        
-        // 배경 설정 불러오기
+
+        // 배경 설정과 링크 데이터를 병렬로 로드
         const settingsDocRef = doc(db, 'users', uid, 'settings', 'background');
-        const settingsSnap = await getDoc(settingsDocRef);
+        const [settingsSnap, linksSnap] = await Promise.all([
+          getDoc(settingsDocRef),
+          getDoc(doc(db, 'users', uid, 'links', 'page'))
+        ]);
+
+        // 배경 설정 처리
         if (settingsSnap.exists()) {
           const backgroundData = settingsSnap.data();
           setContextBackground(backgroundData.type, backgroundData.value);
+        } else {
+          // 기본 배경 이미지 설정
+          try {
+            const defaultImageRef = ref(storage, '/defaults/backgrounds/default-background.jpg');
+            const url = await getDownloadURL(defaultImageRef);
+            const defaultBackground = {
+              type: 'image',
+              value: url
+            };
+            await setDoc(settingsDocRef, defaultBackground);
+            setContextBackground(defaultBackground.type, defaultBackground.value);
+          } catch (error) {
+            console.error('기본 배경 이미지 설정 실패:', error);
+            // 이미지 설정 실패시 기본 색상으로 fallback
+            const defaultBackground = {
+              type: 'color',
+              value: '#f5f5f5'
+            };
+            await setDoc(settingsDocRef, defaultBackground);
+            setContextBackground(defaultBackground.type, defaultBackground.value);
+          }
         }
-        
-        const linksDocRef = doc(db, 'users', uid, 'links', 'page');
-        const linksSnap = await getDoc(linksDocRef);
+
+        // 링크 데이터 설정
         setComponents(linksSnap.exists() ? linksSnap.data().components || [] : []);
 
         // 허용된 사용자 목록 실시간 업데이트
@@ -169,78 +198,91 @@ export default function UserPublicPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center relative" style={getBackgroundStyles()}>
-      {background.type === 'video' && (
-        <>
-          {(() => {
-            const videoInfo = getVideoUrl(background.value, background.type);
-            
-            if (videoInfo?.type === 'youtube') {
-              const videoId = videoInfo.url;
-              return (
-                <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
-                  <iframe
-                    key={videoId}
-                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    className="w-[300%] h-[300%] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-[100%] min-h-[100%]"
-                    style={{ border: 'none' }}
-                  />
-                </div>
-              );
-            }
-            
-            if (videoInfo?.type === 'pixabay') {
-              return (
-                <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
-                  <video
-                    key={videoInfo.url}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls={false}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    style={{ objectFit: 'cover' }}
-                  >
-                    <source 
-                      src={videoInfo.url} 
-                      type="video/mp4"
+    <>
+      <Header />
+      <TranslateBanner />
+      <main className="min-h-screen flex flex-col items-center justify-center relative" style={getBackgroundStyles()}>
+        {background.type === 'video' && (
+          <>
+            {(() => {
+              const videoInfo = getVideoUrl(background.value, background.type);
+              
+              if (videoInfo?.type === 'youtube') {
+                const videoId = videoInfo.url;
+                return (
+                  <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+                    <iframe
+                      key={videoId}
+                      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      className="w-[300%] h-[300%] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-[100%] min-h-[100%]"
+                      style={{ border: 'none' }}
                     />
-                  </video>
-                </div>
-              );
-            }
-            
-            return null;
-          })()}
-          <div 
-            className="fixed inset-0 z-[-1] bg-black/30"
-            style={{ pointerEvents: 'none' }}
-          />
-        </>
-      )}
-      <div className="flex-grow flex flex-col items-center justify-center w-full">
-        <div className="md:w-[1000px] w-full px-[10px]">   
-          {components.map((component, index) => (
-            <ComponentRenderer
-              key={index}
-              type={component}
-              uid={userData.uid}
-              username={username}
-              isEditable={false}
-              isAllowed={isAllowed}
+                  </div>
+                );
+              }
+              
+              if (videoInfo?.type === 'pixabay') {
+                return (
+                  <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+                    <video
+                      key={videoInfo.url}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      controls={false}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{ objectFit: 'cover' }}
+                    >
+                      <source 
+                        src={videoInfo.url} 
+                        type="video/mp4"
+                      />
+                    </video>
+                  </div>
+                );
+              }
+              
+              return null;
+            })()}
+            <div 
+              className="fixed inset-0 z-[-1] bg-black/30"
+              style={{ pointerEvents: 'none' }}
             />
-          ))}
+          </>
+        )}
+        <div className="flex-grow flex flex-col items-center justify-center w-full">
+          <div className="md:w-[1000px] w-full px-[10px]">   
+            {components.map((component, index) => (
+              <ComponentRenderer
+                key={index}
+                type={component}
+                uid={userData.uid}
+                username={username}
+                isEditable={false}
+                isAllowed={isAllowed}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="w-full">
-        <div className="fixed top-4 right-4 z-50">
-          <BackgroundSelector onBackgroundChange={handleBackgroundChange} username={username} />
+        <div className="w-full">
+          {/* 배경 설정 버튼 */}
+          {currentUser?.uid === userData.uid && (
+            <div className="fixed top-[70px] right-5 z-50">
+              <Link 
+                href="/backgrounds"
+                className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors text-white"
+              >
+                <span className="mr-2">🎨</span>
+                배경 설정
+              </Link>
+            </div>
+          )}
+          <div className="h-[50px]"></div>
+          <UserEditButton username={username} ownerUid={userData.uid} />
         </div>
-        <div className="h-[50px]"></div>
-        <UserEditButton username={username} ownerUid={userData.uid} />
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
