@@ -67,7 +67,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   const [contactInfo, setContactInfo] = useState<ContactInfo>(DEFAULT_CONTACT);
   const [showAllButtons, setShowAllButtons] = useState(false);
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state: any) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const [hasLiked, setHasLiked] = useState(false);

@@ -44,7 +44,7 @@ const db = getFirestore(app);
 
 const Calendar2 = ({ username, uid }) => {
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [events, setEvents] = useState([]);

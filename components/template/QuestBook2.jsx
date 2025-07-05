@@ -67,7 +67,7 @@ const MESSAGES_PER_PAGE = 10;
 
 const QuestBook2 = ({ username, uid }) => {
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [imageFile, setImageFile] = useState(null);

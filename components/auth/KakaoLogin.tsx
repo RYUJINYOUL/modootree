@@ -7,6 +7,8 @@ export default function KakaoLogin() {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
+    if (!searchParams) return; // null 체크 추가
+
     const code = searchParams.get('code');
     
     if (code) {

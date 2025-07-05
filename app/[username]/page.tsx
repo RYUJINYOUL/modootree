@@ -17,7 +17,7 @@ import ComponentRenderer from '@/components/ComponentRenderer';
 import Header from '@/components/Header';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase';
-import TranslateBanner from '@/components/ui/TranslateBanner';
+import TranslateBanner from '@/app/components/ui/TranslateBanner';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {

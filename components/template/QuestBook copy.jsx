@@ -26,7 +26,7 @@ import { IoClose } from "react-icons/io5"
 
 const HeaderDrawer = ({ children, username, uid }) => {
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state) => state.user)
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;

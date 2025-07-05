@@ -33,8 +33,10 @@ const COLOR_PALETTE = [
 
 export default function LinkCards({ username, uid }: LogoProps) {
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
-  const { currentUser } = useSelector((state: any) => state.user);
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
+  
+  // Redux 상태 안전하게 처리
+  const currentUser = useSelector((state: any) => state.user?.currentUser) ?? null;
 
   const finalUid = uid ?? currentUser?.uid;
   const finalUsername = username ?? currentUser?.username ?? "사이트";
@@ -252,7 +254,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
           </div>
 
           {/* 색상 및 투명도 편집 */}    
-          {isEditable && openSettingsIndex === index && ( // Only show if isEditable and this link's settings are open
+          {isEditable && openSettingsIndex === index && (
             <div className='flex flex-col gap-2'>
             <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
               <label className="text-sm font-medium text-gray-500">배경색 :</label>

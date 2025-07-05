@@ -43,7 +43,7 @@ const storage = getStorage(app);
 
 const ImageCarousel = ({ username, uid }) => {
   const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const [images, setImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploading, setUploading] = useState(false);

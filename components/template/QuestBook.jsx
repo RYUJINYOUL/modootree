@@ -61,8 +61,8 @@ const getTimeAgo = (date) => {
 };
 
 const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
-  const pathname = usePathname();
-  const isEditable = pathname.startsWith('/editor');
+  const pathname = usePathname()
+  const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state) => state.user)
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;

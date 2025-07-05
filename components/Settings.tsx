@@ -13,19 +13,30 @@ import app from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const db = getFirestore(app);
 
-const Settings = () => {
-  const { currentUser } = useSelector((state) => state.user);
-  const [allowedUsers, setAllowedUsers] = useState([]);
+export default function Settings() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const currentUser = useSelector((state: any) => state?.user?.currentUser) ?? null;
+  const [allowedUsers, setAllowedUsers] = useState<string[]>([]);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    setMounted(true);
+  }, []);
 
-    // 허용된 사용자 목록 실시간 업데이트
+  useEffect(() => {
+    if (!mounted) return;
+    
+    if (!currentUser?.uid) {
+      router.push('/login');
+      return;
+    }
+
     const unsubscribe = onSnapshot(
       doc(db, 'users', currentUser.uid, 'settings', 'permissions'),
       (doc) => {
@@ -36,14 +47,17 @@ const Settings = () => {
     );
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, router, mounted]);
 
-  const handleAddUser = async (e) => {
+  if (!mounted || !currentUser) {
+    return null;
+  }
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserEmail.trim() || !currentUser?.uid) return;
 
     try {
-      // 현재 허용된 사용자 목록 가져오기
       const permissionsRef = doc(db, 'users', currentUser.uid, 'settings', 'permissions');
       const permissionsDoc = await getDoc(permissionsRef);
       
@@ -52,13 +66,11 @@ const Settings = () => {
         currentAllowedUsers = permissionsDoc.data().allowedUsers || [];
       }
 
-      // 이미 존재하는 이메일인지 확인
       if (currentAllowedUsers.includes(newUserEmail)) {
         setError('이미 등록된 사용자입니다.');
         return;
       }
 
-      // 새로운 사용자 추가
       await setDoc(permissionsRef, {
         allowedUsers: [...currentAllowedUsers, newUserEmail]
       });
@@ -71,7 +83,7 @@ const Settings = () => {
     }
   };
 
-  const handleRemoveUser = async (emailToRemove) => {
+  const handleRemoveUser = async (emailToRemove: string) => {
     if (!currentUser?.uid) return;
 
     try {
@@ -85,25 +97,15 @@ const Settings = () => {
     }
   };
 
-  if (!currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-white">로그인이 필요합니다.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen pt-16 px-4">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="bg-blue-500/20 rounded-2xl p-6 backdrop-blur-sm">
           <h1 className="text-2xl font-bold text-white mb-6">설정</h1>
           
-          {/* 허용된 사용자 관리 섹션 */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-white">허용된 사용자 관리</h2>
             
-            {/* 사용자 추가 폼 */}
             <form onSubmit={handleAddUser} className="space-y-4">
               <div className="flex gap-2">
                 <Input
@@ -125,7 +127,6 @@ const Settings = () => {
               )}
             </form>
 
-            {/* 허용된 사용자 목록 */}
             <div className="space-y-2">
               {allowedUsers.map((email) => (
                 <div
@@ -154,6 +155,4 @@ const Settings = () => {
       </div>
     </div>
   );
-};
-
-export default Settings; 
+} 
