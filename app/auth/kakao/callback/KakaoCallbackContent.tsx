@@ -17,6 +17,10 @@ export default function KakaoCallbackContent() {
 
   const handleKakaoCallback = useCallback(async () => {
     try {
+      if (!searchParams) {
+        throw new Error('검색 파라미터를 찾을 수 없습니다');
+      }
+
       const code = searchParams.get('code');
       
       if (!code) {
@@ -100,6 +104,11 @@ export default function KakaoCallbackContent() {
   }, [searchParams, router, auth, dispatch]);
 
   useEffect(() => {
+    if (!searchParams) {
+      setErrorMessage('검색 파라미터를 찾을 수 없습니다. 다시 로그인해 주세요.');
+      return;
+    }
+
     const code = searchParams.get('code');
     if (code) {
       handleKakaoCallback();
