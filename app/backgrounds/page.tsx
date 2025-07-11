@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, deleteField, addDoc } from 'firebase/firestore';
+import { storage } from '@/lib/firebase'; // storage 추가
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // ref, uploadBytes, getDownloadURL 추가
 import Header from '@/components/Header';
 import { useSelector } from 'react-redux';
 import {
@@ -36,6 +38,14 @@ interface UserBackground {
   };
 }
 
+interface NewBackground {
+  title: string;
+  type: 'image' | 'youtube' | 'pixabay';
+  url: string;
+  isActive: boolean;
+  file?: File | null;  // 파일 업로드를 위한 필드 추가
+}
+
 export default function BackgroundGallery() {
   const router = useRouter();
   const { currentUser } = useSelector((state: any) => state.user);
@@ -59,11 +69,12 @@ export default function BackgroundGallery() {
   // 관리자 관련 상태
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newBackground, setNewBackground] = useState({
+  const [newBackground, setNewBackground] = useState<NewBackground>({
     title: '',
     type: 'image',
     url: '',
-    isActive: true
+    isActive: true,
+    file: null
   });
 
   const gradientDirections = [
@@ -171,10 +182,10 @@ export default function BackgroundGallery() {
 
   const copyUrl = async (background: Background) => {
     try {
-      setBackgroundType('url');
-      setCustomUrl(background.url);
+      await navigator.clipboard.writeText(background.url);
       setCopiedId(background.id);
       setTimeout(() => setCopiedId(null), 2000);
+      alert('URL이 클립보드에 복사되었습니다.');
     } catch (error) {
       console.error('Error copying URL:', error);
       alert('URL 복사 중 오류가 발생했습니다.');
@@ -416,14 +427,36 @@ export default function BackgroundGallery() {
 
   // 새 배경 추가 함수
   const handleAddBackground = async () => {
-    if (!newBackground.title.trim() || !newBackground.url.trim()) {
-      alert('제목과 URL을 모두 입력해주세요.');
+    if (!newBackground.title.trim()) {
+      alert('제목을 입력해주세요.');
+      return;
+    }
+
+    if (newBackground.type === 'image' && !newBackground.file && !newBackground.url) {
+      alert('이미지를 업로드하거나 URL을 입력해주세요.');
+      return;
+    }
+
+    if ((newBackground.type === 'youtube' || newBackground.type === 'pixabay') && !newBackground.url.trim()) {
+      alert('영상 URL을 입력해주세요.');
       return;
     }
 
     try {
+      let finalUrl = newBackground.url;
+      
+      // 이미지 파일이 있는 경우 스토리지에 업로드
+      if (newBackground.type === 'image' && newBackground.file) {
+        const storageRef = ref(storage, `backgrounds/${Date.now()}_${newBackground.file.name}`);
+        const snapshot = await uploadBytes(storageRef, newBackground.file);
+        finalUrl = await getDownloadURL(snapshot.ref);
+      }
+
       await addDoc(collection(db, 'backgrounds'), {
-        ...newBackground,
+        title: newBackground.title,
+        type: newBackground.type,
+        url: finalUrl,
+        isActive: true,
         createdAt: new Date()
       });
 
@@ -432,7 +465,8 @@ export default function BackgroundGallery() {
         title: '',
         type: 'image',
         url: '',
-        isActive: true
+        isActive: true,
+        file: null
       });
       alert('배경이 추가되었습니다.');
     } catch (error) {
@@ -456,6 +490,30 @@ export default function BackgroundGallery() {
     }
   };
 
+  // 파일 업로드 핸들러 추가
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 파일 크기 체크 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('이미지 크기는 5MB 이하여야 합니다.');
+      return;
+    }
+
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+
+    setNewBackground(prev => ({
+      ...prev,
+      file: file,
+      url: '' // 파일이 선택되면 URL 초기화
+    }));
+  };
+
   if (loading) {
     return (
       <>
@@ -470,9 +528,10 @@ export default function BackgroundGallery() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-[#1E1E1E] md:pt-[100px] pt-[70px] pb-[100px] p-4">
-        {/* 페이지 제목 */}
-        <div className="container mx-auto max-w-[1100px] mb-12">
+      {/* 전체 컨테이너의 패딩 수정 */}
+      <div className="min-h-screen bg-[#1E1E1E] md:pt-[100px] pt-[70px] pb-[100px] md:p-4 p-0">
+        {/* 페이지 제목 컨테이너 */}
+        <div className="container mx-auto md:max-w-[1100px] w-full mb-12 px-4 md:px-0">
           <h1 className="text-3xl font-bold text-center text-white mb-2">
             배경 관리
           </h1>
@@ -481,8 +540,8 @@ export default function BackgroundGallery() {
           </p>
         </div>
 
-        {/* 관리자 상태 표시 */}
-        <div className="container mx-auto max-w-[1100px] mb-8">
+        {/* 관리자 상태 컨테이너 */}
+        <div className="container mx-auto md:max-w-[1100px] w-full mb-8 px-4 md:px-0">
           <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium text-gray-200">관리자 설정</h2>
@@ -505,9 +564,9 @@ export default function BackgroundGallery() {
           </div>
         </div>
 
-        {/* 배경 설정 섹션 */}
-        <div className="container mx-auto max-w-[1100px] mb-8">
-          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-8">
+        {/* 배경 설정 섹션 컨테이너 */}
+        <div className="container mx-auto md:max-w-[1100px] w-full mb-8 px-4 md:px-0">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
             <h2 className="text-xl font-bold mb-6 text-gray-200">배경 설정</h2>
             <div className="space-y-6">
               {/* 배경 타입 선택 */}
@@ -524,7 +583,7 @@ export default function BackgroundGallery() {
                         : 'bg-white border border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    이미지/영상
+                    미디어
                   </button>
                   <button
                     onClick={() => setBackgroundType('color')}
@@ -544,7 +603,7 @@ export default function BackgroundGallery() {
                         : 'bg-white border border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    그라데이션
+                    점층
                   </button>
                 </div>
               </div>
@@ -683,11 +742,11 @@ export default function BackgroundGallery() {
           </div>
         </div>
 
-        {/* 배경 갤러리 섹션 */}
-        <div className="container mx-auto max-w-[1100px]">
-          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-8">
+        {/* 배경 갤러리 섹션 컨테이너 */}
+        <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
             <h2 className="text-xl font-bold mb-6 text-gray-200">배경 갤러리</h2>
-            <div className="bg-[#333333] rounded-2xl p-6">
+            <div className="bg-[#333333] rounded-2xl p-4 md:p-6">
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() => setSelectedType('all')}
@@ -784,15 +843,36 @@ export default function BackgroundGallery() {
                   <option value="pixabay">Pixabay 영상</option>
                 </select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="url">URL</Label>
-                <Input
-                  id="url"
-                  value={newBackground.url}
-                  onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
-                  placeholder="배경 URL을 입력하세요"
-                />
-              </div>
+              
+              {newBackground.type === 'image' ? (
+                <div className="grid gap-2">
+                  <Label>이미지 업로드</Label>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="mb-2"
+                    />
+                    <div className="text-sm text-gray-500">또는</div>
+                    <Input
+                      placeholder="이미지 URL을 입력하세요"
+                      value={newBackground.url}
+                      onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <Label htmlFor="url">영상 URL</Label>
+                  <Input
+                    id="url"
+                    value={newBackground.url}
+                    onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
+                    placeholder={`${newBackground.type === 'youtube' ? 'YouTube' : 'Pixabay'} 영상 URL을 입력하세요`}
+                  />
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button
@@ -803,7 +883,8 @@ export default function BackgroundGallery() {
                     title: '',
                     type: 'image',
                     url: '',
-                    isActive: true
+                    isActive: true,
+                    file: null
                   });
                 }}
               >

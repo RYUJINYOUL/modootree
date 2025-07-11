@@ -1080,7 +1080,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 일기 팝업 모달 */}
         <Dialog open={showDiaryPopup} onOpenChange={setShowDiaryPopup}>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-gray-300">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">
                 {selectedDate?.format('YYYY년 MM월 DD일')}의 일기
@@ -1090,7 +1090,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
               {selectedDateDiaries.map((diary) => (
                 <div
                   key={diary.id}
-                  className="bg-blue-500/20 p-4 rounded-xl backdrop-blur-sm"
+                  className="bg-blue-500/30 p-4 rounded-xl backdrop-blur-sm"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">

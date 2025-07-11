@@ -19,7 +19,7 @@ interface BackgroundContextType {
 
 const DEFAULT_BACKGROUND = {
   type: 'image',
-  value: '/defaults/backgrounds/default-background.jpg'  // 신규 가입자용 기본 이미지 경로
+  value: '/defaults/backgrounds/default-background.png'  // 신규 가입자용 기본 이미지 경로
 };
 
 const BackgroundContext = createContext<BackgroundContextType>({

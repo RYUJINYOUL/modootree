@@ -269,13 +269,13 @@ export default function UserPublicPage() {
         <div className="w-full">
           {/* 배경 설정 버튼 */}
           {currentUser?.uid === userData.uid && (
-            <div className="fixed top-[70px] right-5 z-50">
+            <div className="fixed top-5 right-5 z-50">
               <Link 
                 href="/backgrounds"
-                className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors text-white"
+                className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors"
               >
-                <span className="mr-2">🎨</span>
-                배경 설정
+                <span className="text-white text-sm">🎨</span>
+                <span className="text-white ml-2">배경</span>
               </Link>
             </div>
           )}

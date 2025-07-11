@@ -14,7 +14,8 @@ import {
   deleteDoc,
   addDoc,
   where,
-  onSnapshot
+  onSnapshot,
+  setDoc
 } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
@@ -22,7 +23,7 @@ import Link from 'next/link';
 import CategoryCarousel from '../../components/CategoryCarousel';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
-import { Trash2, MessageCircle, Edit, Send } from 'lucide-react';
+import { Trash2, MessageCircle, Edit, Send, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -84,6 +85,9 @@ const maskEmail = (email) => {
   return `${username}@${domainParts.join('.')}`;
 };
 
+// 글자 수 제한 상수 추가
+const CONTENT_PREVIEW_LENGTH = 100;
+
 export default function LikesPage() {
   const [likes, setLikes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +105,9 @@ export default function LikesPage() {
   const [editingComment, setEditingComment] = useState(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [showComments, setShowComments] = useState({});
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [userReactions, setUserReactions] = useState({});  // 사용자가 누른 공감 버튼 추적
 
   // 관리자 UID 목록
   const isAdmin = currentUser?.uid && ADMIN_UIDS.includes(currentUser.uid);
@@ -149,32 +156,95 @@ export default function LikesPage() {
     fetchLikes();
   }, []);
 
+  // 실시간 업데이트를 위한 useEffect 추가
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const likesRef = collection(db, 'likes');
+    const unsubscribe = onSnapshot(likesRef, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "modified") {
+          const updatedData = change.doc.data();
+          setLikes(prevLikes => 
+            prevLikes.map(like => 
+              like.id === change.doc.id 
+                ? {
+                    ...like,
+                    reactions: updatedData.reactions || like.reactions,
+                    viewCount: updatedData.viewCount || like.viewCount
+                  }
+                : like
+            )
+          );
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // 사용자의 이전 공감 기록 불러오기
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const loadUserReactions = async () => {
+      try {
+        const q = query(
+          collection(db, 'userReactions'),
+          where('userId', '==', currentUser.uid)
+        );
+        const snapshot = await getDocs(q);
+        const reactions = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          reactions[`${data.postId}:${data.reactionId}`] = true;
+        });
+        setUserReactions(reactions);
+      } catch (error) {
+        console.error('사용자 공감 기록 로드 실패:', error);
+      }
+    };
+
+    loadUserReactions();
+  }, [currentUser]);
+
+  // 공감 버튼 핸들러 수정
   const handleReaction = async (postId, reactionId) => {
+    if (!currentUser) {
+      alert('공감하려면 로그인이 필요합니다.');
+      return;
+    }
+
     const reactionKey = `${postId}:${reactionId}`;
     if (reacting === reactionKey) return;
+
+    if (userReactions[reactionKey]) {
+      alert('이미 공감하셨습니다.');
+      return;
+    }
 
     setReacting(reactionKey);
     try {
       const postRef = doc(db, 'likes', postId);
       
+      // 사용자별 공감 기록 저장
+      const userReactionRef = doc(db, 'userReactions', `${currentUser.uid}_${postId}_${reactionId}`);
+      await setDoc(userReactionRef, {
+        userId: currentUser.uid,
+        postId,
+        reactionId,
+        createdAt: new Date()
+      });
+
       await updateDoc(postRef, {
         [`reactions.${reactionId}`]: increment(1)
       });
 
-      const updatedDoc = await getDoc(postRef);
-      const updatedData = updatedDoc.data();
+      setUserReactions(prev => ({
+        ...prev,
+        [reactionKey]: true
+      }));
 
-      setLikes(prevLikes => 
-        prevLikes.map(like => {
-          if (like.id === postId) {
-            return {
-              ...like,
-              reactions: updatedData.reactions || like.reactions
-            };
-          }
-          return like;
-        })
-      );
     } catch (error) {
       console.error('공감 반응 저장 실패:', error);
       alert('공감 저장에 실패했습니다.');
@@ -322,6 +392,34 @@ export default function LikesPage() {
     return () => unsubscribe();
   }, []);
 
+  // 조회수 증가 함수
+  const incrementViewCount = async (postId) => {
+    try {
+      const postRef = doc(db, 'likes', postId);
+      await updateDoc(postRef, {
+        viewCount: increment(1)
+      });
+      
+      // 로컬 상태 업데이트
+      setLikes(prevLikes => 
+        prevLikes.map(like => 
+          like.id === postId 
+            ? { ...like, viewCount: (like.viewCount || 0) + 1 }
+            : like
+        )
+      );
+    } catch (error) {
+      console.error('조회수 업데이트 실패:', error);
+    }
+  };
+
+  // 게시글 클릭 핸들러
+  const handlePostClick = (post) => {
+    setSelectedPost(post);
+    setIsPostModalOpen(true);
+    incrementViewCount(post.id);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-black">
@@ -424,11 +522,43 @@ export default function LikesPage() {
     );
   };
 
+  // 반응 버튼 컴포넌트
+  const ReactionButton = ({ reaction, postId }) => {
+    const reactionKey = `${postId}:${reaction.id}`;
+    const isReacted = userReactions[reactionKey];
+    const isReacting = reacting === reactionKey;
+
+    return (
+      <Button
+        onClick={() => handleReaction(postId, reaction.id)}
+        disabled={!currentUser || isReacting}
+        variant="ghost"
+        className={`flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg text-sm transition-colors
+          ${!currentUser 
+            ? 'opacity-50 cursor-not-allowed' 
+            : isReacting
+              ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+              : isReacted
+                ? `${reaction.bgColor} ${reaction.textColor} ring-2 ring-blue-500`
+                : `${reaction.bgColor} ${reaction.textColor}`
+          }`}
+      >
+        <span>{reaction.text}</span>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full ${reaction.countBgColor} relative`}>
+          {likes.find(l => l.id === postId)?.reactions[reaction.id] || 0}
+          {isReacting && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+          )}
+        </span>
+      </Button>
+    );
+  };
+
   return (
     <>
       <Header />
       <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white/90 pt-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl font-bold">공감 한 조각</h1>
             <Link href="/" className="text-blue-400 hover:text-blue-300">
@@ -480,96 +610,143 @@ export default function LikesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredLikes.map((like) => (
-                <div key={like.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700/80 transition-colors">
-                  <div className="mb-3 flex justify-between items-center">
-                    <span className="text-sm text-gray-400">{like.category}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">
-                        {like.createdAt?.toLocaleDateString()}
-                      </span>
-                      {canDelete(like) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLike(like);
-                            setDeleteConfirmOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-gray-300 text-sm whitespace-pre-wrap mb-4">{like.content}</p>
-                  
-                  {/* 이미지 갤러리 */}
+                <div 
+                  key={like.id} 
+                  className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700/80 transition-colors cursor-pointer"
+                  onClick={() => handlePostClick(like)}
+                >
+                  {/* 이미지 섹션을 상단으로 이동 */}
                   {like.images && like.images.length > 0 && (
-                    <div className="mb-4 grid grid-cols-2 gap-2">
-                      {like.images.map((imageUrl, index) => (
-                        <img
-                          key={index}
-                          src={imageUrl}
-                          alt={`공감 이미지 ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      ))}
+                    <div className="mb-4">
+                      <img
+                        src={like.images[0]}
+                        alt="첫 번째 이미지"
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      {like.images.length > 1 && (
+                        <div className="mt-2 text-sm text-gray-400 text-center">
+                          +{like.images.length - 1}장의 사진 더보기
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {REACTIONS.map((reaction) => (
-                      <Button
-                        key={reaction.id}
-                        onClick={() => handleReaction(like.id, reaction.id)}
-                        disabled={reacting === `${like.id}:${reaction.id}`}
-                        variant="ghost"
-                        className={`flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg text-sm transition-colors
-                          ${reacting === `${like.id}:${reaction.id}`
-                            ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                            : `${reaction.bgColor} ${reaction.textColor}`
-                          }`}
-                      >
-                        <span>{reaction.text}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${reaction.countBgColor}`}>
-                          {like.reactions[reaction.id] || 0}
-                        </span>
-                      </Button>
-                    ))}
+                  <div className="mb-3 flex justify-between items-center">
+                    <span className="text-sm text-gray-400">{like.category}</span>
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-gray-400" />
+                      <span className="text-xs text-gray-500">{like.viewCount || 0}</span>
+                      <span className="text-xs text-gray-500">
+                        {like.createdAt?.toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
+                  
+                  {/* 글자 수 제한된 내용 */}
+                  <p className="text-gray-300 text-sm whitespace-pre-wrap mb-4">
+                    {like.content.length > CONTENT_PREVIEW_LENGTH
+                      ? `${like.content.slice(0, CONTENT_PREVIEW_LENGTH)}...`
+                      : like.content}
+                  </p>
 
-                  {/* 답글 섹션 추가 */}
-                  <div className="mt-4 border-t border-gray-700 pt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageCircle className="w-4 h-4 text-gray-400" />
-                      <button 
-                        onClick={() => setShowComments(prev => ({ ...prev, [like.id]: !prev[like.id] }))}
-                        className="text-sm text-gray-400 hover:text-gray-300"
-                      >
-                        답글 {comments[like.id]?.length || 0}개
-                      </button>
+                  {/* 하단 정보 (답글 수, 공감 수) */}
+                  <div className="flex items-center gap-4 text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      <span className="text-sm">{comments[like.id]?.length || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {REACTIONS.map((reaction) => (
+                        <div
+                          key={reaction.id}
+                          className={`px-2 py-1 rounded-full ${reaction.countBgColor} ${
+                            userReactions[`${like.id}:${reaction.id}`] ? 'ring-2 ring-blue-500' : ''
+                          }`}
+                        >
+                          <span className="text-sm">
+                            {like.reactions[reaction.id] || 0}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 게시글 상세 모달 */}
+          <Dialog open={isPostModalOpen} onOpenChange={(open) => {
+            if (!open) {
+              setIsPostModalOpen(false);
+              setSelectedPost(null);
+            }
+          }}>
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-800">
+              {selectedPost && (
+                <>
+                  <DialogHeader className="border-b border-gray-800 pb-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-400">{selectedPost.category}</span>
+                        <span className="text-xs text-gray-500">
+                          {selectedPost.createdAt?.toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-400">
+                          {selectedPost.viewCount || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="mt-4">
+                    {/* 이미지 갤러리를 상단으로 이동 */}
+                    {selectedPost.images && selectedPost.images.length > 0 && (
+                      <div className="mb-6 grid grid-cols-2 gap-2">
+                        {selectedPost.images.map((imageUrl, index) => (
+                          <img
+                            key={index}
+                            src={imageUrl}
+                            alt={`공감 이미지 ${index + 1}`}
+                            className="w-full h-48 object-cover rounded-lg"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-gray-300 whitespace-pre-wrap mb-6">{selectedPost.content}</p>
+
+                    {/* 반응 버튼 */}
+                    <div className="grid grid-cols-2 gap-2 mb-6">
+                      {REACTIONS.map((reaction) => (
+                        <ReactionButton
+                          key={reaction.id}
+                          reaction={reaction}
+                          postId={selectedPost.id}
+                        />
+                      ))}
                     </div>
 
-                    {showComments[like.id] && (
+                    {/* 답글 섹션 */}
+                    <div className="border-t border-gray-800 pt-4">
                       <div className="space-y-3">
-                        {/* 답글 목록 */}
-                        {comments[like.id]?.map(renderComment)}
+                        {comments[selectedPost.id]?.map(renderComment)}
 
-                        {/* 답글 입력 폼 */}
                         {currentUser?.uid ? (
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center gap-2 mt-4">
                             <input
                               type="text"
                               value={newComment}
                               onChange={(e) => setNewComment(e.target.value)}
                               placeholder="답글을 입력하세요"
-                              className="flex-1 bg-gray-700 rounded px-3 py-1.5 text-sm placeholder-gray-400"
+                              className="flex-1 bg-gray-800 rounded px-3 py-1.5 text-sm placeholder-gray-400 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                             <button
                               className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm flex items-center gap-1"
-                              onClick={() => handleAddComment(like.id)}
+                              onClick={() => handleAddComment(selectedPost.id)}
                             >
                               <Send className="h-4 w-4" />
                             </button>
@@ -578,42 +755,42 @@ export default function LikesPage() {
                           <p className="text-sm text-gray-400">답글을 작성하려면 로그인이 필요합니다.</p>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
 
-        {/* 삭제 확인 다이얼로그 */}
-        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <DialogContent 
-            className="sm:max-w-[425px]"
-            aria-describedby="delete-dialog-description"
-          >
-            <DialogHeader>
-              <DialogTitle>공감 삭제</DialogTitle>
-              <DialogDescription id="delete-dialog-description">
-                이 공감을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirmOpen(false)}
-              >
-                취소
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-              >
-                삭제
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          {/* 삭제 확인 다이얼로그 */}
+          <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+            <DialogContent 
+              className="sm:max-w-[425px]"
+              aria-describedby="delete-dialog-description"
+            >
+              <DialogHeader>
+                <DialogTitle>공감 삭제</DialogTitle>
+                <DialogDescription id="delete-dialog-description">
+                  이 공감을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                >
+                  삭제
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </>
   );
