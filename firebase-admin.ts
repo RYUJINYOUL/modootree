@@ -4,23 +4,15 @@ if (!admin.apps.length) {
   try {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-    if (!projectId || !clientEmail || !privateKeyBase64) {
+    if (!projectId || !clientEmail || !privateKey) {
       throw new Error(
         '필수 Firebase Admin 환경 변수가 누락되었습니다:\n' +
         (!projectId ? '- NEXT_PUBLIC_FIREBASE_PROJECT_ID\n' : '') +
         (!clientEmail ? '- FIREBASE_CLIENT_EMAIL\n' : '') +
-        (!privateKeyBase64 ? '- FIREBASE_PRIVATE_KEY_BASE64\n' : '')
+        (!privateKey ? '- FIREBASE_PRIVATE_KEY\n' : '')
       );
-    }
-
-    // Base64 디코딩
-    let privateKey;
-    try {
-      privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
-    } catch (error) {
-      throw new Error('FIREBASE_PRIVATE_KEY_BASE64가 올바른 Base64 형식이 아닙니다.');
     }
 
     admin.initializeApp({
