@@ -63,12 +63,12 @@ const getVideoUrl = (url: string, type: string) => {
 
 const DEFAULT_BACKGROUND = {
   type: 'image',
-  value: '/backgrounds/1752324410072_leaves-8931849_1920.jpg'
+  value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
 };
 
 const NO_SETTING_BACKGROUND = {
   type: 'image',
-  value: '/backgrounds/1752324791928_watercolor-5062356_1920.jpg'
+  value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324791928_watercolor-5062356_1920.jpg?alt=media&token=d911e094-0017-410b-a317-daf250cebcca'
 };
 
 export default function UserPublicPage() {
@@ -102,6 +102,8 @@ export default function UserPublicPage() {
   };
 
   useEffect(() => {
+    let isSubscribed = true;
+
     async function loadBackgroundFromStorage(path: string) {
       try {
         const storageRef = ref(storage, path);
@@ -115,7 +117,7 @@ export default function UserPublicPage() {
 
     async function fetchData() {
       try {
-        // 사용자 데이터 로드
+        // 먼저 username 문서 확인
         const userSnap = await getDoc(doc(db, 'usernames', username));
         
         if (!userSnap.exists()) {
@@ -125,65 +127,82 @@ export default function UserPublicPage() {
 
         const data = userSnap.data();
         const uid = data?.uid;
+        if (!isSubscribed) return;
         setUserData({ ...data, uid });
 
-        // 배경 설정과 링크 데이터를 병렬로 로드
-        const settingsDocRef = doc(db, 'users', uid, 'settings', 'background');
+        // uid가 확인된 후 나머지 데이터 로드
         const [settingsSnap, linksSnap] = await Promise.all([
-          getDoc(settingsDocRef),
+          getDoc(doc(db, 'users', uid, 'settings', 'background')),
           getDoc(doc(db, 'users', uid, 'links', 'page'))
         ]);
+
+        if (!isSubscribed) return;
 
         // 배경 설정 처리
         if (settingsSnap.exists()) {
           const backgroundData = settingsSnap.data();
-          if (backgroundData.type === 'image') {
+          if (backgroundData.type === 'image' && backgroundData.value.startsWith('/')) {
+            // 로컬 이미지인 경우 바로 설정
+            setContextBackground(backgroundData.type, backgroundData.value);
+          } else if (backgroundData.type === 'image') {
+            // Storage 이미지인 경우에만 URL 가져오기
             const url = await loadBackgroundFromStorage(backgroundData.value);
+            if (!isSubscribed) return;
             setContextBackground(backgroundData.type, url);
           } else {
             setContextBackground(backgroundData.type, backgroundData.value);
           }
         } else {
           // 기본 배경 설정
-          const url = await loadBackgroundFromStorage(DEFAULT_BACKGROUND.value);
-          await setDoc(settingsDocRef, { ...DEFAULT_BACKGROUND, value: DEFAULT_BACKGROUND.value });
-          setContextBackground('image', url);
+          if (!isSubscribed) return;
+          setContextBackground('image', DEFAULT_BACKGROUND.value);
+          await setDoc(doc(db, 'users', uid, 'settings', 'background'), DEFAULT_BACKGROUND);
         }
 
         // 링크 데이터 설정
+        if (!isSubscribed) return;
         setComponents(linksSnap.exists() ? linksSnap.data().components || [] : []);
 
-        // 허용된 사용자 목록 실시간 업데이트
-        const unsubscribe = onSnapshot(
-          doc(db, 'users', uid, 'settings', 'permissions'),
-          (doc) => {
-            if (doc.exists()) {
-              const allowedUsersData = doc.data().allowedUsers || [];
-              setAllowedUsers(allowedUsersData);
-              
-              // 현재 사용자가 허용된 사용자인지 확인
-              const user = auth.currentUser || currentUser;
-              if (user) {
-                const isUserAllowed = allowedUsersData.some(
-                  (allowedUser: { email: string }) => allowedUser.email === user.email
-                );
-                setIsAllowed(isUserAllowed);
+        // 권한 설정은 실시간 업데이트가 필요한 경우에만 구독
+        if ((auth.currentUser || currentUser) && isSubscribed) {
+          const unsubscribe = onSnapshot(
+            doc(db, 'users', uid, 'settings', 'permissions'),
+            (doc) => {
+              if (!isSubscribed) return;
+              if (doc.exists()) {
+                const allowedUsersData = doc.data().allowedUsers || [];
+                setAllowedUsers(allowedUsersData);
+                
+                const user = auth.currentUser || currentUser;
+                if (user) {
+                  const isUserAllowed = allowedUsersData.some(
+                    (allowedUser: { email: string }) => allowedUser.email === user.email
+                  );
+                  setIsAllowed(isUserAllowed);
+                }
               }
             }
-          }
-        );
+          );
 
-        return () => unsubscribe();
+          return () => {
+            unsubscribe();
+            isSubscribed = false;
+          };
+        }
       } catch (error) {
         console.error('데이터 로딩 중 오류 발생:', error);
         // 에러 발생 시 NO_SETTING_BACKGROUND 사용
-        const url = await loadBackgroundFromStorage(NO_SETTING_BACKGROUND.value);
-        setContextBackground('image', url);
+        if (!isSubscribed) return;
+        setContextBackground('image', NO_SETTING_BACKGROUND.value);
       }
     }
 
     fetchData();
-  }, [username, currentUser]);
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [username, currentUser, auth.currentUser]);
 
   if (!userData) return null;
 
@@ -277,7 +296,7 @@ export default function UserPublicPage() {
                 className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors"
               >
                 <span className="text-white text-sm">🎨</span>
-                <span className="text-white ml-2">배경</span>
+                <span className="text-white ml-2">설정</span>
               </Link>
             </div>
           )}

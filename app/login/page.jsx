@@ -80,8 +80,8 @@ const LoginPage = () => {
 
         // 기본 배경 설정 저장
         await setDoc(doc(db, "users", user.uid, "settings", "background"), {
-          type: 'video',
-          value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+          type: 'image',
+          value: '/backgrounds/1752324410072_leaves-8931849_1920.jpg'
         });
 
         // 빈 컴포넌트로 시작
