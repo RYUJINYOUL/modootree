@@ -21,9 +21,30 @@ import EditorCanvas from '@/components/edit/EditorCanvas';
 import EditorCanvas2 from '@/components/edit/EditorCanvas2';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X } from 'lucide-react';
+import { X, ChevronDown, ChevronUp } from 'lucide-react';
 
 const db = getFirestore(app);
+
+// 사이트 타입 정의
+type SiteType = "diary" | "schedule" | "links" | "portfolio" | "etc";
+
+// 사이트 타입별 기본 컴포넌트 설정
+const DEFAULT_COMPONENTS: Record<SiteType, string[]> = {
+  diary: ["일기장"],
+  schedule: ["달력"],
+  links: ["링크카드"],
+  portfolio: ["사진첩"],
+  etc: ["프로필카드", "링크카드", "달력", "게스트북"]
+};
+
+// 사이트 타입 한글명
+const TYPE_LABELS: Record<SiteType, string> = {
+  diary: "다이어리",
+  schedule: "일정표",
+  links: "링크모음",
+  portfolio: "포트폴리오",
+  etc: "기타"
+};
 
 export default function EditPage({ username }: { username: string }) {
   const { currentUser } = useSelector((state: any) => state.user);
@@ -33,6 +54,9 @@ export default function EditPage({ username }: { username: string }) {
   const [allowedUsers, setAllowedUsers] = useState<Array<{uid: string, email: string}>>([]);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [error, setError] = useState('');
+  const [siteType, setSiteType] = useState<SiteType | null>(null);
+  const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
+  const [components, setComponents] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -55,9 +79,10 @@ export default function EditPage({ username }: { username: string }) {
             uid: currentUser.uid
           });
 
-          // 기본 컴포넌트 설정
+          // 빈 컴포넌트로 시작
           await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
-            components: ["프로필카드",  "SNS카드", "사진첩", "링크카드", "달력", "게스트북"],
+            components: [], // 빈 배열로 시작
+            type: null // 타입도 초기에는 null
           });
 
           // 기본 배경 설정
@@ -75,6 +100,15 @@ export default function EditPage({ username }: { username: string }) {
             return;
           }
           setOwnerUid(uid);
+
+          // 배경 설정이 없는 경우 기본 배경 설정
+          const backgroundDoc = await getDoc(doc(db, "users", uid, "settings", "background"));
+          if (!backgroundDoc.exists()) {
+            await setDoc(doc(db, "users", uid, "settings", "background"), {
+              type: 'video',
+              value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+            });
+          }
         }
       } catch (error) {
         console.error('Error in load:', error);
@@ -102,6 +136,51 @@ export default function EditPage({ username }: { username: string }) {
 
     return () => unsubscribe();
   }, [ownerUid]);
+
+  // 컴포넌트 데이터 로드
+  useEffect(() => {
+    const loadComponents = async () => {
+      if (!ownerUid) return;
+      
+      try {
+        const pageDoc = await getDoc(doc(db, "users", ownerUid, "links", "page"));
+        if (pageDoc.exists()) {
+          const data = pageDoc.data();
+          setComponents(data.components || []);
+          setSiteType(data.type || null);
+        }
+      } catch (error) {
+        console.error('컴포넌트 로드 실패:', error);
+      }
+    };
+
+    loadComponents();
+  }, [ownerUid]);
+
+  // 컴포넌트 저장
+  useEffect(() => {
+    const saveComponents = async () => {
+      if (!ownerUid) return;
+      
+      try {
+        await setDoc(doc(db, "users", ownerUid, "links", "page"), {
+          components,
+          type: siteType
+        });
+      } catch (error) {
+        console.error('컴포넌트 저장 실패:', error);
+      }
+    };
+
+    if (components.length > 0 || siteType) {
+      saveComponents();
+    }
+  }, [components, siteType, ownerUid]);
+
+  // 컴포넌트 업데이트 핸들러
+  const handleComponentsUpdate = (newComponents: string[]) => {
+    setComponents(newComponents);
+  };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +242,20 @@ export default function EditPage({ username }: { username: string }) {
     }
   };
 
+  // 사이트 타입 변경 핸들러
+  const handleSiteTypeChange = async (newType: SiteType) => {
+    try {
+      setComponents(DEFAULT_COMPONENTS[newType]);
+      setSiteType(newType);
+      setIsTypeMenuOpen(false);
+      
+      alert(`${TYPE_LABELS[newType]} 타입으로 변경되었습니다!`);
+    } catch (error) {
+      console.error('사이트 타입 변경 실패:', error);
+      alert('사이트 타입 변경에 실패했습니다.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-screen flex justify-center items-center bg-gray-100">
@@ -176,8 +269,94 @@ export default function EditPage({ username }: { username: string }) {
   return (
     <div className="w-full min-h-screen flex justify-center items-start bg-gray-700">
       <div className="w-full max-w-6xl md:w-4/5 bg-gray-300 rounded-2xl shadow-2xl mt-10 mb-10 p-4 flex flex-col gap-8">
-        <h1 className="font-bold text-center mt-6 mb-8 text-3xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500 after:rounded-full">에디터</h1>
-        
+        <h1 className="font-bold text-center mt-6 mb-8 text-3xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500 after:rounded-full">
+          에디터
+        </h1>
+
+        {/* 사이트 타입 선택 섹션 - 모바일 친화적 */}
+        <div className="bg-gray-50 rounded-xl p-6 shadow-lg">
+          <div 
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
+          >
+            <h2 className="text-xl font-semibold text-gray-800">
+              사이트 타입 선택
+              {siteType && <span className="ml-2 text-blue-500">- {TYPE_LABELS[siteType]}</span>}
+            </h2>
+            {isTypeMenuOpen ? (
+              <ChevronUp className="w-6 h-6 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-6 h-6 text-gray-500" />
+            )}
+          </div>
+
+          {isTypeMenuOpen && (
+            <div className="mt-4 space-y-2">
+              <p className="text-gray-600 mb-4">
+                원하시는 사이트 타입을 선택하시면 기본 컴포넌트가 자동으로 설정됩니다.
+              </p>
+              <div className="flex flex-col gap-2">
+                {(Object.keys(TYPE_LABELS) as SiteType[]).map((type) => (
+                  <Button
+                    key={type}
+                    onClick={() => handleSiteTypeChange(type)}
+                    className={`w-full py-3 ${
+                      siteType === type 
+                        ? "bg-blue-500 text-white" 
+                        : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                    }`}
+                  >
+                    {TYPE_LABELS[type]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 에디터 영역 */}
+        <div className="p-0.5 flex gap-10 md:bg-gray-50 bg-blend-darken rounded-xl">
+          <div className="w-1/4 md:block hidden pt-6">
+            <h1 className="font-bold text-center mt-4 mb-8 text-2xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-12 after:h-1 after:bg-gradient-to-r after:from-blue-400 after:to-purple-400 after:rounded-full">컴포넌트</h1>
+            <ComponentPalette />
+          </div>
+
+          <div className="md:hidden w-full">
+            <EditorCanvas
+              components={components}
+              onComponentsUpdate={handleComponentsUpdate}
+            />
+            <div className='h-[50px]'></div>
+            <div className="flex justify-center">
+              <Link 
+                href={`/${username}`} 
+                className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none"
+              >
+                수정완료 · 배경설정
+              </Link>
+            </div>
+          </div>
+
+          <div className="md:w-3/4 md:block hidden">
+            <h1 className="md:block hidden font-bold text-center mt-6 mb-8 text-2xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-20 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500 after:rounded-full">드래그로 위치 변경하세요 ✨</h1>
+            <div className="bg-white rounded-xl shadow p-4">
+              <EditorCanvas2
+                components={components}
+                onComponentsUpdate={handleComponentsUpdate}
+              />
+            </div>
+            <div className='h-[50px]'></div>
+            <div className="flex justify-center">
+              <Link 
+                href={`/${username}`} 
+                className="px-8 py-4 mb-10 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none"
+              >
+                수정완료 · 배경설정
+              </Link>
+            </div>
+          </div>
+        </div>
+
         {/* 허용된 사용자 관리 섹션 */}
         <div className="bg-gray-50 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">허용된 사용자 관리</h2>
@@ -227,42 +406,6 @@ export default function EditPage({ username }: { username: string }) {
                 등록된 사용자가 없습니다.
               </p>
             )}
-          </div>
-        </div>
-
-        <div className="p-0.5 flex gap-10 md:bg-gray-50 bg-blend-darken rounded-xl">
-          <div className="w-1/4 md:block hidden pt-6">
-            <h1 className="font-bold text-center mt-4 mb-8 text-2xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-12 after:h-1 after:bg-gradient-to-r after:from-blue-400 after:to-purple-400 after:rounded-full">컴포넌트</h1>
-            <ComponentPalette />
-          </div>
-
-          <div className="md:hidden w-full">
-            <EditorCanvas/>
-            <div className='h-[50px]'></div>
-            <div className="flex justify-center">
-              <Link 
-                href={`/${username}`} 
-                className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none"
-              >
-                수정완료 · 배경설정
-              </Link>
-            </div>
-          </div>
-
-          <div className="md:w-3/4 md:block hidden">
-            <h1 className="md:block hidden font-bold text-center mt-6 mb-8 text-2xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-20 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500 after:rounded-full">드래그로 위치 변경하세요 ✨</h1>
-            <div className="bg-white rounded-xl shadow p-4">
-              <EditorCanvas2/>
-            </div>
-            <div className='h-[50px]'></div>
-            <div className="flex justify-center">
-              <Link 
-                href={`/${username}`} 
-                className="px-8 py-4 mb-10 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-gray-50 hover:border-gray-300 hover:scale-105 active:scale-95 select-none"
-              >
-                수정완료 · 배경설정
-              </Link>
-            </div>
           </div>
         </div>
       </div>

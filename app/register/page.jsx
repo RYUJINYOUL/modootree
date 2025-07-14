@@ -95,6 +95,18 @@ const RegisterPage = () => {
                     photoURL: user.photoURL,
                     createdAt: serverTimestamp(),
                 });
+
+                // 빈 컴포넌트로 시작
+                await setDoc(doc(db, "users", user.uid, "links", "page"), {
+                    components: [], // 빈 배열로 시작
+                    type: null // 타입도 초기에는 null
+                });
+
+                // 기본 배경 설정
+                await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+                    type: 'video',
+                    value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+                });
             }
 
             dispatch(

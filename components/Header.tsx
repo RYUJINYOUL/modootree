@@ -138,7 +138,7 @@ export default function Header() {
     }
   };
 
-  if (!mounted || !user?.currentUser?.uid) return null;
+  if (!mounted) return null;
 
   return (
     <header className={`fixed ${isMobile ? 'top-5 left-5' : 'top-5 left-5'} z-50`}>
@@ -174,6 +174,7 @@ export default function Header() {
 
         {showDropdown && (
           <div className={`absolute ${isMobile ? 'left-0 right-0 mx-4' : 'left-0'} mt-2 w-48 bg-white/30 backdrop-blur-sm rounded-lg shadow-md py-1 text-sm text-white`}>
+            {/* 기본 메뉴 - 로그인 상태와 관계없이 항상 표시 */}
             <button
               onClick={() => handleNavigation('/')}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
@@ -192,42 +193,57 @@ export default function Header() {
             >
               문의하기
             </button>
-            
-            {myUsername && (
+
+            {/* 로그인한 경우에만 표시되는 메뉴 */}
+            {user?.currentUser?.uid ? (
               <>
-                <div className="px-4 py-2 text-white/50 border-t border-white/10">내 사이트</div>
-                <button
-                  onClick={() => handleNavigation(`/${myUsername}`)}
-                  className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-                >
-                  {myUsername}
-                </button>
-              </>
-            )}
-            
-            {allowedSites.length > 0 && (
-              <>
-                <div className="px-4 py-2 text-white/50 border-t border-white/10">초대된 사이트</div>
-                {allowedSites.map((site, index) => (
+                {myUsername && (
+                  <>
+                    <div className="px-4 py-2 text-white/50 border-t border-white/10">내 사이트</div>
+                    <button
+                      onClick={() => handleNavigation(`/${myUsername}`)}
+                      className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
+                    >
+                      {myUsername}
+                    </button>
+                  </>
+                )}
+                
+                {allowedSites.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 text-white/50 border-t border-white/10">초대된 사이트</div>
+                    {allowedSites.map((site, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleNavigation(`/${site.username}`)}
+                        className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
+                      >
+                        {site.username}
+                      </button>
+                    ))}
+                  </>
+                )}
+                
+                <div className="border-t border-white/10">
                   <button
-                    key={index}
-                    onClick={() => handleNavigation(`/${site.username}`)}
-                    className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 text-red-400"
                   >
-                    {site.username}
+                    로그아웃
                   </button>
-                ))}
+                </div>
               </>
+            ) : (
+              // 로그아웃 상태일 때 보여줄 로그인 버튼
+              <div className="border-t border-white/10">
+                <button
+                  onClick={() => handleNavigation('/login')}
+                  className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 text-blue-400"
+                >
+                  로그인
+                </button>
+              </div>
             )}
-            
-            <div className="border-t border-white/10">
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 text-red-400"
-              >
-                로그아웃
-              </button>
-            </div>
           </div>
         )}
       </div>

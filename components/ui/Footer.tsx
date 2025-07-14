@@ -26,7 +26,7 @@ export default function Footer() {
               alt="모두트리 로고"
               width={30}
               height={30}
-              className="rounded-lg"
+              className="rounded-lg w-auto h-auto"
               priority={false}  // 우선순위 낮춤
               loading="lazy"    // 지연 로딩 적용
             />

@@ -80,9 +80,9 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent className={`w-full h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
+      <DrawerContent className={`w-full h-full flex flex-col bg-gray-50 ${drawerContentClassName}`}>
         <DrawerHeader>
-          <DrawerTitle>일기장</DrawerTitle>
+          <DrawerTitle>오늘 기록</DrawerTitle>
         </DrawerHeader>
         <div className="flex-1 overflow-y-auto p-4">
           {/* 일기 작성 폼이 여기에 들어갈 수 있습니다 */}
@@ -621,7 +621,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
   }, [diaries]);
 
   return (
-    <div className='pt-16 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+    <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
       {/* 일기장 제목 */}
       <div className="w-full max-w-[1200px] space-y-6">
         <div className="relative flex items-center justify-center text-[21px] font-bold w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white">
@@ -908,7 +908,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 일기 상세 보기 모달 */}
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <div className="flex flex-col">
@@ -946,7 +946,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 공감하기 모달 */}
         <Dialog open={likeModalOpen} onOpenChange={setLikeModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>공감하기</DialogTitle>
             </DialogHeader>
@@ -996,7 +996,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 공감 완료 모달 */}
         <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-          <DialogContent className="sm:max-w-[400px]">
+          <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>공감이 저장되었습니다</DialogTitle>
             </DialogHeader>

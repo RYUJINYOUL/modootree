@@ -61,6 +61,16 @@ const getVideoUrl = (url: string, type: string) => {
   };
 };
 
+const DEFAULT_BACKGROUND = {
+  type: 'image',
+  value: '/backgrounds/1752324410072_leaves-8931849_1920.jpg'
+};
+
+const NO_SETTING_BACKGROUND = {
+  type: 'image',
+  value: '/backgrounds/1752324791928_watercolor-5062356_1920.jpg'
+};
+
 export default function UserPublicPage() {
   const params = useParams();
   if (!params || !params.username) {
@@ -70,6 +80,7 @@ export default function UserPublicPage() {
   const { background, setBackground: setContextBackground } = useBackground();
   const { currentUser } = useSelector((state: any) => state.user);
   const auth = getAuth();
+  const [backgroundUrl, setBackgroundUrl] = useState<string>('');
 
   const [userData, setUserData] = useState<any>(null);
   const [components, setComponents] = useState<string[]>([]);
@@ -91,6 +102,17 @@ export default function UserPublicPage() {
   };
 
   useEffect(() => {
+    async function loadBackgroundFromStorage(path: string) {
+      try {
+        const storageRef = ref(storage, path);
+        const url = await getDownloadURL(storageRef);
+        return url;
+      } catch (error) {
+        console.error('Error loading background from storage:', error);
+        return '';
+      }
+    }
+
     async function fetchData() {
       try {
         // 사용자 데이터 로드
@@ -115,28 +137,17 @@ export default function UserPublicPage() {
         // 배경 설정 처리
         if (settingsSnap.exists()) {
           const backgroundData = settingsSnap.data();
-          setContextBackground(backgroundData.type, backgroundData.value);
-        } else {
-          // 기본 배경 이미지 설정
-          try {
-            const defaultImageRef = ref(storage, '/defaults/backgrounds/default-background.jpg');
-            const url = await getDownloadURL(defaultImageRef);
-            const defaultBackground = {
-              type: 'image',
-              value: url
-            };
-            await setDoc(settingsDocRef, defaultBackground);
-            setContextBackground(defaultBackground.type, defaultBackground.value);
-          } catch (error) {
-            console.error('기본 배경 이미지 설정 실패:', error);
-            // 이미지 설정 실패시 기본 색상으로 fallback
-            const defaultBackground = {
-              type: 'color',
-              value: '#f5f5f5'
-            };
-            await setDoc(settingsDocRef, defaultBackground);
-            setContextBackground(defaultBackground.type, defaultBackground.value);
+          if (backgroundData.type === 'image') {
+            const url = await loadBackgroundFromStorage(backgroundData.value);
+            setContextBackground(backgroundData.type, url);
+          } else {
+            setContextBackground(backgroundData.type, backgroundData.value);
           }
+        } else {
+          // 기본 배경 설정
+          const url = await loadBackgroundFromStorage(DEFAULT_BACKGROUND.value);
+          await setDoc(settingsDocRef, { ...DEFAULT_BACKGROUND, value: DEFAULT_BACKGROUND.value });
+          setContextBackground('image', url);
         }
 
         // 링크 데이터 설정
@@ -165,6 +176,9 @@ export default function UserPublicPage() {
         return () => unsubscribe();
       } catch (error) {
         console.error('데이터 로딩 중 오류 발생:', error);
+        // 에러 발생 시 NO_SETTING_BACKGROUND 사용
+        const url = await loadBackgroundFromStorage(NO_SETTING_BACKGROUND.value);
+        setContextBackground('image', url);
       }
     }
 
@@ -175,26 +189,63 @@ export default function UserPublicPage() {
 
   const getBackgroundStyles = () => {
     const styles: { [key: string]: string } = {};
-
-    switch (background.type) {
-      case 'color':
-        styles.backgroundColor = background.value;
-        break;
-      case 'gradient':
-        styles.backgroundImage = background.value;
-        break;
-      case 'image':
-        styles.backgroundColor = 'transparent';
-        styles.backgroundImage = `url(${background.value})`;
-        styles.backgroundSize = 'cover';
-        styles.backgroundPosition = 'center';
-        styles.backgroundRepeat = 'no-repeat';
-        break;
-      default:
-        styles.backgroundColor = 'transparent';
+    
+    if (background.type === 'color') {
+      styles.backgroundColor = background.value;
+      return styles;
+    }
+    
+    if (background.type === 'gradient') {
+      styles.backgroundImage = background.value;
+      return styles;
     }
 
+    styles.backgroundColor = 'transparent';
     return styles;
+  };
+
+  const renderBackground = () => {
+    if (background.type === 'image') {
+      return (
+        <>
+          <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img
+                src={background.value}
+                alt="background"
+                className="w-full h-full object-cover"
+                style={{ objectFit: 'cover' }}
+              />
+            </div>
+          </div>
+          <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+        </>
+      );
+    }
+
+    if (background.type === 'video') {
+      const videoInfo = getVideoUrl(background.value, background.type);
+      if (videoInfo?.type === 'youtube') {
+        return (
+          <>
+            <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+              <div className="relative w-full h-full flex items-center justify-center">
+                <iframe
+                  key={videoInfo.url}
+                  src={`https://www.youtube.com/embed/${videoInfo.url}?autoplay=1&mute=1&loop=1&playlist=${videoInfo.url}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1&vq=hd1080`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  className="w-full h-full"
+                  style={{ border: 'none', pointerEvents: 'none', aspectRatio: '9/16' }}
+                />
+              </div>
+            </div>
+            <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+          </>
+        );
+      }
+    }
+
+    return null;
   };
 
   return (
@@ -202,56 +253,7 @@ export default function UserPublicPage() {
       <Header />
       <TranslateBanner />
       <main className="min-h-screen flex flex-col items-center justify-center relative" style={getBackgroundStyles()}>
-        {background.type === 'video' && (
-          <>
-            {(() => {
-              const videoInfo = getVideoUrl(background.value, background.type);
-              
-              if (videoInfo?.type === 'youtube') {
-                const videoId = videoInfo.url;
-                return (
-                  <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
-                    <iframe
-                      key={videoId}
-                      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      className="w-[300%] h-[300%] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-[100%] min-h-[100%]"
-                      style={{ border: 'none' }}
-                    />
-                  </div>
-                );
-              }
-              
-              if (videoInfo?.type === 'pixabay') {
-                return (
-                  <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
-                    <video
-                      key={videoInfo.url}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      controls={false}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      style={{ objectFit: 'cover' }}
-                    >
-                      <source 
-                        src={videoInfo.url} 
-                        type="video/mp4"
-                      />
-                    </video>
-                  </div>
-                );
-              }
-              
-              return null;
-            })()}
-            <div 
-              className="fixed inset-0 z-[-1] bg-black/30"
-              style={{ pointerEvents: 'none' }}
-            />
-          </>
-        )}
+        {renderBackground()}
         <div className="flex-grow flex flex-col items-center justify-center w-full">
           <div className="md:w-[1000px] w-full px-[10px]">   
             {components.map((component, index) => (

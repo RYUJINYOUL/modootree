@@ -566,7 +566,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
             src={selectedImage.url}
             alt={selectedImage.caption || '이미지'}
             fill
-            sizes="100vw"
+            sizes="(max-width: 768px) 100vw, 600px"
             className="object-cover"
           />
         </div>

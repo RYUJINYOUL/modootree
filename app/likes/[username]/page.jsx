@@ -235,7 +235,7 @@ export default function LikesPage() {
         reactionId,
         createdAt: new Date()
       });
-
+      
       await updateDoc(postRef, {
         [`reactions.${reactionId}`]: increment(1)
       });
@@ -570,7 +570,7 @@ export default function LikesPage() {
           {isMobile ? (
             <div className="mb-8">
               <CategoryCarousel
-                categories={['전체', ...CATEGORIES]}
+                categories={CATEGORIES}
                 selectedCategory={selectedCategory}
                 onSelect={setSelectedCategory}
               />
@@ -707,27 +707,27 @@ export default function LikesPage() {
                     {selectedPost.images && selectedPost.images.length > 0 && (
                       <div className="mb-6 grid grid-cols-2 gap-2">
                         {selectedPost.images.map((imageUrl, index) => (
-                          <img
-                            key={index}
-                            src={imageUrl}
-                            alt={`공감 이미지 ${index + 1}`}
+                        <img
+                          key={index}
+                          src={imageUrl}
+                          alt={`공감 이미지 ${index + 1}`}
                             className="w-full h-48 object-cover rounded-lg"
-                          />
-                        ))}
-                      </div>
-                    )}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                     <p className="text-gray-300 whitespace-pre-wrap mb-6">{selectedPost.content}</p>
 
                     {/* 반응 버튼 */}
                     <div className="grid grid-cols-2 gap-2 mb-6">
-                      {REACTIONS.map((reaction) => (
+                    {REACTIONS.map((reaction) => (
                         <ReactionButton
-                          key={reaction.id}
+                        key={reaction.id}
                           reaction={reaction}
                           postId={selectedPost.id}
                         />
-                      ))}
+                    ))}
                     </div>
 
                     {/* 답글 섹션 */}
@@ -758,38 +758,38 @@ export default function LikesPage() {
                     </div>
                   </div>
                 </>
-              )}
+          )}
             </DialogContent>
           </Dialog>
 
-          {/* 삭제 확인 다이얼로그 */}
-          <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-            <DialogContent 
-              className="sm:max-w-[425px]"
-              aria-describedby="delete-dialog-description"
-            >
-              <DialogHeader>
-                <DialogTitle>공감 삭제</DialogTitle>
-                <DialogDescription id="delete-dialog-description">
-                  이 공감을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteConfirmOpen(false)}
-                >
-                  취소
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                >
-                  삭제
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+        {/* 삭제 확인 다이얼로그 */}
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <DialogContent 
+            className="sm:max-w-[425px]"
+            aria-describedby="delete-dialog-description"
+          >
+            <DialogHeader>
+              <DialogTitle>공감 삭제</DialogTitle>
+              <DialogDescription id="delete-dialog-description">
+                이 공감을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmOpen(false)}
+              >
+                취소
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+              >
+                삭제
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
     </>

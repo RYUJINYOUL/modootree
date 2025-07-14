@@ -84,9 +84,10 @@ const LoginPage = () => {
           value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
         });
 
-        // 기본 컴포넌트 설정
+        // 빈 컴포넌트로 시작
         await setDoc(doc(db, "users", user.uid, "links", "page"), {
-          components: ["이미지", "링크카드", "달력", "게스트북"],
+          components: [], // 빈 배열로 시작
+          type: null // 타입도 초기에는 null
         });
       }
     } catch (error) {

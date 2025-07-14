@@ -18,8 +18,8 @@ interface BackgroundContextType {
 }
 
 const DEFAULT_BACKGROUND = {
-  type: 'image',
-  value: '/defaults/backgrounds/default-background.png'  // 신규 가입자용 기본 이미지 경로
+  type: 'video',
+  value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
 };
 
 const BackgroundContext = createContext<BackgroundContextType>({
@@ -31,29 +31,6 @@ export const useBackground = () => useContext(BackgroundContext);
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [background, setBackgroundState] = useState<BackgroundState>(DEFAULT_BACKGROUND);
-
-  useEffect(() => {
-    // 기본 이미지 URL 가져오기
-    const loadDefaultBackground = async () => {
-      try {
-        const defaultImageRef = ref(storage, DEFAULT_BACKGROUND.value);
-        const url = await getDownloadURL(defaultImageRef);
-        setBackgroundState({
-          type: 'image',
-          value: url
-        });
-      } catch (error) {
-        console.error('기본 배경 이미지 로드 실패:', error);
-        // 이미지 로드 실패시 기본 색상으로 fallback
-        setBackgroundState({
-          type: 'color',
-          value: '#f5f5f5'
-        });
-      }
-    };
-
-    loadDefaultBackground();
-  }, []);
 
   const setBackground = (type: string, value: string) => {
     setBackgroundState({ type, value });

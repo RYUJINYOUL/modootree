@@ -301,7 +301,7 @@ const ImageCarousel = ({ username, uid }) => {
   }, [finalUid]);
 
   return (
-    <div className="w-full max-w-[1000px] mx-auto p-4 space-y-4 mt-8">
+    <div className="w-full max-w-[1000px] mx-auto p-8 space-y-4 mt-8 bg-blue-600/10 backdrop-blur-sm rounded-2xl shadow-lg">
       {/* 상단 컨트롤 */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
@@ -311,7 +311,7 @@ const ImageCarousel = ({ username, uid }) => {
                 type="text"
                 value={carouselTitle}
                 onChange={(e) => setCarouselTitle(e.target.value)}
-                className="text-xl font-semibold text-white bg-blue-500/20 backdrop-blur-sm rounded-xl px-3 py-2"
+                className="text-xl font-semibold text-white bg-blue-600/40 backdrop-blur-sm rounded-xl px-3 py-2"
                 onBlur={handleCarouselTitleSave}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
@@ -322,14 +322,14 @@ const ImageCarousel = ({ username, uid }) => {
               />
               <button
                 onClick={handleCarouselTitleSave}
-                className="p-2 bg-blue-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-blue-500/30 transition-all"
+                className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="px-3 py-2 bg-blue-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-blue-500/30 transition-all">
+              <div className="px-3 py-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all">
                 <h2 className="text-xl font-semibold">
                   {carouselTitle}
                 </h2>
@@ -337,7 +337,7 @@ const ImageCarousel = ({ username, uid }) => {
               {canEdit && (
                 <button
                   onClick={() => setEditingCarouselTitle(true)}
-                  className="p-2 bg-blue-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-blue-500/30 transition-all opacity-0 group-hover:opacity-100"
+                  className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all opacity-0 group-hover:opacity-100"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
@@ -357,7 +357,7 @@ const ImageCarousel = ({ username, uid }) => {
               />
               <label
                 htmlFor="image-upload"
-                className="p-2 bg-blue-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-blue-500/30 transition-all cursor-pointer"
+                className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
               </label>
@@ -365,14 +365,14 @@ const ImageCarousel = ({ username, uid }) => {
           )}
           <button
             onClick={handlePrevious}
-            className="p-2 bg-blue-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-blue-500/30 transition-all"
+            className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all"
             disabled={images.length < 2}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={handleNext}
-            className="p-2 bg-blue-500/20 backdrop-blur-sm rounded-xl text-white hover:bg-blue-500/30 transition-all"
+            className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all"
             disabled={images.length < 2}
           >
             <ChevronRight className="w-5 h-5" />
@@ -386,11 +386,12 @@ const ImageCarousel = ({ username, uid }) => {
         <div className="md:hidden w-full space-y-4">
           {images.length > 0 ? (
             <div className="space-y-4">
-              <div className="relative bg-black/20 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3]">
+              <div className="relative bg-blue-600/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3]">
                 <Image
                   src={images[currentIndex]?.url}
                   alt={images[currentIndex]?.caption || '이미지'}
                   fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
                   className="object-cover"
                   onClick={() => handleImageClick(images[currentIndex])}
                 />
@@ -413,7 +414,7 @@ const ImageCarousel = ({ username, uid }) => {
               </div>
             </div>
           ) : (
-            <div className="relative bg-black/20 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3]">
+            <div className="relative bg-blue-600/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3]">
               <div className="absolute inset-0 flex items-center justify-center text-white/60">
                 이미지를 추가해주세요
               </div>
@@ -428,13 +429,14 @@ const ImageCarousel = ({ username, uid }) => {
             const image = images[imageIndex];
             
             return (
-              <div key={offset} className="relative bg-black/20 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3] group">
+              <div key={offset} className="relative bg-blue-600/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3] group">
                 {image ? (
                   <>
                     <Image
                       src={image.url}
                       alt={image.caption || '이미지'}
                       fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
                       className="object-cover cursor-pointer"
                       onClick={() => handleImageClick(image)}
                     />

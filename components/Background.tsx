@@ -84,6 +84,7 @@ export default function Background({ type, value, thumbnailUrl }: BackgroundProp
         src={value}
         alt="배경"
         fill
+        sizes="100vw"
         priority
         className="object-cover"
       />

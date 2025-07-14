@@ -1,46 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { db } from '../../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useState } from 'react';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
-import { useSelector } from 'react-redux';
 
-
-
-export default function EditorCanvas2() {
-  const [components, setComponents] = useState([]);
+export default function EditorCanvas2({ components, onComponentsUpdate }) {
   const [dragInfo, setDragInfo] = useState(null); // 모바일 드래그 정보
-  const { currentUser } = useSelector(state => state.user);
-  const uid = currentUser.uid;
-  const [loaded, setLoaded] = useState(false); 
-
-  // 초기 데이터 로드
-  useEffect(() => {
-    const load = async () => {
-      const docRef = doc(db, 'users', uid, 'links', 'page');
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        setComponents(snapshot.data().components || []);
-      }
-    setLoaded(true); // 데이터 로딩 완료 표시
-   };
-  if (uid) load();
-  }, [uid]);
-
-  // 데이터 저장
-  useEffect(() => {
-    const save = async () => {
-      const docRef = doc(db, 'users', uid, 'links', 'page');
-      await setDoc(docRef, { components });
-    };
-     if (uid && loaded) save();
-  }, [components, uid, loaded]);
 
   // 데스크탑: 새 컴포넌트 드롭
   const handleDropNew = (e) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('component');
-    setComponents(prev => [...prev, type]);
+    onComponentsUpdate([...components, type]);
   };
 
   // 데스크탑: 드래그 시작
@@ -57,12 +26,10 @@ export default function EditorCanvas2() {
 
     if (isNaN(fromIdx)) return;
 
-    setComponents(prev => {
-      const updated = [...prev];
+    const updated = [...components];
       updated.splice(fromIdx, 1);
       updated.splice(targetIdx, 0, component);
-      return updated;
-    });
+    onComponentsUpdate(updated);
   };
 
   // 데스크탑: 삭제
@@ -70,11 +37,9 @@ export default function EditorCanvas2() {
     e.preventDefault();
     const fromIdx = parseInt(e.dataTransfer.getData('dragIndex'), 10);
     if (!isNaN(fromIdx)) {
-      setComponents(prev => {
-        const updated = [...prev];
+      const updated = [...components];
         updated.splice(fromIdx, 1);
-        return updated;
-      });
+      onComponentsUpdate(updated);
     }
   };
 
@@ -92,12 +57,10 @@ export default function EditorCanvas2() {
   const handleTouchEnd = (targetIdx) => {
     if (!dragInfo) return;
 
-    setComponents(prev => {
-      const updated = [...prev];
+    const updated = [...components];
       const [item] = updated.splice(dragInfo.index, 1);
       updated.splice(targetIdx, 0, item);
-      return updated;
-    });
+    onComponentsUpdate(updated);
 
     setDragInfo(null);
   };
@@ -106,11 +69,9 @@ export default function EditorCanvas2() {
   const handleTouchDelete = () => {
     if (!dragInfo) return;
 
-    setComponents(prev => {
-      const updated = [...prev];
+    const updated = [...components];
       updated.splice(dragInfo.index, 1);
-      return updated;
-    });
+    onComponentsUpdate(updated);
 
     setDragInfo(null);
   };

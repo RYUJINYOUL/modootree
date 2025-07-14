@@ -1,9 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { db } from '../../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ComponentLibrary } from './ComponentLibrary';
-import { useSelector } from 'react-redux';
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -11,66 +7,39 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export default function EditorCanvas() {
-  const [components, setComponents] = useState<string[]>([]);
-  const { currentUser } = useSelector((state: any) => state.user);
-  const uid = currentUser?.uid;
-  const [loaded, setLoaded] = useState(false); 
+interface EditorCanvasProps {
+  components: string[];
+  onComponentsUpdate: (components: string[]) => void;
+}
 
-  // 🔹 Firebase에서 로드
-  useEffect(() => {
-    const load = async () => {
-    const docRef = doc(db, 'users', uid, 'links', 'page');
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      setComponents(snapshot.data().components || []);
-    }
-    setLoaded(true); // 데이터 로딩 완료 표시
-  };
-  if (uid) load();
-}, [uid]);
-
-  // 🔹 Firebase에 저장
-  useEffect(() => {
-  const save = async () => {
-    const docRef = doc(db, 'users', uid, 'links', 'page');
-    await setDoc(docRef, { components });
-  };
-  if (uid && loaded) save();
-}, [components, uid, loaded]);
-
+export default function EditorCanvas({ components, onComponentsUpdate }: EditorCanvasProps) {
   // 🔹 컴포넌트 추가
   const handleAdd = (type: string) => {
-    setComponents(prev => [...prev, type]);
+    onComponentsUpdate([...components, type]);
   };
 
   // 🔹 삭제
   const handleRemove = (index: number) => {
-    setComponents(prev => prev.filter((_, i) => i !== index));
+    onComponentsUpdate(components.filter((_, i) => i !== index));
   };
 
   // 🔹 위로 이동
   const moveUp = (index: number) => {
     if (index === 0) return;
-    setComponents(prev => {
-      const updated = [...prev];
+    const updated = [...components];
       [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-      return updated;
-    });
+    onComponentsUpdate(updated);
   };
 
   // 🔹 아래로 이동
   const moveDown = (index: number) => {
     if (index === components.length - 1) return;
-    setComponents(prev => {
-      const updated = [...prev];
+    const updated = [...components];
       [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-      return updated;
-    });
+    onComponentsUpdate(updated);
   };
 
   return (
-    
     <div className="md:hidden space-y-2">
       {/* 🔹 현재 추가된 컴포넌트 목록 */}
       {components.map((type, idx) => (
@@ -114,7 +83,6 @@ export default function EditorCanvas() {
           </PopoverContent>
         </Popover>
       </div>
-
     </div>
   );
 }
