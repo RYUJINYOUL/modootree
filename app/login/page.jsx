@@ -81,7 +81,7 @@ const LoginPage = () => {
         // 기본 배경 설정 저장
         await setDoc(doc(db, "users", user.uid, "settings", "background"), {
           type: 'image',
-          value: '/backgrounds/1752324410072_leaves-8931849_1920.jpg'
+          value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
         });
 
         // 빈 컴포넌트로 시작

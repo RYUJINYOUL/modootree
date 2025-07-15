@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // admin 컬렉션에 대한 규칙
+    match /admin/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;  // admin 문서는 콘솔에서만 수정 가능
+    }
+
+    // 사용자 문서에 대한 규칙
+    match /users/{userId}/{document=**} {
+      allow read;  // 모든 사용자가 읽기 가능
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+    
+    // views 컬렉션에 대한 규칙
+    match /views/{docId} {
+      allow read;  // 모든 사용자가 읽기 가능
+      allow write;  // 모든 사용자가 쓰기 가능 (조회수/좋아요 업데이트)
+    }
+    
+    // usernames 컬렉션에 대한 규칙
+    match /usernames/{username} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+    
+    // likes 컬렉션에 대한 규칙
+    match /likes/{docId} {
+      allow read;
+      allow write: if request.auth != null || true;  // 비로그인 사용자도 좋아요 가능
+    }
+    
+    // comments 컬렉션에 대한 규칙
+    match /comments/{commentId} {
+      allow read;
+      allow write;  // 모든 사용자가 댓글 작성 가능
+    }
+    
+    // userReactions 컬렉션에 대한 규칙
+    match /userReactions/{reactionId} {
+      allow read;
+      allow write;  // 모든 사용자가 리액션 가능
+    }
+
+    // backgrounds 컬렉션에 대한 규칙
+    match /backgrounds/{backgroundId} {
+      allow read;  // 모든 사용자가 읽기 가능
+      allow write: if request.auth != null && isAdmin();  // 관리자만 쓰기 가능
+    }
+    
+    // 관리자 확인 함수
+    function isAdmin() {
+      let adminDoc = get(/databases/$(database)/documents/admin/settings);
+      return adminDoc != null && 
+             adminDoc.data.adminUid == request.auth.uid;
+    }
+  }
+} 

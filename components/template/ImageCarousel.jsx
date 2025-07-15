@@ -301,7 +301,7 @@ const ImageCarousel = ({ username, uid }) => {
   }, [finalUid]);
 
   return (
-    <div className="w-full max-w-[1000px] mx-auto p-8 space-y-4 mt-8 bg-blue-600/10 backdrop-blur-sm rounded-2xl shadow-lg">
+    <div className="w-full max-w-[1100px] mx-auto p-4 space-y-4 mt-8 bg-blue-600/10 backdrop-blur-sm rounded-2xl shadow-lg">
       {/* 상단 컨트롤 */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">

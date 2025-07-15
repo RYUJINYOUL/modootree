@@ -243,7 +243,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     const buttons: ButtonConfig[] = [
       ...((!isEditable) ? [
         { field: 'views', icon: BsEyeFill, label: '', color: 'text-blue-400/80', count: contactInfo.views || 0 },
-        { field: 'likes', icon: FaHeart, label: '', color: 'text-blue-400/80', onClick: handleLike, count: contactInfo.likedBy?.length || 0, isActive: hasLiked }
+        { field: 'likes', icon: FaHeart, label: '', color: 'text-red-500', onClick: handleLike, count: contactInfo.likedBy?.length || 0, isActive: hasLiked }
       ] : []),
       { field: 'phone', icon: BsPhone, label: '전화번호', color: 'text-gray-100/90' },
       { field: 'location', icon: IoLocationSharp, label: '위치', color: 'text-red-500/90' },

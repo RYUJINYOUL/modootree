@@ -224,7 +224,48 @@ export default function UserPublicPage() {
   };
 
   const renderBackground = () => {
-    if (background.type === 'image') {
+    if (background.type === 'url') {
+      // YouTube 비디오 URL 처리
+      if (background.value.includes('youtube.com') || background.value.includes('youtu.be')) {
+        const videoId = getYouTubeVideoId(background.value);
+        return (
+          <>
+            <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+              <div className="relative w-full h-full flex items-center justify-center">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  className="absolute w-[300%] h-[300%] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                />
+              </div>
+            </div>
+            <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+          </>
+        );
+      }
+      // 픽사베이 비디오 URL 처리
+      else if (background.value.includes('pixabay.com')) {
+        return (
+          <>
+            <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+              <div className="relative w-full h-full flex items-center justify-center">
+                <video
+                  src={background.value}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="absolute w-full h-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+          </>
+        );
+      }
+    }
+    // 이미지 배경 처리
+    else if (background.type === 'image') {
       return (
         <>
           <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
@@ -233,35 +274,12 @@ export default function UserPublicPage() {
                 src={background.value}
                 alt="background"
                 className="w-full h-full object-cover"
-                style={{ objectFit: 'cover' }}
               />
             </div>
           </div>
           <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
         </>
       );
-    }
-
-    if (background.type === 'video') {
-      const videoInfo = getVideoUrl(background.value, background.type);
-      if (videoInfo?.type === 'youtube') {
-        return (
-          <>
-            <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
-              <div className="relative w-full h-full flex items-center justify-center">
-                <iframe
-                  key={videoInfo.url}
-                  src={`https://www.youtube.com/embed/${videoInfo.url}?autoplay=1&mute=1&loop=1&playlist=${videoInfo.url}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1&vq=hd1080`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  className="w-full h-full"
-                  style={{ border: 'none', pointerEvents: 'none', aspectRatio: '9/16' }}
-                />
-              </div>
-            </div>
-            <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
-          </>
-        );
-      }
     }
 
     return null;

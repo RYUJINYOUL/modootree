@@ -51,8 +51,8 @@ export default function EditPage({ username }: { username: string }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [ownerUid, setOwnerUid] = useState('');
-  const [allowedUsers, setAllowedUsers] = useState<Array<{uid: string, email: string}>>([]);
-  const [newUserEmail, setNewUserEmail] = useState('');
+  const [allowedUsers, setAllowedUsers] = useState<string[]>([]);
+  const [newUsername, setNewUsername] = useState('');
   const [error, setError] = useState('');
   const [siteType, setSiteType] = useState<SiteType | null>(null);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
@@ -88,7 +88,7 @@ export default function EditPage({ username }: { username: string }) {
           // 기본 배경 설정
           await setDoc(doc(db, "users", currentUser.uid, "settings", "background"), {
             type: 'image',
-            value: '/backgrounds/1752324410072_leaves-8931849_1920.jpg'
+            value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
           });
 
           setOwnerUid(currentUser.uid);
@@ -105,8 +105,8 @@ export default function EditPage({ username }: { username: string }) {
           const backgroundDoc = await getDoc(doc(db, "users", uid, "settings", "background"));
           if (!backgroundDoc.exists()) {
             await setDoc(doc(db, "users", uid, "settings", "background"), {
-              type: 'video',
-              value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+              type: 'image',
+              value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
             });
           }
         }
@@ -184,23 +184,18 @@ export default function EditPage({ username }: { username: string }) {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserEmail.trim() || !ownerUid) return;
+    if (!newUsername.trim() || !ownerUid) return;
 
     try {
-      // 이메일로 사용자 찾기
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', newUserEmail));
-      const querySnapshot = await getDocs(q);
+      // username으로 사용자 찾기
+      const usernameDoc = await getDoc(doc(db, 'usernames', newUsername));
 
-      if (querySnapshot.empty) {
-        setError('등록되지 않은 사용자입니다.');
+      if (!usernameDoc.exists()) {
+        setError('존재하지 않는 사용자입니다.');
         return;
       }
 
-      const userDoc = querySnapshot.docs[0];
-      const userData = { uid: userDoc.id, email: newUserEmail };
-
-      // 현재 허용된 사용자 목록 가져오기
+      // 권한 설정
       const permissionsRef = doc(db, 'users', ownerUid, 'settings', 'permissions');
       const permissionsDoc = await getDoc(permissionsRef);
       
@@ -209,18 +204,16 @@ export default function EditPage({ username }: { username: string }) {
         currentAllowedUsers = permissionsDoc.data().allowedUsers || [];
       }
 
-      // 이미 존재하는 사용자인지 확인
-      if (currentAllowedUsers.some((user: { uid: string }) => user.uid === userData.uid)) {
+      if (currentAllowedUsers.includes(newUsername)) {
         setError('이미 등록된 사용자입니다.');
         return;
       }
 
-      // 새로운 사용자 추가
       await setDoc(permissionsRef, {
-        allowedUsers: [...currentAllowedUsers, userData]
+        allowedUsers: [...currentAllowedUsers, newUsername]
       });
 
-      setNewUserEmail('');
+      setNewUsername('');
       setError('');
     } catch (error) {
       console.error('사용자 추가 실패:', error);
@@ -228,13 +221,13 @@ export default function EditPage({ username }: { username: string }) {
     }
   };
 
-  const handleRemoveUser = async (userToRemove: {uid: string, email: string}) => {
+  const handleRemoveUser = async (usernameToRemove: string) => {
     if (!ownerUid) return;
 
     try {
       const permissionsRef = doc(db, 'users', ownerUid, 'settings', 'permissions');
       await setDoc(permissionsRef, {
-        allowedUsers: allowedUsers.filter(user => user.uid !== userToRemove.uid)
+        allowedUsers: allowedUsers.filter(username => username !== usernameToRemove)
       });
     } catch (error) {
       console.error('사용자 제거 실패:', error);
@@ -365,11 +358,11 @@ export default function EditPage({ username }: { username: string }) {
           <form onSubmit={handleAddUser} className="space-y-4 mb-6">
             <div className="flex gap-2">
               <Input
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="사용자 이메일 입력"
-                className="flex-1"
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="사용자 아이디 입력"
+                className="flex-1 bg-blue-500/20 border-none text-white placeholder-white/50"
               />
               <Button
                 type="submit"
@@ -385,14 +378,14 @@ export default function EditPage({ username }: { username: string }) {
 
           {/* 허용된 사용자 목록 */}
           <div className="space-y-2">
-            {allowedUsers.map((user) => (
+            {allowedUsers.map((username) => (
               <div
-                key={user.uid}
+                key={username}
                 className="flex items-center justify-between p-3 bg-gray-100 rounded-lg"
               >
-                <span className="text-gray-700">{user.email}</span>
+                <span className="text-gray-700">{username}</span>
                 <Button
-                  onClick={() => handleRemoveUser(user)}
+                  onClick={() => handleRemoveUser(username)}
                   variant="ghost"
                   size="icon"
                   className="text-gray-500 hover:text-red-500 hover:bg-gray-200"

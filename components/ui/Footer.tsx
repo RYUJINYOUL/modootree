@@ -23,12 +23,10 @@ export default function Footer() {
           <div className="flex items-center gap-2">
             <Image
               src="/Image/logo.png"
-              alt="모두트리 로고"
-              width={30}
-              height={30}
-              className="rounded-lg w-auto h-auto"
-              priority={false}  // 우선순위 낮춤
-              loading="lazy"    // 지연 로딩 적용
+              alt="ModooTree Logo"
+              width={120}
+              height={120}
+              className="w-8 h-8"
             />
             <span className="text-lg font-bold text-white/90">
               모두트리

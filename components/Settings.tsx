@@ -22,7 +22,7 @@ export default function Settings() {
   const [mounted, setMounted] = useState(false);
   const currentUser = useSelector((state: any) => state?.user?.currentUser) ?? null;
   const [allowedUsers, setAllowedUsers] = useState<string[]>([]);
-  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUsername, setNewUsername] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -55,9 +55,17 @@ export default function Settings() {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserEmail.trim() || !currentUser?.uid) return;
+    if (!newUsername.trim() || !currentUser?.uid) return;
 
     try {
+      // username으로 사용자 찾기
+      const usernameDoc = await getDoc(doc(db, 'usernames', newUsername));
+      
+      if (!usernameDoc.exists()) {
+        setError('존재하지 않는 사용자입니다.');
+        return;
+      }
+
       const permissionsRef = doc(db, 'users', currentUser.uid, 'settings', 'permissions');
       const permissionsDoc = await getDoc(permissionsRef);
       
@@ -66,16 +74,16 @@ export default function Settings() {
         currentAllowedUsers = permissionsDoc.data().allowedUsers || [];
       }
 
-      if (currentAllowedUsers.includes(newUserEmail)) {
+      if (currentAllowedUsers.includes(newUsername)) {
         setError('이미 등록된 사용자입니다.');
         return;
       }
 
       await setDoc(permissionsRef, {
-        allowedUsers: [...currentAllowedUsers, newUserEmail]
+        allowedUsers: [...currentAllowedUsers, newUsername]
       });
 
-      setNewUserEmail('');
+      setNewUsername('');
       setError('');
     } catch (error) {
       console.error('사용자 추가 실패:', error);
@@ -83,13 +91,13 @@ export default function Settings() {
     }
   };
 
-  const handleRemoveUser = async (emailToRemove: string) => {
+  const handleRemoveUser = async (usernameToRemove: string) => {
     if (!currentUser?.uid) return;
 
     try {
       const permissionsRef = doc(db, 'users', currentUser.uid, 'settings', 'permissions');
       await setDoc(permissionsRef, {
-        allowedUsers: allowedUsers.filter(email => email !== emailToRemove)
+        allowedUsers: allowedUsers.filter(username => username !== usernameToRemove)
       });
     } catch (error) {
       console.error('사용자 제거 실패:', error);
@@ -109,10 +117,10 @@ export default function Settings() {
             <form onSubmit={handleAddUser} className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  placeholder="사용자 이메일 입력"
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="사용자 아이디 입력"
                   className="flex-1 bg-blue-500/20 border-none text-white placeholder-white/50"
                 />
                 <Button
@@ -128,14 +136,14 @@ export default function Settings() {
             </form>
 
             <div className="space-y-2">
-              {allowedUsers.map((email) => (
+              {allowedUsers.map((username) => (
                 <div
-                  key={email}
+                  key={username}
                   className="flex items-center justify-between p-3 bg-blue-500/30 rounded-xl"
                 >
-                  <span className="text-white">{email}</span>
+                  <span className="text-white">{username}</span>
                   <Button
-                    onClick={() => handleRemoveUser(email)}
+                    onClick={() => handleRemoveUser(username)}
                     variant="ghost"
                     size="icon"
                     className="text-white hover:bg-blue-500/40"

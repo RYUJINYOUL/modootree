@@ -16,7 +16,6 @@ export default function MainHeader() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
-  const [inquiryCount, setInquiryCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
@@ -24,39 +23,16 @@ export default function MainHeader() {
   }, []);
 
   useEffect(() => {
-    if (!user?.currentUser?.uid) return;
-
-    const fetchData = async () => {
       const viewsRef = doc(db, 'views', 'total');
-      const userLikeRef = doc(db, 'views', 'total', 'likes', user.currentUser.uid);
-
-      try {
-        const [viewsDoc, userLikeDoc] = await Promise.all([
-          getDoc(viewsRef),
-          getDoc(userLikeRef)
-        ]);
-
-        if (viewsDoc.exists()) {
-          const data = viewsDoc.data();
-          setViewCount(data.count || 0);
-          setLikeCount(data.likes || 0);
-          setInquiryCount(data.inquiries || 0);
-        }
-
-        setIsLiked(userLikeDoc.exists());
-      } catch (error) {
-        console.error('데이터 가져오기 실패:', error);
-      }
-    };
-
-    fetchData();
-
-    const unsubscribe = onSnapshot(doc(db, 'views', 'total'), (doc) => {
+    const unsubscribe = onSnapshot(viewsRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
         setViewCount(data.count || 0);
-        setLikeCount(data.likes || 0);
-        setInquiryCount(data.inquiries || 0);
+        // 좋아요 수는 likedBy 배열의 길이로 계산
+        const likedByArray = data.likedBy || [];
+        setLikeCount(likedByArray.length);
+        // 현재 사용자의 좋아요 상태 확인
+        setIsLiked(likedByArray.includes(user?.currentUser?.uid));
       }
     });
 
@@ -80,30 +56,59 @@ export default function MainHeader() {
     }
 
     const viewsRef = doc(db, 'views', 'total');
-    const userLikeRef = doc(db, 'views', 'total', 'likes', user.currentUser.uid);
-
+    
     try {
-      if (!isLiked) {
+      const docSnap = await getDoc(viewsRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const likedBy = data.likedBy || [];
+        const userUid = user.currentUser.uid;
+        
+        if (!likedBy.includes(userUid)) {
+          // 좋아요 추가
         await updateDoc(viewsRef, {
-          likes: increment(1)
+            likedBy: [...likedBy, userUid]
         });
-        await setDoc(userLikeRef, { timestamp: new Date() });
-        setIsLiked(true);
       } else {
+          // 좋아요 제거
         await updateDoc(viewsRef, {
-          likes: increment(-1)
+            likedBy: likedBy.filter((uid: string) => uid !== userUid)
         });
-        await deleteDoc(userLikeRef);
-        setIsLiked(false);
+        }
       }
     } catch (error) {
       console.error('좋아요 업데이트 실패:', error);
     }
   };
 
-  const handleInquiry = () => {
-    window.open('http://pf.kakao.com/_pGNPn/chat', '_blank', 'noopener,noreferrer');
-  };
+  // 페이지 로드시 조회수 증가
+  useEffect(() => {
+    const incrementViewCount = async () => {
+      const viewsRef = doc(db, 'views', 'total');
+      try {
+        const docSnap = await getDoc(viewsRef);
+        if (!docSnap.exists()) {
+          await setDoc(viewsRef, {
+            count: 1,
+            likedBy: []
+          });
+        } else {
+          await updateDoc(viewsRef, {
+            count: increment(1)
+          });
+        }
+      } catch (error) {
+        console.error('조회수 업데이트 실패:', error);
+      }
+    };
+    
+    // 세션 스토리지를 사용하여 중복 카운트 방지
+    const hasVisited = sessionStorage.getItem('hasVisited');
+    if (!hasVisited) {
+      incrementViewCount();
+      sessionStorage.setItem('hasVisited', 'true');
+    }
+  }, []);
 
   if (!mounted) return null;
 
@@ -118,9 +123,8 @@ export default function MainHeader() {
             src="/Image/logo.png"
             alt="ModooTree Logo"
             width={120}
-            height={40}
-            priority
-            className="h-10 w-auto"
+            height={120}
+            className="w-8 h-8"
           />
           <span className="text-white/90 text-sm font-medium">
             {user?.currentUser?.uid ? '로그인 중' : '로그아웃 중'}
@@ -137,19 +141,16 @@ export default function MainHeader() {
             </div>
             <button
               onClick={handleLike}
-              className="w-full text-left px-4 py-2 border-b border-white/10 hover:bg-white/10 transition-colors duration-200 flex items-center justify-between"
+              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 flex items-center justify-between"
             >
               <span>좋아요: {likeCount.toLocaleString()}</span>
               <Heart 
                 className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-white/70'}`}
               />
             </button>
-            <div className="w-full text-left px-4 py-2 border-b border-white/10">
-              문의: {inquiryCount.toLocaleString()}
-            </div>
             <button
               onClick={() => {
-                handleInquiry();
+                window.open('http://pf.kakao.com/_pGNPn/chat', '_blank', 'noopener,noreferrer');
                 setShowDropdown(false);
               }}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 flex items-center justify-between"

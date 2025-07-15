@@ -741,7 +741,7 @@ export default function BackgroundGallery() {
         </div>
 
         {/* 배경 설정 섹션 컨테이너 */}
-        <div className="container mx-auto md:max-w-[1100px] w-full mb-8 px-4 md:px-0">
+        <div className="container mx-auto md:max-w-[1100px] w-full mb-8 px-4 md:px-0 mt-12">
           <div className="mt-8">
             <Tabs defaultValue="background" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8 bg-[#2A2A2A] p-1.5 rounded-xl h-[60px]">
@@ -760,180 +760,180 @@ export default function BackgroundGallery() {
               </TabsList>
               
               <TabsContent value="background">
-                <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
-                  <h2 className="text-xl font-bold mb-6 text-gray-200">배경 설정</h2>
-                  <div className="space-y-6">
-                    {/* 배경 타입 선택 */}
-                    <div className="bg-gray-50 rounded-2xl p-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        배경 타입
-                      </label>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setBackgroundType('url')}
-                          className={`flex-1 py-2.5 px-4 rounded-xl ${
-                            backgroundType === 'url'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-white border border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          미디어
-                        </button>
-                        <button
-                          onClick={() => setBackgroundType('color')}
-                          className={`flex-1 py-2.5 px-4 rounded-xl ${
-                            backgroundType === 'color'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-white border border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          단색
-                        </button>
-                        <button
-                          onClick={() => setBackgroundType('gradient')}
-                          className={`flex-1 py-2.5 px-4 rounded-xl ${
-                            backgroundType === 'gradient'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-white border border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          점층
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* URL 입력 필드 */}
-                    {backgroundType === 'url' && (
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                          배경 URL
-                        </label>
-                        <input
-                          type="text"
-                          value={customUrl}
-                          onChange={(e) => setCustomUrl(e.target.value)}
-                          placeholder="배경 URL을 입력하거나 아래 갤러리에서 선택하세요"
-                          className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    )}
-
-                    {/* 단색 선택 */}
-                    {backgroundType === 'color' && (
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                          배경색
-                        </label>
-                        <div className="flex gap-3 items-center">
-                          <input
-                            type="color"
-                            value={backgroundColor}
-                            onChange={(e) => setBackgroundColor(e.target.value)}
-                            className="h-12 w-24 rounded-lg"
-                          />
-                          <input
-                            type="text"
-                            value={backgroundColor}
-                            onChange={(e) => setBackgroundColor(e.target.value)}
-                            className="flex-1 p-3 border border-gray-200 rounded-xl"
-                            placeholder="#ffffff"
-                          />
-                        </div>
-                        <div 
-                          className="mt-4 h-24 rounded-xl border border-gray-200"
-                          style={{ backgroundColor: backgroundColor }}
-                        />
-                      </div>
-                    )}
-
-                    {/* 그라데이션 설정 */}
-                    {backgroundType === 'gradient' && (
-                      <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">
-                            시작 색상
-                          </label>
-                          <div className="flex gap-3 items-center">
-                            <input
-                              type="color"
-                              value={gradientColor1}
-                              onChange={(e) => setGradientColor1(e.target.value)}
-                              className="h-12 w-24 rounded-lg"
-                            />
-                            <input
-                              type="text"
-                              value={gradientColor1}
-                              onChange={(e) => setGradientColor1(e.target.value)}
-                              className="flex-1 p-3 border border-gray-200 rounded-xl"
-                              placeholder="#ffffff"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">
-                            끝 색상
-                          </label>
-                          <div className="flex gap-3 items-center">
-                            <input
-                              type="color"
-                              value={gradientColor2}
-                              onChange={(e) => setGradientColor2(e.target.value)}
-                              className="h-12 w-24 rounded-lg"
-                            />
-                            <input
-                              type="text"
-                              value={gradientColor2}
-                              onChange={(e) => setGradientColor2(e.target.value)}
-                              className="flex-1 p-3 border border-gray-200 rounded-xl"
-                              placeholder="#000000"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">
-                            방향
-                          </label>
-                          <select
-                            value={gradientDirection}
-                            onChange={(e) => setGradientDirection(e.target.value)}
-                            className="w-full p-3 border border-gray-200 rounded-xl"
-                          >
-                            {gradientDirections.map(dir => (
-                              <option key={dir.value} value={dir.value}>
-                                {dir.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div 
-                          className="h-24 rounded-xl border border-gray-200"
-                          style={{ 
-                            background: `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* 저장 버튼 */}
-                    <div>
-                      <button
-                        onClick={saveBackground}
-                        disabled={saving}
-                        className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl hover:bg-blue-600 disabled:bg-gray-400 font-medium"
-                      >
-                        {saving ? '저장중...' : '저장'}
-                      </button>
-                    </div>
-
-                    {/* 현재 배경 미리보기 */}
-                    {currentBackground && (
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <p className="text-sm font-medium text-gray-700 mb-3">현재 설정된 배경:</p>
-                        {renderCurrentBackgroundPreview()}
-                      </div>
-                    )}
-                  </div>
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
+            <h2 className="text-xl font-bold mb-6 text-gray-200">배경 설정</h2>
+            <div className="space-y-6">
+              {/* 배경 타입 선택 */}
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  배경 타입
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setBackgroundType('url')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl ${
+                      backgroundType === 'url'
+                        ? 'bg-blue-500 text-white'
+                              : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    미디어
+                  </button>
+                  <button
+                    onClick={() => setBackgroundType('color')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl ${
+                      backgroundType === 'color'
+                        ? 'bg-blue-500 text-white'
+                              : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    단색
+                  </button>
+                  <button
+                    onClick={() => setBackgroundType('gradient')}
+                    className={`flex-1 py-2.5 px-4 rounded-xl ${
+                      backgroundType === 'gradient'
+                        ? 'bg-blue-500 text-white'
+                              : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    점층
+                  </button>
                 </div>
+              </div>
+
+              {/* URL 입력 필드 */}
+              {backgroundType === 'url' && (
+                <div className="bg-gray-50 rounded-2xl p-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    배경 URL
+                  </label>
+                  <input
+                    type="text"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    placeholder="배경 URL을 입력하거나 아래 갤러리에서 선택하세요"
+                          className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                  />
+                </div>
+              )}
+
+              {/* 단색 선택 */}
+              {backgroundType === 'color' && (
+                <div className="bg-gray-50 rounded-2xl p-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    배경색
+                  </label>
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      className="h-12 w-24 rounded-lg"
+                    />
+                    <input
+                      type="text"
+                      value={backgroundColor}
+                      onChange={(e) => setBackgroundColor(e.target.value)}
+                            className="flex-1 p-3 border border-gray-200 rounded-xl text-gray-700"
+                      placeholder="#ffffff"
+                    />
+                  </div>
+                  <div 
+                    className="mt-4 h-24 rounded-xl border border-gray-200"
+                    style={{ backgroundColor: backgroundColor }}
+                  />
+                </div>
+              )}
+
+              {/* 그라데이션 설정 */}
+              {backgroundType === 'gradient' && (
+                <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      시작 색상
+                    </label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="color"
+                        value={gradientColor1}
+                        onChange={(e) => setGradientColor1(e.target.value)}
+                        className="h-12 w-24 rounded-lg"
+                      />
+                      <input
+                        type="text"
+                        value={gradientColor1}
+                        onChange={(e) => setGradientColor1(e.target.value)}
+                              className="flex-1 p-3 border border-gray-200 rounded-xl text-gray-700"
+                        placeholder="#ffffff"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      끝 색상
+                    </label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="color"
+                        value={gradientColor2}
+                        onChange={(e) => setGradientColor2(e.target.value)}
+                        className="h-12 w-24 rounded-lg"
+                      />
+                      <input
+                        type="text"
+                        value={gradientColor2}
+                        onChange={(e) => setGradientColor2(e.target.value)}
+                              className="flex-1 p-3 border border-gray-200 rounded-xl text-gray-700"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      방향
+                    </label>
+                    <select
+                      value={gradientDirection}
+                      onChange={(e) => setGradientDirection(e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-xl"
+                    >
+                      {gradientDirections.map(dir => (
+                        <option key={dir.value} value={dir.value}>
+                          {dir.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div 
+                    className="h-24 rounded-xl border border-gray-200"
+                    style={{ 
+                      background: `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* 저장 버튼 */}
+              <div>
+                <button
+                  onClick={saveBackground}
+                  disabled={saving}
+                  className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl hover:bg-blue-600 disabled:bg-gray-400 font-medium"
+                >
+                  {saving ? '저장중...' : '저장'}
+                </button>
+              </div>
+
+              {/* 현재 배경 미리보기 */}
+              {currentBackground && (
+                <div className="bg-gray-50 rounded-2xl p-6">
+                  <p className="text-sm font-medium text-gray-700 mb-3">현재 설정된 배경:</p>
+                  {renderCurrentBackgroundPreview()}
+                </div>
+              )}
+            </div>
+          </div>
               </TabsContent>
 
               <TabsContent value="metadata">
@@ -949,7 +949,7 @@ export default function BackgroundGallery() {
                         placeholder="페이지 제목을 입력하세요"
                         className="h-12"
                       />
-                    </div>
+        </div>
 
                     <div className="space-y-3">
                       <Label className="text-gray-200">페이지 설명</Label>
@@ -1027,189 +1027,189 @@ export default function BackgroundGallery() {
               </TabsContent>
             </Tabs>
 
-            {/* 배경 갤러리 섹션 컨테이너 */}
-            <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0">
-              <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
-                <h2 className="text-xl font-bold mb-6 text-gray-200">배경 갤러리</h2>
-                <div className="bg-[#333333] rounded-2xl p-4 md:p-6">
-                  <div className="flex gap-2 mb-6">
-                    <button
-                      onClick={() => setSelectedType('all')}
-                      className={`flex-1 py-2.5 px-4 rounded-xl ${
-                        selectedType === 'all'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
-                      }`}
-                    >
-                      전체
-                    </button>
-                    <button
-                      onClick={() => setSelectedType('image')}
-                      className={`flex-1 py-2.5 px-4 rounded-xl ${
-                        selectedType === 'image'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
-                      }`}
-                    >
-                      이미지
-                    </button>
-                    <button
-                      onClick={() => setSelectedType('video')}
-                      className={`flex-1 py-2.5 px-4 rounded-xl ${
-                        selectedType === 'video'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
-                      }`}
-                    >
-                      영상
-                    </button>
-                  </div>
+        {/* 배경 갤러리 섹션 컨테이너 */}
+            <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0 mt-12">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
+            <h2 className="text-xl font-bold mb-6 text-gray-200">배경 갤러리</h2>
+            <div className="bg-[#333333] rounded-2xl p-4 md:p-6">
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setSelectedType('all')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl ${
+                    selectedType === 'all'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
+                  }`}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setSelectedType('image')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl ${
+                    selectedType === 'image'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
+                  }`}
+                >
+                  이미지
+                </button>
+                <button
+                  onClick={() => setSelectedType('video')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl ${
+                    selectedType === 'video'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#252525]'
+                  }`}
+                >
+                  영상
+                </button>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredBackgrounds.map((background) => (
-                      <div key={background.id} className="bg-[#2A2A2A] rounded-xl shadow-sm overflow-hidden border border-gray-800">
-                        {renderPreview(background)}
-                        <div className="p-4">
-                          <div className="flex justify-between items-center">
-                            <h3 className="font-medium text-gray-200">{background.title}</h3>
-                            {isAdmin && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteBackground(background.id)}
-                                className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                              >
-                                삭제
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredBackgrounds.map((background) => (
+                  <div key={background.id} className="bg-[#2A2A2A] rounded-xl shadow-sm overflow-hidden border border-gray-800">
+                    {renderPreview(background)}
+                    <div className="p-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium text-gray-200">{background.title}</h3>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteBackground(background.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                          >
+                            삭제
+                          </Button>
+                        )}
                       </div>
-                    ))}
-                    {filteredBackgrounds.length === 0 && (
-                      <div className="col-span-full text-center py-8 text-gray-400">
-                        선택한 유형의 배경이 없습니다.
-                      </div>
-                    )}
+                    </div>
                   </div>
-                </div>
+                ))}
+                {filteredBackgrounds.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-400">
+                    선택한 유형의 배경이 없습니다.
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* 배경 추가 다이얼로그 */}
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>새 배경 추가</DialogTitle>
-                  <DialogDescription>
-                    갤러리에 새로운 배경을 추가합니다.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">제목</Label>
+        {/* 배경 추가 다이얼로그 */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+              <DialogContent className="sm:max-w-[425px] md:max-w-[425px] w-[95vw] max-w-[95vw] sm:w-full sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>새 배경 추가</DialogTitle>
+              <DialogDescription>
+                갤러리에 새로운 배경을 추가합니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">제목</Label>
+                <Input
+                  id="title"
+                  value={newBackground.title}
+                  onChange={(e) => setNewBackground({...newBackground, title: e.target.value})}
+                  placeholder="배경 제목을 입력하세요"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="type">타입</Label>
+                <select
+                  id="type"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={newBackground.type}
+                  onChange={(e) => setNewBackground({...newBackground, type: e.target.value as 'image' | 'youtube' | 'pixabay'})}
+                >
+                  <option value="image">이미지</option>
+                  <option value="youtube">YouTube 영상</option>
+                  <option value="pixabay">Pixabay 영상</option>
+                </select>
+              </div>
+              
+              {newBackground.type === 'image' ? (
+                <div className="grid gap-2">
+                  <Label>이미지 업로드</Label>
+                  <div className="space-y-2">
                     <Input
-                      id="title"
-                      value={newBackground.title}
-                      onChange={(e) => setNewBackground({...newBackground, title: e.target.value})}
-                      placeholder="배경 제목을 입력하세요"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="mb-2"
+                    />
+                    <div className="text-sm text-gray-500">또는</div>
+                    <Input
+                      placeholder="이미지 URL을 입력하세요"
+                      value={newBackground.url}
+                      onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="type">타입</Label>
-                    <select
-                      id="type"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={newBackground.type}
-                      onChange={(e) => setNewBackground({...newBackground, type: e.target.value as 'image' | 'youtube' | 'pixabay'})}
-                    >
-                      <option value="image">이미지</option>
-                      <option value="youtube">YouTube 영상</option>
-                      <option value="pixabay">Pixabay 영상</option>
-                    </select>
-                  </div>
-                  
-                  {newBackground.type === 'image' ? (
-                    <div className="grid gap-2">
-                      <Label>이미지 업로드</Label>
-                      <div className="space-y-2">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileSelect}
-                          className="mb-2"
-                        />
-                        <div className="text-sm text-gray-500">또는</div>
-                        <Input
-                          placeholder="이미지 URL을 입력하세요"
-                          value={newBackground.url}
-                          onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2">
-                      <Label htmlFor="url">영상 URL</Label>
-                      <Input
-                        id="url"
-                        value={newBackground.url}
-                        onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
-                        placeholder={`${newBackground.type === 'youtube' ? 'YouTube' : 'Pixabay'} 영상 URL을 입력하세요`}
-                      />
-                    </div>
-                  )}
                 </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddDialog(false);
-                      setNewBackground({
-                        title: '',
-                        type: 'image',
-                        url: '',
-                        isActive: true,
-                        file: null
-                      });
-                    }}
-                  >
-                    취소
-                  </Button>
-                  <Button
-                    onClick={handleAddBackground}
-                    className="bg-blue-500 text-white hover:bg-blue-600"
-                  >
-                    추가
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              ) : (
+                <div className="grid gap-2">
+                  <Label htmlFor="url">영상 URL</Label>
+                  <Input
+                    id="url"
+                    value={newBackground.url}
+                    onChange={(e) => setNewBackground({...newBackground, url: e.target.value})}
+                    placeholder={`${newBackground.type === 'youtube' ? 'YouTube' : 'Pixabay'} 영상 URL을 입력하세요`}
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddDialog(false);
+                  setNewBackground({
+                    title: '',
+                    type: 'image',
+                    url: '',
+                    isActive: true,
+                    file: null
+                  });
+                }}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleAddBackground}
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                추가
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-            {/* 성공 다이얼로그 */}
-            <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>배경 저장 완료</DialogTitle>
-                  <DialogDescription>
-                    배경이 성공적으로 저장되었습니다.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSuccessDialog(false)}
-                  >
-                    계속 수정하기
-                  </Button>
-                  <Button
-                    onClick={handleViewPage}
-                    className="bg-blue-500 text-white hover:bg-blue-600"
-                  >
-                    내 사이트 보기
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+        {/* 성공 다이얼로그 */}
+        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>배경 저장 완료</DialogTitle>
+              <DialogDescription>
+                배경이 성공적으로 저장되었습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowSuccessDialog(false)}
+              >
+                계속 수정하기
+              </Button>
+              <Button
+                onClick={handleViewPage}
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                내 사이트 보기
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
             {/* 이미지 크롭 다이얼로그 */}
             <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>

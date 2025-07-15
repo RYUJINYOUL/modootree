@@ -672,10 +672,25 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
             <h3 className="text-xl font-bold text-white pl-2">
               {selectedDate.format('M월 D일')}
             </h3>
+            {canWrite && (
+              <Button
+                onClick={() => setShowAddEventForm(prev => !prev)}
+                className="px-4 py-2.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-105 active:scale-95"
+              >
+                {showAddEventForm ? '닫기' : '일정 추가'}
+              </Button>
+            )}
           </div>
 
           {/* 구분선 */}
           <div className="border-t border-white/10"></div>
+
+          {/* 일정 추가 폼 */}
+          {canWrite && showAddEventForm && (
+            <div className="py-4">
+              <EventForm />
+            </div>
+          )}
 
           {/* 일정 목록 */}
           <div className="space-y-4">
@@ -684,26 +699,6 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
         </div>
       </div>
 
-      {/* 일정 추가 섹션 */}
-      {canWrite && (
-        <div className="w-full max-w-[1100px] mt-2 p-6 rounded-3xl bg-blue-500/20 backdrop-blur-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              {selectedDate.format('YY년 MM월 DD일')}
-            </h3>
-            <Button
-              onClick={() => setShowAddEventForm(prev => !prev)}
-              className="px-4 py-2.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-105 active:scale-95"
-            >
-              {showAddEventForm ? '닫기' : '일정 추가'}
-            </Button>
-          </div>
-
-          {showAddEventForm && (
-            <EventForm />
-          )}
-        </div>
-      )}
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -713,7 +708,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
               {selectedDate.format('YYYY년 MM월 DD일')}
             </DialogTitle>
             <DialogDescription className="text-white/80">
-              일정을 확인하거나 추가할 수 있습니다.
+              일정 수정 추가 삭제는 달력 아래 리스트로 작성하세요
             </DialogDescription>
           </DialogHeader>
 
@@ -731,22 +726,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
                 >
                   <div className="flex justify-between items-start">
                     <h3 className="font-semibold text-lg">{event.title}</h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleConfirm(event.id)}
-                        className="text-xs bg-gray-500/50 hover:bg-gray-500/70 px-2 py-1 rounded transition-colors"
-                      >
-                        확인 ({event.confirmCount || 0})
-                      </button>
-                      {(canDelete || event.authorUid === currentUser?.uid) && (
-                        <button
-                          onClick={() => handleDelete(event.id)}
-                          className="text-xs bg-red-500/30 hover:bg-red-500/50 px-2 py-1 rounded transition-colors"
-                        >
-                          삭제
-                        </button>
-                      )}
-                    </div>
+                 
                   </div>
 
                   <p className="text-sm text-white/90 min-h-[1.5em]">
@@ -762,21 +742,6 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
             )}
           </div>
 
-          {/* 일정 추가 폼 */}
-          {canDelete && (
-            <div className="mt-4 pt-4 border-t border-gray-600">
-              {!showAddEventForm ? (
-                <Button
-                  onClick={() => setShowAddEventForm(true)}
-                  className="w-full bg-gray-600/50 hover:bg-gray-600/70 text-white border-none"
-                >
-                  + 일정 추가
-                </Button>
-              ) : (
-                <EventForm />
-              )}
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>

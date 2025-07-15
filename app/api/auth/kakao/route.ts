@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     // 환경 변수 검증
-    if (!process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || !process.env.KAKAO_CLIENT_SECRET || !process.env.NEXT_PUBLIC_BASE_URL) {
+    if (!process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || !process.env.KAKAO_CLIENT_SECRET || !process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI) {
       console.error('필수 환경 변수 누락');
       return NextResponse.json(
         { error: '서버 설정 오류가 발생했습니다.' },
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         grant_type: 'authorization_code',
         client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID,
         client_secret: process.env.KAKAO_CLIENT_SECRET,
-        redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/kakao/callback`,
+        redirect_uri: process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI,
         code,
       }),
     });

@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    // 환경변수는 .env 파일에서 자동으로 로드됩니다
-  },
   images: {
     domains: [
       'firebasestorage.googleapis.com',

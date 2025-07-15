@@ -88,7 +88,7 @@ export default function Page() {
 
         setAllowedSites(usernames);
       } catch (e) {
-        console.error(e);
+        console.error('사용자 데이터 로드 중 오류:', e);
       } finally {
         setLoading(false);
       }
@@ -182,80 +182,81 @@ export default function Page() {
   return (
     <div>
       <MainHeader />
-      <div className="flex flex-col items-center justify-center pt-6 pb-8 md:py-12 text-center mb-12">
-        <div className="animate-swing mb-4">
-          <Image
-            src="/Image/logo.png"
-            alt="ModooTree Logo"
-            width={300}
-            height={100}
-            priority
-            className="h-24 w-auto md:h-32"
-          />
-        </div>
-        <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
-        <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
+      {/* 첫 번째 섹션 - 소개 및 버튼 */}
+      <div className="w-full bg-blue-950/30 rounded-3xl">
+        <div className="max-w-[1100px] mx-auto px-4">
+          <div className="flex flex-col items-center justify-center pt-6 pb-8 md:py-12 text-center mb-12">
+            <div className="animate-swing mb-4">
+              <Image
+                src="/Image/logo.png"
+                alt="ModooTree Logo"
+                width={300}
+                height={300}
+                priority
+                className="w-24 h-24 md:w-32 md:h-32"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
+            <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
 
-        <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
-          {renderViewSiteButton('main')}
-          {renderViewSiteButton('sub')}
-          <Link
-            href="/likes/all"
-            className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
-          >
-            공감 한 조각
-          </Link>
-          {(authUser || currentUser) && allowedSites.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setShowAllowedSites(!showAllowedSites)}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center relative"
+            <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
+              {renderViewSiteButton('main')}
+              {renderViewSiteButton('sub')}
+              <Link
+                href="/likes/all"
+                className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
               >
-                <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">초대 페이지 목록 {allowedSites.length}개</span>
-                <span className="absolute right-4">
-                  {showAllowedSites ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
+                공감 한 조각
+              </Link>
+              {(authUser || currentUser) && allowedSites.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAllowedSites(!showAllowedSites)}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center relative"
+                  >
+                    <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">초대 페이지 목록 {allowedSites.length}개</span>
+                    <span className="absolute right-4">
+                      {showAllowedSites ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </span>
+                  </button>
+                  {showAllowedSites && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-emerald-600/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg z-10">
+                      {allowedSites.map((site) => (
+                        <Link
+                          key={site.username}
+                          href={`/${site.username}`}
+                          className="block px-6 py-3 hover:bg-emerald-700/80 text-white text-[15px] text-left border-b border-white/10 last:border-none"
+                        >
+                          modootree.com/{site.username}
+                        </Link>
+                      ))}
+                    </div>
                   )}
-                </span>
-              </button>
-              {showAllowedSites && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-emerald-600/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg z-10">
-                  {allowedSites.map((site) => (
-                    <Link
-                      key={site.username}
-                      href={`/${site.username}`}
-                      className="block px-6 py-3 hover:bg-emerald-700/80 text-white text-[15px] text-left border-b border-white/10 last:border-none"
-                    >
-                      modootree.com/{site.username}
-                    </Link>
-                  ))}
                 </div>
               )}
             </div>
-          )}
+
+            <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+              모두트리는 대한민국 5,500만명에게
+              작지만 의미 있는 한페이지를 선물합니다.
+            </h2>
+
+            <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+              모두트리는 대한민국 5,500만명에게<br />
+              작지만 의미 있는 한페이지를 선물합니다.
+            </h2>
+          </div>
         </div>
+      </div>
 
-        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-          모두트리는 대한민국 5,500만명에게
-          작지만 의미 있는 한페이지를 선물합니다.
-        </h2>
-
-        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-          모두트리는 대한민국 5,500만명에게<br />
-          작지만 의미 있는 한페이지를 선물합니다.
-        </h2>
-
-        <UseCaseCarousel />
-
-        <div className="mt-8">
-          <Link
-            href="/farmtoolceo"
-            className="inline-block px-6 py-2 rounded-full transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/30 text-white/80 hover:bg-white/10 hover:border-white/40"
-          >
-            문의하기
-          </Link>
+      {/* 두 번째 섹션 - 사용 사례 */}
+      <div className="w-full bg-indigo-950/30 rounded-3xl mb-8">
+        <div className="max-w-[1100px] mx-auto px-4 py-16">
+          <UseCaseCarousel />
         </div>
       </div>
 

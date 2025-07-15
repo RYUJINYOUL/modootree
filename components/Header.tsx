@@ -59,6 +59,8 @@ export default function Header() {
         
         const sites = [];
         for (const emailData of allowedEmails) {
+          if (!emailData.email) continue; // 이메일이 없는 경우 건너뛰기
+          
           const usersQuery = query(
             collection(db, 'users'),
             where('email', '==', emailData.email)
@@ -150,10 +152,9 @@ export default function Header() {
           <Image
             src="/Image/logo.png"
             alt="ModooTree Logo"
-            width={24}
-            height={24}
-            priority
-            className="w-6 h-6 rounded-sm"
+            width={120}
+            height={120}
+            className="w-8 h-8"
           />
           <svg
             className={`w-4 h-4 text-white ml-2 transition-transform duration-200 ${

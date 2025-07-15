@@ -3,15 +3,15 @@ import React, { useState } from 'react';
 const KakaoAuthButton = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleKakaoLogin = () => {
-    setIsLoading(true);
-    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}/auth/kakao/callback&response_type=code`;
+  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
+
+  const handleLogin = () => {
     window.location.href = KAKAO_AUTH_URL;
   };
 
   return (
     <button
-      onClick={handleKakaoLogin}
+      onClick={handleLogin}
       disabled={isLoading}
       className={`w-full flex items-center justify-center gap-2 py-3 mb-6 rounded-xl ${
         isLoading ? 'bg-[#FEE500]/70 cursor-not-allowed' : 'bg-[#FEE500] hover:bg-[#FEE500]/90'

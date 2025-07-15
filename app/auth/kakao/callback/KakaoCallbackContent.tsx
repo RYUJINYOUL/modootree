@@ -55,6 +55,11 @@ export default function KakaoCallbackContent() {
         throw new Error('인증 토큰이 없습니다.');
       }
 
+      // 이메일 체크 추가
+      if (!responseData.kakaoUserInfo.email) {
+        throw new Error('카카오 계정의 이메일 정보가 필요합니다. 카카오 로그인 시 이메일 제공에 동의해주세요.');
+      }
+
       // Firebase Custom Token으로 로그인
       const userCredential = await signInWithCustomToken(auth, responseData.customToken);
       const user = userCredential.user;
@@ -64,32 +69,31 @@ export default function KakaoCallbackContent() {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        // 신규 사용자인 경우 기본 정보만 저장
+        // 신규 사용자인 경우 기본 정보 저장 (이메일 필수)
         await setDoc(userRef, {
-          email: responseData.kakaoUserInfo.email || null,
+          email: responseData.kakaoUserInfo.email,
           photoURL: responseData.kakaoUserInfo.profile_image || null,
           provider: 'kakao',
           createdAt: serverTimestamp(),
         });
 
-          // 기본 배경 설정 저장 (추가)
-      await setDoc(doc(db, "users", user.uid, "settings", "background"), {
-        type: 'video',
-        value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
-      });
+        // 기본 배경 설정 저장
+        await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+          type: 'image',
+          value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
+        });
 
-      // 빈 컴포넌트로 시작
-      await setDoc(doc(db, "users", user.uid, "links", "page"), {
-        components: [], // 빈 배열로 시작
-        type: null // 타입도 초기에는 null
-      });
-      
+        // 빈 컴포넌트로 시작
+        await setDoc(doc(db, "users", user.uid, "links", "page"), {
+          components: [],
+          type: null
+        });
       }
 
-      // Redux 상태 업데이트
+      // Redux 상태 업데이트 (이메일 필수 포함)
       dispatch(setUser({
         uid: user.uid,
-        email: responseData.kakaoUserInfo.email || null,
+        email: responseData.kakaoUserInfo.email,
         photoURL: responseData.kakaoUserInfo.profile_image || null,
       }));
 
