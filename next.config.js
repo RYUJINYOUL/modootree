@@ -7,7 +7,7 @@ const nextConfig = {
         has: [
           {
             type: 'host',
-            value: 'www.modootree.com',
+            value: 'modootree.vercel.app',
           },
         ],
         destination: 'https://modootree.com/:path*',
