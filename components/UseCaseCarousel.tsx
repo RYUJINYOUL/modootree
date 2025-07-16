@@ -127,7 +127,7 @@ export default function UseCaseCarousel() {
               {testimonials.map((item, index) => (
                 <div 
                   key={index}
-                  className="flex-[0_0_85%] md:flex-[0_0_340px] min-w-0 pl-4 first:pl-4"
+                  className="flex-[0_0_85%] md:flex-[0_0_280px] min-w-0 pl-4 first:pl-4"
                 >
                   <div className="bg-blue-600/50 hover:bg-blue-600/20 rounded-3xl border border-blue-400/20 backdrop-blur-sm p-4 md:p-7 transition-all duration-300">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3">

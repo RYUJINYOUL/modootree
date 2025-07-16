@@ -1,0 +1,21 @@
+# Firebase 클라이언트 설정 (NEXT_PUBLIC_ 접두사 필수)
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyA0PPJP6n0t-Rl0Xa91uCEwfwUw1xxaV2M
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=mtree-e0249.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=mtree-e0249
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=mtree-e0249.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=712740047046
+NEXT_PUBLIC_FIREBASE_APP_ID=1:712740047046:web:b89909a26dacd73faf6fc7
+
+# Firebase Admin SDK (서버 전용, NEXT_PUBLIC_ 없음)
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@mtree-e0249.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY=
+
+# 카카오 로그인 (NextAuth.js Provider 사용 기준)
+KAKAO_CLIENT_ID=817d5d874123488dc9257a1e82537a46
+KAKAO_CLIENT_SECRET=8t6Z1ukxSho3gZ7h0TQTXFRt7rY5fay8
+NEXT_PUBLIC_KAKAO_REDIRECT_URI=https://www.modootree.com/api/auth/callback/kakao
+NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY=4e8437446a956f6e4907d44addbc52a0
+
+# NextAuth.js (서버 전용, NEXT_PUBLIC_ 없음)
+NEXTAUTH_URL=https://www.modootree.com
+NEXTAUTH_SECRET=fbwnsdufagenxmflceodhsmfdmsdhksfy
