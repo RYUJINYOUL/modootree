@@ -8,7 +8,7 @@ const KakaoAuthButton = () => {
     const redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
     
     if (!clientId || !redirectUri) {
-      console.error('카카오 로그인 설정이 없습니다.', { hasClientId: !!clientId, hasRedirectUri: !!redirectUri });
+      console.error('카카오 로그인 설정이 없습니다.', { clientId, redirectUri });
       alert('카카오 로그인 설정에 문제가 있습니다.');
       return;
     }
@@ -16,6 +16,9 @@ const KakaoAuthButton = () => {
     const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
     window.location.href = KAKAO_AUTH_URL;
   };
+
+  // ... rest of the component
+
 
   return (
     <button

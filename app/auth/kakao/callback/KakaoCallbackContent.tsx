@@ -48,11 +48,16 @@ export default function KakaoCallbackContent() {
       }
 
       if (!response.ok) {
-        throw new Error(responseData.error || '인증 처리 중 오류가 발생했습니다.');
+        throw new Error(responseData.details || `인증 처리 중 오류가 발생했습니다.`);
       }
 
       if (!responseData.customToken) {
         throw new Error('인증 토큰이 없습니다.');
+      }
+
+      // 이메일 체크 추가
+      if (!responseData.kakaoUserInfo.email) {
+        throw new Error('카카오 계정의 이메일 정보가 필요합니다. 카카오 로그인 시 이메일 제공에 동의해주세요.');
       }
 
       // Firebase Custom Token으로 로그인
@@ -64,7 +69,7 @@ export default function KakaoCallbackContent() {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        // 신규 사용자인 경우 기본 정보 저장
+        // 신규 사용자인 경우 기본 정보 저장 (이메일 필수)
         await setDoc(userRef, {
           email: responseData.kakaoUserInfo.email,
           photoURL: responseData.kakaoUserInfo.profile_image || null,
@@ -75,7 +80,7 @@ export default function KakaoCallbackContent() {
         // 기본 배경 설정 저장
         await setDoc(doc(db, "users", user.uid, "settings", "background"), {
           type: 'image',
-          value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.apps/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
+          value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
         });
 
         // 빈 컴포넌트로 시작
@@ -85,7 +90,7 @@ export default function KakaoCallbackContent() {
         });
       }
 
-      // Redux 상태 업데이트
+      // Redux 상태 업데이트 (이메일 필수 포함)
       dispatch(setUser({
         uid: user.uid,
         email: responseData.kakaoUserInfo.email,
@@ -94,14 +99,14 @@ export default function KakaoCallbackContent() {
 
       router.push('/');
     } catch (error) {
-      console.error('인증 처리 중 오류:', error);
+      console.error('인증 처리 중 오류가 발생했습니다.');
       setErrorMessage(
         error instanceof Error 
           ? error.message 
           : '인증 처리 중 오류가 발생했습니다. 다시 시도해 주세요.'
       );
     }
-  }, [searchParams, router, dispatch, auth]);
+  }, [searchParams, router, auth, dispatch]);
 
   useEffect(() => {
     if (!searchParams) {

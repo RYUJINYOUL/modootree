@@ -3,6 +3,7 @@ import admin from '@/firebase-admin';
 
 export async function GET(request: Request) {
   try {
+    // URL에서 code 파라미터 추출
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
 
