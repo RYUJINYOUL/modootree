@@ -138,8 +138,14 @@ const RegisterPage = () => {
 
     const handleKakaoRegister = () => {
         const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-        const REDIRECT_URI = `${BASE_URL}/auth/kakao/callback`;
+        const REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+        
+        if (!KAKAO_CLIENT_ID || !REDIRECT_URI) {
+            console.error('카카오 로그인 설정이 없습니다.');
+            alert('카카오 로그인 설정에 문제가 있습니다.');
+            return;
+        }
+        
         const kakaoURL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code`;
         window.location.href = kakaoURL;
     };
