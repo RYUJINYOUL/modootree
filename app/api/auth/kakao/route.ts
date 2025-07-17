@@ -1,28 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
-import type { ServiceAccount } from 'firebase-admin';
-
-// Firebase Admin SDK 초기화
-if (!admin.apps.length) {
-  try {
-    const serviceAccount: ServiceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-    };
-
-    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-      throw new Error('Firebase Admin SDK 초기화에 필요한 환경 변수가 누락되었습니다.');
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-  } catch (error) {
-    console.error('Firebase Admin SDK 초기화 실패:', error);
-    throw error;
-  }
-}
+import admin from '../../../../firebase-admin';
 
 // 환경에 따른 리다이렉트 URI 설정
 const getRedirectUri = () => {
