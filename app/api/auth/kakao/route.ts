@@ -4,9 +4,8 @@ import admin from '@/firebase-admin';
 // 환경에 따른 리다이렉트 URI 설정
 const getRedirectUri = () => {
   const isDevelopment = process.env.NODE_ENV === 'development';
-  return isDevelopment
-    ? 'http://localhost:3000/auth/kakao/callback'
-    : 'https://www.modootree.com/auth/kakao/callback';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (isDevelopment ? 'http://localhost:3000' : 'https://www.modootree.com');
+  return `${baseUrl}/auth/kakao/callback`;
 };
 
 export async function GET(request: Request) {
@@ -24,7 +23,7 @@ export async function GET(request: Request) {
 
     // 환경 변수 검증
     const clientId = process.env.KAKAO_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-    const redirectUri = 'https://www.modootree.com/auth/kakao/callback';  // 하드코딩된 리다이렉트 URI
+    const redirectUri = getRedirectUri();  // 동적 리다이렉트 URI 사용
     const clientSecret = process.env.KAKAO_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
