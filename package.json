@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=18.x"
+    "node": "20.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next dev",
+    "build": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next build",
+    "start": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next start",
     "lint": "next lint",
     "migrate:likes": "node scripts/migrateLikesToLikedBy.mjs"
   },
@@ -85,6 +85,7 @@
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-slick": "^0.23.13",
+    "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "postcss-loader": "^8.1.1",
     "sass-loader": "^16.0.5",
