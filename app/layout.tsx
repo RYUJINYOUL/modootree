@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import Footer from '@/components/ui/Footer';
 import Header from '@/components/Header';
 import { TranslateProvider } from '@/context/TranslateContext';
-import AuthProvider from '@/components/providers/AuthProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,19 +38,18 @@ export default function RootLayout({
         )}
         suppressHydrationWarning
       >
-        <AuthProvider>
-          <TranslateProvider>
-            <Providers>
-              <div className="flex flex-col min-h-screen">
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-              <Toaster />
-            </Providers>
-          </TranslateProvider>
-        </AuthProvider>
+        <TranslateProvider>
+          <Providers>
+            {/* Header는 메인 페이지가 아닐 때만 표시 */}
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
+            <Toaster />
+          </Providers>
+        </TranslateProvider>
       </body>
     </html>
   );
