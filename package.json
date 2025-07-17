@@ -2,13 +2,10 @@
   "name": "soil1642",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": "20.x"
-  },
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next dev",
-    "build": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next build",
-    "start": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next start",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
     "migrate:likes": "node scripts/migrateLikesToLikedBy.mjs"
   },
@@ -80,12 +77,11 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^24.0.14",
+    "@types/node": "24.0.7",
     "@types/react": "19.1.8",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-slick": "^0.23.13",
-    "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "postcss-loader": "^8.1.1",
     "sass-loader": "^16.0.5",
