@@ -24,8 +24,16 @@ export async function POST(request: Request) {
     }
 
     // 환경 변수 검증
-    if (!process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || !process.env.KAKAO_CLIENT_SECRET || !process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI) {
-      console.error('필수 환경 변수 누락');
+    const clientId = process.env.KAKAO_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
+    const redirectUri = process.env.KAKAO_REDIRECT_URI || process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+    const clientSecret = process.env.KAKAO_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      console.error('필수 환경 변수 누락', { 
+        hasClientId: !!clientId, 
+        hasClientSecret: !!clientSecret, 
+        hasRedirectUri: !!redirectUri 
+      });
       return NextResponse.json(
         { error: '서버 설정 오류가 발생했습니다.' },
         { status: 500 }
@@ -40,15 +48,21 @@ export async function POST(request: Request) {
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID,
-        client_secret: process.env.KAKAO_CLIENT_SECRET,
-        redirect_uri: process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
         code,
       }),
     });
 
     if (!tokenResponse.ok) {
-      console.error('카카오 토큰 발급 실패');
+      const errorData = await tokenResponse.text();
+      console.error('카카오 토큰 발급 실패', {
+        status: tokenResponse.status,
+        error: errorData,
+        redirectUri,
+        code: code.substring(0, 10) + '...' // 보안을 위해 일부만 로깅
+      });
       return NextResponse.json(
         { error: '카카오 인증에 실패했습니다.' },
         { status: tokenResponse.status }
