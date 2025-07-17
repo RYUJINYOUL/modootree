@@ -3,11 +3,22 @@ import React, { useState } from 'react';
 const KakaoAuthButton = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
-
   const handleLogin = () => {
+    const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
+    const redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+    
+    if (!clientId || !redirectUri) {
+      console.error('카카오 로그인 설정이 없습니다.', { clientId, redirectUri });
+      alert('카카오 로그인 설정에 문제가 있습니다.');
+      return;
+    }
+
+    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
     window.location.href = KAKAO_AUTH_URL;
   };
+
+  // ... rest of the component
+
 
   return (
     <button
