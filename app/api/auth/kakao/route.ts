@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import admin from '@/firebase-admin';
 
+// 환경에 따른 리다이렉트 URI 설정
+const getRedirectUri = () => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  return isDevelopment
+    ? 'http://localhost:3000/auth/kakao/callback'
+    : 'https://www.modootree.com/auth/kakao/callback';
+};
+
 export async function GET(request: Request) {
   try {
     // URL에서 code 파라미터 추출
@@ -137,12 +145,13 @@ export async function POST(request: Request) {
     // 환경 변수 검증
     const clientId = process.env.KAKAO_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
     const clientSecret = process.env.KAKAO_CLIENT_SECRET;
-    const redirectUri = 'https://www.modootree.com/auth/kakao/callback';
+    const redirectUri = getRedirectUri();
 
     console.log('Environment check:', {
       hasClientId: !!clientId,
       hasClientSecret: !!clientSecret,
-      redirectUri
+      redirectUri,
+      nodeEnv: process.env.NODE_ENV
     });
 
     if (!clientId || !clientSecret) {
