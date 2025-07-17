@@ -16,14 +16,13 @@ export async function GET(request: Request) {
 
     // 환경 변수 검증
     const clientId = process.env.KAKAO_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-    const redirectUri = process.env.KAKAO_REDIRECT_URI || process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+    const redirectUri = 'https://www.modootree.com/auth/kakao/callback';  // 하드코딩된 리다이렉트 URI
     const clientSecret = process.env.KAKAO_CLIENT_SECRET;
 
-    if (!clientId || !clientSecret || !redirectUri) {
+    if (!clientId || !clientSecret) {
       console.error('필수 환경 변수 누락', { 
         hasClientId: !!clientId, 
-        hasClientSecret: !!clientSecret, 
-        hasRedirectUri: !!redirectUri 
+        hasClientSecret: !!clientSecret
       });
       return NextResponse.json(
         { error: '서버 설정 오류가 발생했습니다.' },
@@ -117,7 +116,9 @@ export async function POST(request: Request) {
     try {
       const body = await request.json();
       code = body.code;
+      console.log('Received code:', code?.substring(0, 10) + '...');
     } catch (error) {
+      console.error('Body parsing error:', error);
       return NextResponse.json(
         { error: '잘못된 요청 형식입니다.' },
         { status: 400 }
@@ -126,6 +127,7 @@ export async function POST(request: Request) {
 
     // 필수 파라미터 검증
     if (!code) {
+      console.error('Code is missing');
       return NextResponse.json(
         { error: '인증 코드가 누락되었습니다.' },
         { status: 400 }
@@ -134,14 +136,19 @@ export async function POST(request: Request) {
 
     // 환경 변수 검증
     const clientId = process.env.KAKAO_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-    const redirectUri = process.env.KAKAO_REDIRECT_URI || process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
     const clientSecret = process.env.KAKAO_CLIENT_SECRET;
+    const redirectUri = 'https://www.modootree.com/auth/kakao/callback';
 
-    if (!clientId || !clientSecret || !redirectUri) {
-      console.error('필수 환경 변수 누락', { 
-        hasClientId: !!clientId, 
-        hasClientSecret: !!clientSecret, 
-        hasRedirectUri: !!redirectUri 
+    console.log('Environment check:', {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      redirectUri
+    });
+
+    if (!clientId || !clientSecret) {
+      console.error('Missing environment variables:', {
+        hasClientId: !!clientId,
+        hasClientSecret: !!clientSecret
       });
       return NextResponse.json(
         { error: '서버 설정 오류가 발생했습니다.' },
@@ -150,6 +157,7 @@ export async function POST(request: Request) {
     }
 
     // 카카오 토큰 발급 요청
+    console.log('Requesting Kakao token...');
     const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -166,21 +174,23 @@ export async function POST(request: Request) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
-      console.error('카카오 토큰 발급 실패', {
+      console.error('Kakao token request failed:', {
         status: tokenResponse.status,
         error: errorData,
         redirectUri,
-        code: code.substring(0, 10) + '...' // 보안을 위해 일부만 로깅
+        code: code.substring(0, 10) + '...'
       });
       return NextResponse.json(
-        { error: '카카오 인증에 실패했습니다.' },
+        { error: '카카오 인증에 실패했습니다.', details: errorData },
         { status: tokenResponse.status }
       );
     }
 
     const tokenData = await tokenResponse.json();
+    console.log('Token received successfully');
 
     // 카카오 사용자 정보 요청
+    console.log('Requesting user info...');
     const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
@@ -188,14 +198,22 @@ export async function POST(request: Request) {
     });
 
     if (!userResponse.ok) {
-      console.error('카카오 사용자 정보 요청 실패');
+      const errorData = await userResponse.text();
+      console.error('Kakao user info request failed:', {
+        status: userResponse.status,
+        error: errorData
+      });
       return NextResponse.json(
-        { error: '사용자 정보를 가져오는데 실패했습니다.' },
+        { error: '사용자 정보를 가져오는데 실패했습니다.', details: errorData },
         { status: userResponse.status }
       );
     }
 
     const userData = await userResponse.json();
+    console.log('User info received:', {
+      hasId: !!userData.id,
+      hasEmail: !!userData.kakao_account?.email
+    });
 
     // 카카오 계정 정보
     const kakaoUserInfo = {
@@ -206,23 +224,25 @@ export async function POST(request: Request) {
 
     try {
       // Firebase Custom Token 생성
+      console.log('Creating Firebase token...');
       const firebaseToken = await admin.auth().createCustomToken(String(userData.id));
+      console.log('Firebase token created successfully');
 
       return NextResponse.json({
         customToken: firebaseToken,
         kakaoUserInfo,
       });
-    } catch (error) {
-      console.error('Firebase 토큰 생성 실패');
+    } catch (error: any) {
+      console.error('Firebase token creation failed:', error);
       return NextResponse.json(
-        { error: '인증 토큰 생성에 실패했습니다.' },
+        { error: '인증 토큰 생성에 실패했습니다.', details: error?.message || '알 수 없는 오류' },
         { status: 500 }
       );
     }
-  } catch (error) {
-    console.error('카카오 인증 처리 중 오류 발생');
+  } catch (error: any) {
+    console.error('Kakao auth process failed:', error);
     return NextResponse.json(
-      { error: '인증 처리 중 오류가 발생했습니다.' },
+      { error: '인증 처리 중 오류가 발생했습니다.', details: error?.message || '알 수 없는 오류' },
       { status: 500 }
     );
   }
