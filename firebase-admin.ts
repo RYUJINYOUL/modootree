@@ -5,20 +5,33 @@ if (!admin.apps.length) {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-    const databaseURL = process.env.FIREBASE_DATABASE_URL;
+
+    // 환경 변수 검증 및 디버그 로깅
+    console.log('Firebase Admin SDK 초기화 시도:', {
+      hasProjectId: !!projectId,
+      hasClientEmail: !!clientEmail,
+      hasPrivateKey: !!privateKey,
+      projectId: projectId?.substring(0, 5) + '...',
+      clientEmail: clientEmail?.substring(0, 5) + '...',
+    });
 
     if (!projectId || !clientEmail || !privateKey) {
+      console.error('누락된 환경 변수:', {
+        projectId: !projectId,
+        clientEmail: !clientEmail,
+        privateKey: !privateKey
+      });
       throw new Error('Firebase Admin SDK 초기화에 필요한 환경 변수가 누락되었습니다.');
     }
 
+    const cert = {
+      projectId,
+      clientEmail,
+      privateKey: privateKey.replace(/\\n/g, '\n'),
+    };
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        clientEmail,
-        // private_key는 JSON에서 이스케이프된 \n을 실제 개행 문자로 변환
-        privateKey: privateKey.replace(/\\n/g, '\n'),
-      }),
-      databaseURL: databaseURL // 옵션이지만 있으면 사용
+      credential: admin.credential.cert(cert)
     });
 
     console.log('Firebase Admin SDK 초기화 성공');
