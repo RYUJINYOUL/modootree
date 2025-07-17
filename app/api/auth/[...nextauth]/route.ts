@@ -13,20 +13,21 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
+  debug: true,
   pages: {
     signIn: '/login',
     error: '/login',
   },
-  session: {
-    strategy: 'jwt',
-  },
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      console.log('SignIn callback:', { user, account, profile });
+      return true;
+    },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith('/')) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
+      console.log('Redirect callback:', { url, baseUrl });
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
     },
   },
 });

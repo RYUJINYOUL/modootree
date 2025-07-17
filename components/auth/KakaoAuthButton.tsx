@@ -7,11 +7,16 @@ const KakaoAuthButton = () => {
   const handleLogin = async () => {
     setIsLoading(true);
     try {
-      // NextAuth의 signIn 함수 사용
-      await signIn('kakao', { 
-        redirect: true,
-        callbackUrl: '/'
+      const result = await signIn('kakao', { 
+        callbackUrl: '/',
+        redirect: false
       });
+      
+      console.log('Kakao login result:', result);
+      
+      if (result?.error) {
+        console.error('Login failed:', result.error);
+      }
     } catch (error) {
       console.error('Kakao login error:', error);
     } finally {
