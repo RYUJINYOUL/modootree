@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
+import { signIn } from 'next-auth/react';
 
 const KakaoAuthButton = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI}&response_type=code`;
-
-  const handleLogin = () => {
-    window.location.href = KAKAO_AUTH_URL;
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // NextAuth의 signIn 함수 사용
+      await signIn('kakao', { 
+        redirect: true,
+        callbackUrl: '/'
+      });
+    } catch (error) {
+      console.error('Kakao login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
