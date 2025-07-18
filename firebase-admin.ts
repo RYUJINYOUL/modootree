@@ -1,25 +1,28 @@
+// firebase-admin.ts
 import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   try {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64; 
 
-    if (!projectId || !clientEmail || !privateKey) {
+    if (!projectId || !clientEmail || !privateKeyBase64) {
       throw new Error(
         '필수 Firebase Admin 환경 변수가 누락되었습니다:\n' +
         (!projectId ? '- NEXT_PUBLIC_FIREBASE_PROJECT_ID\n' : '') +
         (!clientEmail ? '- FIREBASE_CLIENT_EMAIL\n' : '') +
-        (!privateKey ? '- FIREBASE_PRIVATE_KEY\n' : '')
+        (!privateKeyBase64 ? '- FIREBASE_PRIVATE_KEY_BASE64\n' : '')
       );
     }
+
+    const privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
 
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId,
         clientEmail,
-        privateKey,
+        privateKey, // ⭐ 이 부분이 중요합니다. privateKey 변수만 있어야 합니다.
       }),
     });
 

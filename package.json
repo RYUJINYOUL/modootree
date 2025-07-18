@@ -9,8 +9,7 @@
     "dev": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next dev",
     "build": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next build",
     "start": "cross-env NODE_OPTIONS=\"--openssl-legacy-provider\" next start",
-    "lint": "next lint",
-    "migrate:likes": "node scripts/migrateLikesToLikedBy.mjs"
+    "lint": "next lint"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
