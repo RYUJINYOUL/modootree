@@ -13,6 +13,7 @@ import {
   doc,
   updateDoc,
   getDoc,
+  setDoc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -51,6 +52,7 @@ import {
 } from "@/components/ui/select";
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { cn } from '@/lib/utils';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -94,6 +96,11 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 
 const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
 
+const COLOR_PALETTE = [
+  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
+  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+];
+
 const Diary = ({ username, uid, isEditable, isAllowed }) => {
   const pathname = usePathname();
   const router = useRouter();
@@ -128,10 +135,31 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
   const itemsPerPage = 5;
   const [allowedUsers, setAllowedUsers] = useState([]);
   const [usernames, setUsernames] = useState({});
+  const [showColorSettings, setShowColorSettings] = useState(false);
+  const [styleSettings, setStyleSettings] = useState({
+    bgColor: '#60A5FA',
+    textColor: '#FFFFFF',
+    bgOpacity: 0.2,
+    shadow: 'none'  // 그림자 설정 추가
+  });
   
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
-  const userRole = currentUser?.uid;
+  const isEditMode = pathname ? pathname.startsWith('/editor') : false;
+  // 현재 사용자가 작성자인지 확인하는 함수 추가
+  const isAuthor = (diary) => {
+    if (!currentUser) return false;
+    return diary.authorUid === currentUser.uid;
+  };
+
+  // canEdit 로직 수정
+  const canEdit = useMemo(() => {
+    if (!currentUser) return false;
+    if (pathname?.startsWith('/editor')) return true;
+    return currentUser.uid === finalUid;
+    if (currentUser.uid === finalUid) return true;
+    return isAllowed; // 허용된 사용자도 수정/삭제 가능하도록 추가
+  }, [currentUser, pathname, finalUid, isAllowed]);
 
   // 현재 사용자 정보를 메모이제이션
   const currentUserInfo = useMemo(() => {
@@ -149,9 +177,6 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
     if (isEditable || currentUser.uid === uid) return true;
     return isAllowed;  // isAllowed prop 사용
   }, [currentUser, isEditable, uid, isAllowed]);
-
-  // canEdit 수정 (삭제 권한용)
-  const canEdit = isEditable || userRole === uid;  // 소유자와 편집 모드만 수정/삭제 가능
 
   // 허용된 사용자 목록 가져오기
   useEffect(() => {
@@ -503,49 +528,190 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
     setCurrentPage(prev => prev + 1);
   };
 
+  // 스타일 설정 저장 함수
+  const saveStyleSettings = async (newSettings) => {
+    if (!finalUid) return;
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'settings', 'diary'), newSettings, { merge: true });
+      setStyleSettings(newSettings);
+    } catch (error) {
+      console.error('스타일 설정 저장 실패:', error);
+    }
+  };
+
+  // 스타일 설정 불러오기
+  useEffect(() => {
+    const loadStyleSettings = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'settings', 'diary');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setStyleSettings(docSnap.data());
+        }
+      } catch (error) {
+        console.error('스타일 설정 불러오기 실패:', error);
+      }
+    };
+    loadStyleSettings();
+  }, [finalUid]);
+
+  // 스타일 설정 렌더링 함수 수정
+  const renderColorSettings = () => {
+    if (!pathname?.startsWith('/editor')) return null;  // 에디터 페이지에서만 표시
+
+    const SHADOW_OPTIONS = [
+      { value: 'none', label: '없음' },
+      { value: 'sm', label: '약하게' },
+      { value: 'md', label: '보통' },
+      { value: 'lg', label: '강하게' },
+      { value: 'retro', label: '레트로' },
+      { value: 'retro-black', label: '레트로-블랙' },
+      { value: 'retro-sky', label: '레트로-하늘' },
+      { value: 'retro-gray', label: '레트로-회색' },
+      { value: 'retro-white', label: '레트로-하얀' },
+    ];
+
+    return (
+      <div className="w-full max-w-[1100px] mb-4">
+        <button
+          onClick={() => setShowColorSettings(!showColorSettings)}
+          className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
+          다이어리 스타일 설정 {showColorSettings ? '닫기' : '열기'}
+        </button>
+
+        {showColorSettings && (
+          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
+            <div>
+              <label className="text-white text-sm mb-2 block">배경색</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`bg-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">배경 투명도</label>
+              <input
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                value={styleSettings.bgOpacity ?? 0.2}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">그림자 효과</label>
+              <select
+                value={styleSettings.shadow}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
+              >
+                {SHADOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 일기 목록 표시 부분 수정
   const renderDiaryList = () => {
     return getPaginatedDiaries().map((diary) => (
       <div
         key={diary.id}
         onClick={() => handleDiaryClick(diary)}
-        className="flex flex-col bg-blue-500/20 rounded-2xl shadow-md backdrop-blur-sm overflow-hidden"
+        className={cn(
+          "flex flex-col rounded-2xl overflow-hidden backdrop-blur-sm",
+          styleSettings.shadow === 'none' && 'shadow-none',
+          styleSettings.shadow === 'sm' && 'shadow-sm',
+          styleSettings.shadow === 'md' && 'shadow',
+          styleSettings.shadow === 'lg' && 'shadow-lg',
+          styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+          styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+          styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+        )}
+        style={{ 
+          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+          color: styleSettings.textColor,
+          ...(styleSettings.shadow?.includes('retro') && { 
+            border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                    styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                    styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                    '2px solid rgb(0 0 0)'
+          })
+        }}
       >
         {/* 1번 row: 제목과 버튼들 */}
         <div className="flex justify-between items-center p-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-white flex items-center gap-1">
+            <h3 className="text-lg font-bold flex items-center gap-1" style={{ color: styleSettings.textColor }}>
               {diary.isPrivate && <Lock className="w-4 h-4" />}
               {diary.title}
             </h3>
-            <span className="text-sm text-white/70">
+            <span className="text-sm opacity-70" style={{ color: styleSettings.textColor }}>
               {renderAuthorInfo(diary)}
             </span>
           </div>
-          <div className="flex gap-2">
-            {canEdit && (
+          <div className="flex items-center gap-2">
+            {(canEdit || isAuthor(diary)) && (
               <>
-                <Button
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditingDiary(diary);
                   }}
-                  className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
+                  className="text-blue-500 hover:text-blue-700"
                 >
                   <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDelete(diary.id, diary.images);
                   }}
-                  className="p-2 bg-red-500/30 text-white rounded-lg hover:bg-red-500/40"
+                  className="text-red-500 hover:text-red-700"
                 >
                   <Trash2 className="w-4 h-4" />
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={(e) => handleLikeClick(e, diary)}
-                  className="p-2 bg-blue-500/30 text-white rounded-lg hover:bg-blue-500/40"
+                  className="text-blue-500 hover:text-blue-700"
                 >
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
@@ -561,7 +727,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                       d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
                     />
                   </svg>
-                </Button>
+                </button>
               </>
             )}
           </div>
@@ -569,7 +735,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 2번 row: 내용 */}
         <div className="p-4 border-b border-white/10">
-          <p className="text-white/80 line-clamp-3 whitespace-pre-wrap">
+          <p className="opacity-80 line-clamp-3 whitespace-pre-wrap" style={{ color: styleSettings.textColor }}>
             {diary.content}
           </p>
         </div>
@@ -588,7 +754,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
               ))}
               {diary.images.length > 3 && (
                 <div className="relative h-24 md:h-40 lg:h-48">
-                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center text-white">
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center" style={{ color: styleSettings.textColor }}>
                     +{diary.images.length - 3}
                   </div>
                 </div>
@@ -598,7 +764,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
         )}
 
         {/* 4번 row: 날짜 */}
-        <div className="p-4 text-sm text-white/70">
+        <div className="p-4 text-sm opacity-70" style={{ color: styleSettings.textColor }}>
           {dayjs(diary.createdAt).locale('ko').format('YY년 MM월 DD일 HH:mm')}
         </div>
       </div>
@@ -621,10 +787,34 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
   }, [diaries]);
 
   return (
-    <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+    <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full px-2'>
+      {renderColorSettings()}
       {/* 일기장 제목 */}
-      <div className="w-full max-w-[1200px] space-y-6">
-        <div className="relative flex items-center justify-center text-[21px] font-bold w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white">
+      <div className="w-full max-w-[1100px] space-y-6 mt-8">
+        <div 
+          className={cn(
+            "relative flex items-center justify-center text-[21px] font-bold w-full rounded-2xl p-4 backdrop-blur-sm tracking-tight",
+            styleSettings.shadow === 'none' && 'shadow-none',
+            styleSettings.shadow === 'sm' && 'shadow-sm',
+            styleSettings.shadow === 'md' && 'shadow',
+            styleSettings.shadow === 'lg' && 'shadow-lg',
+            styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+            styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+            styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+            styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+            styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+          )}
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor,
+            ...(styleSettings.shadow?.includes('retro') && { 
+              border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                      styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                      styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                      '2px solid rgb(0 0 0)'
+            })
+          }}
+        >
           <HeaderDrawer uid={finalUid}>
             <button 
               onClick={(e) => {
@@ -634,9 +824,13 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                   setIsWriting(true);
                 }
               }}
-              className="absolute left-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all"
+              className="absolute left-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
+              style={{ 
+                backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                color: styleSettings.textColor 
+              }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
             </button>
@@ -651,9 +845,13 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                   setIsWriting(true);
                 }
               }}
-              className="absolute right-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all"
+              className="absolute right-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
+              style={{ 
+                backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                color: styleSettings.textColor 
+              }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
@@ -662,18 +860,55 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 달력 섹션 - 주간 뷰로 변경 */}
         <div className="w-full max-w-[1200px] mb-4">
-          <div className="bg-blue-500/20 rounded-3xl p-4 shadow-lg backdrop-blur-sm">
+          <div 
+            className={cn(
+              "rounded-3xl p-4 shadow-lg backdrop-blur-sm",
+              styleSettings.shadow === 'none' && 'shadow-none',
+              styleSettings.shadow === 'sm' && 'shadow-sm',
+              styleSettings.shadow === 'md' && 'shadow',
+              styleSettings.shadow === 'lg' && 'shadow-lg',
+              styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+              styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+              styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+              styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+              styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+            )}
+            style={{ 
+              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+              color: styleSettings.textColor,
+              ...(styleSettings.shadow?.includes('retro') && { 
+                border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                        styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                        styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                        '2px solid rgb(0 0 0)'
+              })
+            }}
+          >
             {/* 주 선택 헤더 */}
             <div className="flex items-center justify-between mb-4">
-              <button onClick={handlePrevWeek} className="p-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30 transition-all">
+              <button 
+                onClick={handlePrevWeek} 
+                className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
+                style={{ 
+                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+                  color: styleSettings.textColor 
+                }}
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold" style={{ color: styleSettings.textColor }}>
                 {currentWeek.format('YY년 MM월')}
               </h2>
-              <button onClick={handleNextWeek} className="p-2 bg-blue-500/20 text-white rounded-xl hover:bg-blue-500/30 transition-all">
+              <button 
+                onClick={handleNextWeek} 
+                className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
+                style={{ 
+                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+                  color: styleSettings.textColor 
+                }}
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -698,20 +933,27 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                     onClick={() => handleDateClick(date)}
                     className={`
                       relative aspect-square p-1 rounded-lg flex flex-col items-center justify-center
-                      ${isSunday ? 'bg-red-500/30' : ''}
-                      ${isSaturday ? 'bg-blue-500/40' : ''}
-                      ${!isSunday && !isSaturday ? 'bg-blue-500/20' : ''}
-                      ${isSelected ? 'ring-2 ring-white/50' : ''}
+                      hover:bg-opacity-40 transition-all text-lg
+                      ${isSelected ? 'ring-2' : ''}
                       ${isToday ? 'font-bold' : ''}
-                      hover:bg-opacity-40 transition-all
-                      text-white text-lg
                     `}
+                    style={{
+                      backgroundColor: isSunday ? 'rgba(239, 68, 68, 0.3)' :
+                                    isSaturday ? 'rgba(96, 165, 250, 0.4)' :
+                                    `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor,
+                      ringColor: styleSettings.textColor
+                    }}
                   >
-                    <span className="text-lg">
+                    <span>
                       {date.date()}
                     </span>
                     {hasDiary && (
-                      <span className="text-sm bg-yellow-500/70 text-white px-2 py-1 rounded-full mt-1">
+                      <span className="text-sm px-2 py-1 rounded-full mt-1"
+                        style={{
+                          backgroundColor: 'rgba(234, 179, 8, 0.7)',
+                          color: '#FFFFFF'
+                        }}>
                         {dayDiaries.length}
                       </span>
                     )}
@@ -1118,7 +1360,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                   )}
 
                   {/* 수정/삭제 버튼 */}
-                  {canEdit && (
+                  {(canEdit || isAuthor(diary)) && (
                     <div className="flex justify-end gap-2 mt-4">
                       <Button
                         onClick={() => {

@@ -13,5 +13,5 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   링크카드: LinkCard,
   게스트북: QuestBook,
   달력: CalendarComponent,
-  일기장: Diary,
+  일기장: Diary
 }; 

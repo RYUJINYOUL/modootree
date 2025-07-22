@@ -17,7 +17,9 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
-  increment
+  increment,
+  setDoc,
+  getDoc
 } from 'firebase/firestore'
 import { useSelector } from 'react-redux'
 import { Button } from '@/components/ui/button'
@@ -32,6 +34,16 @@ import { IoClose } from "react-icons/io5"
 import { FaHeart, FaRegHeart, FaReply } from "react-icons/fa"
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
+// Dialog 관련 import 제거 (주석 처리)
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogDescription,
+//   DialogFooter,
+// } from "@/components/ui/dialog"
 
 // getTimeAgo 함수를 컴포넌트 외부로 이동
 const getTimeAgo = (date) => {
@@ -392,11 +404,146 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   )
 }
 
+const COLOR_PALETTE = [
+  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
+  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+];
+
 export default function GuestbookTemplate({ username, uid }) {
-  const [previewEntries, setPreviewEntries] = useState([])
-  const { currentUser } = useSelector((state) => state.user)
-  const finalUid = uid ?? currentUser?.uid
+  const [previewEntries, setPreviewEntries] = useState([]);
+  const [showColorSettings, setShowColorSettings] = useState(false);
+  // 모달 관련 상태 제거 (주석 처리)
+  // const [selectedEntry, setSelectedEntry] = useState(null);
+  // const [showDetailModal, setShowDetailModal] = useState(false);
+  const [styleSettings, setStyleSettings] = useState({
+    bgColor: '#60A5FA',
+    textColor: '#FFFFFF',
+    bgOpacity: 0.2,
+    shadow: 'none'
+  });
+  const pathname = usePathname();
+  const { currentUser } = useSelector((state) => state.user);
+  const finalUid = uid ?? currentUser?.uid;
   const { toast } = useToast();
+
+  // 스타일 설정 저장 함수
+  const saveStyleSettings = async (newSettings) => {
+    if (!finalUid) return;
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'settings', 'guestbook'), newSettings, { merge: true });
+      setStyleSettings(newSettings);
+    } catch (error) {
+      console.error('스타일 설정 저장 실패:', error);
+    }
+  };
+
+  // 스타일 설정 불러오기
+  useEffect(() => {
+    const loadStyleSettings = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'settings', 'guestbook');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setStyleSettings(docSnap.data());
+        }
+      } catch (error) {
+        console.error('스타일 설정 불러오기 실패:', error);
+      }
+    };
+    loadStyleSettings();
+  }, [finalUid]);
+
+  const renderColorSettings = () => {
+    if (!pathname?.startsWith('/editor')) return null;
+
+    const SHADOW_OPTIONS = [
+      { value: 'none', label: '없음' },
+      { value: 'sm', label: '약하게' },
+      { value: 'md', label: '보통' },
+      { value: 'lg', label: '강하게' },
+      { value: 'retro', label: '레트로' },
+      { value: 'retro-black', label: '레트로-블랙' },
+      { value: 'retro-sky', label: '레트로-하늘' },
+      { value: 'retro-gray', label: '레트로-회색' },
+      { value: 'retro-white', label: '레트로-하얀' },
+    ];
+
+    return (
+      <div className="w-full max-w-[320px] mb-4">
+        <button
+          onClick={() => setShowColorSettings(!showColorSettings)}
+          className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
+          게스트북 스타일 설정 {showColorSettings ? '닫기' : '열기'}
+        </button>
+
+        {showColorSettings && (
+          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
+            <div>
+              <label className="text-white text-sm mb-2 block">배경색</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`bg-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">배경 투명도</label>
+              <input
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                value={styleSettings.bgOpacity ?? 0.2}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">그림자 효과</label>
+              <select
+                value={styleSettings.shadow}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
+              >
+                {SHADOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const showToast = (title, description, duration = 2000) => {
     toast.toast({
@@ -452,11 +599,41 @@ export default function GuestbookTemplate({ username, uid }) {
 
   return (
     <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+      {renderColorSettings()}
       {/* 게스트북 제목 */}
-      <div className="relative flex items-center justify-center text-[21px] font-bold md:w-[320px] w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm tracking-tight text-white">
+      <div 
+        className={cn(
+          "relative flex items-center justify-center text-[21px] font-bold w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm tracking-tight mt-8",
+          styleSettings.shadow === 'none' && 'shadow-none',
+          styleSettings.shadow === 'sm' && 'shadow-sm',
+          styleSettings.shadow === 'md' && 'shadow',
+          styleSettings.shadow === 'lg' && 'shadow-lg',
+          styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+          styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+          styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+        )}
+        style={{ 
+          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+          color: styleSettings.textColor,
+          ...(styleSettings.shadow?.includes('retro') && { 
+            border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                    styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                    styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                    '2px solid rgb(0 0 0)'
+          })
+        }}
+      >
         <HeaderDrawer uid={finalUid}>
-          <button className="absolute left-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button 
+            className="absolute left-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
+            style={{ 
+              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+              color: styleSettings.textColor 
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
           </button>
@@ -464,18 +641,13 @@ export default function GuestbookTemplate({ username, uid }) {
         게스트북
         <HeaderDrawer uid={finalUid}>
           <button 
-            onClick={() => {
-              const drawerContent = document.querySelector('[role="dialog"]');
-              if (drawerContent) {
-                const form = drawerContent.querySelector('form');
-                if (form) {
-                  form.scrollIntoView({ behavior: 'smooth' });
-                }
-              }
+            className="absolute right-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
+            style={{ 
+              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+              color: styleSettings.textColor 
             }}
-            className="absolute right-4 bg-blue-500/20 p-2 rounded-lg hover:bg-blue-500/30 transition-all"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
@@ -485,39 +657,83 @@ export default function GuestbookTemplate({ username, uid }) {
       {/* 메인 리스트 */}
       <div className="w-full flex flex-col items-center gap-6">
         {previewEntries.map((entry) => (
-          <div key={entry.id} className="w-full max-w-[1100px] bg-blue-500/20 rounded-2xl p-6 shadow-lg hover:bg-blue-500/30 transition-all duration-300 backdrop-blur-sm">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="text-sm text-white">
-                  {entry.name || '익명'}
-                </div>
-              </div>
-              <span className="text-sm text-white/70 font-medium bg-blue-500/20 px-3 py-1.5 rounded-full">
-                {getTimeAgo(entry.createdAt)}
-              </span>
-            </div>
-            <p className="text-white leading-relaxed">{entry.message}</p>
-            <div className="mt-3 flex items-center space-x-4">
-              <button
-                onClick={() => handleMainLike(entry.id)}
-                className="flex items-center space-x-1 text-white/70 hover:text-white transition-colors"
-              >
-                <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : "text-white/50"} />
-                <span>{entry.likes || 0}</span>
-              </button>
-              {entry.replies?.length > 0 && (
-                <div className="flex items-center space-x-1 text-white/70">
-                  <FaReply className="text-white/50" />
-                  <span>{entry.replies.length}</span>
-                </div>
+          <HeaderDrawer key={entry.id} uid={finalUid}>
+            <div 
+              className={cn(
+                "w-full max-w-[1100px] rounded-2xl p-6 backdrop-blur-sm transition-all duration-300 ease-in-out hover:-translate-y-1 cursor-pointer",
+                styleSettings.shadow === 'none' && 'shadow-none hover:shadow-xl',
+                styleSettings.shadow === 'sm' && 'shadow-sm hover:shadow-xl',
+                styleSettings.shadow === 'md' && 'shadow hover:shadow-xl',
+                styleSettings.shadow === 'lg' && 'shadow-lg hover:shadow-xl',
+                styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]',
+                styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]',
+                styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)] hover:shadow-[10px_10px_0px_0px_rgba(2,132,199,1)]',
+                styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)] hover:shadow-[10px_10px_0px_0px_rgba(107,114,128,1)]',
+                styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,1)]'
               )}
+              style={{ 
+                backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+                color: styleSettings.textColor,
+                ...(styleSettings.shadow?.includes('retro') && { 
+                  border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                          styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                          styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                          '2px solid rgb(0 0 0)'
+                })
+              }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm" style={{ color: styleSettings.textColor }}>
+                    {entry.name || '익명'}
+                  </div>
+                </div>
+                <span 
+                  className="text-sm font-medium px-3 py-1.5 rounded-full"
+                  style={{ 
+                    backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+                    color: styleSettings.textColor,
+                    opacity: 0.7 
+                  }}
+                >
+                  {getTimeAgo(entry.createdAt)}
+                </span>
+              </div>
+              <p style={{ color: styleSettings.textColor }} className="leading-relaxed">
+                {entry.message}
+              </p>
+              <div className="mt-3 flex items-center space-x-4">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMainLike(entry.id);
+                  }}
+                  className="flex items-center space-x-1 transition-colors"
+                  style={{ color: styleSettings.textColor, opacity: 0.7 }}
+                >
+                  <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : ""} />
+                  <span>{entry.likes || 0}</span>
+                </button>
+                {entry.replies?.length > 0 && (
+                  <div 
+                    className="flex items-center space-x-1"
+                    style={{ color: styleSettings.textColor, opacity: 0.7 }}
+                  >
+                    <FaReply />
+                    <span>{entry.replies.length}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </HeaderDrawer>
         ))}
       </div>
+
+      {/* 모달 컴포넌트 완전히 제거 */}
+
       <div className="pt-4 w-full flex justify-center">
         <div className="h-[40px]" />
       </div>
     </div>
-  )
+  );
 }

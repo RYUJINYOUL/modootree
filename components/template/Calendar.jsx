@@ -15,6 +15,7 @@ import {
   updateDoc,
   increment,
   getDoc,
+  setDoc,
 } from 'firebase/firestore';
 import app from '@/firebase';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -29,13 +30,26 @@ import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 const db = getFirestore(app);
+
+const COLOR_PALETTE = [
+  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
+  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+];
 
 const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [showColorSettings, setShowColorSettings] = useState(false);
+  const [styleSettings, setStyleSettings] = useState({
+    bgColor: '#60A5FA',
+    textColor: '#FFFFFF',
+    bgOpacity: 0.2,
+    shadow: 'none'  // 그림자 설정 추가
+  });
   const [events, setEvents] = useState([]);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -592,31 +606,214 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     </div>
   );
 
+  // 스타일 설정 저장 함수
+  const saveStyleSettings = async (newSettings) => {
+    if (!finalUid) return;
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'settings', 'calendar'), newSettings, { merge: true });
+      setStyleSettings(newSettings);
+    } catch (error) {
+      console.error('스타일 설정 저장 실패:', error);
+    }
+  };
+
+  // 스타일 설정 불러오기
+  useEffect(() => {
+    const loadStyleSettings = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'settings', 'calendar');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setStyleSettings(docSnap.data());
+        }
+      } catch (error) {
+        console.error('스타일 설정 불러오기 실패:', error);
+      }
+    };
+    loadStyleSettings();
+  }, [finalUid]);
+
+  const renderColorSettings = () => {
+    if (!pathname?.startsWith('/editor')) return null;
+
+    const SHADOW_OPTIONS = [
+      { value: 'none', label: '없음' },
+      { value: 'sm', label: '약하게' },
+      { value: 'md', label: '보통' },
+      { value: 'lg', label: '강하게' },
+      { value: 'retro', label: '레트로' },
+      { value: 'retro-black', label: '레트로-블랙' },
+      { value: 'retro-sky', label: '레트로-하늘' },
+      { value: 'retro-gray', label: '레트로-회색' },
+      { value: 'retro-white', label: '레트로-하얀' },
+    ];
+
+    return (
+      <div className="w-full max-w-[1100px] mb-4">
+        <button
+          onClick={() => setShowColorSettings(!showColorSettings)}
+          className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
+          캘린더 스타일 설정 {showColorSettings ? '닫기' : '열기'}
+        </button>
+
+        {showColorSettings && (
+          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
+            <div>
+              <label className="text-white text-sm mb-2 block">배경색</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`bg-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">배경 투명도</label>
+              <input
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                value={styleSettings.bgOpacity ?? 0.2}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">그림자 효과</label>
+              <select
+                value={styleSettings.shadow}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
+              >
+                {SHADOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col items-center w-full space-y-6 mt-8 px-2">
+      {renderColorSettings()}
       {/* 월 선택 헤더 */}
-      <div className="flex items-center justify-between md:w-[320px] w-full bg-blue-500/20 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
-        <button onClick={handlePrevMonth} className="p-2.5 bg-blue-500/20 text-white rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-500/30">
+      <div 
+        className={cn(
+          "flex items-center justify-between w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm mt-8",
+          styleSettings.shadow === 'none' && 'shadow-none',
+          styleSettings.shadow === 'sm' && 'shadow-sm',
+          styleSettings.shadow === 'md' && 'shadow',
+          styleSettings.shadow === 'lg' && 'shadow-lg',
+          styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+          styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+          styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+        )}
+        style={{ 
+          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+          color: styleSettings.textColor,
+          ...(styleSettings.shadow?.includes('retro') && { 
+            border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                    styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                    styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                    '2px solid rgb(0 0 0)'
+          })
+        }}
+      >
+        <button 
+          onClick={handlePrevMonth} 
+          className="p-2.5 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-opacity-30"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold text-white tracking-tight">{currentDate.format('YY년 MM월')}</h2>
-        <button onClick={handleNextMonth} className="p-2.5 bg-blue-500/20 text-white rounded-xl font-semibold text-center shadow-md transition-all hover:bg-blue-500/30">
+        <h2 className="text-xl font-bold tracking-tight" style={{ color: styleSettings.textColor }}>
+          {currentDate.format('YY년 MM월')}
+        </h2>
+        <button 
+          onClick={handleNextMonth} 
+          className="p-2.5 rounded-xl font-semibold text-center shadow-md transition-all hover:bg-opacity-30"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
 
       {/* 캘린더 테이블 */}
-      <div className="w-full overflow-x-auto">
+      <div className="w-full">
         <div className="mx-auto max-w-[1100px] w-full">
-          <div className="bg-blue-500/20 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+          <div 
+            className={cn(
+              "rounded-3xl overflow-hidden backdrop-blur-sm",
+              styleSettings.shadow === 'none' && 'shadow-none',
+              styleSettings.shadow === 'sm' && 'shadow-sm',
+              styleSettings.shadow === 'md' && 'shadow',
+              styleSettings.shadow === 'lg' && 'shadow-lg',
+              styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+              styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+              styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+              styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+              styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+            )}
+            style={{ 
+              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+              color: styleSettings.textColor,
+              ...(styleSettings.shadow?.includes('retro') && { 
+                border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                        styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                        styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                        '2px solid rgb(0 0 0)'
+              })
+            }}
+          >
             <table className="table-fixed w-full border-collapse">
               <thead>
-                <tr className="bg-blue-500/10">
+                <tr style={{ backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}` }}>
                   {days.map((day, idx) => (
                     <th
                       key={day}
                       className={`py-4 px-3 text-start font-bold text-sm tracking-wide
-                        ${idx === 0 ? 'text-red-300' : idx === 6 ? 'text-blue-300' : 'text-white'}`}
+                        ${idx === 0 ? 'text-red-300' : idx === 6 ? 'text-blue-300' : ''}`}
+                      style={{ color: idx === 0 ? '#FCA5A5' : idx === 6 ? '#93C5FD' : styleSettings.textColor }}
                     >
                       {day}
                     </th>
@@ -637,18 +834,27 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
                         <td
                           key={dateStr}
                           onClick={() => handleDateClick(date)}
-                          className={`align-top p-2 md:p-3 h-16 md:h-24 cursor-pointer transition-all duration-200 hover:bg-blue-500/30
-                            ${isCurrentMonth ? 'text-white' : 'text-white/50'}
-                            ${isToday ? 'bg-blue-500/30 rounded-xl' : ''}
-                            ${isSelected ? 'bg-blue-500/40' : ''}`}
+                          className={`align-top p-2 md:p-3 h-16 md:h-24 cursor-pointer transition-all duration-200 hover:bg-opacity-30
+                            ${isToday ? 'rounded-xl' : ''}
+                            ${isSelected ? 'bg-opacity-40' : ''}`}
+                          style={{ 
+                            backgroundColor: isToday || isSelected ? `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}` : 'transparent',
+                            color: isCurrentMonth ? styleSettings.textColor : `${styleSettings.textColor}80`
+                          }}
                         >
                           <div className="flex flex-col h-full items-center gap-2">
-                            <span className={`inline-block w-7 h-7 text-center leading-7
-                              ${isToday ? 'text-white' : ''}`}>
+                            <span className={`inline-block w-7 h-7 text-center leading-7`}
+                              style={{ color: styleSettings.textColor }}>
                               {date.date()}
                             </span>
                             {dayEvents.length > 0 && (
-                              <span className="flex items-center justify-center w-8 h-8 bg-blue-500/50 rounded-full text-sm font-semibold text-white shadow-lg hover:bg-blue-500/60 transition-colors">
+                              <span 
+                                className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold shadow-lg transition-colors hover:bg-opacity-60"
+                                style={{ 
+                                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.5) * 255).toString(16).padStart(2, '0')}`,
+                                  color: styleSettings.textColor 
+                                }}
+                              >
                                 {dayEvents.length}
                               </span>
                             )}
@@ -666,16 +872,43 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
 
       {/* 일정 리스트 섹션 */}
       <div className="w-full max-w-[1100px] mt-2">
-        <div className="p-6 rounded-3xl bg-blue-500/20 backdrop-blur-sm space-y-4">
+        <div 
+          className={cn(
+            "p-6 rounded-3xl backdrop-blur-sm space-y-4",
+            styleSettings.shadow === 'none' && 'shadow-none',
+            styleSettings.shadow === 'sm' && 'shadow-sm',
+            styleSettings.shadow === 'md' && 'shadow',
+            styleSettings.shadow === 'lg' && 'shadow-lg',
+            styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+            styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+            styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+            styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+            styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+          )}
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor,
+            ...(styleSettings.shadow?.includes('retro') && { 
+              border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                      styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                      styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                      '2px solid rgb(0 0 0)'
+            })
+          }}
+        >
           {/* 헤더 영역 */}
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-white pl-2">
+            <h3 className="text-xl font-bold pl-2" style={{ color: styleSettings.textColor }}>
               {selectedDate.format('M월 D일')}
             </h3>
             {canWrite && (
               <Button
                 onClick={() => setShowAddEventForm(prev => !prev)}
-                className="px-4 py-2.5 bg-blue-500/30 text-white rounded-xl font-semibold shadow-lg transition-all hover:bg-blue-500/40 hover:scale-105 active:scale-95"
+                className="px-4 py-2.5 rounded-xl font-semibold shadow-lg transition-all hover:bg-opacity-40 hover:scale-105 active:scale-95"
+                style={{ 
+                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                  color: styleSettings.textColor 
+                }}
               >
                 {showAddEventForm ? '닫기' : '일정 추가'}
               </Button>
@@ -683,7 +916,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
           </div>
 
           {/* 구분선 */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t" style={{ borderColor: `${styleSettings.textColor}20` }}></div>
 
           {/* 일정 추가 폼 */}
           {canWrite && showAddEventForm && (
@@ -700,50 +933,8 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
       </div>
 
 
-      {/* Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto bg-gray-700 border-none">
-          <DialogHeader>
-            <DialogTitle className="text-white">
-              {selectedDate.format('YYYY년 MM월 DD일')}
-            </DialogTitle>
-            <DialogDescription className="text-white/80">
-              일정 수정 추가 삭제는 달력 아래 리스트로 작성하세요
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* 일정 목록 */}
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-            {selectedEvents.length === 0 ? (
-              <div className="text-white/70 text-center py-4">
-                등록된 일정이 없습니다.
-              </div>
-            ) : (
-              selectedEvents.map(event => (
-                <div
-                  key={event.id}
-                  className="bg-gray-600/50 rounded-lg p-4 text-white space-y-3"
-                >
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-semibold text-lg">{event.title}</h3>
-                 
-                  </div>
-
-                  <p className="text-sm text-white/90 min-h-[1.5em]">
-                    {event.content || '내용 없음'}
-                  </p>
-
-                  <div className="flex justify-between items-center text-sm text-white/70">
-                    <span>{event.startTime} - {event.endTime}</span>
-                    <span>{usernames[event.authorUid] || event.authorName || '사용자'}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-        </DialogContent>
-      </Dialog>
+    
+     
     </div>
   );
 };

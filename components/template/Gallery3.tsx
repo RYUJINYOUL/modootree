@@ -8,6 +8,7 @@ import { db } from "@/firebase";
 import { useSelector } from "react-redux";
 import { uploadLogoImage, uploadLinkImage, deleteImageFromStorage } from "@/hooks/useUploadImage"; // deleteImageFromStorage도 필요합니다.
 import imageCompression from "browser-image-compression";
+import { cn } from "@/lib/utils";
 
 import CropperModal from '@/components/ui/CropperModal';
 import {
@@ -24,6 +25,17 @@ type LogoProps = {
   uid?: string;
 };
 
+interface GallerySettings {
+  logoUrl: string;
+  bgUrl: string;
+  name: string;
+  desc: string;
+  bgColor: string;
+  bgOpacity: number;
+  textColor: string;
+  shadow: string;  // 그림자 효과 추가
+}
+
 const COLOR_PALETTE = [
   "transparent",
   "#000000", "#FFFFFF", "#F87171", "#FBBF24",
@@ -35,6 +47,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const [cropType, setCropType] = useState<'logo' | 'background' | null>(null);
   const [isUploading, setIsUploading] = useState(false); // 업로드 상태 추가
   const [showProfileModal, setShowProfileModal] = useState(false); // 프로필 팝업 상태 추가
+  const [shadow, setShadow] = useState("none");  // 그림자 효과 상태 추가
 
   const pathname = usePathname();
   const isEditable = pathname?.startsWith("/editor") ?? false;
@@ -93,6 +106,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
         if (data.bgColor) setBgBaseColor(data.bgColor);
         if (data.bgOpacity) setBgOpacity(parseFloat(data.bgOpacity));
         if (data.textColor) setTextColor(data.textColor);
+        if (data.shadow) setShadow(data.shadow);  // 그림자 효과 불러오기
       }
     };
     fetchData();
@@ -242,9 +256,38 @@ function Gallery3 ({ username, uid }: LogoProps) {
     }
   };
 
+  const handleShadowSelect = async (value: string) => {
+    if (!isEditable) return;
+    setShadow(value);
+    await saveToFirestore({ shadow: value });
+  };
+
   return (
     <div className="flex items-center justify-center w-full p-[10px]">
-      <div className="relative w-full md:w-[1000px] overflow-hidden rounded-xl shadow-lg" style={{ backgroundColor: computedBgColor, minHeight: "300px" }}>
+      <div 
+        className={cn(
+          "relative w-full md:w-[1000px] overflow-hidden rounded-xl",
+          shadow === 'none' && 'shadow-none',
+          shadow === 'sm' && 'shadow-sm',
+          shadow === 'md' && 'shadow',
+          shadow === 'lg' && 'shadow-lg',
+          shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+          shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+          shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+        )}
+        style={{ 
+          backgroundColor: computedBgColor, 
+          minHeight: "300px",
+          ...(shadow?.includes('retro') && { 
+            border: shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                    shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                    shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                    '2px solid rgb(0 0 0)'
+          })
+        }}
+      >
         <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
         <div
           className="absolute inset-0 z-0"
@@ -268,11 +311,11 @@ function Gallery3 ({ username, uid }: LogoProps) {
             width={120}
             height={120}
             priority
-            className="rounded-full border-4 border-black/20 backdrop-blur-[2px] shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
+            className="rounded-full shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
             onClick={handleProfileClick}
             title={isEditable ? "로고 클릭 시 변경" : "프로필 사진 클릭 시 상세보기"}
           />
-          <div className="mt-6 px-6 py-3 mb-8 rounded-lg bg-blue-500/30 backdrop-blur-[2px] text-center">
+          <div className="mt-6 px-6 py-3 mb-8 text-center">
             <h1 className={`text-2xl font-bold ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
             <p className={`text-sm mt-2 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
           </div>
@@ -329,24 +372,45 @@ function Gallery3 ({ username, uid }: LogoProps) {
                   텍스트색 {showTextColors ? "닫기" : "열기"}
                 </button>
                 {showTextColors && (
-                  <div className="flex gap-2 flex-wrap mt-2 justify-end w-[120px]">
-                    {COLOR_PALETTE.map((color) => (
-                      <button
-                        key={`text-${color}`}
-                        onClick={() => handleColorSelect("textColor", color)}
-                        className="w-6 h-6 rounded-full border border-gray-300"
-                        style={{
-                          backgroundColor: color === "transparent" ? "white" : color,
-                          backgroundImage:
-                            color === "transparent"
-                              ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
-                              : undefined,
-                          backgroundSize: "8px 8px",
-                          backgroundPosition: "0 0, 4px 4px",
-                        }}
-                        title={color === "transparent" ? "투명" : color}
-                      />
-                    ))}
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex gap-2 flex-wrap mt-2 justify-end w-[120px]">
+                      {COLOR_PALETTE.map((color) => (
+                        <button
+                          key={`text-${color}`}
+                          onClick={() => handleColorSelect("textColor", color)}
+                          className="w-6 h-6 rounded-full border border-gray-300"
+                          style={{
+                            backgroundColor: color === "transparent" ? "white" : color,
+                            backgroundImage:
+                              color === "transparent"
+                                ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
+                                : undefined,
+                            backgroundSize: "8px 8px",
+                            backgroundPosition: "0 0, 4px 4px",
+                          }}
+                          title={color === "transparent" ? "투명" : color}
+                        />
+                      ))}
+                    </div>
+                    {/* 그림자 효과 설정 추가 */}
+                    <div className="mt-2 w-full">
+                      <label className="text-xs text-white">그림자 효과</label>
+                      <select
+                        value={shadow}
+                        onChange={(e) => handleShadowSelect(e.target.value)}
+                        className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 mt-1"
+                      >
+                        <option value="none">없음</option>
+                        <option value="sm">약하게</option>
+                        <option value="md">보통</option>
+                        <option value="lg">강하게</option>
+                        <option value="retro">레트로</option>
+                        <option value="retro-black">레트로-블랙</option>
+                        <option value="retro-sky">레트로-하늘</option>
+                        <option value="retro-gray">레트로-회색</option>
+                        <option value="retro-white">레트로-하얀</option>
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>

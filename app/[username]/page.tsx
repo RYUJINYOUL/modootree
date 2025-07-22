@@ -14,7 +14,6 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { getAuth } from 'firebase/auth';
 import ComponentRenderer from '@/components/ComponentRenderer';
-import Header from '@/components/Header';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase';
 import TranslateBanner from '@/app/components/ui/TranslateBanner';
@@ -84,7 +83,7 @@ export default function UserPublicPage() {
 
   const [userData, setUserData] = useState<any>(null);
   const [components, setComponents] = useState<string[]>([]);
-  const [allowedUsers, setAllowedUsers] = useState<Array<{uid: string, email: string}>>([]);
+  const [allowedUsers, setAllowedUsers] = useState<Array<{email: string}>>([]);
   const [isAllowed, setIsAllowed] = useState(false);
 
   const handleBackgroundChange = async (type: string, value: string) => {
@@ -287,7 +286,7 @@ export default function UserPublicPage() {
 
   return (
     <>
-      <Header />
+      {/* Header 컴포넌트 제거 */}
       <TranslateBanner />
       <main className="min-h-screen flex flex-col items-center justify-center relative" style={getBackgroundStyles()}>
         {renderBackground()}

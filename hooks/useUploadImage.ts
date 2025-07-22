@@ -9,7 +9,7 @@ export async function uploadLogoImage(file: File, uid:string): Promise<string> {
 }
 
 export async function uploadLinkImage(file: File, uid:string): Promise<string> {
-  const fileRef = ref(storage, `${uid}/Links/Links_${Date.now()}`);
+  const fileRef = ref(storage, `Links/${uid}/Links_${Date.now()}`);  // 경로 수정
   await uploadBytes(fileRef, file);
   return getDownloadURL(fileRef);
 }

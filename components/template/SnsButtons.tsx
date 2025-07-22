@@ -15,6 +15,7 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { IconType } from 'react-icons';
+import { cn } from '@/lib/utils';
 
 interface ContactButtonsProps {
   username?: string;
@@ -35,6 +36,10 @@ interface ContactInfo {
   views: number;
   likes: number;
   likedBy: string[];
+  bgColor?: string;      // 배경색 추가
+  textColor?: string;    // 텍스트 색상 추가
+  bgOpacity?: number;    // 배경 투명도 추가
+  shadow?: string;       // 그림자 효과 추가
 }
 
 const DEFAULT_CONTACT: ContactInfo = {
@@ -50,8 +55,17 @@ const DEFAULT_CONTACT: ContactInfo = {
   blog: '',
   views: 0,
   likes: 0,
-  likedBy: []
+  likedBy: [],
+  bgColor: '#60A5FA',    // 기본 배경색
+  textColor: '#FFFFFF',  // 기본 텍스트 색상
+  bgOpacity: 0.2,       // 기본 투명도
+  shadow: 'none',       // 기본 그림자 효과
 };
+
+const COLOR_PALETTE = [
+  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
+  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+];
 
 interface ButtonConfig {
   field: string;
@@ -66,6 +80,7 @@ interface ButtonConfig {
 export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   const [contactInfo, setContactInfo] = useState<ContactInfo>(DEFAULT_CONTACT);
   const [showAllButtons, setShowAllButtons] = useState(false);
+  const [showColorSettings, setShowColorSettings] = useState(false);
   const pathname = usePathname();
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state: any) => state.user);
@@ -239,6 +254,119 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     }
   };
 
+  const handleColorSelect = async (type: 'bgColor' | 'textColor' | 'shadow', color: string) => {
+    if (!isEditable || !finalUid) return;
+
+    const newInfo = { ...contactInfo, [type]: color };
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'info', 'contact'), newInfo);
+      setContactInfo(newInfo);
+    } catch (error) {
+      console.error('색상 저장 실패:', error);
+      alert('색상 저장에 실패했습니다.');
+    }
+  };
+
+  const handleOpacityChange = async (value: number) => {
+    if (!isEditable || !finalUid) return;
+
+    const newInfo = { ...contactInfo, bgOpacity: value };
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'info', 'contact'), newInfo);
+      setContactInfo(newInfo);
+    } catch (error) {
+      console.error('투명도 저장 실패:', error);
+      alert('투명도 저장에 실패했습니다.');
+    }
+  };
+
+  const renderColorSettings = () => {
+    if (!isEditable) return null;
+
+    const SHADOW_OPTIONS = [
+      { value: 'none', label: '없음' },
+      { value: 'sm', label: '약하게' },
+      { value: 'md', label: '보통' },
+      { value: 'lg', label: '강하게' },
+      { value: 'retro', label: '레트로' },
+      { value: 'retro-black', label: '레트로-블랙' },
+      { value: 'retro-sky', label: '레트로-하늘' },
+      { value: 'retro-gray', label: '레트로-회색' },
+      { value: 'retro-white', label: '레트로-하얀' },
+    ];
+
+    return (
+      <div className="w-full px-4 mb-4">
+        <button
+          onClick={() => setShowColorSettings(!showColorSettings)}
+          className="w-full p-2 bg-blue-500/20 text-white rounded-lg mb-2 hover:bg-blue-500/30 transition-all"
+        >
+          버튼 스타일 설정 {showColorSettings ? '닫기' : '열기'}
+        </button>
+
+        {showColorSettings && (
+          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
+            <div>
+              <label className="text-white text-sm mb-2 block">배경색</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`bg-${color}`}
+                    onClick={() => handleColorSelect('bgColor', color)}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => handleColorSelect('textColor', color)}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">배경 투명도</label>
+              <input
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                value={contactInfo.bgOpacity ?? 0.2}
+                onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">그림자 효과</label>
+              <select
+                value={contactInfo.shadow}
+                onChange={(e) => handleColorSelect('shadow', e.target.value)}
+                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
+              >
+                {SHADOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderButtons = () => {
     const buttons: ButtonConfig[] = [
       ...((!isEditable) ? [
@@ -286,27 +414,51 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     );
   };
 
-  const renderButton = (button: ButtonConfig) => (
-    <button
-      key={button.field}
-      onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
-      className={`
-        w-full h-[70px] flex flex-col items-center justify-center gap-1 p-2 rounded-xl
-        ${button.isActive ? 'bg-blue-500/30' : 'bg-blue-500/20'} 
-        backdrop-blur-sm hover:bg-blue-500/30 transition-all
-        ${isEditable ? 'cursor-pointer' : contactInfo[button.field as keyof ContactInfo] ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}
-      `}
-    >
-      <button.icon className={`text-2xl ${button.color}`} />
-      <span className="text-xs text-white/80">{button.label}</span>
-      {button.count !== undefined && (
-        <span className="text-xs text-white/60">{button.count}</span>
-      )}
-    </button>
-  );
+  const renderButton = (button: ButtonConfig) => {
+    const bgColorWithOpacity = contactInfo.bgColor 
+      ? `${contactInfo.bgColor}${Math.round((contactInfo.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`
+      : 'rgba(96, 165, 250, 0.2)';
+
+    return (
+      <button
+        key={button.field}
+        onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
+        className={cn(
+          "w-full h-[70px] flex flex-col items-center justify-center gap-1 p-2 rounded-xl hover:bg-opacity-30 transition-all",
+          isEditable ? 'cursor-pointer' : contactInfo[button.field as keyof ContactInfo] ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+          contactInfo.shadow === 'none' && 'shadow-none',
+          contactInfo.shadow === 'sm' && 'shadow-sm',
+          contactInfo.shadow === 'md' && 'shadow',
+          contactInfo.shadow === 'lg' && 'shadow-lg',
+          contactInfo.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          contactInfo.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+          contactInfo.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+          contactInfo.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+          contactInfo.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+        )}
+        style={{
+          backgroundColor: button.isActive ? bgColorWithOpacity.replace(/0.2/, '0.3') : bgColorWithOpacity,
+          color: contactInfo.textColor || '#FFFFFF',
+          ...(contactInfo.shadow?.includes('retro') && { 
+            border: contactInfo.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                    contactInfo.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                    contactInfo.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                    '2px solid rgb(0 0 0)'
+          })
+        }}
+      >
+        <button.icon className={`text-2xl ${button.color}`} />
+        <span className="text-xs" style={{ color: contactInfo.textColor }}>{button.label}</span>
+        {button.count !== undefined && (
+          <span className="text-xs opacity-60" style={{ color: contactInfo.textColor }}>{button.count}</span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="w-full px-4 py-2">
+      {renderColorSettings()}
       {renderButtons()}
     </div>
   );

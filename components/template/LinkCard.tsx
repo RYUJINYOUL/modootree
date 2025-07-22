@@ -18,6 +18,8 @@ interface LinkItem {
   bgColor?: string;
   textColor?: string;
   opacity?: number;
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';  // 둥근 모서리 옵션 추가
+  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'retro' | 'retro-black' | 'retro-sky' | 'retro-gray' | 'retro-white';           // 그림자 옵션 추가
 }
 
 type LogoProps = {
@@ -43,7 +45,6 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [links, setLinks] = useState<LinkItem[]>([]);
-  // Use a state to track which link's settings are open
   const [openSettingsIndex, setOpenSettingsIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -76,11 +77,10 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   const handleImageChange = async (index: number, file: File) => {
     try {
-       const linkToDelete = links[index];
-        if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
-          // Only delete if it's a real uploaded image, not the default placeholder
-          await deleteImageFromStorage(linkToDelete.image);
-        }
+      const linkToDelete = links[index];
+      if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
+        await deleteImageFromStorage(linkToDelete.image);
+      }
       const url = await uploadLinkImage(file, finalUid);
       const updated = [...links];
       updated[index].image = url;
@@ -98,6 +98,8 @@ export default function LinkCards({ username, uid }: LogoProps) {
       bgColor: '#ffffff',
       textColor: '#000000',
       opacity: 1,
+      rounded: 'md',    // 기본값 설정
+      shadow: 'none'    // 기본값 설정
     };
     const updated = [...links, newLink];
     await saveLinks(updated);
@@ -116,23 +118,18 @@ export default function LinkCards({ username, uid }: LogoProps) {
   };
 
   const onDeleteLink = async (index: number) => {
-    // Add confirmation alert
     if (window.confirm('정말로 이 링크를 삭제하시겠습니까?')) {
-      const linkToDelete = links[index]; // Get the link object before it's removed from 'links' state
+      const linkToDelete = links[index];
 
       try {
-        // 1. Attempt to delete the image from Firebase Storage
         if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
-          // Only delete if it's a real uploaded image, not the default placeholder
           await deleteImageFromStorage(linkToDelete.image);
         }
 
-        // 2. Remove the link from Firestore and local state
         const updatedLinks = [...links];
         updatedLinks.splice(index, 1);
-        await saveLinks(updatedLinks); // This updates Firestore and setLinks state
+        await saveLinks(updatedLinks);
 
-        // 3. Adjust openSettingsIndex as before
         if (openSettingsIndex === index) {
           setOpenSettingsIndex(null);
         } else if (openSettingsIndex !== null && openSettingsIndex > index) {
@@ -140,11 +137,10 @@ export default function LinkCards({ username, uid }: LogoProps) {
         }
       } catch (error) {
         console.error('링크 삭제 중 오류 발생:', error);
-        alert('링크 삭제에 실패했습니다. 다시 시도해주세요.'); // User-friendly error message
+        alert('링크 삭제에 실패했습니다. 다시 시도해주세요.');
       }
     }
   };
-
 
   const moveLink = async (fromIndex: number, toIndex: number) => {
     if (toIndex < 0 || toIndex >= links.length) return;
@@ -152,7 +148,6 @@ export default function LinkCards({ username, uid }: LogoProps) {
     const [moved] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, moved);
     await saveLinks(updated);
-    // Adjust openSettingsIndex if the moved link was the one with open settings
     if (openSettingsIndex === fromIndex) {
       setOpenSettingsIndex(toIndex);
     }
@@ -160,165 +155,234 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   return (
     <div className='flex items-center justify-center w-full'>
-    <section className="space-y-4 pt-3 p-2 md:w-[1100px] w-full">
-      {links.map((link, index) => (
-       <div className='flex flex-col' key={index}> {/* Added key to the outer div */}
-        <div
-          className={cn("flex flex-row items-center p-2 rounded-2xl gap-6 transition-all shadow-sm" ,isEditable&&"flex flex-row")}
-           style={{
-        // Convert the background color to RGBA with the desired opacity
-            backgroundColor: link.bgColor ? `rgba(${parseInt(link.bgColor.slice(1, 3), 16)}, ${parseInt(link.bgColor.slice(3, 5), 16)}, ${parseInt(link.bgColor.slice(5, 7), 16)}, ${link.opacity ?? 1})` : `rgba(255, 255, 255, ${link.opacity ?? 1})`,
-            color: link.textColor || '#000000',
-      }}
-        >
-          {/* 이미지 업로드 input */}
-          <input
-            type="file"
-            accept="image/*"
-            ref={(el: HTMLInputElement | null) => {
-              fileInputRefs.current[index] = el;
-            }}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImageChange(index, file);
-            }}
-          />
-
-          {/* 이미지 */}
-      <Image
-            src={link.image}
-            width={50}
-            height={50}
-            alt="link"
-            className={cn(
-              'rounded-xl object-cover w-[50px] h-[50px]',
-              isEditable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
-            )}
-        onClick={() => isEditable && fileInputRefs.current[index]?.click()}
-        />
-
-          {/* 제목 링크 */}
-        <div className="flex-grow">
-          {isEditable ? (
-        <span className="text-[16px] font-semibold">{link.title}</span>
-          ) : (
-            <a
-              href={link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[16px] font-semibold hover:underline"
-              style={{ color: link.textColor || '#000000' }}
+      <section className="space-y-4 pt-3 p-2 md:w-[1100px] w-full">
+        {links.map((link, index) => (
+          <div className='flex flex-col' key={index}>
+            <div
+              className={cn(
+                "flex flex-row items-center justify-center p-2 gap-6 transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl", // 호버 애니메이션 추가
+                isEditable && "flex flex-row",
+                // 둥근 모서리 스타일
+                link.rounded === 'none' && 'rounded-none',
+                link.rounded === 'sm' && 'rounded',
+                link.rounded === 'md' && 'rounded-lg',
+                link.rounded === 'lg' && 'rounded-xl',
+                link.rounded === 'full' && 'rounded-full',
+                // 그림자 스타일
+                link.shadow === 'none' && 'shadow-none hover:shadow-xl',
+                link.shadow === 'sm' && 'shadow-sm hover:shadow-xl',
+                link.shadow === 'md' && 'shadow hover:shadow-xl',
+                link.shadow === 'lg' && 'shadow-lg hover:shadow-xl',
+                // 레트로 그림자 스타일 - 호버 시 그림자 크기 증가
+                link.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]',
+                link.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]',
+                link.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)] hover:shadow-[10px_10px_0px_0px_rgba(2,132,199,1)]',
+                link.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)] hover:shadow-[10px_10px_0px_0px_rgba(107,114,128,1)]',
+                link.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,1)]'
+              )}
+              style={{
+                backgroundColor: link.bgColor ? `rgba(${parseInt(link.bgColor.slice(1, 3), 16)}, ${parseInt(link.bgColor.slice(3, 5), 16)}, ${parseInt(link.bgColor.slice(5, 7), 16)}, ${link.opacity ?? 1})` : `rgba(255, 255, 255, ${link.opacity ?? 1})`,
+                color: link.textColor || '#000000',
+                ...(link.shadow?.includes('retro') && { 
+                  border: link.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                         link.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                         link.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                         '2px solid rgb(0 0 0)'
+                })
+              }}
             >
-              {link.title}
-            </a>
-          )}
-         </div>
-
-          {/* 편집/삭제/이동 버튼 */}
-          {isEditable && (
-            <div className="flex flex-wrap gap-1 ml-auto">
-              <Button
-                onClick={() => setOpenSettingsIndex(openSettingsIndex === index ? null : index)} // Toggle settings for this specific link
-                className='bg-white text-black' size="sm"
-              >
-                C
-              </Button>
-              <Button
-                onClick={() => handleEdit(index)}
-                className='bg-white text-black' size="sm"
-              >
-                ✎
-              </Button>
-              <Button
-                onClick={() => moveLink(index, index - 1)}
-                className='bg-white text-black' size="sm"
-              >
-                ↑
-              </Button>
-              <Button
-                onClick={() => moveLink(index, index + 1)}
-                className='bg-white text-black' size="sm"
-              >
-                ↓
-              </Button>
-              <Button
-                onClick={() => onDeleteLink(index)}
-                className='bg-white text-black' size="sm"
-              >
-                X
-              </Button>
-            </div>
-            
-          )}
-          </div>
-
-          {/* 색상 및 투명도 편집 */}    
-          {isEditable && openSettingsIndex === index && (
-            <div className='flex flex-col gap-2'>
-            <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
-              <label className="text-sm font-medium text-gray-500">배경색 :</label>
-              {COLOR_PALETTE.map((color) => (
-                <button
-                  key={color}
-                  className="w-5 h-5 rounded-full border"
-                  style={{ backgroundColor: color }}
-                  onClick={() => {
-                    const updated = [...links];
-                    updated[index].bgColor = color;
-                    saveLinks(updated);
-                  }}
-                />
-              ))}
-               <label className="text-sm font-medium ml-4 text-gray-500">투명도:</label>
               <input
-                type="range"
-                min={0.1}
-                max={1}
-                step={0.1}
-                value={link.opacity ?? 1}
-                onChange={(e) => {
-                  const updated = [...links];
-                  updated[index].opacity = parseFloat(e.target.value);
-                  saveLinks(updated);
+                type="file"
+                accept="image/*"
+                ref={(el: HTMLInputElement | null) => {
+                  if (fileInputRefs.current) {
+                    fileInputRefs.current[index] = el;
+                  }
                 }}
-                className="w-24"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageChange(index, file);
+                }}
               />
-              <span className="text-sm">{(link.opacity ?? 1).toFixed(1)}</span>
+
+              {/* 이미지 */}
+              <div className="flex-shrink-0">
+                <Image
+                  src={link.image}
+                  width={50}
+                  height={50}
+                  alt="link"
+                  className={cn(
+                    'rounded-xl object-cover w-[50px] h-[50px]',
+                    isEditable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
+                  )}
+                  onClick={() => isEditable && fileInputRefs.current[index]?.click()}
+                />
               </div>
 
-              <div className='w-full flex flex-wrap items-center gap-2 mt-2 ml-4'>
-              <label className="text-sm font-medium text-gray-500">텍스트색 :</label>
-              {COLOR_PALETTE.map((color) => (
-                <button
-                  key={color + '-text'}
-                  className="w-5 h-5 rounded-full border"
-                  style={{ backgroundColor: color }}
-                  onClick={() => {
-                    const updated = [...links];
-                    updated[index].textColor = color;
-                    saveLinks(updated);
-                  }}
-                />
-              ))}
-            </div>
-            </div>
-          )}
-        </div>
-      ))}
-      
+              {/* 제목 링크 - 중앙에서 살짝 왼쪽으로 */}
+              <div className="flex-grow text-center pr-12"> {/* padding-right 추가 */}
+                {isEditable ? (
+                  <span className="text-[16px] font-semibold">{link.title}</span>
+                ) : (
+                  <a
+                    href={link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[16px] font-semibold hover:underline"
+                    style={{ color: link.textColor || '#000000' }}
+                  >
+                    {link.title}
+                  </a>
+                )}
+              </div>
 
+              {/* 편집 버튼들 */}
+              {isEditable && (
+                <div className="flex flex-wrap gap-1 ml-auto">
+                  <Button
+                    onClick={() => setOpenSettingsIndex(openSettingsIndex === index ? null : index)}
+                    className='bg-white text-black' 
+                    size="sm"
+                  >
+                    C
+                  </Button>
+                  <Button
+                    onClick={() => handleEdit(index)}
+                    className='bg-white text-black'
+                    size="sm"
+                  >
+                    ✎
+                  </Button>
+                  <Button
+                    onClick={() => moveLink(index, index - 1)}
+                    className='bg-white text-black'
+                    size="sm"
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    onClick={() => moveLink(index, index + 1)}
+                    className='bg-white text-black'
+                    size="sm"
+                  >
+                    ↓
+                  </Button>
+                  <Button
+                    onClick={() => onDeleteLink(index)}
+                    className='bg-white text-black'
+                    size="sm"
+                  >
+                    X
+                  </Button>
+                </div>
+              )}
+            </div>
 
-      {/* 새 링크 추가 버튼 */}
-      {isEditable && (
-        <button
-          onClick={addNewLink}
-          className="w-full mt-4 p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 mb-3"
-        >
-          새 링크 추가
-        </button>
-      )}
-    </section>
+            {isEditable && openSettingsIndex === index && (
+              <div className='flex flex-col gap-2'>
+                <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
+                  <label className="text-sm font-medium text-gray-500">배경색 :</label>
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      className="w-5 h-5 rounded-full border"
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        const updated = [...links];
+                        updated[index].bgColor = color;
+                        saveLinks(updated);
+                      }}
+                    />
+                  ))}
+                  <label className="text-sm font-medium ml-4 text-gray-500">투명도:</label>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    value={link.opacity ?? 1}
+                    onChange={(e) => {
+                      const updated = [...links];
+                      updated[index].opacity = parseFloat(e.target.value);
+                      saveLinks(updated);
+                    }}
+                    className="w-24"
+                  />
+                  <span className="text-sm">{(link.opacity ?? 1).toFixed(1)}</span>
+                </div>
+
+                {/* 새로운 스타일 설정 추가 */}
+                <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
+                  <label className="text-sm font-medium text-gray-500">모서리:</label>
+                  <select
+                    value={link.rounded || 'md'}
+                    onChange={(e) => {
+                      const updated = [...links];
+                      updated[index].rounded = e.target.value as LinkItem['rounded'];
+                      saveLinks(updated);
+                    }}
+                    className="rounded border p-1"
+                  >
+                    <option value="none">각진</option>
+                    <option value="sm">약간 둥근</option>
+                    <option value="md">둥근</option>
+                    <option value="lg">많이 둥근</option>
+                    <option value="full">완전 둥근</option>
+                  </select>
+
+                  <label className="text-sm font-medium ml-4 text-gray-500">그림자:</label>
+                  <select
+                    value={link.shadow || 'none'}
+                    onChange={(e) => {
+                      const updated = [...links];
+                      updated[index].shadow = e.target.value as LinkItem['shadow'];
+                      saveLinks(updated);
+                    }}
+                    className="rounded border p-1"
+                  >
+                    <option value="none">없음</option>
+                    <option value="sm">약한</option>
+                    <option value="md">보통</option>
+                    <option value="lg">강한</option>
+                    <option value="retro">레트로</option>
+                    <option value="retro-black">레트로-블랙</option>
+                    <option value="retro-sky">레트로-하늘</option>
+                    <option value="retro-gray">레트로-회색</option>
+                    <option value="retro-white">레트로-하얀</option>
+                  </select>
+                </div>
+
+                <div className='w-full flex flex-wrap items-center gap-2 mt-2 ml-4'>
+                  <label className="text-sm font-medium text-gray-500">텍스트색 :</label>
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color + '-text'}
+                      className="w-5 h-5 rounded-full border"
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        const updated = [...links];
+                        updated[index].textColor = color;
+                        saveLinks(updated);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {isEditable && (
+          <button
+            onClick={addNewLink}
+            className="w-full mt-4 p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 mb-3"
+          >
+            새 링크 추가
+          </button>
+        )}
+      </section>
     </div>
   );
 }

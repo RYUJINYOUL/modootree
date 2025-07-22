@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 기본 함수
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 이미지 파일 검증
+    function isImageFile() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // 모든 경로에 대한 기본 규칙
+    match /{allPaths=**} {
+      allow read: if true;  // 모든 문서 읽기 허용
+      allow write: if isAuthenticated() && isImageFile();  // 로그인한 사용자만 이미지 업로드 가능
+    }
+  }
+} 

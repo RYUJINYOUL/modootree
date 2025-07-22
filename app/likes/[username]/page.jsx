@@ -698,6 +698,18 @@ export default function LikesPage() {
                         <span className="text-sm text-gray-400">
                           {selectedPost.viewCount || 0}
                         </span>
+                        {canDelete(selectedPost) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLike(selectedPost);
+                              setDeleteConfirmOpen(true);
+                            }}
+                            className="text-red-500 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </DialogHeader>

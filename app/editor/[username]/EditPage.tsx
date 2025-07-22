@@ -46,12 +46,16 @@ const TYPE_LABELS: Record<SiteType, string> = {
   etc: "기타"
 };
 
+interface AllowedUser {
+  email: string;
+}
+
 export default function EditPage({ username }: { username: string }) {
   const { currentUser } = useSelector((state: any) => state.user);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [ownerUid, setOwnerUid] = useState('');
-  const [allowedUsers, setAllowedUsers] = useState<string[]>([]);
+  const [allowedUsers, setAllowedUsers] = useState<AllowedUser[]>([]);
   const [newUsername, setNewUsername] = useState('');
   const [error, setError] = useState('');
   const [siteType, setSiteType] = useState<SiteType | null>(null);
@@ -129,7 +133,8 @@ export default function EditPage({ username }: { username: string }) {
       doc(db, 'users', ownerUid, 'settings', 'permissions'),
       (doc) => {
         if (doc.exists()) {
-          setAllowedUsers(doc.data().allowedUsers || []);
+          const data = doc.data();
+          setAllowedUsers(data.allowedUsers || []);
         }
       }
     );
@@ -187,11 +192,10 @@ export default function EditPage({ username }: { username: string }) {
     if (!newUsername.trim() || !ownerUid) return;
 
     try {
-      // username으로 사용자 찾기
-      const usernameDoc = await getDoc(doc(db, 'usernames', newUsername));
-
-      if (!usernameDoc.exists()) {
-        setError('존재하지 않는 사용자입니다.');
+      // 이메일 형식 검증
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newUsername)) {
+        setError('올바른 이메일 형식이 아닙니다.');
         return;
       }
 
@@ -199,18 +203,18 @@ export default function EditPage({ username }: { username: string }) {
       const permissionsRef = doc(db, 'users', ownerUid, 'settings', 'permissions');
       const permissionsDoc = await getDoc(permissionsRef);
       
-      let currentAllowedUsers = [];
+      let currentAllowedUsers: AllowedUser[] = [];
       if (permissionsDoc.exists()) {
         currentAllowedUsers = permissionsDoc.data().allowedUsers || [];
       }
 
-      if (currentAllowedUsers.includes(newUsername)) {
-        setError('이미 등록된 사용자입니다.');
+      if (currentAllowedUsers.some((user: AllowedUser) => user.email === newUsername)) {
+        setError('이미 등록된 이메일입니다.');
         return;
       }
 
       await setDoc(permissionsRef, {
-        allowedUsers: [...currentAllowedUsers, newUsername]
+        allowedUsers: [...currentAllowedUsers, { email: newUsername }]
       });
 
       setNewUsername('');
@@ -221,13 +225,13 @@ export default function EditPage({ username }: { username: string }) {
     }
   };
 
-  const handleRemoveUser = async (usernameToRemove: string) => {
+  const handleRemoveUser = async (emailToRemove: string) => {
     if (!ownerUid) return;
 
     try {
       const permissionsRef = doc(db, 'users', ownerUid, 'settings', 'permissions');
       await setDoc(permissionsRef, {
-        allowedUsers: allowedUsers.filter(username => username !== usernameToRemove)
+        allowedUsers: allowedUsers.filter(user => user.email !== emailToRemove)
       });
     } catch (error) {
       console.error('사용자 제거 실패:', error);
@@ -361,7 +365,7 @@ export default function EditPage({ username }: { username: string }) {
                 type="text"
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="사용자 아이디 입력"
+                placeholder="이메일 주소 입력"
                 className="flex-1 bg-blue-500/20 border-none text-white placeholder-white/50"
               />
               <Button
@@ -378,14 +382,14 @@ export default function EditPage({ username }: { username: string }) {
 
           {/* 허용된 사용자 목록 */}
           <div className="space-y-2">
-            {allowedUsers.map((username) => (
+            {allowedUsers.map((user: AllowedUser) => (
               <div
-                key={username}
+                key={user.email}
                 className="flex items-center justify-between p-3 bg-gray-100 rounded-lg"
               >
-                <span className="text-gray-700">{username}</span>
+                <span className="text-gray-700">{user.email}</span>
                 <Button
-                  onClick={() => handleRemoveUser(username)}
+                  onClick={() => handleRemoveUser(user.email)}
                   variant="ghost"
                   size="icon"
                   className="text-gray-500 hover:text-red-500 hover:bg-gray-200"

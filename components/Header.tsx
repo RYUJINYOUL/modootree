@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { db } from '@/firebase';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function Header() {
   const user = useSelector((state: any) => state.user);
@@ -17,6 +18,15 @@ export default function Header() {
   const [allowedSites, setAllowedSites] = useState<Array<{username: string}>>([]);
   const [myUsername, setMyUsername] = useState<string>('');
   const [isMobile, setIsMobile] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);  // 푸터 표시 상태
+  
+  // 메인페이지, 로그인, 회원가입 페이지에서는 푸터를 숨김
+  const isMainPage = pathname === '/';
+  const isAuthPage = pathname === '/login' || pathname === '/register';
+
+  if (isMainPage || isAuthPage) {
+    return null;
+  }
 
   useEffect(() => {
     const checkMobile = () => {

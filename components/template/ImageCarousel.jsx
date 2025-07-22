@@ -37,9 +37,15 @@ import {
 } from '@/components/ui/dialog';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { cn } from '@/lib/utils';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+const COLOR_PALETTE = [
+  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
+  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+];
 
 const ImageCarousel = ({ username, uid }) => {
   const pathname = usePathname();
@@ -64,6 +70,13 @@ const ImageCarousel = ({ username, uid }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [showColorSettings, setShowColorSettings] = useState(false);
+  const [styleSettings, setStyleSettings] = useState({
+    bgColor: '#60A5FA',
+    textColor: '#FFFFFF',
+    bgOpacity: 0.2,
+    shadow: 'none'  // 그림자 설정 추가
+  });
 
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
@@ -300,315 +313,511 @@ const ImageCarousel = ({ username, uid }) => {
     fetchCarouselTitle();
   }, [finalUid]);
 
-  return (
-    <div className="w-full max-w-[1100px] mx-auto p-4 space-y-4 mt-8 bg-blue-600/10 backdrop-blur-sm rounded-2xl shadow-lg">
-      {/* 상단 컨트롤 */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          {editingCarouselTitle ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={carouselTitle}
-                onChange={(e) => setCarouselTitle(e.target.value)}
-                className="text-xl font-semibold text-white bg-blue-600/40 backdrop-blur-sm rounded-xl px-3 py-2"
-                onBlur={handleCarouselTitleSave}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCarouselTitleSave();
-                  }
-                }}
-                autoFocus
-              />
-              <button
-                onClick={handleCarouselTitleSave}
-                className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all">
-                <h2 className="text-xl font-semibold">
-                  {carouselTitle}
-                </h2>
-              </div>
-              {canEdit && (
-                <button
-                  onClick={() => setEditingCarouselTitle(true)}
-                  className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all opacity-0 group-hover:opacity-100"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {canEdit && (
-            <>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload"
-              />
-              <label
-                htmlFor="image-upload"
-                className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all cursor-pointer"
-              >
-                <Plus className="w-5 h-5" />
-              </label>
-            </>
-          )}
-          <button
-            onClick={handlePrevious}
-            className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all"
-            disabled={images.length < 2}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleNext}
-            className="p-2 bg-blue-600/40 backdrop-blur-sm rounded-xl text-white hover:bg-blue-600/50 transition-all"
-            disabled={images.length < 2}
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+  // 스타일 설정 저장 함수
+  const saveStyleSettings = async (newSettings) => {
+    if (!finalUid) return;
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'settings', 'carousel'), newSettings, { merge: true });
+      setStyleSettings(newSettings);
+    } catch (error) {
+      console.error('스타일 설정 저장 실패:', error);
+    }
+  };
 
-      {/* 메인 캐러셀 */}
-      <div className="w-full mb-8">
-        {/* 모바일 뷰 - 한 장씩 */}
-        <div className="md:hidden w-full space-y-4">
-          {images.length > 0 ? (
-            <div className="space-y-4">
-              <div className="relative bg-blue-600/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3]">
-                <Image
-                  src={images[currentIndex]?.url}
-                  alt={images[currentIndex]?.caption || '이미지'}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                  onClick={() => handleImageClick(images[currentIndex])}
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                  <h3 className="text-lg font-semibold text-white">
-                    {images[currentIndex]?.title || '제목 없음'}
-                  </h3>
-                  <p className="text-sm text-white/80">
-                    {images[currentIndex]?.description || '설명 없음'}
-                  </p>
-                </div>
-                {canEdit && (
+  // 스타일 설정 불러오기
+  useEffect(() => {
+    const loadStyleSettings = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'settings', 'carousel');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setStyleSettings(docSnap.data());
+        }
+      } catch (error) {
+        console.error('스타일 설정 불러오기 실패:', error);
+      }
+    };
+    loadStyleSettings();
+  }, [finalUid]);
+
+  const renderColorSettings = () => {
+    if (!pathname?.startsWith('/editor')) return null;
+
+    const SHADOW_OPTIONS = [
+      { value: 'none', label: '없음' },
+      { value: 'sm', label: '약하게' },
+      { value: 'md', label: '보통' },
+      { value: 'lg', label: '강하게' },
+      { value: 'retro', label: '레트로' },
+      { value: 'retro-black', label: '레트로-블랙' },
+      { value: 'retro-sky', label: '레트로-하늘' },
+      { value: 'retro-gray', label: '레트로-회색' },
+      { value: 'retro-white', label: '레트로-하얀' },
+    ];
+
+    return (
+      <div className="w-full max-w-[1100px] mb-4">
+        <button
+          onClick={() => setShowColorSettings(!showColorSettings)}
+          className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
+          캐러셀 스타일 설정 {showColorSettings ? '닫기' : '열기'}
+        </button>
+
+        {showColorSettings && (
+          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
+            <div>
+              <label className="text-white text-sm mb-2 block">배경색</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
                   <button
-                    onClick={() => handleDelete(images[currentIndex])}
-                    className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
+                    key={`bg-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="relative bg-blue-600/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3]">
-              <div className="absolute inset-0 flex items-center justify-center text-white/60">
-                이미지를 추가해주세요
+
+            <div>
+              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className="w-8 h-8 rounded-full border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
               </div>
             </div>
-          )}
-        </div>
 
-        {/* 데스크톱 뷰 - 3장씩 */}
-        <div className="hidden md:grid md:grid-cols-3 gap-4">
-          {[0, 1, 2].map((offset) => {
-            const imageIndex = (currentIndex + offset) % images.length;
-            const image = images[imageIndex];
-            
-            return (
-              <div key={offset} className="relative bg-blue-600/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg aspect-[4/3] group">
-                {image ? (
-                  <>
-                    <Image
-                      src={image.url}
-                      alt={image.caption || '이미지'}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover cursor-pointer"
-                      onClick={() => handleImageClick(image)}
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                      <h3 className="text-sm font-semibold text-white truncate">
-                        {image.title || '제목 없음'}
-                      </h3>
-                      <p className="text-xs text-white/80 line-clamp-2">
-                        {image.description || '설명 없음'}
-                      </p>
-                    </div>
-                    {canEdit && (
-                      <button
-                        onClick={() => handleDelete(image)}
-                        className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-white/60">
-                    이미지를 추가해주세요
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 크롭 모달 */}
-      {isCropping && (
-        <Dialog open={isCropping} onOpenChange={setIsCropping}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>이미지 자르기</DialogTitle>
-            </DialogHeader>
-            <div className="mt-4">
-              <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                onComplete={(c) => setCompletedCrop(c)}
-                aspect={4/3}
-              >
-                <img
-                  ref={imgRef}
-                  src={previewUrl}
-                  alt="크롭할 이미지"
-                  style={{ maxWidth: '100%' }}
-                />
-              </ReactCrop>
-              <canvas
-                ref={previewCanvasRef}
-                style={{ display: 'none' }}
+            <div>
+              <label className="text-white text-sm mb-2 block">배경 투명도</label>
+              <input
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                value={styleSettings.bgOpacity ?? 0.2}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                className="w-full"
               />
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCropping(false);
-                    setSelectedFile(null);
-                    setPreviewUrl(null);
-                  }}
-                >
-                  취소
-                </Button>
-                <Button
-                  onClick={handleCropComplete}
-                  disabled={!completedCrop || uploading}
-                >
-                  {uploading ? '업로드 중...' : '확인'}
-                </Button>
-              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
 
-      {/* 이미지 상세 모달 */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>이미지 상세</DialogTitle>
-          </DialogHeader>
-          {selectedImage && (
-            <div className="space-y-4">
-              <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
-                <Image
-                  src={selectedImage.url}
-                  alt={selectedImage.caption || '이미지'}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              {canEdit ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full p-2 rounded border"
-                      placeholder="대표 문구를 입력하세요"
-                    />
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full p-2 rounded border"
-                      placeholder="설명을 입력하세요"
-                      rows={3}
-                    />
-                    <input
-                      type="url"
-                      value={link}
-                      onChange={(e) => setLink(e.target.value)}
-                      className="w-full p-2 rounded border"
-                      placeholder="링크를 입력하세요"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button onClick={handleCaptionSave}>저장</Button>
-                  </div>
+            <div>
+              <label className="text-white text-sm mb-2 block">그림자 효과</label>
+              <select
+                value={styleSettings.shadow}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
+              >
+                {SHADOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full flex flex-col items-center justify-center px-2">
+      <div className="w-full max-w-[1100px] mx-auto space-y-4 mt-8">
+        {renderColorSettings()}
+        <div 
+          className={cn(
+            "w-full p-6 space-y-6 rounded-2xl backdrop-blur-sm mt-8",
+            styleSettings.shadow === 'none' && 'shadow-none',
+            styleSettings.shadow === 'sm' && 'shadow-sm',
+            styleSettings.shadow === 'md' && 'shadow',
+            styleSettings.shadow === 'lg' && 'shadow-lg',
+            styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+            styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+            styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
+            styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
+            styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+          )}
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor,
+            ...(styleSettings.shadow?.includes('retro') && { 
+              border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
+                      styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
+                      styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
+                      '2px solid rgb(0 0 0)'
+            })
+          }}
+        >
+          {/* 상단 컨트롤 */}
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-3">
+              {editingCarouselTitle ? (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={carouselTitle}
+                    onChange={(e) => setCarouselTitle(e.target.value)}
+                    className="text-xl font-semibold rounded-xl px-4 py-2"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                    onBlur={handleCarouselTitleSave}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCarouselTitleSave();
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCarouselTitleSave}
+                    className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">{selectedImage.title || '제목 없음'}</h3>
-                  <p className="text-sm text-gray-600">{selectedImage.description || '설명 없음'}</p>
-                  {selectedImage.link && (
-                    <a
-                      href={selectedImage.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:text-blue-600"
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="px-4 py-2 rounded-xl hover:bg-opacity-30 transition-all"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                  >
+                    <h2 className="text-xl font-semibold">
+                      {carouselTitle}
+                    </h2>
+                  </div>
+                  {canEdit && (
+                    <button
+                      onClick={() => setEditingCarouselTitle(true)}
+                      className="p-2 rounded-xl hover:bg-opacity-30 transition-all opacity-0 group-hover:opacity-100"
+                      style={{ 
+                        backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                        color: styleSettings.textColor 
+                      }}
                     >
-                      자세히 보기
-                    </a>
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            <div className="flex items-center gap-3">
+              {canEdit && (
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="p-2 rounded-xl hover:bg-opacity-30 transition-all cursor-pointer"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                  >
+                    <Plus className="w-5 h-5" />
+                  </label>
+                </>
+              )}
+              <button
+                onClick={handlePrevious}
+                className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
+                style={{ 
+                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                  color: styleSettings.textColor 
+                }}
+                disabled={images.length < 2}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleNext}
+                className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
+                style={{ 
+                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                  color: styleSettings.textColor 
+                }}
+                disabled={images.length < 2}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
 
-      {/* 저장 확인 다이얼로그 */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent 
-          className="sm:max-w-[425px]"
-          aria-describedby="save-dialog-description"
-        >
-          <DialogHeader>
-            <DialogTitle>이미지 설명 저장</DialogTitle>
-            <DialogDescription id="save-dialog-description">
-              변경된 이미지 설명을 저장하시겠습니까?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setSaveDialogOpen(false)}
+          {/* 메인 캐러셀 */}
+          <div className="w-full mb-8">
+            {/* 모바일 뷰 - 한 장씩 */}
+            <div className="md:hidden w-full space-y-6">
+              {images.length > 0 ? (
+                <div className="space-y-6">
+                  <div 
+                    className="relative rounded-xl overflow-hidden shadow-lg aspect-[4/3]"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                  >
+                    <Image
+                      src={images[currentIndex]?.url}
+                      alt={images[currentIndex]?.caption || '이미지'}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover"
+                      onClick={() => handleImageClick(images[currentIndex])}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                      <h3 className="text-lg font-semibold text-white">
+                        {images[currentIndex]?.title || '제목 없음'}
+                      </h3>
+                      <p className="text-sm text-white/80">
+                        {images[currentIndex]?.description || '설명 없음'}
+                      </p>
+                    </div>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleDelete(images[currentIndex])}
+                        className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div 
+                  className="relative rounded-xl overflow-hidden shadow-lg aspect-[4/3]"
+                  style={{ 
+                    backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                    color: styleSettings.textColor 
+                  }}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                    이미지를 추가해주세요
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 데스크톱 뷰 - 3장씩 */}
+            <div className="hidden md:grid md:grid-cols-3 gap-6">
+              {[0, 1, 2].map((offset) => {
+                const imageIndex = (currentIndex + offset) % images.length;
+                const image = images[imageIndex];
+                
+                return (
+                  <div 
+                    key={offset} 
+                    className="relative rounded-xl overflow-hidden shadow-lg aspect-[4/3] group"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                  >
+                    {image ? (
+                      <>
+                        <Image
+                          src={image.url}
+                          alt={image.caption || '이미지'}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover cursor-pointer"
+                          onClick={() => handleImageClick(image)}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                          <h3 className="text-sm font-semibold text-white truncate">
+                            {image.title || '제목 없음'}
+                          </h3>
+                          <p className="text-xs text-white/80 line-clamp-2">
+                            {image.description || '설명 없음'}
+                          </p>
+                        </div>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleDelete(image)}
+                            className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                        이미지를 추가해주세요
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 크롭 모달 */}
+          {isCropping && (
+            <Dialog open={isCropping} onOpenChange={setIsCropping}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>이미지 자르기</DialogTitle>
+                </DialogHeader>
+                <div className="mt-4">
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(c) => setCrop(c)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={4/3}
+                  >
+                    <img
+                      ref={imgRef}
+                      src={previewUrl}
+                      alt="크롭할 이미지"
+                      style={{ maxWidth: '100%' }}
+                    />
+                  </ReactCrop>
+                  <canvas
+                    ref={previewCanvasRef}
+                    style={{ display: 'none' }}
+                  />
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsCropping(false);
+                        setSelectedFile(null);
+                        setPreviewUrl(null);
+                      }}
+                    >
+                      취소
+                    </Button>
+                    <Button
+                      onClick={handleCropComplete}
+                      disabled={!completedCrop || uploading}
+                    >
+                      {uploading ? '업로드 중...' : '확인'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* 이미지 상세 모달 */}
+          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+            <DialogContent className="max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>이미지 상세</DialogTitle>
+              </DialogHeader>
+              {selectedImage && (
+                <div className="space-y-4">
+                  <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                    <Image
+                      src={selectedImage.url}
+                      alt={selectedImage.caption || '이미지'}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  {canEdit ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          className="w-full p-2 rounded border"
+                          placeholder="대표 문구를 입력하세요"
+                        />
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          className="w-full p-2 rounded border"
+                          placeholder="설명을 입력하세요"
+                          rows={3}
+                        />
+                        <input
+                          type="url"
+                          value={link}
+                          onChange={(e) => setLink(e.target.value)}
+                          className="w-full p-2 rounded border"
+                          placeholder="링크를 입력하세요"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button onClick={handleCaptionSave}>저장</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">{selectedImage.title || '제목 없음'}</h3>
+                      <p className="text-sm text-gray-600">{selectedImage.description || '설명 없음'}</p>
+                      {selectedImage.link && (
+                        <a
+                          href={selectedImage.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-500 hover:text-blue-600"
+                        >
+                          자세히 보기
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* 저장 확인 다이얼로그 */}
+          <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+            <DialogContent 
+              className="sm:max-w-[425px]"
+              aria-describedby="save-dialog-description"
             >
-              취소
-            </Button>
-            <Button
-              onClick={confirmSave}
-            >
-              저장
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogHeader>
+                <DialogTitle>이미지 설명 저장</DialogTitle>
+                <DialogDescription id="save-dialog-description">
+                  변경된 이미지 설명을 저장하시겠습니까?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSaveDialogOpen(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={confirmSave}
+                >
+                  저장
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
     </div>
   );
 };
