@@ -232,14 +232,7 @@ export async function POST(request: Request) {
         email: kakaoUserInfo.email,
         emailVerified: true,
         photoURL: kakaoUserInfo.profile_image || null,
-        displayName: userData.kakao_account?.profile?.nickname || null,
-        providerData: [{
-          providerId: 'kakao',
-          uid: String(userData.id),
-          displayName: userData.kakao_account?.profile?.nickname || null,
-          email: kakaoUserInfo.email,
-          photoURL: kakaoUserInfo.profile_image || null,
-        }]
+        displayName: userData.kakao_account?.profile?.nickname || null
       });
 
       // Custom Token 생성
@@ -261,7 +254,7 @@ export async function POST(request: Request) {
       return new NextResponse(
         JSON.stringify({ 
           error: '사용자 생성 실패',
-          details: error?.message || 'Firebase 사용자 생성 중 오류가 발생했습니다.'
+          details: (error as Error)?.message || 'Firebase 사용자 생성 중 오류가 발생했습니다.'
         }), 
         { 
           status: 500,
