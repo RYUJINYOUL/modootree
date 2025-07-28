@@ -19,7 +19,9 @@ interface LinkItem {
   textColor?: string;
   opacity?: number;
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';  // 둥근 모서리 옵션 추가
-  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'retro' | 'retro-black' | 'retro-sky' | 'retro-gray' | 'retro-white';           // 그림자 옵션 추가
+  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'retro' | 'float' | 'glow' | 'inner' | 'sharp' | 'soft' | 'stripe' | 'cross' | 'diagonal';           // 그림자 옵션 추가
+  shadowColor?: string;  // 그림자 색상 추가
+  shadowOpacity?: number;  // 그림자 투명도 추가
 }
 
 type LogoProps = {
@@ -99,7 +101,9 @@ export default function LinkCards({ username, uid }: LogoProps) {
       textColor: '#000000',
       opacity: 1,
       rounded: 'md',    // 기본값 설정
-      shadow: 'none'    // 기본값 설정
+      shadow: 'none',    // 기본값 설정
+      shadowColor: '#000000',  // 기본 그림자 색상
+      shadowOpacity: 0.2,  // 기본 그림자 투명도
     };
     const updated = [...links, newLink];
     await saveLinks(updated);
@@ -160,7 +164,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
           <div className='flex flex-col' key={index}>
             <div
               className={cn(
-                "flex flex-row items-center justify-center p-2 gap-6 transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl", // 호버 애니메이션 추가
+                "flex flex-row items-center justify-center p-2 gap-6 transition-all duration-300 ease-in-out hover:-translate-y-1",
                 isEditable && "flex flex-row",
                 // 둥근 모서리 스타일
                 link.rounded === 'none' && 'rounded-none',
@@ -168,27 +172,49 @@ export default function LinkCards({ username, uid }: LogoProps) {
                 link.rounded === 'md' && 'rounded-lg',
                 link.rounded === 'lg' && 'rounded-xl',
                 link.rounded === 'full' && 'rounded-full',
-                // 그림자 스타일
-                link.shadow === 'none' && 'shadow-none hover:shadow-xl',
-                link.shadow === 'sm' && 'shadow-sm hover:shadow-xl',
-                link.shadow === 'md' && 'shadow hover:shadow-xl',
-                link.shadow === 'lg' && 'shadow-lg hover:shadow-xl',
-                // 레트로 그림자 스타일 - 호버 시 그림자 크기 증가
-                link.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]',
-                link.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]',
-                link.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)] hover:shadow-[10px_10px_0px_0px_rgba(2,132,199,1)]',
-                link.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)] hover:shadow-[10px_10px_0px_0px_rgba(107,114,128,1)]',
-                link.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:shadow-[10px_10px_0px_0px_rgba(255,255,255,1)]'
               )}
               style={{
                 backgroundColor: link.bgColor ? `rgba(${parseInt(link.bgColor.slice(1, 3), 16)}, ${parseInt(link.bgColor.slice(3, 5), 16)}, ${parseInt(link.bgColor.slice(5, 7), 16)}, ${link.opacity ?? 1})` : `rgba(255, 255, 255, ${link.opacity ?? 1})`,
                 color: link.textColor || '#000000',
-                ...(link.shadow?.includes('retro') && { 
-                  border: link.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                         link.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                         link.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                         '2px solid rgb(0 0 0)'
-                })
+                boxShadow: (() => {
+                  const shadowColor = link.shadowColor 
+                    ? `rgba(${parseInt(link.shadowColor.slice(1, 3), 16)}, ${parseInt(link.shadowColor.slice(3, 5), 16)}, ${parseInt(link.shadowColor.slice(5, 7), 16)}, ${link.shadowOpacity ?? 0.2})`
+                    : 'rgba(0, 0, 0, 0.2)';
+                  
+                  switch (link.shadow) {
+                    case 'none':
+                      return 'none';
+                    case 'sm':
+                      return `0 1px 2px ${shadowColor}`;
+                    case 'md':
+                      return `0 4px 6px ${shadowColor}`;
+                    case 'lg':
+                      return `0 10px 15px ${shadowColor}`;
+                    case 'retro':
+                      return `8px 8px 0px 0px ${shadowColor}`;
+                    case 'float':
+                      return `0 10px 20px -5px ${shadowColor}`;
+                    case 'glow':
+                      return `0 0 20px ${shadowColor}`;
+                    case 'inner':
+                      return `inset 0 2px 4px ${shadowColor}`;
+                    case 'sharp':
+                      return `-10px 10px 0px ${shadowColor}`;
+                    case 'soft':
+                      return `0 5px 15px ${shadowColor}`;
+                    case 'stripe':
+                      return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+                    case 'cross':
+                      return `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+                    case 'diagonal':
+                      return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+                    default:
+                      return 'none';
+                  }
+                })(),
+                borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(link.shadow || '') ? link.shadowColor || '#000000' : undefined,
+                borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(link.shadow || '') ? '2px' : undefined,
+                borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(link.shadow || '') ? 'solid' : undefined,
               }}
             >
               <input
@@ -281,93 +307,162 @@ export default function LinkCards({ username, uid }: LogoProps) {
             </div>
 
             {isEditable && openSettingsIndex === index && (
-              <div className='flex flex-col gap-2'>
-                <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
-                  <label className="text-sm font-medium text-gray-500">배경색 :</label>
-                  {COLOR_PALETTE.map((color) => (
-                    <button
-                      key={color}
-                      className="w-5 h-5 rounded-full border"
-                      style={{ backgroundColor: color }}
-                      onClick={() => {
+              <div className='flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 mt-2 shadow-lg border border-gray-700'>
+                {/* 1. 배경색 설정 */}
+                <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-100 w-24">배경색</span>
+                    <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                      {COLOR_PALETTE.map((color) => (
+                        <button
+                          key={color}
+                          className={cn(
+                            "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                            link.bgColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                          )}
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            const updated = [...links];
+                            updated[index].bgColor = color;
+                            saveLinks(updated);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={link.opacity ?? 1}
+                      onChange={(e) => {
                         const updated = [...links];
-                        updated[index].bgColor = color;
+                        updated[index].opacity = parseFloat(e.target.value);
                         saveLinks(updated);
                       }}
+                      className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                     />
-                  ))}
-                  <label className="text-sm font-medium ml-4 text-gray-500">투명도:</label>
-                  <input
-                    type="range"
-                    min={0.1}
-                    max={1}
-                    step={0.1}
-                    value={link.opacity ?? 1}
-                    onChange={(e) => {
-                      const updated = [...links];
-                      updated[index].opacity = parseFloat(e.target.value);
-                      saveLinks(updated);
-                    }}
-                    className="w-24"
-                  />
-                  <span className="text-sm">{(link.opacity ?? 1).toFixed(1)}</span>
+                    <span className="text-sm text-gray-100 w-12 text-right">
+                      {(link.opacity ?? 1).toFixed(1)}
+                    </span>
+                  </div>
                 </div>
 
-                {/* 새로운 스타일 설정 추가 */}
-                <div className="w-full flex flex-wrap items-center gap-2 mt-2 ml-4">
-                  <label className="text-sm font-medium text-gray-500">모서리:</label>
-                  <select
-                    value={link.rounded || 'md'}
-                    onChange={(e) => {
-                      const updated = [...links];
-                      updated[index].rounded = e.target.value as LinkItem['rounded'];
-                      saveLinks(updated);
-                    }}
-                    className="rounded border p-1"
-                  >
-                    <option value="none">각진</option>
-                    <option value="sm">약간 둥근</option>
-                    <option value="md">둥근</option>
-                    <option value="lg">많이 둥근</option>
-                    <option value="full">완전 둥근</option>
-                  </select>
-
-                  <label className="text-sm font-medium ml-4 text-gray-500">그림자:</label>
-                  <select
-                    value={link.shadow || 'none'}
-                    onChange={(e) => {
-                      const updated = [...links];
-                      updated[index].shadow = e.target.value as LinkItem['shadow'];
-                      saveLinks(updated);
-                    }}
-                    className="rounded border p-1"
-                  >
-                    <option value="none">없음</option>
-                    <option value="sm">약한</option>
-                    <option value="md">보통</option>
-                    <option value="lg">강한</option>
-                    <option value="retro">레트로</option>
-                    <option value="retro-black">레트로-블랙</option>
-                    <option value="retro-sky">레트로-하늘</option>
-                    <option value="retro-gray">레트로-회색</option>
-                    <option value="retro-white">레트로-하얀</option>
-                  </select>
+                {/* 2. 텍스트 색상 설정 */}
+                <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+                  <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
+                  <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                    {COLOR_PALETTE.map((color) => (
+                      <button
+                        key={color + '-text'}
+                        className={cn(
+                          "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                          link.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                        )}
+                        style={{ backgroundColor: color }}
+                        onClick={() => {
+                          const updated = [...links];
+                          updated[index].textColor = color;
+                          saveLinks(updated);
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
 
-                <div className='w-full flex flex-wrap items-center gap-2 mt-2 ml-4'>
-                  <label className="text-sm font-medium text-gray-500">텍스트색 :</label>
-                  {COLOR_PALETTE.map((color) => (
-                    <button
-                      key={color + '-text'}
-                      className="w-5 h-5 rounded-full border"
-                      style={{ backgroundColor: color }}
-                      onClick={() => {
+                {/* 3. 그림자 색상 설정 */}
+                <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                    <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                      {COLOR_PALETTE.map((color) => (
+                        <button
+                          key={color + '-shadow'}
+                          className={cn(
+                            "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                            link.shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                          )}
+                          style={{ backgroundColor: color }}
+                          onClick={() => {
+                            const updated = [...links];
+                            updated[index].shadowColor = color;
+                            saveLinks(updated);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={link.shadowOpacity ?? 0.2}
+                      onChange={(e) => {
                         const updated = [...links];
-                        updated[index].textColor = color;
+                        updated[index].shadowOpacity = parseFloat(e.target.value);
                         saveLinks(updated);
                       }}
+                      className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                     />
-                  ))}
+                    <span className="text-sm text-gray-100 w-12 text-right">
+                      {(link.shadowOpacity ?? 0.2).toFixed(1)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. 모서리와 그림자 스타일 설정 */}
+                <div className="flex flex-col gap-4 bg-gray-700/50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-100 w-24">모서리</span>
+                    <select
+                      value={link.rounded || 'md'}
+                      onChange={(e) => {
+                        const updated = [...links];
+                        updated[index].rounded = e.target.value as LinkItem['rounded'];
+                        saveLinks(updated);
+                      }}
+                      className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                    >
+                      <option value="none">각진</option>
+                      <option value="sm">약간 둥근</option>
+                      <option value="md">둥근</option>
+                      <option value="lg">많이 둥근</option>
+                      <option value="full">완전 둥근</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                    <select
+                      value={link.shadow || 'none'}
+                      onChange={(e) => {
+                        const updated = [...links];
+                        updated[index].shadow = e.target.value as LinkItem['shadow'];
+                        saveLinks(updated);
+                      }}
+                      className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                    >
+                      <option value="none">없음</option>
+                      <option value="sm">약한</option>
+                      <option value="md">보통</option>
+                      <option value="lg">강한</option>
+                      <option value="retro">레트로</option>
+                      <option value="float">플로팅</option>
+                      <option value="glow">글로우</option>
+                      <option value="inner">이너</option>
+                      <option value="sharp">샤프</option>
+                      <option value="soft">소프트</option>
+                      <option value="stripe">스트라이프</option>
+                      <option value="cross">크로스</option>
+                      <option value="diagonal">대각선</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}

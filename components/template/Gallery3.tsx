@@ -33,7 +33,10 @@ interface GallerySettings {
   bgColor: string;
   bgOpacity: number;
   textColor: string;
-  shadow: string;  // 그림자 효과 추가
+  shadow: string;
+  shadowColor: string;
+  shadowOpacity: number;
+  rounded: string;
 }
 
 const COLOR_PALETTE = [
@@ -47,7 +50,10 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const [cropType, setCropType] = useState<'logo' | 'background' | null>(null);
   const [isUploading, setIsUploading] = useState(false); // 업로드 상태 추가
   const [showProfileModal, setShowProfileModal] = useState(false); // 프로필 팝업 상태 추가
-  const [shadow, setShadow] = useState("none");  // 그림자 효과 상태 추가
+  const [shadow, setShadow] = useState("none");
+  const [shadowColor, setShadowColor] = useState("#000000");
+  const [shadowOpacity, setShadowOpacity] = useState(0.2);
+  const [rounded, setRounded] = useState("md");
 
   const pathname = usePathname();
   const isEditable = pathname?.startsWith("/editor") ?? false;
@@ -106,7 +112,10 @@ function Gallery3 ({ username, uid }: LogoProps) {
         if (data.bgColor) setBgBaseColor(data.bgColor);
         if (data.bgOpacity) setBgOpacity(parseFloat(data.bgOpacity));
         if (data.textColor) setTextColor(data.textColor);
-        if (data.shadow) setShadow(data.shadow);  // 그림자 효과 불러오기
+        if (data.shadow) setShadow(data.shadow);
+        if (data.shadowColor) setShadowColor(data.shadowColor);
+        if (data.shadowOpacity) setShadowOpacity(parseFloat(data.shadowOpacity));
+        if (data.rounded) setRounded(data.rounded);
       }
     };
     fetchData();
@@ -256,36 +265,62 @@ function Gallery3 ({ username, uid }: LogoProps) {
     }
   };
 
-  const handleShadowSelect = async (value: string) => {
-    if (!isEditable) return;
-    setShadow(value);
-    await saveToFirestore({ shadow: value });
+  // 그림자 스타일 계산 함수
+  const getShadowStyle = () => {
+    const shadowColorRgba = shadowColor 
+      ? `rgba(${parseInt(shadowColor.slice(1, 3), 16)}, ${parseInt(shadowColor.slice(3, 5), 16)}, ${parseInt(shadowColor.slice(5, 7), 16)}, ${shadowOpacity})`
+      : 'rgba(0, 0, 0, 0.2)';
+    
+    switch (shadow) {
+      case 'none':
+        return 'none';
+      case 'sm':
+        return `0 1px 2px ${shadowColorRgba}`;
+      case 'md':
+        return `0 4px 6px ${shadowColorRgba}`;
+      case 'lg':
+        return `0 10px 15px ${shadowColorRgba}`;
+      case 'retro':
+        return `8px 8px 0px 0px ${shadowColorRgba}`;
+      case 'float':
+        return `0 10px 20px -5px ${shadowColorRgba}`;
+      case 'glow':
+        return `0 0 20px ${shadowColorRgba}`;
+      case 'inner':
+        return `inset 0 2px 4px ${shadowColorRgba}`;
+      case 'sharp':
+        return `-10px 10px 0px ${shadowColorRgba}`;
+      case 'soft':
+        return `0 5px 15px ${shadowColorRgba}`;
+      case 'stripe':
+        return `4px 4px 0 ${shadowColorRgba}, 8px 8px 0 ${shadowColorRgba}, 12px 12px 0 ${shadowColorRgba}`;
+      case 'cross':
+        return `4px 4px 0 ${shadowColorRgba}, -4px -4px 0 ${shadowColorRgba}, 4px -4px 0 ${shadowColorRgba}, -4px 4px 0 ${shadowColorRgba}`;
+      case 'diagonal':
+        return `4px 4px 0 ${shadowColorRgba}, 8px 8px 0 ${shadowColorRgba}, 12px 12px 0 ${shadowColorRgba}, -4px -4px 0 ${shadowColorRgba}, -8px -8px 0 ${shadowColorRgba}, -12px -12px 0 ${shadowColorRgba}`;
+      default:
+        return 'none';
+    }
   };
 
   return (
     <div className="flex items-center justify-center w-full p-[10px]">
       <div 
         className={cn(
-          "relative w-full md:w-[1000px] overflow-hidden rounded-xl",
-          shadow === 'none' && 'shadow-none',
-          shadow === 'sm' && 'shadow-sm',
-          shadow === 'md' && 'shadow',
-          shadow === 'lg' && 'shadow-lg',
-          shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-          shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-          shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-          shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-          shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+          "relative w-full md:w-[1000px] overflow-hidden",
+          rounded === 'none' && 'rounded-none',
+          rounded === 'sm' && 'rounded',
+          rounded === 'md' && 'rounded-lg',
+          rounded === 'lg' && 'rounded-xl',
+          rounded === 'full' && 'rounded-full',
         )}
         style={{ 
           backgroundColor: computedBgColor, 
           minHeight: "300px",
-          ...(shadow?.includes('retro') && { 
-            border: shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                    shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                    shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                    '2px solid rgb(0 0 0)'
-          })
+          boxShadow: getShadowStyle(),
+          borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(shadow) ? shadowColor : undefined,
+          borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(shadow) ? '2px' : undefined,
+          borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(shadow) ? 'solid' : undefined,
         }}
       >
         <input type="file" accept="image/*" className="hidden" ref={bgInputRef} onChange={(e) => handleFileChange(e, "background")} />
@@ -372,44 +407,120 @@ function Gallery3 ({ username, uid }: LogoProps) {
                   텍스트색 {showTextColors ? "닫기" : "열기"}
                 </button>
                 {showTextColors && (
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex gap-2 flex-wrap mt-2 justify-end w-[120px]">
-                      {COLOR_PALETTE.map((color) => (
-                        <button
-                          key={`text-${color}`}
-                          onClick={() => handleColorSelect("textColor", color)}
-                          className="w-6 h-6 rounded-full border border-gray-300"
-                          style={{
-                            backgroundColor: color === "transparent" ? "white" : color,
-                            backgroundImage:
-                              color === "transparent"
-                                ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
-                                : undefined,
-                            backgroundSize: "8px 8px",
-                            backgroundPosition: "0 0, 4px 4px",
-                          }}
-                          title={color === "transparent" ? "투명" : color}
-                        />
-                      ))}
+                  <div className="fixed right-4 top-20 flex flex-col gap-4 w-[280px] bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700 max-h-[calc(100vh-120px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                    {/* 1. 텍스트 색상 설정 */}
+                    <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-100 w-20 flex-shrink-0">텍스트</span>
+                        <div className="flex flex-wrap gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={`text-${color}`}
+                              onClick={() => handleColorSelect("textColor", color)}
+                              className={cn(
+                                "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                                textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                              )}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    {/* 그림자 효과 설정 추가 */}
-                    <div className="mt-2 w-full">
-                      <label className="text-xs text-white">그림자 효과</label>
-                      <select
-                        value={shadow}
-                        onChange={(e) => handleShadowSelect(e.target.value)}
-                        className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 mt-1"
-                      >
-                        <option value="none">없음</option>
-                        <option value="sm">약하게</option>
-                        <option value="md">보통</option>
-                        <option value="lg">강하게</option>
-                        <option value="retro">레트로</option>
-                        <option value="retro-black">레트로-블랙</option>
-                        <option value="retro-sky">레트로-하늘</option>
-                        <option value="retro-gray">레트로-회색</option>
-                        <option value="retro-white">레트로-하얀</option>
-                      </select>
+
+                    {/* 2. 그림자 색상 설정 */}
+                    <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-100 w-20 flex-shrink-0">그림자</span>
+                        <div className="flex flex-wrap gap-1">
+                          {COLOR_PALETTE.map((color) => (
+                            <button
+                              key={`shadow-${color}`}
+                              onClick={async () => {
+                                setShadowColor(color);
+                                await saveToFirestore({ shadowColor: color });
+                              }}
+                              className={cn(
+                                "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                                shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                              )}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-100 w-20 flex-shrink-0">투명도</span>
+                        <input
+                          type="range"
+                          min={0.1}
+                          max={1}
+                          step={0.1}
+                          value={shadowOpacity}
+                          onChange={async (e) => {
+                            const value = parseFloat(e.target.value);
+                            setShadowOpacity(value);
+                            await saveToFirestore({ shadowOpacity: value });
+                          }}
+                          className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-sm text-gray-100 w-10 text-right">
+                          {shadowOpacity.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 3. 모서리와 그림자 스타일 설정 */}
+                    <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-100 w-20 flex-shrink-0">모서리</span>
+                        <select
+                          value={rounded}
+                          onChange={async (e) => {
+                            setRounded(e.target.value);
+                            await saveToFirestore({ rounded: e.target.value });
+                          }}
+                          className="flex-1 px-2 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="none">각진</option>
+                          <option value="sm">약간 둥근</option>
+                          <option value="md">둥근</option>
+                          <option value="lg">많이 둥근</option>
+                          <option value="full">완전 둥근</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-100 w-20 flex-shrink-0">효과</span>
+                        <select
+                          value={shadow}
+                          onChange={async (e) => {
+                            const newShadow = e.target.value;
+                            setShadow(newShadow);
+                            await saveToFirestore({ 
+                              shadow: newShadow,
+                              // 새로운 그림자 효과를 선택할 때 현재 색상과 투명도도 함께 저장
+                              shadowColor: shadowColor,
+                              shadowOpacity: shadowOpacity
+                            });
+                          }}
+                          className="flex-1 px-2 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="none">없음</option>
+                          <option value="sm">약한</option>
+                          <option value="md">보통</option>
+                          <option value="lg">강한</option>
+                          <option value="retro">레트로</option>
+                          <option value="float">플로팅</option>
+                          <option value="glow">글로우</option>
+                          <option value="inner">이너</option>
+                          <option value="sharp">샤프</option>
+                          <option value="soft">소프트</option>
+                          <option value="stripe">스트라이프</option>
+                          <option value="cross">크로스</option>
+                          <option value="diagonal">대각선</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -35,8 +35,9 @@ import { cn } from '@/lib/utils';
 const db = getFirestore(app);
 
 const COLOR_PALETTE = [
-  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
-  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+  'transparent',
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
 const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
@@ -48,7 +49,10 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     bgColor: '#60A5FA',
     textColor: '#FFFFFF',
     bgOpacity: 0.2,
-    shadow: 'none'  // 그림자 설정 추가
+    shadow: 'none',
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    rounded: 'md'
   });
   const [events, setEvents] = useState([]);
   const [selectedEvents, setSelectedEvents] = useState([]);
@@ -637,18 +641,6 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const renderColorSettings = () => {
     if (!pathname?.startsWith('/editor')) return null;
 
-    const SHADOW_OPTIONS = [
-      { value: 'none', label: '없음' },
-      { value: 'sm', label: '약하게' },
-      { value: 'md', label: '보통' },
-      { value: 'lg', label: '강하게' },
-      { value: 'retro', label: '레트로' },
-      { value: 'retro-black', label: '레트로-블랙' },
-      { value: 'retro-sky', label: '레트로-하늘' },
-      { value: 'retro-gray', label: '레트로-회색' },
-      { value: 'retro-white', label: '레트로-하얀' },
-    ];
-
     return (
       <div className="w-full max-w-[1100px] mb-4">
         <button
@@ -663,61 +655,134 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
         </button>
 
         {showColorSettings && (
-          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
-            <div>
-              <label className="text-white text-sm mb-2 block">배경색</label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PALETTE.map((color) => (
-                  <button
-                    key={`bg-${color}`}
-                    onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
-                    className="w-8 h-8 rounded-full border border-white/20"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700">
+            {/* 1. 배경색 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">배경색</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.bgColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.bgOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.bgOpacity ?? 0.2).toFixed(1)}
+                </span>
               </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
-              <div className="flex flex-wrap gap-2">
+            {/* 2. 텍스트 색상 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
+              <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
                 {COLOR_PALETTE.map((color) => (
                   <button
                     key={`text-${color}`}
                     onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
-                    className="w-8 h-8 rounded-full border border-white/20"
+                    className={cn(
+                      "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                      styleSettings.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                    )}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">배경 투명도</label>
-              <input
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.1"
-                value={styleSettings.bgOpacity ?? 0.2}
-                onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
-                className="w-full"
-              />
+            {/* 3. 그림자 색상 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={`shadow-${color}`}
+                      onClick={() => saveStyleSettings({ ...styleSettings, shadowColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.shadowOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadowOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.shadowOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">그림자 효과</label>
-              <select
-                value={styleSettings.shadow}
-                onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
-                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
-              >
-                {SHADOW_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            {/* 4. 모서리와 그림자 스타일 설정 */}
+            <div className="flex flex-col gap-4 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">모서리</span>
+                <select
+                  value={styleSettings.rounded || 'md'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, rounded: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                >
+                  <option value="none">각진</option>
+                  <option value="sm">약간 둥근</option>
+                  <option value="md">둥근</option>
+                  <option value="lg">많이 둥근</option>
+                  <option value="full">완전 둥근</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <select
+                  value={styleSettings.shadow || 'none'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                >
+                  <option value="none">없음</option>
+                  <option value="sm">약한</option>
+                  <option value="md">보통</option>
+                  <option value="lg">강한</option>
+                  <option value="retro">레트로</option>
+                  <option value="float">플로팅</option>
+                  <option value="glow">글로우</option>
+                  <option value="inner">이너</option>
+                  <option value="sharp">샤프</option>
+                  <option value="soft">소프트</option>
+                  <option value="stripe">스트라이프</option>
+                  <option value="cross">크로스</option>
+                  <option value="diagonal">대각선</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -732,25 +797,54 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
       <div 
         className={cn(
           "flex items-center justify-between w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm mt-8",
-          styleSettings.shadow === 'none' && 'shadow-none',
-          styleSettings.shadow === 'sm' && 'shadow-sm',
-          styleSettings.shadow === 'md' && 'shadow',
-          styleSettings.shadow === 'lg' && 'shadow-lg',
-          styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-          styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-          styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-          styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-          styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+          styleSettings.rounded === 'none' && 'rounded-none',
+          styleSettings.rounded === 'sm' && 'rounded',
+          styleSettings.rounded === 'md' && 'rounded-lg',
+          styleSettings.rounded === 'lg' && 'rounded-xl',
+          styleSettings.rounded === 'full' && 'rounded-full',
         )}
         style={{ 
           backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
           color: styleSettings.textColor,
-          ...(styleSettings.shadow?.includes('retro') && { 
-            border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                    styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                    styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                    '2px solid rgb(0 0 0)'
-          })
+          boxShadow: (() => {
+            const shadowColor = styleSettings.shadowColor 
+              ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+              : 'rgba(0, 0, 0, 0.2)';
+            
+            switch (styleSettings.shadow) {
+              case 'none':
+                return 'none';
+              case 'sm':
+                return `0 1px 2px ${shadowColor}`;
+              case 'md':
+                return `0 4px 6px ${shadowColor}`;
+              case 'lg':
+                return `0 10px 15px ${shadowColor}`;
+              case 'retro':
+                return `8px 8px 0px 0px ${shadowColor}`;
+              case 'float':
+                return `0 10px 20px -5px ${shadowColor}`;
+              case 'glow':
+                return `0 0 20px ${shadowColor}`;
+              case 'inner':
+                return `inset 0 2px 4px ${shadowColor}`;
+              case 'sharp':
+                return `-10px 10px 0px ${shadowColor}`;
+              case 'soft':
+                return `0 5px 15px ${shadowColor}`;
+              case 'stripe':
+                return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+              case 'cross':
+                return `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+              case 'diagonal':
+                return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+              default:
+                return 'none';
+            }
+          })(),
+          borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? styleSettings.shadowColor || '#000000' : undefined,
+          borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? '2px' : undefined,
+          borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? 'solid' : undefined,
         }}
       >
         <button 
@@ -784,25 +878,54 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
           <div 
             className={cn(
               "rounded-3xl overflow-hidden backdrop-blur-sm",
-              styleSettings.shadow === 'none' && 'shadow-none',
-              styleSettings.shadow === 'sm' && 'shadow-sm',
-              styleSettings.shadow === 'md' && 'shadow',
-              styleSettings.shadow === 'lg' && 'shadow-lg',
-              styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-              styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-              styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-              styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-              styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full',
             )}
             style={{ 
               backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
               color: styleSettings.textColor,
-              ...(styleSettings.shadow?.includes('retro') && { 
-                border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                        styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                        styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                        '2px solid rgb(0 0 0)'
-              })
+              boxShadow: (() => {
+                const shadowColor = styleSettings.shadowColor 
+                  ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+                  : 'rgba(0, 0, 0, 0.2)';
+                
+                switch (styleSettings.shadow) {
+                  case 'none':
+                    return 'none';
+                  case 'sm':
+                    return `0 1px 2px ${shadowColor}`;
+                  case 'md':
+                    return `0 4px 6px ${shadowColor}`;
+                  case 'lg':
+                    return `0 10px 15px ${shadowColor}`;
+                  case 'retro':
+                    return `8px 8px 0px 0px ${shadowColor}`;
+                  case 'float':
+                    return `0 10px 20px -5px ${shadowColor}`;
+                  case 'glow':
+                    return `0 0 20px ${shadowColor}`;
+                  case 'inner':
+                    return `inset 0 2px 4px ${shadowColor}`;
+                  case 'sharp':
+                    return `-10px 10px 0px ${shadowColor}`;
+                  case 'soft':
+                    return `0 5px 15px ${shadowColor}`;
+                  case 'stripe':
+                    return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+                  case 'cross':
+                    return `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+                  case 'diagonal':
+                    return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+                  default:
+                    return 'none';
+                }
+              })(),
+              borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? styleSettings.shadowColor || '#000000' : undefined,
+              borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? '2px' : undefined,
+              borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? 'solid' : undefined,
             }}
           >
             <table className="table-fixed w-full border-collapse">
@@ -875,25 +998,54 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
         <div 
           className={cn(
             "p-6 rounded-3xl backdrop-blur-sm space-y-4",
-            styleSettings.shadow === 'none' && 'shadow-none',
-            styleSettings.shadow === 'sm' && 'shadow-sm',
-            styleSettings.shadow === 'md' && 'shadow',
-            styleSettings.shadow === 'lg' && 'shadow-lg',
-            styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-            styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-            styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-            styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-            styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+            styleSettings.rounded === 'none' && 'rounded-none',
+            styleSettings.rounded === 'sm' && 'rounded',
+            styleSettings.rounded === 'md' && 'rounded-lg',
+            styleSettings.rounded === 'lg' && 'rounded-xl',
+            styleSettings.rounded === 'full' && 'rounded-full',
           )}
           style={{ 
             backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
             color: styleSettings.textColor,
-            ...(styleSettings.shadow?.includes('retro') && { 
-              border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                      styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                      styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                      '2px solid rgb(0 0 0)'
-            })
+            boxShadow: (() => {
+              const shadowColor = styleSettings.shadowColor 
+                ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+                : 'rgba(0, 0, 0, 0.2)';
+              
+              switch (styleSettings.shadow) {
+                case 'none':
+                  return 'none';
+                case 'sm':
+                  return `0 1px 2px ${shadowColor}`;
+                case 'md':
+                  return `0 4px 6px ${shadowColor}`;
+                case 'lg':
+                  return `0 10px 15px ${shadowColor}`;
+                case 'retro':
+                  return `8px 8px 0px 0px ${shadowColor}`;
+                case 'float':
+                  return `0 10px 20px -5px ${shadowColor}`;
+                case 'glow':
+                  return `0 0 20px ${shadowColor}`;
+                case 'inner':
+                  return `inset 0 2px 4px ${shadowColor}`;
+                case 'sharp':
+                  return `-10px 10px 0px ${shadowColor}`;
+                case 'soft':
+                  return `0 5px 15px ${shadowColor}`;
+                case 'stripe':
+                  return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+                case 'cross':
+                  return `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+                case 'diagonal':
+                  return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+                default:
+                  return 'none';
+              }
+            })(),
+            borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? styleSettings.shadowColor || '#000000' : undefined,
+            borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? '2px' : undefined,
+            borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? 'solid' : undefined,
           }}
         >
           {/* 헤더 영역 */}

@@ -97,8 +97,9 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
 
 const COLOR_PALETTE = [
-  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
-  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+  'transparent',
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
 const Diary = ({ username, uid, isEditable, isAllowed }) => {
@@ -140,7 +141,10 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
     bgColor: '#60A5FA',
     textColor: '#FFFFFF',
     bgOpacity: 0.2,
-    shadow: 'none'  // 그림자 설정 추가
+    shadow: 'none',
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    rounded: 'md'
   });
   
   const { currentUser } = useSelector((state) => state.user);
@@ -156,10 +160,17 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
   const canEdit = useMemo(() => {
     if (!currentUser) return false;
     if (pathname?.startsWith('/editor')) return true;
-    return currentUser.uid === finalUid;
-    if (currentUser.uid === finalUid) return true;
-    return isAllowed; // 허용된 사용자도 수정/삭제 가능하도록 추가
+    if (currentUser.uid === finalUid) return true;  // 페이지 소유자
+    return isAllowed;  // 허용된 사용자
   }, [currentUser, pathname, finalUid, isAllowed]);
+
+  // 삭제 권한 확인 함수 추가
+  const canDelete = (diary) => {
+    if (!currentUser) return false;
+    if (currentUser.uid === finalUid) return true;  // 페이지 소유자
+    if (diary.authorUid === currentUser.uid) return true;  // 작성자 본인
+    return isAllowed;  // 허용된 사용자
+  };
 
   // 현재 사용자 정보를 메모이제이션
   const currentUserInfo = useMemo(() => {
@@ -558,19 +569,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
   // 스타일 설정 렌더링 함수 수정
   const renderColorSettings = () => {
-    if (!pathname?.startsWith('/editor')) return null;  // 에디터 페이지에서만 표시
-
-    const SHADOW_OPTIONS = [
-      { value: 'none', label: '없음' },
-      { value: 'sm', label: '약하게' },
-      { value: 'md', label: '보통' },
-      { value: 'lg', label: '강하게' },
-      { value: 'retro', label: '레트로' },
-      { value: 'retro-black', label: '레트로-블랙' },
-      { value: 'retro-sky', label: '레트로-하늘' },
-      { value: 'retro-gray', label: '레트로-회색' },
-      { value: 'retro-white', label: '레트로-하얀' },
-    ];
+    if (!pathname?.startsWith('/editor')) return null;
 
     return (
       <div className="w-full max-w-[1100px] mb-4">
@@ -586,61 +585,134 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
         </button>
 
         {showColorSettings && (
-          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
-            <div>
-              <label className="text-white text-sm mb-2 block">배경색</label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PALETTE.map((color) => (
-                  <button
-                    key={`bg-${color}`}
-                    onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
-                    className="w-8 h-8 rounded-full border border-white/20"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700">
+            {/* 1. 배경색 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">배경색</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.bgColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.bgOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.bgOpacity ?? 0.2).toFixed(1)}
+                </span>
               </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
-              <div className="flex flex-wrap gap-2">
+            {/* 2. 텍스트 색상 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
+              <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
                 {COLOR_PALETTE.map((color) => (
                   <button
                     key={`text-${color}`}
                     onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
-                    className="w-8 h-8 rounded-full border border-white/20"
+                    className={cn(
+                      "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                      styleSettings.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                    )}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">배경 투명도</label>
-              <input
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.1"
-                value={styleSettings.bgOpacity ?? 0.2}
-                onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
-                className="w-full"
-              />
+            {/* 3. 그림자 색상 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={`shadow-${color}`}
+                      onClick={() => saveStyleSettings({ ...styleSettings, shadowColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.shadowOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadowOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.shadowOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">그림자 효과</label>
-              <select
-                value={styleSettings.shadow}
-                onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
-                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
-              >
-                {SHADOW_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            {/* 4. 모서리와 그림자 스타일 설정 */}
+            <div className="flex flex-col gap-4 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">모서리</span>
+                <select
+                  value={styleSettings.rounded || 'md'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, rounded: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                >
+                  <option value="none">각진</option>
+                  <option value="sm">약간 둥근</option>
+                  <option value="md">둥근</option>
+                  <option value="lg">많이 둥근</option>
+                  <option value="full">완전 둥근</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <select
+                  value={styleSettings.shadow || 'none'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                >
+                  <option value="none">없음</option>
+                  <option value="sm">약한</option>
+                  <option value="md">보통</option>
+                  <option value="lg">강한</option>
+                  <option value="retro">레트로</option>
+                  <option value="float">플로팅</option>
+                  <option value="glow">글로우</option>
+                  <option value="inner">이너</option>
+                  <option value="sharp">샤프</option>
+                  <option value="soft">소프트</option>
+                  <option value="stripe">스트라이프</option>
+                  <option value="cross">크로스</option>
+                  <option value="diagonal">대각선</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -666,16 +738,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
           styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
           styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
         )}
-        style={{ 
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
-          ...(styleSettings.shadow?.includes('retro') && { 
-            border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                    styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                    styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                    '2px solid rgb(0 0 0)'
-          })
-        }}
+        style={getStyleObject()}
       >
         {/* 1번 row: 제목과 버튼들 */}
         <div className="flex justify-between items-center p-4 border-b border-white/10">
@@ -700,15 +763,17 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(diary.id, diary.images);
-                  }}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {(canDelete(diary)) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(diary.id, diary.images);
+                    }}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={(e) => handleLikeClick(e, diary)}
                   className="text-blue-500 hover:text-blue-700"
@@ -786,6 +851,52 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
     loadUsernames();
   }, [diaries]);
 
+  // 스타일 적용 함수
+  const getStyleObject = () => ({
+    backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+    color: styleSettings.textColor,
+    boxShadow: (() => {
+      const shadowColor = styleSettings.shadowColor 
+        ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+        : 'rgba(0, 0, 0, 0.2)';
+      
+      switch (styleSettings.shadow) {
+        case 'none':
+          return 'none';
+        case 'sm':
+          return `0 1px 2px ${shadowColor}`;
+        case 'md':
+          return `0 4px 6px ${shadowColor}`;
+        case 'lg':
+          return `0 10px 15px ${shadowColor}`;
+        case 'retro':
+          return `8px 8px 0px 0px ${shadowColor}`;
+        case 'float':
+          return `0 10px 20px -5px ${shadowColor}`;
+        case 'glow':
+          return `0 0 20px ${shadowColor}`;
+        case 'inner':
+          return `inset 0 2px 4px ${shadowColor}`;
+        case 'sharp':
+          return `-10px 10px 0px ${shadowColor}`;
+        case 'soft':
+          return `0 5px 15px ${shadowColor}`;
+        case 'stripe':
+          return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+        case 'cross':
+          return `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+        case 'diagonal':
+          return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+        default:
+          return 'none';
+      }
+    })(),
+    borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? styleSettings.shadowColor || '#000000' : undefined,
+    borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? '2px' : undefined,
+    borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? 'solid' : undefined,
+  });
+
+  // 컴포넌트에서 스타일 적용
   return (
     <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full px-2'>
       {renderColorSettings()}
@@ -794,26 +905,13 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
         <div 
           className={cn(
             "relative flex items-center justify-center text-[21px] font-bold w-full rounded-2xl p-4 backdrop-blur-sm tracking-tight",
-            styleSettings.shadow === 'none' && 'shadow-none',
-            styleSettings.shadow === 'sm' && 'shadow-sm',
-            styleSettings.shadow === 'md' && 'shadow',
-            styleSettings.shadow === 'lg' && 'shadow-lg',
-            styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-            styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-            styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-            styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-            styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+            styleSettings.rounded === 'none' && 'rounded-none',
+            styleSettings.rounded === 'sm' && 'rounded',
+            styleSettings.rounded === 'md' && 'rounded-lg',
+            styleSettings.rounded === 'lg' && 'rounded-xl',
+            styleSettings.rounded === 'full' && 'rounded-full',
           )}
-          style={{ 
-            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-            color: styleSettings.textColor,
-            ...(styleSettings.shadow?.includes('retro') && { 
-              border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                      styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                      styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                      '2px solid rgb(0 0 0)'
-            })
-          }}
+          style={getStyleObject()}
         >
           <HeaderDrawer uid={finalUid}>
             <button 
@@ -862,27 +960,14 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
         <div className="w-full max-w-[1200px] mb-4">
           <div 
             className={cn(
-              "rounded-3xl p-4 shadow-lg backdrop-blur-sm",
-              styleSettings.shadow === 'none' && 'shadow-none',
-              styleSettings.shadow === 'sm' && 'shadow-sm',
-              styleSettings.shadow === 'md' && 'shadow',
-              styleSettings.shadow === 'lg' && 'shadow-lg',
-              styleSettings.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-              styleSettings.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-              styleSettings.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-              styleSettings.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-              styleSettings.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+              "rounded-3xl p-4 backdrop-blur-sm",
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full',
             )}
-            style={{ 
-              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-              color: styleSettings.textColor,
-              ...(styleSettings.shadow?.includes('retro') && { 
-                border: styleSettings.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                        styleSettings.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                        styleSettings.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                        '2px solid rgb(0 0 0)'
-              })
-            }}
+            style={getStyleObject()}
           >
             {/* 주 선택 헤더 */}
             <div className="flex items-center justify-between mb-4">
@@ -1126,7 +1211,17 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
         {/* 일기 목록 */}
         <div className="space-y-4 max-w-[1200px]">
           {diaries.length === 0 ? (
-            <div className="p-6 bg-blue-500/20 rounded-2xl shadow-md text-center text-white backdrop-blur-sm">
+            <div 
+              className={cn(
+                "p-6 rounded-2xl text-center backdrop-blur-sm",
+                styleSettings.rounded === 'none' && 'rounded-none',
+                styleSettings.rounded === 'sm' && 'rounded',
+                styleSettings.rounded === 'md' && 'rounded-lg',
+                styleSettings.rounded === 'lg' && 'rounded-xl',
+                styleSettings.rounded === 'full' && 'rounded-full',
+              )}
+              style={getStyleObject()}
+            >
               등록된 일기가 없습니다.
             </div>
           ) : (

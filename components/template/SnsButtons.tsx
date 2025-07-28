@@ -36,10 +36,13 @@ interface ContactInfo {
   views: number;
   likes: number;
   likedBy: string[];
-  bgColor?: string;      // 배경색 추가
-  textColor?: string;    // 텍스트 색상 추가
-  bgOpacity?: number;    // 배경 투명도 추가
-  shadow?: string;       // 그림자 효과 추가
+  bgColor?: string;
+  textColor?: string;
+  bgOpacity?: number;
+  shadow?: string;
+  shadowColor?: string;
+  shadowOpacity?: number;
+  rounded?: string;
 }
 
 const DEFAULT_CONTACT: ContactInfo = {
@@ -56,15 +59,19 @@ const DEFAULT_CONTACT: ContactInfo = {
   views: 0,
   likes: 0,
   likedBy: [],
-  bgColor: '#60A5FA',    // 기본 배경색
-  textColor: '#FFFFFF',  // 기본 텍스트 색상
-  bgOpacity: 0.2,       // 기본 투명도
-  shadow: 'none',       // 기본 그림자 효과
+  bgColor: '#60A5FA',
+  textColor: '#FFFFFF',
+  bgOpacity: 0.2,
+  shadow: 'none',
+  shadowColor: '#000000',
+  shadowOpacity: 0.2,
+  rounded: 'md'
 };
 
 const COLOR_PALETTE = [
-  "#000000", "#FFFFFF", "#F87171", "#FBBF24",
-  "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
+  'transparent',
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
 interface ButtonConfig {
@@ -254,7 +261,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     }
   };
 
-  const handleColorSelect = async (type: 'bgColor' | 'textColor' | 'shadow', color: string) => {
+  const handleColorSelect = async (type: 'bgColor' | 'textColor' | 'shadow' | 'shadowColor' | 'rounded', color: string) => {
     if (!isEditable || !finalUid) return;
 
     const newInfo = { ...contactInfo, [type]: color };
@@ -267,7 +274,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     }
   };
 
-  const handleOpacityChange = async (value: number) => {
+  const handleBgOpacityChange = async (value: number) => {
     if (!isEditable || !finalUid) return;
 
     const newInfo = { ...contactInfo, bgOpacity: value };
@@ -275,91 +282,220 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
       await setDoc(doc(db, 'users', finalUid, 'info', 'contact'), newInfo);
       setContactInfo(newInfo);
     } catch (error) {
-      console.error('투명도 저장 실패:', error);
-      alert('투명도 저장에 실패했습니다.');
+      console.error('배경 투명도 저장 실패:', error);
+      alert('배경 투명도 저장에 실패했습니다.');
+    }
+  };
+
+  const handleShadowOpacityChange = async (value: number) => {
+    if (!isEditable || !finalUid) return;
+
+    const newInfo = { ...contactInfo, shadowOpacity: value };
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'info', 'contact'), newInfo);
+      setContactInfo(newInfo);
+    } catch (error) {
+      console.error('그림자 투명도 저장 실패:', error);
+      alert('그림자 투명도 저장에 실패했습니다.');
+    }
+  };
+
+  const getShadowStyle = () => {
+    const shadowColor = contactInfo.shadowColor 
+      ? `rgba(${parseInt(contactInfo.shadowColor.slice(1, 3), 16)}, ${parseInt(contactInfo.shadowColor.slice(3, 5), 16)}, ${parseInt(contactInfo.shadowColor.slice(5, 7), 16)}, ${contactInfo.shadowOpacity ?? 0.2})`
+      : 'rgba(0, 0, 0, 0.2)';
+    
+    switch (contactInfo.shadow) {
+      case 'none':
+        return 'none';
+      case 'sm':
+        return `0 1px 2px ${shadowColor}`;
+      case 'md':
+        return `0 4px 6px ${shadowColor}`;
+      case 'lg':
+        return `0 10px 15px ${shadowColor}`;
+      case 'retro':
+        return `8px 8px 0px 0px ${shadowColor}`;
+      case 'float':
+        return `0 10px 20px -5px ${shadowColor}`;
+      case 'glow':
+        return `0 0 20px ${shadowColor}`;
+      case 'inner':
+        return `inset 0 2px 4px ${shadowColor}`;
+      case 'sharp':
+        return `-10px 10px 0px ${shadowColor}`;
+      case 'soft':
+        return `0 5px 15px ${shadowColor}`;
+      case 'stripe':
+        return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+      case 'cross':
+        return `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+      case 'diagonal':
+        return `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+      default:
+        return 'none';
+    }
+  };
+
+  const getButtonSpacing = (shadowType: string | undefined) => {
+    switch (shadowType) {
+      case 'stripe':
+      case 'cross':
+      case 'diagonal':
+        return 'my-4 md:my-2'; // 모바일에서 더 큰 여백
+      case 'retro':
+      case 'sharp':
+        return 'my-3 md:my-2'; // 중간 크기 여백
+      default:
+        return 'my-2'; // 기본 여백
     }
   };
 
   const renderColorSettings = () => {
     if (!isEditable) return null;
 
-    const SHADOW_OPTIONS = [
-      { value: 'none', label: '없음' },
-      { value: 'sm', label: '약하게' },
-      { value: 'md', label: '보통' },
-      { value: 'lg', label: '강하게' },
-      { value: 'retro', label: '레트로' },
-      { value: 'retro-black', label: '레트로-블랙' },
-      { value: 'retro-sky', label: '레트로-하늘' },
-      { value: 'retro-gray', label: '레트로-회색' },
-      { value: 'retro-white', label: '레트로-하얀' },
-    ];
-
     return (
       <div className="w-full px-4 mb-4">
         <button
           onClick={() => setShowColorSettings(!showColorSettings)}
-          className="w-full p-2 bg-blue-500/20 text-white rounded-lg mb-2 hover:bg-blue-500/30 transition-all"
+          className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
+          style={{ 
+            backgroundColor: `${contactInfo.bgColor}${Math.round((contactInfo.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: contactInfo.textColor 
+          }}
         >
           버튼 스타일 설정 {showColorSettings ? '닫기' : '열기'}
         </button>
 
         {showColorSettings && (
-          <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
-            <div>
-              <label className="text-white text-sm mb-2 block">배경색</label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PALETTE.map((color) => (
-                  <button
-                    key={`bg-${color}`}
-                    onClick={() => handleColorSelect('bgColor', color)}
-                    className="w-8 h-8 rounded-full border border-white/20"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700">
+            {/* 1. 배경색 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-20">배경색</span>
+                <div className="flex flex-wrap gap-1">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={`bg-${color}`}
+                      onClick={() => handleColorSelect('bgColor', color)}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        contactInfo.bgColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-20">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={contactInfo.bgOpacity ?? 0.2}
+                  onChange={(e) => handleBgOpacityChange(parseFloat(e.target.value))}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-10 text-right">
+                  {(contactInfo.bgOpacity ?? 0.2).toFixed(1)}
+                </span>
               </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">텍스트 색상</label>
-              <div className="flex flex-wrap gap-2">
+            {/* 2. 텍스트 색상 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-20">텍스트</span>
+              <div className="flex flex-wrap gap-1">
                 {COLOR_PALETTE.map((color) => (
                   <button
                     key={`text-${color}`}
                     onClick={() => handleColorSelect('textColor', color)}
-                    className="w-8 h-8 rounded-full border border-white/20"
+                    className={cn(
+                      "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                      contactInfo.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                    )}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">배경 투명도</label>
-              <input
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.1"
-                value={contactInfo.bgOpacity ?? 0.2}
-                onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-                className="w-full"
-              />
+            {/* 3. 그림자 색상 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-20">그림자</span>
+                <div className="flex flex-wrap gap-1">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={`shadow-${color}`}
+                      onClick={() => handleColorSelect('shadowColor', color)}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        contactInfo.shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-20">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={contactInfo.shadowOpacity ?? 0.2}
+                  onChange={(e) => handleShadowOpacityChange(parseFloat(e.target.value))}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-10 text-right">
+                  {(contactInfo.shadowOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">그림자 효과</label>
-              <select
-                value={contactInfo.shadow}
-                onChange={(e) => handleColorSelect('shadow', e.target.value)}
-                className="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600"
-              >
-                {SHADOW_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            {/* 4. 모서리와 그림자 스타일 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-20">모서리</span>
+                <select
+                  value={contactInfo.rounded || 'md'}
+                  onChange={(e) => handleColorSelect('rounded', e.target.value)}
+                  className="flex-1 px-2 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="none">각진</option>
+                  <option value="sm">약간 둥근</option>
+                  <option value="md">둥근</option>
+                  <option value="lg">많이 둥근</option>
+                  <option value="full">완전 둥근</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-20">효과</span>
+                <select
+                  value={contactInfo.shadow || 'none'}
+                  onChange={(e) => handleColorSelect('shadow', e.target.value)}
+                  className="flex-1 px-2 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="none">없음</option>
+                  <option value="sm">약한</option>
+                  <option value="md">보통</option>
+                  <option value="lg">강한</option>
+                  <option value="retro">레트로</option>
+                  <option value="float">플로팅</option>
+                  <option value="glow">글로우</option>
+                  <option value="inner">이너</option>
+                  <option value="sharp">샤프</option>
+                  <option value="soft">소프트</option>
+                  <option value="stripe">스트라이프</option>
+                  <option value="cross">크로스</option>
+                  <option value="diagonal">대각선</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -404,7 +540,10 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
         <div className="md:hidden">
           <Slider {...sliderSettings}>
             {filteredButtons.map((button, index) => (
-              <div key={button.field} className="px-1">
+              <div key={button.field} className={cn(
+                "px-1",
+                getButtonSpacing(contactInfo.shadow)
+              )}>
                 {renderButton(button)}
               </div>
             ))}
@@ -424,27 +563,21 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
         key={button.field}
         onClick={() => button.onClick ? button.onClick() : handleButtonClick(button.field as keyof ContactInfo)}
         className={cn(
-          "w-full h-[70px] flex flex-col items-center justify-center gap-1 p-2 rounded-xl hover:bg-opacity-30 transition-all",
+          "w-full h-[70px] flex flex-col items-center justify-center gap-1 p-2 transition-all",
           isEditable ? 'cursor-pointer' : contactInfo[button.field as keyof ContactInfo] ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-          contactInfo.shadow === 'none' && 'shadow-none',
-          contactInfo.shadow === 'sm' && 'shadow-sm',
-          contactInfo.shadow === 'md' && 'shadow',
-          contactInfo.shadow === 'lg' && 'shadow-lg',
-          contactInfo.shadow === 'retro' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-          contactInfo.shadow === 'retro-black' && 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
-          contactInfo.shadow === 'retro-sky' && 'shadow-[8px_8px_0px_0px_rgba(2,132,199,1)]',
-          contactInfo.shadow === 'retro-gray' && 'shadow-[8px_8px_0px_0px_rgba(107,114,128,1)]',
-          contactInfo.shadow === 'retro-white' && 'shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]'
+          contactInfo.rounded === 'none' && 'rounded-none',
+          contactInfo.rounded === 'sm' && 'rounded',
+          contactInfo.rounded === 'md' && 'rounded-lg',
+          contactInfo.rounded === 'lg' && 'rounded-xl',
+          contactInfo.rounded === 'full' && 'rounded-full',
         )}
         style={{
           backgroundColor: button.isActive ? bgColorWithOpacity.replace(/0.2/, '0.3') : bgColorWithOpacity,
           color: contactInfo.textColor || '#FFFFFF',
-          ...(contactInfo.shadow?.includes('retro') && { 
-            border: contactInfo.shadow === 'retro-sky' ? '2px solid rgb(2 132 199)' :
-                    contactInfo.shadow === 'retro-gray' ? '2px solid rgb(107 114 128)' :
-                    contactInfo.shadow === 'retro-white' ? '2px solid rgb(255 255 255)' :
-                    '2px solid rgb(0 0 0)'
-          })
+          boxShadow: getShadowStyle(),
+          borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(contactInfo.shadow || '') ? contactInfo.shadowColor || '#000000' : undefined,
+          borderWidth: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(contactInfo.shadow || '') ? '2px' : undefined,
+          borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(contactInfo.shadow || '') ? 'solid' : undefined,
         }}
       >
         <button.icon className={`text-2xl ${button.color}`} />

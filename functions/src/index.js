@@ -34,7 +34,7 @@ exports.sendEmailOnNewEvent = functions.firestore
       const mailOptions = {
         from: functions.config().email.user,
         to: userEmail,
-        subject: '새로운 일정이 등록되었습니다',
+        subject: '모두트리 새글 등록',
         html: `
           <h2>새로운 일정</h2>
           <p><strong>제목:</strong> ${newEvent.title}</p>
