@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { db } from '@/firebase';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, X } from 'lucide-react';
 
 export default function Header() {
   const user = useSelector((state: any) => state.user);
@@ -18,9 +18,10 @@ export default function Header() {
   const [allowedSites, setAllowedSites] = useState<Array<{username: string}>>([]);
   const [myUsername, setMyUsername] = useState<string>('');
   const [isMobile, setIsMobile] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);  // 푸터 표시 상태
   
-  // 메인페이지, 로그인, 회원가입 페이지에서는 푸터를 숨김
+  // 메인페이지, 로그인, 회원가입 페이지에서는 헤더를 숨김
   const isMainPage = pathname === '/';
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
@@ -152,36 +153,46 @@ export default function Header() {
 
   if (!mounted) return null;
 
+  if (!isVisible) return null;
+
   return (
-    <header className={`fixed ${isMobile ? 'top-5 left-5' : 'top-5 left-5'} z-50`}>
+    <header className="fixed top-1/2 left-5 -translate-y-1/2 z-50">
       <div className="relative">
-        <button
-          onClick={() => setShowDropdown(!showDropdown)}
-          className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors"
-        >
-          <Image
-            src="/Image/logo.png"
-            alt="ModooTree Logo"
-            width={120}
-            height={120}
-            className="w-8 h-8"
-          />
-          <svg
-            className={`w-4 h-4 text-white ml-2 transition-transform duration-200 ${
-              showDropdown ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
+            <Image
+              src="/Image/logo.png"
+              alt="ModooTree Logo"
+              width={120}
+              height={120}
+              className="w-8 h-8"
             />
-          </svg>
-        </button>
+            <svg
+              className={`w-4 h-4 text-white ml-2 transition-transform duration-200 ${
+                showDropdown ? 'rotate-180' : ''
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={() => setIsVisible(false)}
+            className="p-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
 
         {showDropdown && (
           <div className={`absolute ${isMobile ? 'left-0 right-0 mx-4' : 'left-0'} mt-2 w-48 bg-white/30 backdrop-blur-sm rounded-lg shadow-md py-1 text-sm text-white`}>

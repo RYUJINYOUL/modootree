@@ -202,14 +202,53 @@ export async function POST(request: Request) {
     };
 
     try {
-      // Firebase Custom Token 생성
+      // 1. 이메일로 기존 사용자 확인
+      let existingUser = null;
+      try {
+        existingUser = await admin.auth().getUserByEmail(kakaoUserInfo.email);
+      } catch (error) {
+        // 사용자가 없는 경우 에러가 발생하므로 무시
+      }
+
+      if (existingUser) {
+        // 이미 존재하는 이메일이면 거부
+        return new NextResponse(
+          JSON.stringify({ 
+            error: '이미 사용 중인 이메일',
+            details: '이 이메일은 이미 다른 계정에서 사용 중입니다. 다른 카카오 계정을 사용해주세요.'
+          }), 
+          { 
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+      }
+
+      // 2. 새 사용자 생성 (Authentication에 이메일 포함)
+      await admin.auth().createUser({
+        uid: String(userData.id),
+        email: kakaoUserInfo.email,
+        emailVerified: true,
+        photoURL: kakaoUserInfo.profile_image || null,
+        displayName: userData.kakao_account?.profile?.nickname || null,
+        providerData: [{
+          providerId: 'kakao',
+          uid: String(userData.id),
+          displayName: userData.kakao_account?.profile?.nickname || null,
+          email: kakaoUserInfo.email,
+          photoURL: kakaoUserInfo.profile_image || null,
+        }]
+      });
+
+      // Custom Token 생성
       const firebaseToken = await admin.auth().createCustomToken(String(userData.id));
-      console.log('Firebase token created successfully for user:', userData.id);
 
       return new NextResponse(
         JSON.stringify({
-        customToken: firebaseToken,
-        kakaoUserInfo,
+          customToken: firebaseToken,
+          kakaoUserInfo,
         }), 
         {
           headers: {
@@ -217,12 +256,12 @@ export async function POST(request: Request) {
           }
         }
       );
-    } catch (error: any) {
-      console.error('Firebase token creation failed:', error);
+    } catch (error) {
+      console.error('Firebase user creation failed:', error);
       return new NextResponse(
         JSON.stringify({ 
-          error: '인증 토큰 생성에 실패했습니다.',
-          details: error?.message || 'Firebase 토큰 생성 중 오류가 발생했습니다.'
+          error: '사용자 생성 실패',
+          details: error?.message || 'Firebase 사용자 생성 중 오류가 발생했습니다.'
         }), 
         { 
           status: 500,

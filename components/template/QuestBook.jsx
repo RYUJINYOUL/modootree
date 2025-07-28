@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/drawer"
 import { IoClose } from "react-icons/io5"
 import { FaHeart, FaRegHeart, FaReply } from "react-icons/fa"
+import { Edit2 } from "lucide-react"
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -272,7 +273,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
       </DrawerTrigger>
       <DrawerContent className={`w-full h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
         <DrawerHeader>
-          <DrawerTitle>게스트북</DrawerTitle>
+          <DrawerTitle></DrawerTitle>
         </DrawerHeader>
         <div className="flex-1 overflow-y-auto p-4">
           {/* 방명록 작성 폼 */}
@@ -288,7 +289,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={replyTo ? `${replyTo.name}님에게 답글 쓰기` : "방명록 메시지를 입력하세요"}
+                placeholder={replyTo ? `${replyTo.name}님에게 답글 쓰기` : "메시지를 입력하세요"}
                 className="px-4 py-2 border border-gray-200 rounded-lg h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
               />
               <div className="flex justify-between items-center">
@@ -302,7 +303,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                   </button>
                 )}
                 <Button type="submit" className="ml-auto">
-                  {replyTo ? '답글 작성' : '방명록 작성'}
+                  {replyTo ? '답글 작성' : '메시지 작성'}
                 </Button>
               </div>
             </div>
@@ -393,10 +394,10 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 
           {isLoading && <div className="text-center py-4">로딩 중...</div>}
           {!isLoading && !hasMore && entries.length > 0 && (
-            <div className="text-center py-4 text-gray-500">더 이상 방명록이 없습니다</div>
+            <div className="text-center py-4 text-gray-500">더 이상 메세지가 없습니다</div>
           )}
           {!isLoading && entries.length === 0 && (
-            <div className="text-center py-4 text-gray-500">아직 방명록이 없습니다</div>
+            <div className="text-center py-4 text-gray-500">아직 메세지가 없습니다</div>
           )}
     </div>
   </DrawerContent>
@@ -429,6 +430,10 @@ export default function GuestbookTemplate({ username, uid }) {
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const { toast } = useToast();
+
+  // canEdit 로직 추가
+  const isEditMode = pathname ? pathname.startsWith('/editor') : false;
+  const canEdit = isEditMode || (currentUser?.uid === finalUid);
 
   // 스타일 설정 저장 함수
   const saveStyleSettings = async (newSettings) => {
@@ -706,8 +711,49 @@ export default function GuestbookTemplate({ username, uid }) {
     return () => unsub()
   }, [finalUid])
 
+  const [guestBookTitle, setGuestBookTitle] = useState('게스트북');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+
+  useEffect(() => {
+    const loadGuestBookTitle = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'info', 'guestBookSettings');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().title) {
+          setGuestBookTitle(docSnap.data().title);
+        }
+      } catch (error) {
+        console.error('게스트북 제목 불러오기 실패:', error);
+      }
+    };
+    loadGuestBookTitle();
+  }, [finalUid]);
+
+  const handleTitleSave = async (newTitle) => {
+    if (!finalUid || !canEdit) return;
+    try {
+      const docRef = doc(db, 'users', finalUid, 'info', 'guestBookSettings');
+      await setDoc(docRef, { title: newTitle }, { merge: true });
+      setGuestBookTitle(newTitle);
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error('제목 저장 실패:', error);
+      alert('제목 저장에 실패했습니다.');
+    }
+  };
+
   return (
     <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+      <style jsx global>{`
+        @keyframes floating {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        .floating-animation {
+          animation: floating 5s ease-in-out infinite;
+        }
+      `}</style>
       {renderColorSettings()}
       {/* 게스트북 제목 */}
       <div 
@@ -734,7 +780,36 @@ export default function GuestbookTemplate({ username, uid }) {
             </svg>
           </button>
         </HeaderDrawer>
-        게스트북
+        <div className="flex items-center justify-center gap-2 relative group">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={guestBookTitle}
+              onChange={(e) => setGuestBookTitle(e.target.value)}
+              onBlur={() => handleTitleSave(guestBookTitle)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleTitleSave(guestBookTitle);
+                }
+              }}
+              className="text-xl font-semibold bg-transparent border-b border-white/30 focus:border-white/60 outline-none text-center px-2 py-1"
+              style={{ color: styleSettings.textColor }}
+              autoFocus
+            />
+          ) : (
+            <>
+              <span className="text-xl font-semibold">{guestBookTitle}</span>
+              {canEdit && (
+                <button
+                  onClick={() => setIsEditingTitle(true)}
+                  className="p-1 rounded-lg hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Edit2 className="w-4 h-4" style={{ color: styleSettings.textColor }} />
+                </button>
+              )}
+            </>
+          )}
+        </div>
         <HeaderDrawer uid={finalUid}>
           <button 
             className="absolute right-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
@@ -756,7 +831,7 @@ export default function GuestbookTemplate({ username, uid }) {
           <HeaderDrawer key={entry.id} uid={finalUid}>
             <div 
               className={cn(
-                "w-full max-w-[1100px] p-6 backdrop-blur-sm transition-all duration-300 ease-in-out hover:-translate-y-1 cursor-pointer",
+                "w-full max-w-[1100px] p-6 backdrop-blur-sm transition-all duration-300 ease-in-out floating-animation",
                 styleSettings.rounded === 'none' && 'rounded-none',
                 styleSettings.rounded === 'sm' && 'rounded',
                 styleSettings.rounded === 'md' && 'rounded-lg',

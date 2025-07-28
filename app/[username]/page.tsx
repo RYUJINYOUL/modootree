@@ -288,9 +288,9 @@ export default function UserPublicPage() {
     <>
       {/* Header 컴포넌트 제거 */}
       <TranslateBanner />
-      <main className="min-h-screen flex flex-col items-center justify-center relative" style={getBackgroundStyles()}>
+      <main className="min-h-screen flex flex-col items-center relative" style={getBackgroundStyles()}>
         {renderBackground()}
-        <div className="flex-grow flex flex-col items-center justify-center w-full">
+        <div className="flex-grow flex flex-col items-center w-full">
           <div className="md:w-[1000px] w-full px-[10px]">   
             {components.map((component, index) => (
               <ComponentRenderer

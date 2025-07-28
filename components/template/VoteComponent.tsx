@@ -27,6 +27,9 @@ import { Input } from '../ui/input';
 import { Copy, Lock, Image as ImageIcon, X } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
 import Image from 'next/image';
+import imageCompression from 'browser-image-compression';
+import { Inter, Noto_Sans_KR } from 'next/font/google';
+import { cn } from '@/lib/utils';
 
 interface VoteOption {
   id: string;
@@ -64,6 +67,26 @@ interface VoteComponentProps {
   uid?: string;
   voteData?: VoteData | null;
 }
+
+export const useImageCompression = () => {
+  const compressImage = async (file: File) => {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      initialQuality: 0.8,
+    };
+    
+    try {
+      return await imageCompression(file, options);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      return file;
+    }
+  };
+  
+  return { compressImage };
+};
 
 export default function VoteComponent({ username, uid, voteData: initialVoteData }: VoteComponentProps) {
   const { currentUser } = useSelector((state: any) => state.user);
@@ -600,11 +623,14 @@ export default function VoteComponent({ username, uid, voteData: initialVoteData
                     {option.images.map((imageUrl, index) => (
                       <div key={index} className="relative">
                         <Image
+                          loading="lazy"
                           src={imageUrl}
                           alt={`옵션 ${option.id} 이미지 ${index + 1}`}
                           width={100}
                           height={100}
                           className="w-full h-20 object-cover rounded-lg"
+                          placeholder="blur"
+                          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRg..."
                         />
                       </div>
                     ))}

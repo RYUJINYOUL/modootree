@@ -28,7 +28,7 @@ import { useSelector } from 'react-redux';
 import { usePathname, useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
-import { Lock, Unlock, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Lock, Unlock, Pencil, Trash2, Check, X, Edit2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -896,7 +896,42 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
     borderStyle: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow || '') ? 'solid' : undefined,
   });
 
-  // 컴포넌트에서 스타일 적용
+  // 상단 state 추가
+  const [diaryTitle, setDiaryTitle] = useState('일기장');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+
+  // useEffect 추가 (기존 일기장 제목 불러오기)
+  useEffect(() => {
+    const loadDiaryTitle = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'info', 'diarySettings');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().title) {
+          setDiaryTitle(docSnap.data().title);
+        }
+      } catch (error) {
+        console.error('일기장 제목 불러오기 실패:', error);
+      }
+    };
+    loadDiaryTitle();
+  }, [finalUid]);
+
+  // 제목 저장 함수 추가
+  const handleTitleSave = async (newTitle) => {
+    if (!finalUid || !canEdit) return;
+    try {
+      const docRef = doc(db, 'users', finalUid, 'info', 'diarySettings');
+      await setDoc(docRef, { title: newTitle }, { merge: true });
+      setDiaryTitle(newTitle);
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error('제목 저장 실패:', error);
+      alert('제목 저장에 실패했습니다.');
+    }
+  };
+
+  // 일기장 제목 부분 수정
   return (
     <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full px-2'>
       {renderColorSettings()}
@@ -933,7 +968,36 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
               </svg>
             </button>
           </HeaderDrawer>
-          일기장
+          <div className="flex items-center justify-center gap-2 relative group">
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={diaryTitle}
+                onChange={(e) => setDiaryTitle(e.target.value)}
+                onBlur={() => handleTitleSave(diaryTitle)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleTitleSave(diaryTitle);
+                  }
+                }}
+                className="text-xl font-semibold bg-transparent border-b border-white/30 focus:border-white/60 outline-none text-center px-2 py-1"
+                style={{ color: styleSettings.textColor }}
+                autoFocus
+              />
+            ) : (
+              <>
+                <span className="text-xl font-semibold">{diaryTitle}</span>
+                {canEdit && (
+                  <button
+                    onClick={() => setIsEditingTitle(true)}
+                    className="p-1 rounded-lg hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Edit2 className="w-4 h-4" style={{ color: styleSettings.textColor }} />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
           <HeaderDrawer uid={finalUid}>
             <button 
               onClick={(e) => {

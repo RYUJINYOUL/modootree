@@ -12,6 +12,10 @@ import {
   setDoc,
   getDoc,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
 
@@ -61,39 +65,47 @@ const LoginPage = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // 로그인 완료 처리 (예: Redux 저장, 페이지 이동)
-      dispatch(setUser({
-        uid: user.uid,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      }));
-
+      // Firestore에서 사용자 정보 확인
       const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+      const userDoc = await getDoc(userRef);
 
-      if (!userSnap.exists()) {
-        // 기본 사용자 정보 저장
+      if (!userDoc.exists()) {
+        // 신규 사용자인 경우 정보 저장
         await setDoc(userRef, {
           email: user.email,
+          photoURL: user.photoURL,
+          provider: "google",
           createdAt: serverTimestamp(),
         });
 
-        // 기본 배경 설정 저장
+        // 기본 설정 저장
         await setDoc(doc(db, "users", user.uid, "settings", "background"), {
           type: 'image',
-          value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
+          value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.appspot.com/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
         });
 
         // 빈 컴포넌트로 시작
         await setDoc(doc(db, "users", user.uid, "links", "page"), {
-          components: [], // 빈 배열로 시작
-          type: null // 타입도 초기에는 null
+          components: [],
+          type: null
         });
       }
+
+      dispatch(setUser({
+        uid: user.uid,
+        email: user.email,
+        photoURL: user.photoURL,
+      }));
+
+      push("/");
     } catch (error) {
       console.error("Google login error", error);
+      setErrorFromSubmit("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setTimeout(() => {
+        setErrorFromSubmit("");
+      }, 5000);
     }
-};
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
