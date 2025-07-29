@@ -17,6 +17,8 @@ import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
 import { useSelector } from 'react-redux';
 import UseCaseCarousel from '@/components/UseCaseCarousel';
+import UserSampleCarousel from '@/components/UserSampleCarousel';
+import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import MainHeader from '@/components/MainHeader';
@@ -253,7 +255,21 @@ export default function Page() {
         </div>
       </div>
 
-      {/* 두 번째 섹션 - 사용 사례 */}
+      {/* 두 번째 섹션 - 첫 번째 샘플 캐로셀 */}
+      <div className="w-full bg-purple-950/30 rounded-3xl mb-8">
+        <div className="max-w-[1100px] mx-auto px-4 py-16">
+          <UserSampleCarousel />
+        </div>
+      </div>
+
+      {/* 세 번째 섹션 - 두 번째 샘플 캐로셀 */}
+      <div className="w-full bg-fuchsia-950/30 rounded-3xl mb-8">
+        <div className="max-w-[1100px] mx-auto px-4 py-16">
+          <UserSampleCarousel2 />
+        </div>
+      </div>
+
+      {/* 네 번째 섹션 - 사용 사례 */}
       <div className="w-full bg-indigo-950/30 rounded-3xl mb-8">
         <div className="max-w-[1100px] mx-auto px-4 py-16">
           <UseCaseCarousel />

@@ -14,12 +14,17 @@ const COLOR_PALETTE = [
   '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
+const COLOR_PALETTE_NO_TRANSPARENT = [
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
+];
+
 export default function Description({ username, uid }) {
   const pathname = usePathname();
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
-  const canEdit = isEditable || (currentUser?.uid === finalUid);
+  const canEdit = isEditable && (currentUser?.uid === finalUid);
 
   const [description, setDescription] = useState('설명을 입력하세요');
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -34,7 +39,8 @@ export default function Description({ username, uid }) {
     rounded: 'md',
     marginTop: 0,    // 상단 여백 추가
     marginBottom: 0, // 하단 여백 추가
-    fontSize: 16     // 폰트 크기 추가 (설명은 기본값을 16px로 설정)
+    fontSize: 16,    // 폰트 크기 추가 (설명은 기본값을 16px로 설정)
+    width: 100      // 폭 설정 추가 (백분율)
   });
 
   // 설명 저장
@@ -159,9 +165,9 @@ export default function Description({ username, uid }) {
     if (!pathname?.startsWith('/editor')) return null;
 
     return (
-      <div className="w-full max-w-[1100px] mb-4">
+      <div className="w-full max-w-[1100px] mb-4 px-4 py-4">
         {showColorSettings && (
-          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700">
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-gray-700">
             {/* 1. 배경색 설정 */}
             <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
               <div className="flex items-center gap-2">
@@ -201,7 +207,7 @@ export default function Description({ username, uid }) {
             <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
               <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
               <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
-                {COLOR_PALETTE.map((color) => (
+                {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
                   <button
                     key={`text-${color}`}
                     onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
@@ -220,7 +226,7 @@ export default function Description({ username, uid }) {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
                 <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
-                  {COLOR_PALETTE.map((color) => (
+                  {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
                     <button
                       key={`shadow-${color}`}
                       onClick={() => saveStyleSettings({ ...styleSettings, shadowColor: color })}
@@ -341,6 +347,23 @@ export default function Description({ username, uid }) {
                 {styleSettings.fontSize}px
               </span>
             </div>
+
+            {/* 7. 폭 설정 추가 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">폭</span>
+              <input
+                type="range"
+                min={30}
+                max={100}
+                step={5}
+                value={styleSettings.width}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, width: parseInt(e.target.value) })}
+                className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-sm text-gray-100 w-12 text-right">
+                {styleSettings.width}%
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -351,36 +374,51 @@ export default function Description({ username, uid }) {
     const shadowColor = styleSettings.shadowColor 
       ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
       : 'rgba(0, 0, 0, 0.2)';
+
+    // 배경색 처리 - 투명색일 경우 opacity 무시
+    const bgColor = styleSettings.bgColor === 'transparent' 
+      ? 'transparent' 
+      : styleSettings.bgColor;
+
+    // hex to rgba 변환 함수
+    const hexToRgba = (hex, opacity) => {
+      if (hex === 'transparent') return 'transparent';
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    };
+
+    // 기본 스타일 객체
+    const baseStyle = {
+      backgroundColor: bgColor === 'transparent' ? 'transparent' : hexToRgba(bgColor, styleSettings.bgOpacity),
+      color: styleSettings.textColor
+    };
     
     switch (styleSettings.shadow) {
       case 'none':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: 'none'
         };
       case 'sm':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 1px 2px ${shadowColor}`
         };
       case 'md':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 4px 6px ${shadowColor}`
         };
       case 'lg':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 10px 15px ${shadowColor}`
         };
       case 'retro':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `8px 8px 0px 0px ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -388,26 +426,22 @@ export default function Description({ username, uid }) {
         };
       case 'float':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 10px 20px -5px ${shadowColor}`
         };
       case 'glow':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 0 20px ${shadowColor}`
         };
       case 'inner':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `inset 0 2px 4px ${shadowColor}`
         };
       case 'sharp':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `-10px 10px 0px ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -415,14 +449,12 @@ export default function Description({ username, uid }) {
         };
       case 'soft':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 5px 15px ${shadowColor}`
         };
       case 'stripe':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -430,8 +462,7 @@ export default function Description({ username, uid }) {
         };
       case 'cross':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -439,8 +470,7 @@ export default function Description({ username, uid }) {
         };
       case 'diagonal':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -448,19 +478,219 @@ export default function Description({ username, uid }) {
         };
       default:
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: 'none'
         };
     }
   };
 
   return (
-    <div className='md:flex md:flex-col md:items-center md:justify-center md:w-full'>
-      {renderColorSettings()}
+    <div className='flex flex-col items-center justify-center w-full'>
+      <div className="w-full max-w-[1100px] px-4">
+        {showColorSettings && (
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-gray-700">
+            {/* 1. 배경색 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">배경색</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.bgColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.bgOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.bgOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            {/* 2. 텍스트 색상 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
+              <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className={cn(
+                      "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                      styleSettings.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* 3. 그림자 색상 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
+                    <button
+                      key={`shadow-${color}`}
+                      onClick={() => saveStyleSettings({ ...styleSettings, shadowColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.shadowOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadowOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.shadowOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            {/* 4. 모서리와 그림자 스타일 설정 */}
+            <div className="flex flex-col gap-4 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">모서리</span>
+                <select
+                  value={styleSettings.rounded || 'md'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, rounded: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                >
+                  <option value="none">각진</option>
+                  <option value="sm">약간 둥근</option>
+                  <option value="md">둥근</option>
+                  <option value="lg">많이 둥근</option>
+                  <option value="full">완전 둥근</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <select
+                  value={styleSettings.shadow || 'none'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 overflow-y-auto"
+                >
+                  <option value="none">없음</option>
+                  <option value="sm">약한</option>
+                  <option value="md">보통</option>
+                  <option value="lg">강한</option>
+                  <option value="retro">레트로</option>
+                  <option value="float">플로팅</option>
+                  <option value="glow">글로우</option>
+                  <option value="inner">이너</option>
+                  <option value="sharp">샤프</option>
+                  <option value="soft">소프트</option>
+                  <option value="stripe">스트라이프</option>
+                  <option value="cross">크로스</option>
+                  <option value="diagonal">대각선</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 5. 여백 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">상단 여백</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  value={styleSettings.marginTop}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, marginTop: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {styleSettings.marginTop}rem
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">하단 여백</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  value={styleSettings.marginBottom}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, marginBottom: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {styleSettings.marginBottom}rem
+                </span>
+              </div>
+            </div>
+
+            {/* 6. 폰트 크기 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">폰트 크기</span>
+              <input
+                type="range"
+                min={12}
+                max={36}
+                step={1}
+                value={styleSettings.fontSize}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, fontSize: parseInt(e.target.value) })}
+                className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-sm text-gray-100 w-12 text-right">
+                {styleSettings.fontSize}px
+              </span>
+            </div>
+
+            {/* 7. 폭 설정 추가 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">폭</span>
+              <input
+                type="range"
+                min={30}
+                max={100}
+                step={5}
+                value={styleSettings.width}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, width: parseInt(e.target.value) })}
+                className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-sm text-gray-100 w-12 text-right">
+                {styleSettings.width}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
       <div 
         className={cn(
-          "relative flex items-center justify-center font-bold w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm tracking-tight group",
+          "relative flex items-center justify-center font-bold w-full rounded-2xl p-4 backdrop-blur-sm tracking-tight group",
           styleSettings.rounded === 'none' && 'rounded-none',
           styleSettings.rounded === 'sm' && 'rounded',
           styleSettings.rounded === 'md' && 'rounded-lg',
@@ -471,7 +701,8 @@ export default function Description({ username, uid }) {
           ...getStyleObject(),
           marginTop: `${styleSettings.marginTop}rem`,
           marginBottom: `${styleSettings.marginBottom}rem`,
-          fontSize: `${styleSettings.fontSize}px`
+          fontSize: `${styleSettings.fontSize}px`,
+          maxWidth: `${styleSettings.width}%`
         }}
       >
         <div className="relative w-full flex flex-col items-center">

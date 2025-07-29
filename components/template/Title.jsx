@@ -14,12 +14,17 @@ const COLOR_PALETTE = [
   '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
+const COLOR_PALETTE_NO_TRANSPARENT = [
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
+];
+
 export default function Title({ username, uid }) {
   const pathname = usePathname();
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
-  const canEdit = isEditable || (currentUser?.uid === finalUid);
+  const canEdit = isEditable && (currentUser?.uid === finalUid);
 
   const [title, setTitle] = useState('제목을 입력하세요');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -34,7 +39,8 @@ export default function Title({ username, uid }) {
     rounded: 'md',
     marginTop: 0,    // 상단 여백 추가
     marginBottom: 0, // 하단 여백 추가
-    fontSize: 21     // 폰트 크기 추가
+    fontSize: 21,    // 폰트 크기 추가
+    width: 100      // 폭 설정 추가 (백분율)
   });
 
   // 제목 저장
@@ -157,9 +163,9 @@ export default function Title({ username, uid }) {
     if (!pathname?.startsWith('/editor')) return null;
 
     return (
-      <div className="w-full max-w-[1100px] mb-4">
+      <div className="w-full max-w-[1100px] px-4">
         {showColorSettings && (
-          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700">
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-gray-700">
             {/* 1. 배경색 설정 */}
             <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
               <div className="flex items-center gap-2">
@@ -199,7 +205,7 @@ export default function Title({ username, uid }) {
             <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
               <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
               <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
-                {COLOR_PALETTE.map((color) => (
+                {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
                   <button
                     key={`text-${color}`}
                     onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
@@ -218,7 +224,7 @@ export default function Title({ username, uid }) {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
                 <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
-                  {COLOR_PALETTE.map((color) => (
+                  {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
                     <button
                       key={`shadow-${color}`}
                       onClick={() => saveStyleSettings({ ...styleSettings, shadowColor: color })}
@@ -339,6 +345,23 @@ export default function Title({ username, uid }) {
                 {styleSettings.fontSize}px
               </span>
             </div>
+
+            {/* 7. 폭 설정 추가 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">폭</span>
+              <input
+                type="range"
+                min={30}
+                max={100}
+                step={5}
+                value={styleSettings.width}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, width: parseInt(e.target.value) })}
+                className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-sm text-gray-100 w-12 text-right">
+                {styleSettings.width}%
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -349,36 +372,51 @@ export default function Title({ username, uid }) {
     const shadowColor = styleSettings.shadowColor 
       ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
       : 'rgba(0, 0, 0, 0.2)';
+
+    // 배경색 처리 - 투명색일 경우 opacity 무시
+    const bgColor = styleSettings.bgColor === 'transparent' 
+      ? 'transparent' 
+      : styleSettings.bgColor;
+
+    // hex to rgba 변환 함수
+    const hexToRgba = (hex, opacity) => {
+      if (hex === 'transparent') return 'transparent';
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    };
+
+    // 기본 스타일 객체
+    const baseStyle = {
+      backgroundColor: bgColor === 'transparent' ? 'transparent' : hexToRgba(bgColor, styleSettings.bgOpacity),
+      color: styleSettings.textColor
+    };
     
     switch (styleSettings.shadow) {
       case 'none':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: 'none'
         };
       case 'sm':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 1px 2px ${shadowColor}`
         };
       case 'md':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 4px 6px ${shadowColor}`
         };
       case 'lg':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 10px 15px ${shadowColor}`
         };
       case 'retro':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `8px 8px 0px 0px ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -386,26 +424,22 @@ export default function Title({ username, uid }) {
         };
       case 'float':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 10px 20px -5px ${shadowColor}`
         };
       case 'glow':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 0 20px ${shadowColor}`
         };
       case 'inner':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `inset 0 2px 4px ${shadowColor}`
         };
       case 'sharp':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `-10px 10px 0px ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -413,14 +447,12 @@ export default function Title({ username, uid }) {
         };
       case 'soft':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `0 5px 15px ${shadowColor}`
         };
       case 'stripe':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -428,8 +460,7 @@ export default function Title({ username, uid }) {
         };
       case 'cross':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -437,8 +468,7 @@ export default function Title({ username, uid }) {
         };
       case 'diagonal':
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`,
           borderColor: styleSettings.shadowColor || '#000000',
           borderWidth: '2px',
@@ -446,19 +476,18 @@ export default function Title({ username, uid }) {
         };
       default:
         return {
-          backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
-          color: styleSettings.textColor,
+          ...baseStyle,
           boxShadow: 'none'
         };
     }
   };
 
   return (
-    <div className='md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+    <div className='flex flex-col items-center justify-center w-full'>
       {renderColorSettings()}
       <div 
         className={cn(
-          "relative flex items-center justify-center font-bold w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm tracking-tight group",
+          "relative flex items-center justify-center font-bold w-full rounded-2xl p-3 backdrop-blur-sm tracking-tight group",
           styleSettings.rounded === 'none' && 'rounded-none',
           styleSettings.rounded === 'sm' && 'rounded',
           styleSettings.rounded === 'md' && 'rounded-lg',
@@ -469,7 +498,8 @@ export default function Title({ username, uid }) {
           ...getStyleObject(),
           marginTop: `${styleSettings.marginTop}rem`,
           marginBottom: `${styleSettings.marginBottom}rem`,
-          fontSize: `${styleSettings.fontSize}px`
+          fontSize: `${styleSettings.fontSize}px`,
+          maxWidth: `${styleSettings.width}%`
         }}
       >
         {isEditingTitle ? (

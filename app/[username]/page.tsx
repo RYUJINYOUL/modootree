@@ -17,6 +17,9 @@ import ComponentRenderer from '@/components/ComponentRenderer';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase';
 import TranslateBanner from '@/app/components/ui/TranslateBanner';
+import Header from '@/components/Header';
+import Image from 'next/image';
+import { X } from 'lucide-react';
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
@@ -85,6 +88,7 @@ export default function UserPublicPage() {
   const [components, setComponents] = useState<string[]>([]);
   const [allowedUsers, setAllowedUsers] = useState<Array<{email: string}>>([]);
   const [isAllowed, setIsAllowed] = useState(false);
+  const [showBottomButton, setShowBottomButton] = useState(true);
 
   const handleBackgroundChange = async (type: string, value: string) => {
     if (!userData?.uid) {
@@ -286,8 +290,8 @@ export default function UserPublicPage() {
 
   return (
     <>
-      {/* Header 컴포넌트 제거 */}
       <TranslateBanner />
+      <Header />
       <main className="min-h-screen flex flex-col items-center relative" style={getBackgroundStyles()}>
         {renderBackground()}
         <div className="flex-grow flex flex-col items-center w-full">
@@ -305,7 +309,6 @@ export default function UserPublicPage() {
           </div>
         </div>
         <div className="w-full">
-          {/* 배경 설정 버튼 */}
           {currentUser?.uid === userData.uid && (
             <div className="fixed top-5 right-5 z-50">
               <Link 
@@ -319,6 +322,31 @@ export default function UserPublicPage() {
           )}
           <div className="h-[50px]"></div>
           <UserEditButton username={username} ownerUid={userData.uid} />
+          
+          {/* 하단 버튼 */}
+          {showBottomButton && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+              <Link
+                href="/"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all shadow-lg whitespace-nowrap"
+              >
+                <Image
+                  src="/Image/logo.png"
+                  alt="ModooTree Logo"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
+                <span className="text-black text-sm">모두트리 무료페이지 만들기</span>
+              </Link>
+              <button
+                onClick={() => setShowBottomButton(false)}
+                className="p-1.5 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all"
+              >
+                <X className="w-4 h-4 text-black" />
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </>

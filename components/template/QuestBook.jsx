@@ -161,7 +161,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   }, [isLoading, hasMore, loadMore])
 
   const showToast = (title, description, duration = 2000) => {
-    toast.toast({
+    toast({
       title,
       description,
       duration,
@@ -660,7 +660,7 @@ export default function GuestbookTemplate({ username, uid }) {
   });
 
   const showToast = (title, description, duration = 2000) => {
-    toast.toast({
+    toast({
       title,
       description,
       duration,
@@ -780,7 +780,7 @@ export default function GuestbookTemplate({ username, uid }) {
             </svg>
           </button>
         </HeaderDrawer>
-        <div className="flex items-center justify-center gap-2 relative group">
+        <div className="flex items-center justify-center gap-2 relative">
           {isEditingTitle ? (
             <input
               type="text"
@@ -792,22 +792,23 @@ export default function GuestbookTemplate({ username, uid }) {
                   handleTitleSave(guestBookTitle);
                 }
               }}
-              className="text-xl font-semibold bg-transparent border-b border-white/30 focus:border-white/60 outline-none text-center px-2 py-1"
-              style={{ color: styleSettings.textColor }}
+              className="text-xl font-semibold text-center bg-transparent border-b-2 border-gray-300 focus:border-blue-500 outline-none px-2 py-1"
               autoFocus
             />
           ) : (
-            <>
-              <span className="text-xl font-semibold">{guestBookTitle}</span>
+            <div className="relative flex items-center justify-center">
+              <h1 className="text-xl font-semibold text-center px-8">
+                {guestBookTitle}
+              </h1>
               {canEdit && (
                 <button
                   onClick={() => setIsEditingTitle(true)}
-                  className="p-1 rounded-lg hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <Edit2 className="w-4 h-4" style={{ color: styleSettings.textColor }} />
+                  <Edit2 className="w-4 h-4" />
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
         <HeaderDrawer uid={finalUid}>

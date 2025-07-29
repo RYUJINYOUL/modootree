@@ -22,8 +22,31 @@ export default function CropperModal({ image, onCancel, onCrop, type }: Props) {
 
     setIsUploading(true)
     try {
-      const canvas = cropper.getCroppedCanvas({ maxWidth: 512, maxHeight: 512 })
-      const blob = await new Promise<Blob>((resolve) => canvas.toBlob(resolve!, 'image/jpeg'))
+      const canvas = cropper.getCroppedCanvas({ 
+        ...(type === 'logo' 
+          ? {
+              maxWidth: 800,  // 더 큰 크기로 증가
+              maxHeight: 800,
+              imageSmoothingEnabled: true,
+              imageSmoothingQuality: 'high',
+              fillColor: '#fff',
+              minWidth: 400,  // 최소 크기 설정
+              minHeight: 400
+            }
+          : {
+              maxWidth: 1920,
+              maxHeight: 1080,
+              imageSmoothingQuality: 'high'
+            }
+        )
+      })
+
+      // 로고 이미지의 경우 PNG 형식으로 저장 (투명도 유지 및 무손실)
+      const blob = await new Promise<Blob>((resolve) => 
+        type === 'logo' 
+          ? canvas.toBlob(resolve!, 'image/png', 1.0)  // PNG 형식, 최대 품질
+          : canvas.toBlob(resolve!, 'image/jpeg', 0.95)  // JPEG 형식, 95% 품질
+      )
       await onCrop(blob!)
     } finally {
       setIsUploading(false)

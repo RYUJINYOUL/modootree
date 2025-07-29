@@ -7,11 +7,12 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
   
-  // 메인페이지, 로그인, 회원가입 페이지에서는 푸터를 숨김
+  // 메인페이지, 로그인, 회원가입 페이지, username 페이지에서는 푸터를 숨김
   const isMainPage = pathname === '/';
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isUserPage = /^\/[^/]+$/.test(pathname); // /username 형식의 경로 체크
 
-  if (isMainPage || isAuthPage) {
+  if (isMainPage || isAuthPage || isUserPage) {
     return null;
   }
 

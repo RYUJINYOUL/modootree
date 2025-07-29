@@ -175,20 +175,45 @@ function Gallery3 ({ username, uid }: LogoProps) {
     try {
       setIsUploading(true);
 
+      // 이전 이미지 삭제 시도
+      const oldUrl = cropType === "logo" ? logoUrl : bgUrl;
+      if (oldUrl && !oldUrl.startsWith("/Image/")) {
+        try {
+          // URL에서 파일 경로 추출
+          const decodedUrl = decodeURIComponent(oldUrl);
+          const pathMatch = decodedUrl.match(/o\/(.+?)\?/);
+          if (pathMatch && pathMatch[1]) {
+            const storagePath = pathMatch[1].replace(/%2F/g, '/');
+            await deleteImageFromStorage(storagePath);
+          }
+        } catch (deleteError) {
+          console.warn('이전 이미지 삭제 실패:', deleteError);
+          // 삭제 실패해도 계속 진행
+        }
+      }
+
       const options = {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 1024,
-        useWebWorker: true,
+        ...(cropType === 'logo'
+          ? {
+              maxSizeMB: 3,  // 더 큰 파일 크기 허용
+              maxWidthOrHeight: 800,  // 더 큰 크기로 증가
+              useWebWorker: true,
+              quality: 1,
+              fileType: 'png',  // PNG 형식 사용
+              initialQuality: 1  // 초기 품질도 최대로
+            }
+          : {
+              maxSizeMB: 2,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+              quality: 0.95
+            }
+        )
       };
 
       const croppedFile = new File([croppedBlob], `cropped_image.${cropType === 'logo' ? 'jpeg' : 'jpeg'}`, { type: croppedBlob.type });
       const compressedFile = await imageCompression(croppedFile, options);
       const uploadFn = cropType === "logo" ? uploadLogoImage : uploadLinkImage;
-
-      const oldUrl = cropType === "logo" ? logoUrl : bgUrl;
-      if (oldUrl && !oldUrl.startsWith("/Image/")) {
-        await deleteImageFromStorage(oldUrl);
-      }
 
       const url = await uploadFn(compressedFile, finalUid);
 

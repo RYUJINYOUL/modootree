@@ -104,8 +104,18 @@ export default function UserSampleCarousel2() {
       <div className="mx-4">
         <div className="relative w-[260px] h-[450px] bg-white rounded-3xl overflow-hidden shadow-lg">
           <div className="absolute inset-0 flex items-center justify-center p-1">
-            <div className="w-[250px] h-[440px] bg-gray-50 rounded-2xl">
-              {/* 여기에 실제 샘플 이미지나 미리보기를 추가할 수 있습니다 */}
+            <div className="w-[250px] h-[440px] bg-gray-50 rounded-2xl overflow-hidden">
+              <Image
+                src={sample.thumbnail}
+                alt={sample.description}
+                width={250}
+                height={440}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-4">
+                <h3 className="text-lg font-semibold mb-1">{sample.description}</h3>
+                <p className="text-sm text-gray-300">modootree.com/{sample.username}</p>
+              </div>
             </div>
           </div>
         </div>

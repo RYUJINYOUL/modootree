@@ -35,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Drawer,
@@ -160,16 +161,15 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
   const canEdit = useMemo(() => {
     if (!currentUser) return false;
     if (pathname?.startsWith('/editor')) return true;
-    if (currentUser.uid === finalUid) return true;  // 페이지 소유자
-    return isAllowed;  // 허용된 사용자
-  }, [currentUser, pathname, finalUid, isAllowed]);
+    if (currentUser.uid === finalUid) return true;  // 페이지 소유자만 수정 가능
+    return false;  // 다른 사용자는 수정 불가
+  }, [currentUser, pathname, finalUid]);
 
-  // 삭제 권한 확인 함수 추가
+  // 삭제 권한 확인 함수 수정
   const canDelete = (diary) => {
     if (!currentUser) return false;
     if (currentUser.uid === finalUid) return true;  // 페이지 소유자
-    if (diary.authorUid === currentUser.uid) return true;  // 작성자 본인
-    return isAllowed;  // 허용된 사용자
+    return diary.authorUid === currentUser.uid;  // 작성자 본인만 삭제 가능
   };
 
   // 현재 사용자 정보를 메모이제이션
@@ -968,7 +968,7 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
               </svg>
             </button>
           </HeaderDrawer>
-          <div className="flex items-center justify-center gap-2 relative group">
+          <div className="flex items-center justify-center gap-2 relative">
             {isEditingTitle ? (
               <input
                 type="text"
@@ -980,22 +980,23 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                     handleTitleSave(diaryTitle);
                   }
                 }}
-                className="text-xl font-semibold bg-transparent border-b border-white/30 focus:border-white/60 outline-none text-center px-2 py-1"
-                style={{ color: styleSettings.textColor }}
+                className="text-xl font-semibold text-center bg-transparent border-b-2 border-gray-300 focus:border-blue-500 outline-none px-2 py-1"
                 autoFocus
               />
             ) : (
-              <>
-                <span className="text-xl font-semibold">{diaryTitle}</span>
+              <div className="relative flex items-center justify-center">
+                <h1 className="text-xl font-semibold text-center px-8">
+                  {diaryTitle}
+                </h1>
                 {canEdit && (
                   <button
                     onClick={() => setIsEditingTitle(true)}
-                    className="p-1 rounded-lg hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Edit2 className="w-4 h-4" style={{ color: styleSettings.textColor }} />
+                    <Edit2 className="w-4 h-4" />
                   </button>
                 )}
-              </>
+              </div>
             )}
           </div>
           <HeaderDrawer uid={finalUid}>
@@ -1322,6 +1323,9 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
                   {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).locale('ko').format('YYYY년 MM월 DD일')}
                 </span>
               </DialogTitle>
+              <DialogDescription>
+                일기 내용을 확인하실 수 있습니다.
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
               <p className="text-gray-700 whitespace-pre-wrap">
@@ -1350,6 +1354,9 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
           <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>공감하기</DialogTitle>
+              <DialogDescription>
+                이 일기에 공감하고 싶은 카테고리를 선택해주세요.
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
               <p className="text-gray-700 whitespace-pre-wrap mb-6">
@@ -1400,6 +1407,9 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
           <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>공감이 저장되었습니다</DialogTitle>
+              <DialogDescription>
+                공감한 일기는 공감 한 조각 페이지에서 확인하실 수 있습니다.
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-4 space-y-4">
               <p className="text-gray-600">
@@ -1436,6 +1446,9 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>이미지 자르기</DialogTitle>
+              <DialogDescription>
+                이미지를 원하는 크기로 잘라주세요.
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
               {croppingImageUrl && (

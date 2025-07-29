@@ -32,7 +32,7 @@ export default function Divider({ username, uid }) {
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
-  const canEdit = isEditable || (currentUser?.uid === finalUid);
+  const canEdit = isEditable && (currentUser?.uid === finalUid);
 
   const [showSettings, setShowSettings] = useState(false);
   const [styleSettings, setStyleSettings] = useState({
@@ -252,6 +252,9 @@ export default function Divider({ username, uid }) {
       marginRight: 'auto'
     };
 
+    // 투명색 처리를 위한 색상 값 설정
+    const color = styleSettings.color === 'transparent' ? 'transparent' : styleSettings.color;
+
     switch (styleSettings.style) {
       case 'solid':
       case 'dashed':
@@ -259,29 +262,35 @@ export default function Divider({ username, uid }) {
       case 'double':
         return {
           ...baseStyle,
-          borderColor: styleSettings.color
+          borderColor: color
         };
       case 'gradient':
         return {
           ...baseStyle,
-          background: `linear-gradient(${styleSettings.orientation === 'horizontal' ? '90deg' : '0deg'}, transparent, ${styleSettings.color}, transparent)`
+          background: color === 'transparent' 
+            ? 'transparent'
+            : `linear-gradient(${styleSettings.orientation === 'horizontal' ? '90deg' : '0deg'}, transparent, ${color}, transparent)`
         };
       case 'shadow':
         return {
           ...baseStyle,
-          backgroundColor: styleSettings.color,
-          boxShadow: `0 0 4px ${styleSettings.color}`
+          backgroundColor: color,
+          boxShadow: color === 'transparent' ? 'none' : `0 0 4px ${color}`
         };
       case 'pattern':
         return {
           ...baseStyle,
-          backgroundImage: `repeating-linear-gradient(45deg, ${styleSettings.color}, ${styleSettings.color} 1px, transparent 1px, transparent 10px)`
+          backgroundImage: color === 'transparent' 
+            ? 'none'
+            : `repeating-linear-gradient(45deg, ${color}, ${color} 1px, transparent 1px, transparent 10px)`
         };
       case 'wave':
         return {
           ...baseStyle,
           backgroundColor: 'transparent',
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 0 5 Q 25 0, 50 5 T 100 5' stroke='${encodeURIComponent(styleSettings.color)}' fill='none'/%3E%3C/svg%3E")`,
+          backgroundImage: color === 'transparent'
+            ? 'none'
+            : `url("data:image/svg+xml,%3Csvg width='100' height='10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 0 5 Q 25 0, 50 5 T 100 5' stroke='${encodeURIComponent(color)}' fill='none'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'repeat-x',
           backgroundSize: '100px 10px'
         };
@@ -292,13 +301,15 @@ export default function Divider({ username, uid }) {
           '&::before, &::after': {
             content: '""',
             flex: 1,
-            borderTop: `1px solid ${styleSettings.color}`
+            borderTop: `1px solid ${color}`
           }
         };
       case 'zigzag':
         return {
           ...baseStyle,
-          backgroundImage: `linear-gradient(45deg, transparent 33.333%, ${styleSettings.color} 33.333%, ${styleSettings.color} 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, ${styleSettings.color} 33.333%, ${styleSettings.color} 66.667%, transparent 66.667%)`,
+          backgroundImage: color === 'transparent'
+            ? 'none'
+            : `linear-gradient(45deg, transparent 33.333%, ${color} 33.333%, ${color} 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, ${color} 33.333%, ${color} 66.667%, transparent 66.667%)`,
           backgroundSize: '10px 10px',
           backgroundColor: 'transparent'
         };
@@ -308,25 +319,27 @@ export default function Divider({ username, uid }) {
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center">
-      {renderSettings()}
-      <div className="relative w-full flex flex-col items-center justify-center group">
-        {canEdit && (
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="absolute left-1/2 -translate-x-1/2 -top-4 p-1 rounded-lg hover:bg-white/10 transition-colors md:opacity-0 md:group-hover:opacity-100"
-          >
-            <Settings className="w-4 h-4" style={{ color: styleSettings.color }} />
-          </button>
-        )}
-        <div
-          className={cn(
-            "transition-all w-full mt-6", // 상단에 여백 추가하여 아이콘 공간 확보
-            DIVIDER_STYLES[styleSettings.style],
-            styleSettings.orientation === 'vertical' && "h-full inline-block"
+    <div className='flex flex-col items-center justify-center w-full'>
+      <div className="w-full max-w-[1100px] px-4">
+        {renderSettings()}
+        <div className="relative w-full flex flex-col items-center justify-center group">
+          {canEdit && (
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="absolute left-1/2 -translate-x-1/2 -top-4 p-1 rounded-lg hover:bg-white/10 transition-colors md:opacity-0 md:group-hover:opacity-100"
+            >
+              <Settings className="w-4 h-4" style={{ color: styleSettings.color }} />
+            </button>
           )}
-          style={getDividerStyle()}
-        />
+          <div
+            className={cn(
+              "transition-all w-full",
+              DIVIDER_STYLES[styleSettings.style],
+              styleSettings.orientation === 'vertical' && "h-full inline-block"
+            )}
+            style={getDividerStyle()}
+          />
+        </div>
       </div>
     </div>
   );

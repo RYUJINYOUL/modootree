@@ -72,6 +72,8 @@ const ImageCarousel = ({ username, uid }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [showColorSettings, setShowColorSettings] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [showYoutubeInput, setShowYoutubeInput] = useState(false);
   const [styleSettings, setStyleSettings] = useState({
     bgColor: '#60A5FA',
     textColor: '#FFFFFF',
@@ -230,25 +232,34 @@ const ImageCarousel = ({ username, uid }) => {
     }
   };
 
-  const handleDelete = async (image) => {
+  const handleDelete = async (image, e) => {
     if (!canEdit) return;
-    if (!window.confirm('이미지를 삭제하시겠습니까?')) return;
+    e?.preventDefault();
+    e?.stopPropagation();
+
+    if (!window.confirm('삭제하시겠습니까?')) return;
 
     try {
       // Firestore에서 문서 삭제
       await deleteDoc(doc(db, 'users', finalUid, 'carousel', image.id));
       
-      // Storage에서 이미지 파일 삭제
+      // 일반 이미지인 경우에만 Storage에서 파일 삭제
+      if (image.storagePath && (!image.type || image.type === 'image')) {
+        try {
       const imageRef = ref(storage, image.storagePath);
       await deleteObject(imageRef);
+        } catch (storageError) {
+          console.warn('Storage 파일 삭제 실패:', storageError);
+        }
+      }
 
       // 현재 인덱스 조정
       if (currentIndex >= images.length - 1) {
         setCurrentIndex(Math.max(0, images.length - 2));
       }
     } catch (error) {
-      console.error('이미지 삭제 실패:', error);
-      alert('이미지 삭제에 실패했습니다.');
+      console.error('삭제 실패:', error);
+      alert('삭제에 실패했습니다.');
     }
   };
 
@@ -289,8 +300,8 @@ const ImageCarousel = ({ username, uid }) => {
   const handleCarouselTitleSave = async () => {
     if (!canEdit) return;
     try {
-      const docRef = doc(db, 'users', finalUid, 'info', 'carouselSettings');
-      await setDoc(docRef, { title: carouselTitle }, { merge: true });
+      const docRef = doc(db, 'users', finalUid, 'settings', 'carousel');
+      await setDoc(docRef, { carouselTitle }, { merge: true });
       setEditingCarouselTitle(false);
     } catch (error) {
       console.error('제목 저장 실패:', error);
@@ -300,20 +311,18 @@ const ImageCarousel = ({ username, uid }) => {
 
   // 대표사진 문구 불러오기
   useEffect(() => {
-    if (!finalUid) return;
-    
     const fetchCarouselTitle = async () => {
+      if (!finalUid) return;
       try {
-        const docRef = doc(db, 'users', finalUid, 'info', 'carouselSettings');
+        const docRef = doc(db, 'users', finalUid, 'settings', 'carousel');
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().title) {
-          setCarouselTitle(docSnap.data().title);
+        if (docSnap.exists() && docSnap.data().carouselTitle) {
+          setCarouselTitle(docSnap.data().carouselTitle);
         }
       } catch (error) {
         console.error('제목 불러오기 실패:', error);
       }
     };
-
     fetchCarouselTitle();
   }, [finalUid]);
 
@@ -344,6 +353,72 @@ const ImageCarousel = ({ username, uid }) => {
     };
     loadStyleSettings();
   }, [finalUid]);
+
+  const handleYoutubeUpload = async () => {
+    if (!youtubeUrl || !canEdit) return;
+
+    try {
+      setUploading(true);
+
+      // YouTube URL 정규화 및 videoId 추출
+      let videoId = '';
+      const url = youtubeUrl.trim();
+
+      // 다양한 YouTube URL 형식 처리
+      if (url.includes('youtu.be/')) {
+        // 단축 URL (예: https://youtu.be/VIDEO_ID)
+        videoId = url.split('youtu.be/')[1]?.split(/[#?]/)[0];
+      } else if (url.includes('youtube.com/watch')) {
+        // 일반 URL (예: https://www.youtube.com/watch?v=VIDEO_ID)
+        videoId = url.split('v=')[1]?.split('&')[0];
+      } else if (url.includes('youtube.com/embed/')) {
+        // 임베드 URL (예: https://www.youtube.com/embed/VIDEO_ID)
+        videoId = url.split('embed/')[1]?.split(/[#?]/)[0];
+      } else if (url.includes('youtube.com/shorts/')) {
+        // Shorts URL (예: https://www.youtube.com/shorts/VIDEO_ID)
+        videoId = url.split('shorts/')[1]?.split(/[#?]/)[0];
+      }
+      
+      if (!videoId) {
+        alert('올바른 YouTube URL을 입력해주세요.');
+        setUploading(false);
+        return;
+      }
+
+      // 기본 썸네일 URL 사용
+      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+      // 영상 제목 추출 시도
+      let videoTitle = '';
+      try {
+        const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+        const data = await response.json();
+        videoTitle = data.title || '';
+      } catch (error) {
+        console.warn('영상 제목을 가져오는데 실패했습니다:', error);
+      }
+
+      // Firestore에 문서 추가
+      await addDoc(collection(db, 'users', finalUid, 'carousel'), {
+        url: thumbnailUrl,
+        youtubeId: videoId,
+        type: 'youtube',
+        title: videoTitle || '유튜브 영상',
+        description: '',
+        link: `https://www.youtube.com/watch?v=${videoId}`,
+        createdAt: new Date(),
+      });
+
+      // 상태 초기화
+      setYoutubeUrl('');
+      setShowYoutubeInput(false);
+      setUploading(false);
+    } catch (error) {
+      console.error('YouTube 영상 업로드 실패:', error);
+      alert('YouTube 영상 업로드에 실패했습니다.');
+      setUploading(false);
+    }
+  };
 
   const renderColorSettings = () => {
     if (!pathname?.startsWith('/editor')) return null;
@@ -603,7 +678,7 @@ const ImageCarousel = ({ username, uid }) => {
                   {canEdit && (
                     <button
                       onClick={() => setEditingCarouselTitle(true)}
-                      className="p-2 rounded-xl hover:bg-opacity-30 transition-all opacity-0 group-hover:opacity-100"
+                      className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
                       style={{ 
                         backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
                         color: styleSettings.textColor 
@@ -635,6 +710,19 @@ const ImageCarousel = ({ username, uid }) => {
                   >
                     <Plus className="w-5 h-5" />
                   </label>
+                  <button
+                    onClick={() => setShowYoutubeInput(!showYoutubeInput)}
+                    className="p-2 rounded-xl hover:bg-opacity-30 transition-all"
+                    style={{ 
+                      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor 
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
+                      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
+                    </svg>
+                  </button>
                 </>
               )}
               <button
@@ -669,19 +757,31 @@ const ImageCarousel = ({ username, uid }) => {
               {images.length > 0 ? (
                 <div className="space-y-6">
                   <div 
-                    className="relative rounded-xl overflow-hidden shadow-lg aspect-[4/3]"
+                    className="relative rounded-xl overflow-hidden shadow-lg aspect-video cursor-pointer group"
                     style={{ 
                       backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
                       color: styleSettings.textColor 
                     }}
+                    onClick={() => handleImageClick(images[currentIndex])}
                   >
+                    {images[currentIndex]?.type === 'youtube' && (
+                      <div className="absolute inset-0 flex items-center justify-center z-10">
+                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+                        <div className="w-16 h-16 md:w-20 md:h-20 relative">
+                          <div className="absolute inset-0 bg-red-600 rounded-full opacity-90"></div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-0 h-0 border-y-[12px] border-y-transparent border-l-[20px] border-l-white ml-2"></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <Image
                       src={images[currentIndex]?.url}
-                      alt={images[currentIndex]?.caption || '이미지'}
+                      alt={images[currentIndex]?.title || '이미지'}
                       fill
                       sizes="(max-width: 768px) 100vw, 33vw"
                       className="object-cover"
-                      onClick={() => handleImageClick(images[currentIndex])}
+                      priority
                     />
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
                       <h3 className="text-lg font-semibold text-white">
@@ -693,8 +793,8 @@ const ImageCarousel = ({ username, uid }) => {
                     </div>
                     {canEdit && (
                       <button
-                        onClick={() => handleDelete(images[currentIndex])}
-                        className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all"
+                        onClick={(e) => handleDelete(images[currentIndex], e)}
+                        className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all z-20"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -725,21 +825,33 @@ const ImageCarousel = ({ username, uid }) => {
                 return (
                   <div 
                     key={offset} 
-                    className="relative rounded-xl overflow-hidden shadow-lg aspect-[4/3] group"
+                    className="relative rounded-xl overflow-hidden shadow-lg aspect-video group cursor-pointer"
                     style={{ 
                       backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
                       color: styleSettings.textColor 
                     }}
+                    onClick={() => handleImageClick(image)}
                   >
                     {image ? (
                       <>
+                        {image.type === 'youtube' && (
+                          <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+                            <div className="w-16 h-16 relative">
+                              <div className="absolute inset-0 bg-red-600 rounded-full opacity-90"></div>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-0 h-0 border-y-[12px] border-y-transparent border-l-[20px] border-l-white ml-2"></div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         <Image
                           src={image.url}
-                          alt={image.caption || '이미지'}
+                          alt={image.title || '이미지'}
                           fill
                           sizes="(max-width: 768px) 100vw, 33vw"
-                          className="object-cover cursor-pointer"
-                          onClick={() => handleImageClick(image)}
+                          className="object-cover"
+                          priority
                         />
                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                           <h3 className="text-sm font-semibold text-white truncate">
@@ -751,8 +863,8 @@ const ImageCarousel = ({ username, uid }) => {
                         </div>
                         {canEdit && (
                           <button
-                            onClick={() => handleDelete(image)}
-                            className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100"
+                            onClick={(e) => handleDelete(image, e)}
+                            className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100 z-20"
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -817,22 +929,33 @@ const ImageCarousel = ({ username, uid }) => {
             </Dialog>
           )}
 
-          {/* 이미지 상세 모달 */}
+          {/* 이미지/영상 상세 모달 */}
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>이미지 상세</DialogTitle>
+                <DialogTitle>{selectedImage?.type === 'youtube' ? '유튜브 영상' : '이미지 상세'}</DialogTitle>
               </DialogHeader>
               {selectedImage && (
                 <div className="space-y-4">
-                  <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                  {selectedImage.type === 'youtube' ? (
+                    <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${selectedImage.youtubeId}?autoplay=1`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="absolute top-0 left-0 w-full h-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative aspect-video rounded-lg overflow-hidden">
                     <Image
                       src={selectedImage.url}
-                      alt={selectedImage.caption || '이미지'}
+                        alt={selectedImage.title || '이미지'}
                       fill
                       className="object-cover"
                     />
                   </div>
+                  )}
                   {canEdit ? (
                     <div className="space-y-4">
                       <div className="space-y-2">
@@ -850,6 +973,7 @@ const ImageCarousel = ({ username, uid }) => {
                           placeholder="설명을 입력하세요"
                           rows={3}
                         />
+                        {!selectedImage.type && (
                         <input
                           type="url"
                           value={link}
@@ -857,6 +981,7 @@ const ImageCarousel = ({ username, uid }) => {
                           className="w-full p-2 rounded border"
                           placeholder="링크를 입력하세요"
                         />
+                        )}
                       </div>
                       <div className="flex justify-end gap-2">
                         <Button onClick={handleCaptionSave}>저장</Button>
@@ -866,7 +991,7 @@ const ImageCarousel = ({ username, uid }) => {
                     <div className="space-y-2">
                       <h3 className="text-lg font-semibold">{selectedImage.title || '제목 없음'}</h3>
                       <p className="text-sm text-gray-600">{selectedImage.description || '설명 없음'}</p>
-                      {selectedImage.link && (
+                      {selectedImage.link && !selectedImage.type && (
                         <a
                           href={selectedImage.link}
                           target="_blank"
@@ -908,6 +1033,44 @@ const ImageCarousel = ({ username, uid }) => {
                   저장
                 </Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* YouTube URL 입력 모달 */}
+          <Dialog open={showYoutubeInput} onOpenChange={setShowYoutubeInput}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>YouTube 영상 추가</DialogTitle>
+                <DialogDescription>
+                  YouTube 영상 URL을 입력해주세요.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 space-y-4">
+                <input
+                  type="url"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="w-full p-2 rounded border"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowYoutubeInput(false);
+                      setYoutubeUrl('');
+                    }}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    onClick={handleYoutubeUpload}
+                    disabled={!youtubeUrl || uploading}
+                  >
+                    {uploading ? '업로드 중...' : '추가'}
+                  </Button>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes floating {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .animate-floating {
+    animation: floating 5s ease-in-out infinite;
+  }
+}
+
 body{
   /* <!--높이가 화면 꽉차게--> */
   height: 100vh; 

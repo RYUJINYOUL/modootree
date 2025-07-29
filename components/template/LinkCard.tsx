@@ -35,13 +35,15 @@ const COLOR_PALETTE = [
   '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
-// CSS 애니메이션 키프레임 추가
 const floatingAnimation = `
-  @keyframes floating {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
-  }
+@keyframes floating {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-floating {
+  animation: floating 5s ease-in-out infinite;
+}
 `;
 
 export default function LinkCards({ username, uid }: LogoProps) {
@@ -166,64 +168,14 @@ export default function LinkCards({ username, uid }: LogoProps) {
     }
   };
 
-  const getStyleObject = (link: LinkItem) => {
-    const shadowColor = link.shadowColor 
-      ? `rgba(${parseInt(link.shadowColor.slice(1, 3), 16)}, ${parseInt(link.shadowColor.slice(3, 5), 16)}, ${parseInt(link.shadowColor.slice(5, 7), 16)}, ${link.shadowOpacity ?? 0.2})`
-      : 'rgba(0, 0, 0, 0.2)';
-    
-    switch (link.shadow) {
-      case 'none':
-        return { boxShadow: 'none' };
-      case 'sm':
-        return { boxShadow: `0 1px 2px ${shadowColor}` };
-      case 'md':
-        return { boxShadow: `0 4px 6px ${shadowColor}` };
-      case 'lg':
-        return { boxShadow: `0 10px 15px ${shadowColor}` };
-      case 'retro':
-        return { boxShadow: `8px 8px 0px 0px ${shadowColor}` };
-      case 'float':
-        return { boxShadow: `0 10px 20px -5px ${shadowColor}` };
-      case 'glow':
-        return { boxShadow: `0 0 20px ${shadowColor}` };
-      case 'inner':
-        return { boxShadow: `inset 0 2px 4px ${shadowColor}` };
-      case 'sharp':
-        return { boxShadow: `-10px 10px 0px ${shadowColor}` };
-      case 'soft':
-        return { boxShadow: `0 5px 15px ${shadowColor}` };
-      case 'stripe':
-        return { boxShadow: `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}` };
-      case 'cross':
-        return { boxShadow: `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}` };
-      case 'diagonal':
-        return { boxShadow: `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}` };
-      default:
-        return { boxShadow: 'none' };
-    }
-  };
-
   return (
     <div className='flex items-center justify-center w-full'>
-      <style jsx global>{`
-        @keyframes floating {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .floating-animation {
-          animation: floating 5s ease-in-out infinite;
-        }
-      `}</style>
       <section className="space-y-4 pt-3 p-2 md:w-[1100px] w-full">
         {links.map((link, index) => (
           <div className='flex flex-col' key={index}>
             <div
               className={cn(
-                "flex flex-row items-center justify-center p-2 gap-6",
-                "transition-all duration-300 ease-in-out",
-                "hover:-translate-y-1 active:-translate-y-1",
-                "touch-manipulation",
-                "floating-animation",
+                "flex flex-row items-center justify-center p-2 gap-6 transition-all duration-300 ease-in-out hover:-translate-y-1 animate-floating",
                 isEditable && "flex flex-row",
                 // 둥근 모서리 스타일
                 link.rounded === 'none' && 'rounded-none',
@@ -299,8 +251,8 @@ export default function LinkCards({ username, uid }: LogoProps) {
                   height={50}
                   alt="link"
                   className={cn(
-                    'rounded-xl object-cover w-[50px] h-[50px] transition-opacity duration-200',
-                    isEditable ? 'cursor-pointer hover:opacity-80 active:opacity-80' : 'cursor-default'
+                    'rounded-xl object-cover w-[50px] h-[50px]',
+                    isEditable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   )}
                   onClick={() => isEditable && fileInputRefs.current[index]?.click()}
                 />

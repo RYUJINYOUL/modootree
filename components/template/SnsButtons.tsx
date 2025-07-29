@@ -74,6 +74,11 @@ const COLOR_PALETTE = [
   '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
+const COLOR_PALETTE_NO_TRANSPARENT = [
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
+];
+
 interface ButtonConfig {
   field: string;
   icon: IconType;
@@ -354,13 +359,24 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   const renderColorSettings = () => {
     if (!isEditable) return null;
 
+    // hex to rgba 변환 함수
+    const hexToRgba = (hex: string, opacity: number) => {
+      if (hex === 'transparent') return 'transparent';
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    };
+
     return (
       <div className="w-full px-4 mb-4">
         <button
           onClick={() => setShowColorSettings(!showColorSettings)}
           className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
           style={{ 
-            backgroundColor: `${contactInfo.bgColor}${Math.round((contactInfo.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            backgroundColor: contactInfo.bgColor === 'transparent' 
+              ? 'transparent' 
+              : hexToRgba(contactInfo.bgColor || '#60A5FA', contactInfo.bgOpacity || 0.2),
             color: contactInfo.textColor 
           }}
         >
@@ -372,11 +388,11 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
             {/* 1. 배경색 설정 */}
             <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-100 w-20">배경색</span>
-                <div className="flex flex-wrap gap-1">
+                <span className="text-sm font-medium text-gray-100 w-24">배경색</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
                   {COLOR_PALETTE.map((color) => (
                     <button
-                      key={`bg-${color}`}
+                      key={color}
                       onClick={() => handleColorSelect('bgColor', color)}
                       className={cn(
                         "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
@@ -388,7 +404,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-100 w-20">투명도</span>
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
                 <input
                   type="range"
                   min={0.1}
@@ -398,7 +414,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
                   onChange={(e) => handleBgOpacityChange(parseFloat(e.target.value))}
                   className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                 />
-                <span className="text-sm text-gray-100 w-10 text-right">
+                <span className="text-sm text-gray-100 w-12 text-right">
                   {(contactInfo.bgOpacity ?? 0.2).toFixed(1)}
                 </span>
               </div>
@@ -406,9 +422,9 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
 
             {/* 2. 텍스트 색상 설정 */}
             <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
-              <span className="text-sm font-medium text-gray-100 w-20">텍스트</span>
-              <div className="flex flex-wrap gap-1">
-                {COLOR_PALETTE.map((color) => (
+              <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
+              <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
                   <button
                     key={`text-${color}`}
                     onClick={() => handleColorSelect('textColor', color)}
@@ -425,9 +441,9 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
             {/* 3. 그림자 색상 설정 */}
             <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-100 w-20">그림자</span>
-                <div className="flex flex-wrap gap-1">
-                  {COLOR_PALETTE.map((color) => (
+                <span className="text-sm font-medium text-gray-100 w-24">그림자</span>
+                <div className="flex flex-wrap gap-1 max-w-[calc(100%-6rem)]">
+                  {COLOR_PALETTE_NO_TRANSPARENT.map((color) => (
                     <button
                       key={`shadow-${color}`}
                       onClick={() => handleColorSelect('shadowColor', color)}
@@ -441,7 +457,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-100 w-20">투명도</span>
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
                 <input
                   type="range"
                   min={0.1}
@@ -451,7 +467,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
                   onChange={(e) => handleShadowOpacityChange(parseFloat(e.target.value))}
                   className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                 />
-                <span className="text-sm text-gray-100 w-10 text-right">
+                <span className="text-sm text-gray-100 w-12 text-right">
                   {(contactInfo.shadowOpacity ?? 0.2).toFixed(1)}
                 </span>
               </div>
@@ -460,7 +476,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
             {/* 4. 모서리와 그림자 스타일 설정 */}
             <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-100 w-20">모서리</span>
+                <span className="text-sm font-medium text-gray-100 w-24">모서리</span>
                 <select
                   value={contactInfo.rounded || 'md'}
                   onChange={(e) => handleColorSelect('rounded', e.target.value)}
@@ -475,7 +491,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-100 w-20">효과</span>
+                <span className="text-sm font-medium text-gray-100 w-24">효과</span>
                 <select
                   value={contactInfo.shadow || 'none'}
                   onChange={(e) => handleColorSelect('shadow', e.target.value)}
@@ -554,9 +570,19 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
   };
 
   const renderButton = (button: ButtonConfig) => {
-    const bgColorWithOpacity = contactInfo.bgColor 
-      ? `${contactInfo.bgColor}${Math.round((contactInfo.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`
-      : 'rgba(96, 165, 250, 0.2)';
+    // hex to rgba 변환 함수
+    const hexToRgba = (hex: string, opacity: number) => {
+      if (hex === 'transparent') return 'transparent';
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    };
+
+    // 배경색 처리 - 투명색일 경우 opacity 무시
+    const bgColor = contactInfo.bgColor === 'transparent'
+      ? 'transparent'
+      : hexToRgba(contactInfo.bgColor || '#60A5FA', contactInfo.bgOpacity || 0.2);
 
     return (
       <button
@@ -572,7 +598,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
           contactInfo.rounded === 'full' && 'rounded-full',
         )}
         style={{
-          backgroundColor: button.isActive ? bgColorWithOpacity.replace(/0.2/, '0.3') : bgColorWithOpacity,
+          backgroundColor: button.isActive ? hexToRgba(contactInfo.bgColor || '#60A5FA', (contactInfo.bgOpacity || 0.2) * 1.5) : bgColor,
           color: contactInfo.textColor || '#FFFFFF',
           boxShadow: getShadowStyle(),
           borderColor: ['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(contactInfo.shadow || '') ? contactInfo.shadowColor || '#000000' : undefined,
