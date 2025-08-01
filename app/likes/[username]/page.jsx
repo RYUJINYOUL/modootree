@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { db } from '../../../firebase';
 import { 
   collection, 
@@ -32,7 +32,80 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import LoginOutButton from '@/components/ui/LoginOutButton';
 import Header from '@/components/Header';
+import Particles from "react-tsparticles";
+import { loadSlim } from "tsparticles-slim";
+
+const ParticlesComponent = () => {
+  const particlesInit = useCallback(async (engine) => {
+    await loadSlim(engine);
+  }, []);
+
+  return (
+    <Particles
+      className="absolute inset-0"
+      init={particlesInit}
+      options={{
+        background: {
+          opacity: 0
+        },
+        particles: {
+          color: {
+            value: [
+              "#64B5F6",  // 하늘색
+              "#81C784",  // 연두색
+              "#9575CD",  // 보라색
+              "#4FC3F7",  // 밝은 파랑
+              "#4DB6AC",  // 청록색
+              "#7986CB"   // 남색
+            ]
+          },
+          move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+              default: "bounce"
+            },
+            random: false,
+            speed: 2,
+            straight: false
+          },
+          number: {
+            density: {
+              enable: true,
+              area: 800
+            },
+            value: 30
+          },
+          opacity: {
+            value: 0.6,
+            animation: {
+              enable: true,
+              speed: 1,
+              minimumValue: 0.2
+            }
+          },
+          size: {
+            value: { min: 5, max: 10 },
+            animation: {
+              enable: true,
+              speed: 2,
+              minimumValue: 3
+            }
+          },
+          links: {
+            color: "#ffffff",
+            distance: 150,
+            enable: true,
+            opacity: 0.3,
+            width: 1
+          }
+        }
+      }}
+    />
+  );
+};
 
 const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
 // 관리자 UID 목록 추가
@@ -556,15 +629,12 @@ export default function LikesPage() {
 
   return (
     <>
+      <LoginOutButton />
       <Header />
-      <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white/90 pt-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl font-bold">공감 한 조각</h1>
-            <Link href="/" className="text-blue-400 hover:text-blue-300">
-              홈으로
-            </Link>
-          </div>
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90 relative">
+        <ParticlesComponent />
+        <div className="container mx-auto px-4 py-16 relative z-10">
+          
 
           {/* 카테고리 필터 */}
           {isMobile ? (
@@ -576,7 +646,7 @@ export default function LikesPage() {
               />
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 mb-8">
+            <div className="flex flex-wrap gap-2 mb-8 justify-center">
               <button
                 onClick={() => setSelectedCategory('전체')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
@@ -608,7 +678,7 @@ export default function LikesPage() {
               <p className="text-gray-400">아직 공감한 조각이 없습니다.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {filteredLikes.map((like) => (
                 <div 
                   key={like.id} 
@@ -686,6 +756,9 @@ export default function LikesPage() {
               {selectedPost && (
                 <>
                   <DialogHeader className="border-b border-gray-800 pb-4">
+                    <DialogTitle className="text-lg font-semibold text-white mb-4">
+                      공감 한 조각
+                    </DialogTitle>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-400">{selectedPost.category}</span>

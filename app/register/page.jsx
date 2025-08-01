@@ -47,6 +47,19 @@ const RegisterPage = () => {
                 createdAt: serverTimestamp(),
             });
 
+            // 빈 컴포넌트로 시작
+            await setDoc(doc(db, "users", user.uid, "links", "page"), {
+                components: [], // 빈 배열로 시작
+                type: null // 타입도 초기에는 null
+            });
+
+            // 이메일 회원가입
+            await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+                type: 'image',
+                value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                animation: true
+            });
+
             dispatch(
                 setUser({
                     uid: user.uid,
@@ -88,6 +101,7 @@ const RegisterPage = () => {
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
 
+            // 구글 로그인의 배경 설정도 동일한 URL로 수정
             if (!userSnap.exists()) {
                 // 신규 사용자 기본 정보만 저장
                 await setDoc(userRef, {
@@ -105,7 +119,8 @@ const RegisterPage = () => {
                 // 기본 배경 설정
                 await setDoc(doc(db, "users", user.uid, "settings", "background"), {
                     type: 'image',
-                    value: '/backgrounds/1752324410072_leaves-8931849_1920.jpg'
+                    value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                    animation: true
                 });
             }
 

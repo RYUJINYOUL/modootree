@@ -20,6 +20,72 @@ import TranslateBanner from '@/app/components/ui/TranslateBanner';
 import Header from '@/components/Header';
 import Image from 'next/image';
 import { X } from 'lucide-react';
+import { useCallback } from 'react';
+import Particles from "react-tsparticles";
+import { loadSlim } from "tsparticles-slim";
+
+const ParticlesComponent = () => {
+  const particlesInit = useCallback(async (engine: any) => {
+    await loadSlim(engine);
+  }, []);
+
+  return (
+    <Particles
+      className="absolute inset-0 z-[1]"
+      init={particlesInit}
+      options={{
+        background: {
+          opacity: 0
+        },
+        particles: {
+          color: {
+            value: ["#64B5F6", "#81C784", "#9575CD", "#4FC3F7", "#4DB6AC", "#7986CB"]
+          },
+          move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+              default: "bounce"
+            },
+            random: false,
+            speed: 2,
+            straight: false
+          },
+          number: {
+            density: {
+              enable: true,
+              area: 800
+            },
+            value: 30
+          },
+          opacity: {
+            value: 0.4,
+            animation: {
+              enable: true,
+              speed: 1,
+              minimumValue: 0.1
+            }
+          },
+          size: {
+            value: { min: 5, max: 10 },
+            animation: {
+              enable: true,
+              speed: 2,
+              minimumValue: 3
+            }
+          },
+          links: {
+            color: "#ffffff",
+            distance: 150,
+            enable: true,
+            opacity: 0.2,
+            width: 1
+          }
+        }
+      }}
+    />
+  );
+};
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
 const getYouTubeVideoId = (url: string) => {
@@ -63,16 +129,6 @@ const getVideoUrl = (url: string, type: string) => {
   };
 };
 
-const DEFAULT_BACKGROUND = {
-  type: 'image',
-  value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
-};
-
-const NO_SETTING_BACKGROUND = {
-  type: 'image',
-  value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324791928_watercolor-5062356_1920.jpg?alt=media&token=d911e094-0017-410b-a317-daf250cebcca'
-};
-
 export default function UserPublicPage() {
   const params = useParams();
   if (!params || !params.username) {
@@ -89,6 +145,8 @@ export default function UserPublicPage() {
   const [allowedUsers, setAllowedUsers] = useState<Array<{email: string}>>([]);
   const [isAllowed, setIsAllowed] = useState(false);
   const [showBottomButton, setShowBottomButton] = useState(true);
+  const [isAnimationEnabled, setIsAnimationEnabled] = useState(true);
+  const [showSettingButton, setShowSettingButton] = useState(true);
 
   const handleBackgroundChange = async (type: string, value: string) => {
     if (!userData?.uid) {
@@ -97,7 +155,14 @@ export default function UserPublicPage() {
 
     try {
       const settingsDocRef = doc(db, 'users', userData.uid, 'settings', 'background');
-      await setDoc(settingsDocRef, { type, value }, { merge: true });
+      const currentSettings = await getDoc(settingsDocRef);
+      
+      await setDoc(settingsDocRef, {
+        type,
+        value,
+        animation: currentSettings.exists() ? currentSettings.data().animation : true
+      });
+      
       setContextBackground(type, value);
     } catch (error) {
       console.error('배경 설정 저장 중 오류 발생:', error);
@@ -144,11 +209,10 @@ export default function UserPublicPage() {
         // 배경 설정 처리
         if (settingsSnap.exists()) {
           const backgroundData = settingsSnap.data();
+          setIsAnimationEnabled(backgroundData.animation ?? true);
           if (backgroundData.type === 'image' && backgroundData.value.startsWith('/')) {
-            // 로컬 이미지인 경우 바로 설정
             setContextBackground(backgroundData.type, backgroundData.value);
           } else if (backgroundData.type === 'image') {
-            // Storage 이미지인 경우에만 URL 가져오기
             const url = await loadBackgroundFromStorage(backgroundData.value);
             if (!isSubscribed) return;
             setContextBackground(backgroundData.type, url);
@@ -158,8 +222,11 @@ export default function UserPublicPage() {
         } else {
           // 기본 배경 설정
           if (!isSubscribed) return;
-          setContextBackground('image', DEFAULT_BACKGROUND.value);
-          await setDoc(doc(db, 'users', uid, 'settings', 'background'), DEFAULT_BACKGROUND);
+          await setDoc(doc(db, 'users', uid, 'settings', 'background'), {
+            type: 'none',
+            value: '',
+            animation: true
+          });
         }
 
         // 링크 데이터 설정
@@ -196,7 +263,8 @@ export default function UserPublicPage() {
         console.error('데이터 로딩 중 오류 발생:', error);
         // 에러 발생 시 NO_SETTING_BACKGROUND 사용
         if (!isSubscribed) return;
-        setContextBackground('image', NO_SETTING_BACKGROUND.value);
+        setContextBackground('none', '');
+        setIsAnimationEnabled(true);
       }
     }
 
@@ -227,13 +295,15 @@ export default function UserPublicPage() {
   };
 
   const renderBackground = () => {
-    if (background.type === 'url') {
+    if (background.type === 'url' && background.value) {
       // YouTube 비디오 URL 처리
       if (background.value.includes('youtube.com') || background.value.includes('youtu.be')) {
         const videoId = getYouTubeVideoId(background.value);
+        if (!videoId) return null;
+        
         return (
           <>
-            <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+            <div className="fixed inset-0 z-[-3] w-full h-full overflow-hidden pointer-events-none">
               <div className="relative w-full h-full flex items-center justify-center">
                 <iframe
                   src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}`}
@@ -242,7 +312,7 @@ export default function UserPublicPage() {
                 />
               </div>
             </div>
-            <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+            <div className="fixed inset-0 z-[-2] bg-black/30 pointer-events-none" />
           </>
         );
       }
@@ -250,7 +320,7 @@ export default function UserPublicPage() {
       else if (background.value.includes('pixabay.com')) {
         return (
           <>
-            <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+            <div className="fixed inset-0 z-[-3] w-full h-full overflow-hidden pointer-events-none">
               <div className="relative w-full h-full flex items-center justify-center">
                 <video
                   src={background.value}
@@ -262,16 +332,16 @@ export default function UserPublicPage() {
                 />
               </div>
             </div>
-            <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+            <div className="fixed inset-0 z-[-2] bg-black/30 pointer-events-none" />
           </>
         );
       }
     }
     // 이미지 배경 처리
-    else if (background.type === 'image') {
+    else if (background.type === 'image' && background.value && background.value !== '') {
       return (
         <>
-          <div className="fixed inset-0 z-[-2] w-full h-full overflow-hidden pointer-events-none">
+          <div className="fixed inset-0 z-[-3] w-full h-full overflow-hidden pointer-events-none">
             <div className="relative w-full h-full flex items-center justify-center">
               <img
                 src={background.value}
@@ -280,7 +350,7 @@ export default function UserPublicPage() {
               />
             </div>
           </div>
-          <div className="fixed inset-0 z-[-1] bg-black/30 pointer-events-none" />
+          <div className="fixed inset-0 z-[-2] bg-black/30 pointer-events-none" />
         </>
       );
     }
@@ -292,10 +362,15 @@ export default function UserPublicPage() {
     <>
       <TranslateBanner />
       <Header />
-      <main className="min-h-screen flex flex-col items-center relative" style={getBackgroundStyles()}>
-        {renderBackground()}
-        <div className="flex-grow flex flex-col items-center w-full">
-          <div className="md:w-[1000px] w-full px-[10px]">   
+      <main className="min-h-screen flex flex-col items-center relative bg-black/70" style={getBackgroundStyles()}>
+        <div className="absolute inset-0 z-0">
+          {background.type !== 'none' && background.value && renderBackground()}
+        </div>
+        {isAnimationEnabled && (
+          <ParticlesComponent />
+        )}
+        <div className="flex-grow flex flex-col items-center w-full z-10 relative">
+          <div className="md:w-[1000px] w-full px-[10px] relative">   
             {components.map((component, index) => (
               <ComponentRenderer
                 key={index}
@@ -308,16 +383,21 @@ export default function UserPublicPage() {
             ))}
           </div>
         </div>
-        <div className="w-full">
-          {currentUser?.uid === userData.uid && (
-            <div className="fixed top-5 right-5 z-50">
+        <div className="w-full z-10">
+          {currentUser?.uid === userData.uid && showSettingButton && (
+            <div className="fixed top-5 right-5 z-50 flex items-center gap-2">
               <Link 
                 href="/backgrounds"
-                className="inline-flex items-center px-4 py-2 bg-white/30 backdrop-blur-sm rounded-lg shadow-md hover:bg-white/40 transition-colors"
+                className="px-2 py-1.5 bg-white/30 backdrop-blur-sm rounded-lg hover:bg-white/40 transition-colors"
               >
-                <span className="text-white text-sm">🎨</span>
-                <span className="text-white ml-2">설정</span>
+                <span className="text-white text-xs">설정</span>
               </Link>
+              <button
+                onClick={() => setShowSettingButton(false)}
+                className="p-1.5 bg-white/30 backdrop-blur-sm rounded-lg hover:bg-white/40 transition-colors"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
             </div>
           )}
           <div className="h-[50px]"></div>

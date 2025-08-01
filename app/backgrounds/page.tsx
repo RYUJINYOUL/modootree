@@ -31,7 +31,7 @@ interface Background {
 }
 
 interface UserBackground {
-  type: 'image' | 'youtube' | 'pixabay' | 'custom' | 'color' | 'gradient' | 'video';
+  type: 'image' | 'youtube' | 'pixabay' | 'custom' | 'color' | 'gradient' | 'video' | 'none';
   url?: string;
   color?: string;
   gradient?: {
@@ -46,7 +46,7 @@ interface NewBackground {
   type: 'image' | 'youtube' | 'pixabay';
   url: string;
   isActive: boolean;
-  file?: File | null;  // 파일 업로드를 위한 필드 추가
+  file?: File | null;
 }
 
 interface MetaData {
@@ -116,6 +116,9 @@ export default function BackgroundGallery() {
     { value: 'to top right', label: '↗ 대각선 (좌하단 → 우상단)' },
     { value: 'to top left', label: '↖ 대각선 (우하단 → 좌상단)' },
   ];
+
+  // 애니메이션 상태 추가
+  const [isAnimationEnabled, setIsAnimationEnabled] = useState(true);
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -229,30 +232,22 @@ export default function BackgroundGallery() {
 
     setSaving(true);
     try {
-      const userRef = doc(db, 'users', currentUser.uid);
       const settingsDocRef = doc(db, 'users', currentUser.uid, 'settings', 'background');
-      let backgroundData: UserBackground;
-      let type: string;
-      let value: string;
+      const currentSettings = await getDoc(settingsDocRef);
+      let backgroundData: any = {};
 
       if (backgroundType === 'color') {
         backgroundData = {
           type: 'color',
-          color: backgroundColor
+          value: backgroundColor,
+          animation: isAnimationEnabled
         };
-        type = 'color';
-        value = backgroundColor;
       } else if (backgroundType === 'gradient') {
         backgroundData = {
           type: 'gradient',
-          gradient: {
-            color1: gradientColor1,
-            color2: gradientColor2,
-            direction: gradientDirection
-          }
+          value: `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`,
+          animation: isAnimationEnabled
         };
-        type = 'gradient';
-        value = `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`;
       } else {
         if (!customUrl.trim()) {
           alert('URL을 입력해주세요.');
@@ -261,50 +256,28 @@ export default function BackgroundGallery() {
         }
 
         const url = customUrl.trim();
-        // YouTube URL 체크
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
-          type = 'video';
           backgroundData = {
-            type: 'youtube',
-            url: url
+            type: 'video',
+            value: url,
+            animation: isAnimationEnabled
           };
-        }
-        // Pixabay 비디오 URL 체크
-        else if (url.includes('pixabay.com') && url.includes('.mp4')) {
-          type = 'video';
+        } else if (url.includes('pixabay.com') && url.includes('.mp4')) {
           backgroundData = {
-            type: 'pixabay',
-            url: url
+            type: 'video',
+            value: url,
+            animation: isAnimationEnabled
           };
-        }
-        // 일반 이미지 URL
-        else {
-          type = 'image';
+        } else {
           backgroundData = {
             type: 'image',
-            url: url
+            value: url,
+            animation: isAnimationEnabled
           };
         }
-        value = url;
       }
 
-      // 사용자 문서 존재 여부 확인
-      const userDoc = await getDoc(userRef);
-      
-      if (!userDoc.exists()) {
-        // 사용자 문서가 없으면 새로 생성
-        await setDoc(userRef, {
-          background: null,
-          createdAt: new Date()
-        });
-      }
-
-      // 배경 설정 저장
-      await setDoc(settingsDocRef, {
-        type: type,
-        value: value
-      }, { merge: true });
-      
+      await setDoc(settingsDocRef, backgroundData);
       setCurrentBackground(backgroundData);
       setShowSuccessDialog(true);
     } catch (error) {
@@ -400,11 +373,18 @@ export default function BackgroundGallery() {
     } else if (currentBackground.type === 'image' || currentBackground.type === 'custom') {
       return (
         <div className="relative h-40 bg-gray-100 rounded overflow-hidden">
-          <img
-            src={currentBackground.url}
-            alt="Current background"
-            className="w-full h-full object-cover"
-          />
+          {currentBackground.url && (
+            <img
+              src={currentBackground.url}
+              alt="Current background"
+              className="w-full h-full object-cover"
+            />
+          )}
+          {!currentBackground.url && (
+            <div className="w-full h-full flex items-center justify-center text-gray-500">
+              이미지를 선택해주세요
+            </div>
+          )}
         </div>
       );
     } else {
@@ -690,6 +670,91 @@ export default function BackgroundGallery() {
     }
   };
 
+  const handleResetBackground = async () => {
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!window.confirm('배경을 초기화하시겠습니까?\n애니메이션 효과가 적용된 기본 상태로 돌아갑니다.')) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const settingsDocRef = doc(db, 'users', currentUser.uid, 'settings', 'background');
+      
+      // 배경을 초기화하고 애니메이션은 켜기
+      await setDoc(settingsDocRef, {
+        type: 'none',
+        value: '',
+        animation: true
+      });
+
+      // 현재 상태 업데이트
+      setCurrentBackground(null);
+      setCustomUrl('');
+      setBackgroundType('url');
+      setIsAnimationEnabled(true);
+      
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error('배경 초기화 중 오류:', error);
+      alert('배경 초기화 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 애니메이션 설정 저장 함수 추가
+  const handleAnimationToggle = async () => {
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const settingsDocRef = doc(db, 'users', currentUser.uid, 'settings', 'background');
+      const currentSettings = await getDoc(settingsDocRef);
+      
+      // 현재 배경 설정을 유지하면서 애니메이션만 토글
+      const updatedSettings = {
+        type: currentSettings.exists() ? currentSettings.data().type : 'none',
+        value: currentSettings.exists() ? currentSettings.data().value : '',
+        animation: !isAnimationEnabled
+      };
+
+      await setDoc(settingsDocRef, updatedSettings);
+      setIsAnimationEnabled(!isAnimationEnabled);
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error('애니메이션 설정 저장 중 오류:', error);
+      alert('애니메이션 설정 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 초기 애니메이션 설정 로드
+  useEffect(() => {
+    const fetchAnimationSetting = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        const settingsDocRef = doc(db, 'users', currentUser.uid, 'settings', 'background');
+        const settingsDoc = await getDoc(settingsDocRef);
+        if (settingsDoc.exists()) {
+          setIsAnimationEnabled(settingsDoc.data().animation ?? true);
+        }
+      } catch (error) {
+        console.error('애니메이션 설정 로드 중 오류:', error);
+      }
+    };
+
+    fetchAnimationSetting();
+  }, [currentUser?.uid]);
+
   if (loading) {
     return (
       <>
@@ -705,7 +770,7 @@ export default function BackgroundGallery() {
     <>
       <Header />
       {/* 전체 컨테이너의 패딩 수정 */}
-      <div className="min-h-screen bg-[#1E1E1E] md:pt-[100px] pt-[70px] pb-[100px] md:p-4 p-0">
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 md:pt-[100px] pt-[70px] pb-[100px] md:p-4 p-0">
         {/* 페이지 제목 컨테이너 */}
         <div className="container mx-auto md:max-w-[1100px] w-full mb-12 px-4 md:px-0">
           <h1 className="text-3xl font-bold text-center text-white mb-2">
@@ -1027,7 +1092,42 @@ export default function BackgroundGallery() {
               </TabsContent>
             </Tabs>
 
-        {/* 배경 갤러리 섹션 컨테이너 */}
+        {/* 초기화 버튼과 애니메이션 설정 섹션 */}
+        <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0 mt-8">
+          <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-200">배경 초기화</h2>
+                <p className="text-sm text-gray-400 mt-1">배경을 기본 설정으로 되돌립니다</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">애니메이션</span>
+                  <Button
+                    onClick={handleAnimationToggle}
+                    variant="outline"
+                    className={`${
+                      isAnimationEnabled 
+                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 hover:bg-blue-500/30' 
+                        : 'bg-gray-700 text-gray-400 border-gray-600 hover:bg-gray-600'
+                    }`}
+                  >
+                    {isAnimationEnabled ? '켜짐' : '꺼짐'}
+                  </Button>
+                </div>
+                <Button
+                  onClick={handleResetBackground}
+                  variant="outline"
+                  className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                >
+                  초기화
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 배경 갤러리 섹션 */}
             <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0 mt-12">
           <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
             <h2 className="text-xl font-bold mb-6 text-gray-200">배경 갤러리</h2>

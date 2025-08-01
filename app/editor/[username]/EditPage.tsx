@@ -92,7 +92,8 @@ export default function EditPage({ username }: { username: string }) {
           // 기본 배경 설정
           await setDoc(doc(db, "users", currentUser.uid, "settings", "background"), {
             type: 'image',
-            value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
+            value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+            animation: true
           });
 
           setOwnerUid(currentUser.uid);
@@ -109,8 +110,9 @@ export default function EditPage({ username }: { username: string }) {
           const backgroundDoc = await getDoc(doc(db, "users", uid, "settings", "background"));
           if (!backgroundDoc.exists()) {
             await setDoc(doc(db, "users", uid, "settings", "background"), {
-              type: 'image',
-              value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa'
+                type: 'image',
+                value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                animation: true
             });
           }
         }

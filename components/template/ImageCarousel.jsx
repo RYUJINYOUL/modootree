@@ -87,7 +87,7 @@ const ImageCarousel = ({ username, uid }) => {
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
   const userRole = currentUser?.uid;
-  const canEdit = isEditable ? finalUid : userRole === uid;
+  const canEdit = isEditable && finalUid === userRole;
 
   useEffect(() => {
     if (!finalUid) return;
