@@ -1,16 +1,16 @@
 'use client';
 
-import MainHeader from '@/components/MainHeader';
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where } from 'firebase/firestore';
-import LoginOutButton from '@/components/ui/LoginOutButton';
 import { MessageCircle, Send } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
-
 import Header from '@/components/Header';
+import LoginOutButton from '@/components/ui/LoginOutButton';
+
+import MainHeader from '@/components/MainHeader';
 // Footer import 제거
 
 const ParticlesComponent = () => {
@@ -20,7 +20,7 @@ const ParticlesComponent = () => {
 
   return (
     <Particles
-      className="absolute inset-0"
+      className="w-full h-full"
       init={particlesInit}
       options={{
         fpsLimit: 120,
@@ -198,132 +198,138 @@ export default function InquiryPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-black to-blue-950 relative">
-        <ParticlesComponent />
-        <Header />
-        <LoginOutButton />
+        <div className="absolute inset-0 z-0">
+      <ParticlesComponent />
+        </div>
+        <div className="relative z-20">
+      <LoginOutButton />
+        </div>
+        <div className="relative z-10">
+          <Header />
+        </div>
         <div className="flex-1 relative z-10">
           <div className="max-w-[800px] mx-auto px-4 py-16">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 mb-8">
-              <h2 className="text-2xl font-bold text-white mb-6 text-center">말씀, 감사합니다.</h2>
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">말씀, 감사합니다.</h2>
+          
+          {submitMessage && (
+            <div className="mb-8 p-4 rounded-lg bg-blue-500/20 text-white text-center">
+              {submitMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                placeholder="이메일을 입력해주세요"
+                required
+              />
+            </div>
+
+            <div>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-blue-500 min-h-[100px]"
+                placeholder="의견 작성해 주세요"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? '등록 중...' : '등록하기'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="space-y-4">
+          {inquiries.map((inquiry) => (
+            <div
+              key={inquiry.id}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-6"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className="text-white/70 text-sm">
+                  {inquiry.email.split('@')[0]}
+                </div>
+                <div className="text-white/50 text-xs">
+                  {formatDate(inquiry.createdAt)}
+                </div>
+              </div>
+              <p className="text-white whitespace-pre-wrap mb-4">{inquiry.content}</p>
               
-              {submitMessage && (
-                <div className="mb-8 p-4 rounded-lg bg-blue-500/20 text-white text-center">
-                  {submitMessage}
+              {/* 답글 목록 */}
+              {replies[inquiry.id]?.length > 0 && (
+                <div className="mt-4 space-y-3 pl-4 border-l-2 border-blue-500/30">
+                  {replies[inquiry.id].map((reply) => (
+                    <div key={reply.id} className="bg-blue-500/10 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="text-blue-300 text-sm">
+                          {reply.email.split('@')[0]}
+                        </div>
+                        <div className="text-blue-200/50 text-xs">
+                          {formatDate(reply.createdAt)}
+                        </div>
+                      </div>
+                      <p className="text-blue-100 whitespace-pre-wrap">{reply.content}</p>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-blue-500"
-                    placeholder="이메일을 입력해주세요"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-blue-500 min-h-[100px]"
-                    placeholder="의견 작성해 주세요"
-                    required
-                  />
-                </div>
-
-                <div className="flex justify-end">
+              {/* 답글 작성 버튼 */}
+              <div className="mt-4 flex items-center gap-2">
+                {currentUser ? (
                   <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                    onClick={() => setShowReplyForm(showReplyForm === inquiry.id ? null : inquiry.id)}
+                    className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    {isSubmitting ? '등록 중...' : '등록하기'}
+                    <MessageCircle className="w-4 h-4" />
+                    답글 달기
                   </button>
-                </div>
-              </form>
-            </div>
+                ) : (
+                  <span className="text-sm text-gray-400">답글을 작성하려면 로그인이 필요합니다.</span>
+                )}
+              </div>
 
-            <div className="space-y-4">
-              {inquiries.map((inquiry) => (
-                <div
-                  key={inquiry.id}
-                  className="bg-white/10 backdrop-blur-sm rounded-xl p-6"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="text-white/70 text-sm">
-                      {inquiry.email.split('@')[0]}
-                    </div>
-                    <div className="text-white/50 text-xs">
-                      {formatDate(inquiry.createdAt)}
-                    </div>
+              {/* 답글 작성 폼 */}
+              {showReplyForm === inquiry.id && currentUser && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                      placeholder="답글을 입력하세요"
+                      required
+                    />
+                    <button
+                      onClick={() => handleReplySubmit(inquiry.id)}
+                      disabled={isSubmittingReply}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      {isSubmittingReply ? '등록 중...' : '등록'}
+                    </button>
                   </div>
-                  <p className="text-white whitespace-pre-wrap mb-4">{inquiry.content}</p>
-                  
-                  {/* 답글 목록 */}
-                  {replies[inquiry.id]?.length > 0 && (
-                    <div className="mt-4 space-y-3 pl-4 border-l-2 border-blue-500/30">
-                      {replies[inquiry.id].map((reply) => (
-                        <div key={reply.id} className="bg-blue-500/10 rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="text-blue-300 text-sm">
-                              {reply.email.split('@')[0]}
-                            </div>
-                            <div className="text-blue-200/50 text-xs">
-                              {formatDate(reply.createdAt)}
-                            </div>
-                          </div>
-                          <p className="text-blue-100 whitespace-pre-wrap">{reply.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 답글 작성 버튼 */}
-                  <div className="mt-4 flex items-center gap-2">
-                    {currentUser ? (
-                      <button
-                        onClick={() => setShowReplyForm(showReplyForm === inquiry.id ? null : inquiry.id)}
-                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        답글 달기
-                      </button>
-                    ) : (
-                      <span className="text-sm text-gray-400">답글을 작성하려면 로그인이 필요합니다.</span>
-                    )}
-                  </div>
-
-                  {/* 답글 작성 폼 */}
-                  {showReplyForm === inquiry.id && currentUser && (
-                    <div className="mt-4 space-y-3">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={replyContent}
-                          onChange={(e) => setReplyContent(e.target.value)}
-                          className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-blue-500"
-                          placeholder="답글을 입력하세요"
-                          required
-                        />
-                        <button
-                          onClick={() => handleReplySubmit(inquiry.id)}
-                          disabled={isSubmittingReply}
-                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                          <Send className="w-4 h-4" />
-                          {isSubmittingReply ? '등록 중...' : '등록'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
+          ))}
         </div>
+      </div>
+    </div>
       </div>
     </>
   );

@@ -5,31 +5,28 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { getAuth, signOut } from 'firebase/auth';
-import app from '../../firebase';
+import { db } from '@/firebase';
 import { clearUser } from '../../store/userSlice';
 
 export default function LoginOutButton() {
   const [hasMounted, setHasMounted] = useState(false);
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const auth = getAuth();
+  const currentUser = useSelector((state) => state.user.currentUser);
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  const { push } = useRouter();
-  const dispatch = useDispatch();
-  const auth = getAuth(app);
-
-  const currentUser = useSelector((state) => state.user.currentUser);
-
-  const handleLogout = () => {
-    signOut(auth)
-      .then(() => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
         dispatch(clearUser());
-        push('/', { scroll: false });
-      })
-      .catch((err) => {
-        console.error('로그아웃 에러:', err);
-      });
+      router.push('/');
+    } catch (error) {
+      console.error('로그아웃 에러:', error);
+    }
   };
 
   if (!hasMounted) return null;
@@ -37,7 +34,10 @@ export default function LoginOutButton() {
   return (
     <nav className="bg-zinc-900 shadow-lg border-b border-zinc-800">
       <div className="md:w-[1100px] container mx-auto px-4 py-4 flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold text-white hover:text-zinc-200 transition-colors">
+        <Link 
+          href="/" 
+          className="text-xl font-bold text-white hover:text-zinc-200 transition-colors"
+        >
           모두트리
         </Link>
         <div className="flex gap-4 items-center">

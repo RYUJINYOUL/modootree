@@ -374,11 +374,11 @@ export default function BackgroundGallery() {
       return (
         <div className="relative h-40 bg-gray-100 rounded overflow-hidden">
           {currentBackground.url && (
-            <img
-              src={currentBackground.url}
-              alt="Current background"
-              className="w-full h-full object-cover"
-            />
+          <img
+            src={currentBackground.url}
+            alt="Current background"
+            className="w-full h-full object-cover"
+          />
           )}
           {!currentBackground.url && (
             <div className="w-full h-full flex items-center justify-center text-gray-500">

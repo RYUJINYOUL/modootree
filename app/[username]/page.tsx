@@ -364,7 +364,7 @@ export default function UserPublicPage() {
       <Header />
       <main className="min-h-screen flex flex-col items-center relative bg-black/70" style={getBackgroundStyles()}>
         <div className="absolute inset-0 z-0">
-          {background.type !== 'none' && background.value && renderBackground()}
+        {background.type !== 'none' && background.value && renderBackground()}
         </div>
         {isAnimationEnabled && (
           <ParticlesComponent />

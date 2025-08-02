@@ -6,9 +6,21 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import Image from 'next/image';
 import { useSelector } from 'react-redux';
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { uploadLinkImage, deleteImageFromStorage } from '@/hooks/useUploadImage';
+import ReactCrop, { Crop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 interface LinkItem {
@@ -46,6 +58,25 @@ const floatingAnimation = `
 }
 `;
 
+// SNS 로고 목록 추가
+const SNS_LOGOS = [
+  { name: 'Instagram', url: '/Image/sns/instagram.png' },
+  { name: 'Facebook', url: '/Image/sns/facebook.png' },
+  { name: 'YouTube', url: '/Image/sns/youtube.png' },
+  { name: 'TikTok', url: '/Image/sns/tiktok.png' },
+  { name: 'Discord', url: '/Image/sns/discord.png' },
+  { name: 'Telegram', url: '/Image/sns/telegram.png' },
+  { name: 'WhatsApp', url: '/Image/sns/whatsapp.png' },
+  { name: 'Line', url: '/Image/sns/line.png' },
+  { name: 'KakaoTalk', url: '/Image/sns/kakaotalk.png' },
+  { name: 'Naver Blog', url: '/Image/sns/naver.png' },
+  { name: 'apple', url: '/Image/sns/apple.png' },
+  { name: 'gmail', url: '/Image/sns/gmail.png' },
+  { name: 'xxx', url: '/Image/sns/xxx.png' },
+  { name: 'map', url: '/Image/sns/maps.png' },
+  { name: 'Custom', url: '/Image/defaultLogo.png' },
+];
+
 export default function LinkCards({ username, uid }: LogoProps) {
   const pathname = usePathname();
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
@@ -59,6 +90,24 @@ export default function LinkCards({ username, uid }: LogoProps) {
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [openSettingsIndex, setOpenSettingsIndex] = useState<number | null>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState<string>('');
+  const [currentEditingIndex, setCurrentEditingIndex] = useState<number>(-1);
+  const [crop, setCrop] = useState<Crop>({
+    unit: '%',
+    width: 100,
+    height: 100,
+    x: 0,
+    y: 0
+  });
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number>(-1);
+  const [editTitle, setEditTitle] = useState('');
+  const [editUrl, setEditUrl] = useState('');
+  const [showLogoDialog, setShowLogoDialog] = useState(false);
+  const [selectedLogoIndex, setSelectedLogoIndex] = useState<number>(-1);
+
 
   useEffect(() => {
     const fetchLinks = async () => {
@@ -103,33 +152,136 @@ export default function LinkCards({ username, uid }: LogoProps) {
     }
   };
 
+  const handleImageSelect = (index: number, file: File) => {
+    if (!file) return;
+
+    // 파일 크기 체크 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('이미지 크기는 5MB 이하여야 합니다.');
+      return;
+    }
+
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+
+    // 임시 URL 생성
+    const reader = new FileReader();
+    reader.onload = () => {
+      setTempImageUrl(reader.result as string);
+      setCurrentEditingIndex(index);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const cropImage = async () => {
+    if (!imgRef.current || currentEditingIndex === -1) return;
+
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 캔버스 크기 설정 (정사각형으로)
+    canvas.width = 400;
+    canvas.height = 400;
+
+    // 크롭된 영역 계산
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    const pixelCrop = {
+      x: crop.x * scaleX,
+      y: crop.y * scaleY,
+      width: crop.width * scaleX,
+      height: crop.height * scaleY,
+    };
+
+    // 이미지 그리기
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    // 캔버스를 Blob으로 변환
+    return new Promise<File>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const croppedFile = new File([blob], 'cropped_link_image.jpg', {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+        resolve(croppedFile);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
+  const handleCropComplete = async () => {
+    try {
+      const croppedFile = await cropImage();
+      if (!croppedFile) return;
+      
+      await handleImageChange(currentEditingIndex, croppedFile);
+      setCropDialogOpen(false);
+      setTempImageUrl('');
+      setCurrentEditingIndex(-1);
+    } catch (error) {
+      console.error('Error cropping image:', error);
+      alert('이미지 크롭 중 오류가 발생했습니다.');
+    }
+  };
+
   const addNewLink = async () => {
     const newLink: LinkItem = {
-      image: '/new/defaultLogo.png',
+      image: '/Image/defaultLogo.png',  // 기존 logo.png 파일 사용
       title: '제목,링크 등록',
       url: '',
       bgColor: '#ffffff',
       textColor: '#000000',
       opacity: 1,
-      rounded: 'md',    // 기본값 설정
-      shadow: 'none',    // 기본값 설정
-      shadowColor: '#000000',  // 기본 그림자 색상
-      shadowOpacity: 0.2,  // 기본 그림자 투명도
+      rounded: 'md',
+      shadow: 'none',
+      shadowColor: '#000000',
+      shadowOpacity: 0.2,
     };
     const updated = [...links, newLink];
     await saveLinks(updated);
   };
 
-  const handleEdit = async (index: number) => {
+  const handleEdit = (index: number) => {
     if (!isEditable) return;
-    const newTitle = prompt('제목을 입력하세요', links[index].title);
-    const newUrl = prompt('링크 주소를 입력하세요', links[index].url);
-    if (!newTitle || !newUrl) return;
+    setEditingIndex(index);
+    setEditTitle(links[index].title);
+    setEditUrl(links[index].url);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (editingIndex === -1) return;
+    if (!editTitle || !editUrl) {
+      alert('제목과 링크 주소를 모두 입력해주세요.');
+      return;
+    }
 
     const updated = [...links];
-    updated[index].title = newTitle;
-    updated[index].url = newUrl;
+    updated[editingIndex].title = editTitle;
+    updated[editingIndex].url = editUrl;
     await saveLinks(updated);
+    
+    setEditDialogOpen(false);
+    setEditingIndex(-1);
+    setEditTitle('');
+    setEditUrl('');
   };
 
   const onDeleteLink = async (index: number) => {
@@ -168,14 +320,33 @@ export default function LinkCards({ username, uid }: LogoProps) {
     }
   };
 
+  // 이미지 클릭 핸들러 수정
+  const handleImageClick = (index: number) => {
+    if (!isEditable) return;
+    setSelectedLogoIndex(index);
+    setShowLogoDialog(true);
+  };
+
+  // SNS 로고 선택 핸들러
+  const handleSelectLogo = async (logoUrl: string) => {
+    if (selectedLogoIndex === -1) return;
+
+    const updated = [...links];
+    updated[selectedLogoIndex].image = logoUrl;
+    await saveLinks(updated);
+    setShowLogoDialog(false);
+    setSelectedLogoIndex(-1);
+  };
+
   return (
+    <>
     <div className='flex items-center justify-center w-full'>
       <section className="space-y-4 pt-3 p-2 md:w-[1100px] w-full">
         {links.map((link, index) => (
           <div className='flex flex-col' key={index}>
             <div
               className={cn(
-                "flex flex-row items-center justify-center p-2 gap-6 transition-all duration-300 ease-in-out hover:-translate-y-1 animate-floating",
+                  "flex flex-row items-center justify-center p-2 md:p-3 gap-3 md:gap-6 transition-all duration-300 ease-in-out hover:-translate-y-1 animate-floating",
                 isEditable && "flex flex-row",
                 // 둥근 모서리 스타일
                 link.rounded === 'none' && 'rounded-none',
@@ -239,7 +410,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleImageChange(index, file);
+                    if (file) handleImageSelect(index, file);
                 }}
               />
 
@@ -251,23 +422,23 @@ export default function LinkCards({ username, uid }: LogoProps) {
                   height={50}
                   alt="link"
                   className={cn(
-                    'rounded-xl object-cover w-[50px] h-[50px]',
+                      'rounded-xl object-cover w-[40px] h-[40px] md:w-[50px] md:h-[50px]',
                     isEditable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   )}
-                  onClick={() => isEditable && fileInputRefs.current[index]?.click()}
+                    onClick={() => isEditable && handleImageClick(index)}
                 />
               </div>
 
               {/* 제목 링크 - 중앙에서 살짝 왼쪽으로 */}
-              <div className="flex-grow text-center pr-12"> {/* padding-right 추가 */}
+                <div className="flex-grow text-center pr-8 md:pr-12"> {/* padding-right 추가 */}
                 {isEditable ? (
-                  <span className="text-[16px] font-semibold">{link.title}</span>
+                    <span className="text-[14px] md:text-[16px] font-semibold">{link.title}</span>
                 ) : (
                   <a
                     href={link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[16px] font-semibold hover:underline"
+                      className="text-[14px] md:text-[16px] font-semibold hover:underline"
                     style={{ color: link.textColor || '#000000' }}
                   >
                     {link.title}
@@ -280,35 +451,35 @@ export default function LinkCards({ username, uid }: LogoProps) {
                 <div className="flex flex-wrap gap-1 ml-auto">
                   <Button
                     onClick={() => setOpenSettingsIndex(openSettingsIndex === index ? null : index)}
-                    className='bg-white text-black' 
+                      className='bg-white text-black min-w-[28px] h-[28px] md:min-w-[32px] md:h-[32px] p-0' 
                     size="sm"
                   >
                     C
                   </Button>
                   <Button
                     onClick={() => handleEdit(index)}
-                    className='bg-white text-black'
+                      className='bg-white text-black min-w-[28px] h-[28px] md:min-w-[32px] md:h-[32px] p-0'
                     size="sm"
                   >
                     ✎
                   </Button>
                   <Button
                     onClick={() => moveLink(index, index - 1)}
-                    className='bg-white text-black'
+                      className='bg-white text-black min-w-[28px] h-[28px] md:min-w-[32px] md:h-[32px] p-0'
                     size="sm"
                   >
                     ↑
                   </Button>
                   <Button
                     onClick={() => moveLink(index, index + 1)}
-                    className='bg-white text-black'
+                      className='bg-white text-black min-w-[28px] h-[28px] md:min-w-[32px] md:h-[32px] p-0'
                     size="sm"
                   >
                     ↓
                   </Button>
                   <Button
                     onClick={() => onDeleteLink(index)}
-                    className='bg-white text-black'
+                      className='bg-white text-black min-w-[28px] h-[28px] md:min-w-[32px] md:h-[32px] p-0'
                     size="sm"
                   >
                     X
@@ -483,12 +654,164 @@ export default function LinkCards({ username, uid }: LogoProps) {
         {isEditable && (
           <button
             onClick={addNewLink}
-            className="w-full mt-4 p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 mb-3"
+              className="w-full mt-4 p-2 md:p-3 bg-blue-500 text-white text-sm md:text-base rounded-xl hover:bg-blue-600 mb-3"
           >
             새 링크 추가
           </button>
         )}
       </section>
     </div>
+
+      {/* 이미지 크롭 다이얼로그 */}
+      <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>로고 이미지 크롭</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {tempImageUrl && (
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                aspect={1}
+                className="max-h-[600px]"
+              >
+                <img
+                  ref={imgRef}
+                  src={tempImageUrl}
+                  alt="Crop preview"
+                  className="max-w-full h-auto"
+                />
+              </ReactCrop>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCropDialogOpen(false);
+                setTempImageUrl('');
+                setCurrentEditingIndex(-1);
+              }}
+            >
+              취소
+            </Button>
+            <Button onClick={handleCropComplete}>
+              크롭 완료
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 편집 다이얼로그 */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>링크 수정</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">제목</Label>
+              <Input
+                id="title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="제목을 입력하세요 (이모지 사용 가능 😊)"
+                className="h-12"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="url">링크 주소</Label>
+              <Input
+                id="url"
+                value={editUrl}
+                onChange={(e) => setEditUrl(e.target.value)}
+                placeholder="https://example.com"
+                className="h-12"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setEditingIndex(-1);
+                setEditTitle('');
+                setEditUrl('');
+              }}
+            >
+              취소
+            </Button>
+            <Button onClick={handleEditSubmit}>
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SNS 로고 선택 다이얼로그 */}
+      <Dialog open={showLogoDialog} onOpenChange={setShowLogoDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>로고 선택</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="sns" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="sns">SNS 로고</TabsTrigger>
+              <TabsTrigger value="upload">이미지 업로드</TabsTrigger>
+            </TabsList>
+            <TabsContent value="sns" className="py-4">
+              <div className="grid grid-cols-4 md:grid-cols-5 gap-4">
+                {SNS_LOGOS.map((logo, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectLogo(logo.url)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex flex-col items-center gap-2"
+                  >
+                    <Image
+                      src={logo.url}
+                      alt={logo.name}
+                      width={40}
+                      height={40}
+                      className="rounded-lg"
+                    />
+                    <span className="text-xs text-gray-600">{logo.name}</span>
+                  </button>
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="upload" className="py-4">
+              <div className="flex flex-col items-center gap-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={(el) => {
+                    if (fileInputRefs.current && selectedLogoIndex !== -1) {
+                      fileInputRefs.current[selectedLogoIndex] = el;
+                    }
+                  }}
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageChange(selectedLogoIndex, file);
+                    setShowLogoDialog(false);
+                  }}
+                />
+                <Button
+                  onClick={() => fileInputRefs.current[selectedLogoIndex]?.click()}
+                  className="w-full"
+                >
+                  이미지 선택
+                </Button>
+                <p className="text-sm text-gray-500 text-center">
+                  또는 이미지를 이곳에 드래그 앤 드롭하세요
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

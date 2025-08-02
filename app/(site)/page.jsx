@@ -303,7 +303,7 @@ export default function Page() {
       </div>
 
       {/* 두 번째 섹션 - 첫 번째 샘플 캐로셀 */}
-      <section className="relative bg-gradient-to-b rounded-2xl from-black to-blue-950 py-14 overflow-hidden mb-12">
+      <section className="relative bg-gradient-to-b rounded-2xl from-black to-blue-950 py-4 overflow-hidden mb-12">
         <ParticlesComponent />
         <div className="max-w-[1100px] mx-auto px-4 py-16 relative z-10">
         <div className="flex flex-col items-center justify-center text-center">
@@ -326,11 +326,11 @@ export default function Page() {
         <div className="max-w-[1100px] mx-auto px-4 py-16">
           <div className="flex flex-col items-center justify-center text-center">
             <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공유 기능을 만나보세요 
+              세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 기능을 만나보세요 
             </h2>
 
             <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공유 기능을 만나보세요 
+            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 기능을 만나보세요 
             </h2>
           </div>
           <UserSampleCarousel2 />

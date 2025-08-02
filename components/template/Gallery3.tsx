@@ -16,9 +16,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Copy, Share2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type LogoProps = {
   username?: string;
@@ -45,7 +49,7 @@ const COLOR_PALETTE = [
   "#34D399", "#60A5FA", "#A78BFA", "#F472B6",
 ];
 
-function Gallery3 ({ username, uid }: LogoProps) {
+export default function Gallery3({ username, uid }: LogoProps) {
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropType, setCropType] = useState<'logo' | 'background' | null>(null);
   const [isUploading, setIsUploading] = useState(false); // 업로드 상태 추가
@@ -54,6 +58,9 @@ function Gallery3 ({ username, uid }: LogoProps) {
   const [shadowColor, setShadowColor] = useState("#000000");
   const [shadowOpacity, setShadowOpacity] = useState(0.2);
   const [rounded, setRounded] = useState("md");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editType, setEditType] = useState<"name" | "desc" | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const pathname = usePathname();
   const isEditable = pathname?.startsWith("/editor") ?? false;
@@ -121,15 +128,33 @@ function Gallery3 ({ username, uid }: LogoProps) {
     fetchData();
   }, [finalUid]); // finalUid가 변경될 때마다 데이터를 가져오도록 의존성 배열에 추가
 
-  const handleChangeText = async (label: "name" | "desc") => {
+  const handleChangeText = async (type: "name" | "desc") => {
     if (!isEditable) return;
-    const current = label === "name" ? name : desc;
-    const newText = prompt(`새 ${label === "name" ? "이름" : "설명"}을 입력하세요`, current);
-    if (!newText) return;
+    const current = type === "name" ? name : desc;
+    setEditType(type);
+    setEditValue(current);
+    setEditDialogOpen(true);
+  };
 
-    label === "name" ? setName(newText) : setDesc(newText);
-    await saveToFirestore({ [label]: newText });
-    alert("저장되었습니다.");
+  const handleEditSubmit = async () => {
+    if (!editType || !editValue.trim()) {
+      alert(editType === "name" ? "제목을 입력해주세요." : "설명을 입력해주세요.");
+      return;
+    }
+
+    try {
+      if (editType === "name") {
+        setName(editValue);
+      } else {
+        setDesc(editValue);
+      }
+      await saveToFirestore({ [editType]: editValue });
+      setEditDialogOpen(false);
+      setEditType(null);
+      setEditValue("");
+    } catch (error) {
+      alert("저장 중 오류가 발생했습니다.");
+    }
   };
 
   const handleColorSelect = async (label: "bgColor" | "textColor", color: string) => {
@@ -329,6 +354,7 @@ function Gallery3 ({ username, uid }: LogoProps) {
   };
 
   return (
+    <>
     <div className="flex items-center justify-center w-full p-[10px]">
       <div 
         className={cn(
@@ -622,9 +648,56 @@ function Gallery3 ({ username, uid }: LogoProps) {
             </div>
           </DialogContent>
         </Dialog>
+
+          {/* 텍스트 편집 다이얼로그 */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editType === "name" ? "제목 수정" : "설명 수정"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>
+                    {editType === "name" ? "제목" : "설명"}
+                  </Label>
+                  {editType === "name" ? (
+                    <Input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      placeholder="제목을 입력하세요 (이모지 사용 가능 😊)"
+                      className="h-12"
+                    />
+                  ) : (
+                    <Textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      placeholder="설명을 입력하세요 (이모지 사용 가능 😊)"
+                      className="min-h-[100px]"
+                    />
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditDialogOpen(false);
+                    setEditType(null);
+                    setEditValue("");
+                  }}
+                >
+                  취소
+                </Button>
+                <Button onClick={handleEditSubmit}>
+                  저장
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
-
-export default Gallery3;

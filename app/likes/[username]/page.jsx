@@ -633,7 +633,12 @@ export default function LikesPage() {
       <Header />
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90 relative">
         <ParticlesComponent />
-        <div className="container mx-auto px-4 py-16 relative z-10">
+        <div className="container mx-auto px-4 py-10 relative z-10">
+        
+          {/* 제목 추가 */}
+          <h1 className="text-2xl font-bold text-center text-white mb-6">
+            공감 한조각
+          </h1>
           
 
           {/* 카테고리 필터 */}
