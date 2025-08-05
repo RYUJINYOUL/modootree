@@ -29,66 +29,76 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;  // 작성자만 삭제 가능
     }
 
-    // 방명록(comments) 컬렉션에 대한 규칙
-    match /users/{userId}/comments/{commentId} {
-      allow read: if true;  // 모든 사용자가 읽기 가능
-      allow create: if true;  // 모든 사용자가 작성 가능
-      allow update, delete: if isAuthenticated() && 
-        (resource.data.uid == request.auth.uid ||  // 작성자 본인
-         userId == request.auth.uid);  // 페이지 소유자
-    }
+    // users 컬렉션에 대한 규칙
+    match /users/{userId} {
+      // 방명록(comments) 컬렉션에 대한 규칙
+      match /comments/{commentId} {
+        allow read: if true;  // 모든 사용자가 읽기 가능
+        allow create: if true;  // 모든 사용자가 작성 가능
+        allow update, delete: if isAuthenticated() && 
+          (resource.data.uid == request.auth.uid ||  // 작성자 본인
+           userId == request.auth.uid);  // 페이지 소유자
+      }
 
-    // 다이어리 컬렉션에 대한 규칙
-    match /users/{userId}/diary/{diaryId} {
-      allow read: if true;  // 모든 사용자가 읽기 가능
-      allow create: if isAuthenticated();  // 로그인한 사용자만 생성 가능
-      allow update, delete: if isAuthenticated() && (
-        resource.data.authorUid == request.auth.uid ||  // 작성자 본인
-        userId == request.auth.uid ||  // 페이지 소유자
-        // 허용된 사용자 확인
-        exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
-        get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
-      );
-    }
+      // 다이어리 컬렉션에 대한 규칙
+      match /diary/{diaryId} {
+        allow read: if true;  // 모든 사용자가 읽기 가능
+        allow create: if isAuthenticated();  // 로그인한 사용자만 생성 가능
+        allow update, delete: if isAuthenticated() && (
+          resource.data.authorUid == request.auth.uid ||  // 작성자 본인
+          userId == request.auth.uid ||  // 페이지 소유자
+          // 허용된 사용자 확인
+          exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+          get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
+        );
+      }
 
-    // 다이어리 설정에 대한 규칙
-    match /users/{userId}/settings/diary {
-      allow read: if true;
-      allow write: if isAuthenticated() && userId == request.auth.uid;
+      // 다이어리 설정에 대한 규칙
+      match /settings/diary {
+        allow read: if true;
+        allow write: if isAuthenticated() && userId == request.auth.uid;
+      }
+
+      // 캘린더 구독 설정에 대한 규칙
+      match /settings/subscribers {
+        allow read: if true;
+        // 모든 사용자가 구독 가능
+        allow create, update: if true;  // 구독 추가/수정 모두 허용
+      }
+
+      // 캘린더 이벤트에 대한 규칙
+      match /event/{eventId} {
+        allow read: if true;
+        
+        // 이벤트 생성 권한
+        allow create: if isAuthenticated() && (
+          request.auth.uid == userId ||
+          exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+          get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
+        );
+
+        // 이벤트 수정 권한
+        allow update: if isAuthenticated() && (
+          // 페이지 소유자이거나
+          request.auth.uid == userId ||
+          // 허용된 사용자이거나
+          exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+          get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}]) ||
+          // 답글만 추가하는 경우 로그인한 모든 사용자 허용
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replies']) &&
+            request.resource.data.replies.size() > resource.data.replies.size()
+          )
+        );
+
+        // 이벤트 삭제 권한
+        allow delete: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // 나머지 모든 컬렉션에 대한 기본 규칙
     match /{document=**} {
       allow read: if true;  // 모든 문서 읽기 허용
-      allow write: if isAuthenticated();  // 로그인한 사용자만 쓰기 가능
-    }
-  }
-}
-
-service firebase.storage {
-  match /b/{bucket}/o {
-    // 기본 함수
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // 이미지 파일 검증
-    function isImageFile() {
-      return request.resource.contentType.matches('image/.*');
-    }
-
-    // 투표 이미지에 대한 규칙
-    match /votes/{userId}/{imageId} {
-      allow read: if true;  // 모든 사용자가 읽기 가능
-      allow create: if isAuthenticated() && 
-                   request.auth.uid == userId && 
-                   isImageFile();  // 로그인한 사용자만 자신의 폴더에 이미지 업로드 가능
-      allow delete: if isAuthenticated() && request.auth.uid == userId;  // 작성자만 삭제 가능
-    }
-
-    // 나머지 모든 파일에 대한 기본 규칙
-    match /{allPaths=**} {
-      allow read: if true;  // 모든 파일 읽기 허용
       allow write: if isAuthenticated();  // 로그인한 사용자만 쓰기 가능
     }
   }

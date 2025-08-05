@@ -8,6 +8,8 @@ import ImageCarousel from '../template/ImageCarousel';
 import Title from '../template/Title';
 import Description from '../template/Description';
 import Divider from '../template/Divider';
+import QuestBook2 from '../template/QuestBook2';
+
 
 export const ComponentLibrary: Record<string, React.FC<any>> = {
   제목: Title,
@@ -18,6 +20,7 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   사진첩: ImageCarousel,
   링크카드: LinkCard,
   게스트북: QuestBook,
+  자유게시판:QuestBook2,
   달력: CalendarComponent,
-  일기장: Diary,
+  일기장: Diary
 }; 

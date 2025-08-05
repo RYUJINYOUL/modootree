@@ -16,30 +16,38 @@ service firebase.storage {
       return request.resource.size <= 5 * 1024 * 1024;
     }
 
+    // 허용된 사용자 확인 함수
+    function isAllowedUser(userId) {
+      return isAuthenticated() && (
+        request.auth.uid == userId ||  // 페이지 소유자
+        // 허용된 사용자 확인
+        exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+        get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
+      );
+    }
+
     // 투표 이미지에 대한 규칙
     match /votes/{userId}/{imageId} {
       allow read: if true;  // 모든 사용자가 읽기 가능
       allow create: if isAuthenticated() && 
                    request.auth.uid == userId && 
-                   isImageFile();  // 로그인한 사용자만 자신의 폴더에 이미지 업로드 가능
+                   isImageFile() && 
+                   isValidFileSize();  // 로그인한 사용자만 자신의 폴더에 이미지 업로드 가능
       allow delete: if isAuthenticated() && request.auth.uid == userId;  // 작성자만 삭제 가능
     }
 
     // 다이어리 이미지에 대한 규칙
     match /diary/{userId}/{fileName} {
       allow read: if true;  // 모든 사용자가 읽기 가능
-      allow create: if isAuthenticated() && (
-        request.auth.uid == userId ||  // 페이지 소유자
-        // 허용된 사용자 확인
-        exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
-        get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
-      ) && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated() && (
-        request.auth.uid == userId ||  // 페이지 소유자
-        // 허용된 사용자 확인
-        exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
-        get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
-      );
+      allow create: if isAllowedUser(userId) && isImageFile() && isValidFileSize();
+      allow delete: if isAllowedUser(userId);
+    }
+
+    // 캘린더 이벤트 이미지에 대한 규칙
+    match /calendar/{userId}/{fileName} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isAllowedUser(userId) && isImageFile() && isValidFileSize();
+      allow delete: if isAllowedUser(userId);
     }
 
     // 나머지 모든 파일에 대한 기본 규칙

@@ -217,7 +217,7 @@ export default function BackgroundGallery() {
       await navigator.clipboard.writeText(background.url);
       setCopiedId(background.id);
       setTimeout(() => setCopiedId(null), 2000);
-      alert('URL이 클립보드에 복사되었습니다.');
+      alert('URL 복사, 배경타입 미디어 url을 입력하세요');
     } catch (error) {
       console.error('Error copying URL:', error);
       alert('URL 복사 중 오류가 발생했습니다.');
@@ -877,7 +877,7 @@ export default function BackgroundGallery() {
                     type="text"
                     value={customUrl}
                     onChange={(e) => setCustomUrl(e.target.value)}
-                    placeholder="배경 URL을 입력하거나 아래 갤러리에서 선택하세요"
+                    placeholder="URL 입력 · 아래 갤러리 선택"
                           className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                   />
                 </div>
@@ -1093,16 +1093,14 @@ export default function BackgroundGallery() {
             </Tabs>
 
         {/* 초기화 버튼과 애니메이션 설정 섹션 */}
-        <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0 mt-8">
+        <div className="container mx-auto md:max-w-[1100px] w-full px-0 md:px-0 mt-8">
           <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-200">배경 초기화</h2>
-                <p className="text-sm text-gray-400 mt-1">배경을 기본 설정으로 되돌립니다</p>
+                <h2 className="text-xl font-bold text-gray-200">애니메이션</h2>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-400">애니메이션</span>
                   <Button
                     onClick={handleAnimationToggle}
                     variant="outline"
@@ -1128,7 +1126,7 @@ export default function BackgroundGallery() {
         </div>
 
         {/* 배경 갤러리 섹션 */}
-            <div className="container mx-auto md:max-w-[1100px] w-full px-4 md:px-0 mt-12">
+            <div className="container mx-auto md:max-w-[1100px] w-full px-0 md:px-0 mt-12">
           <div className="bg-[#2A2A2A] rounded-3xl shadow-lg p-4 md:p-8">
             <h2 className="text-xl font-bold mb-6 text-gray-200">배경 갤러리</h2>
             <div className="bg-[#333333] rounded-2xl p-4 md:p-6">

@@ -62,6 +62,13 @@ export default function EditPage({ username }: { username: string }) {
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [components, setComponents] = useState<string[]>([]);
 
+  // 구독자 목록 상태 추가
+  const [subscribers, setSubscribers] = useState<{ email: string }[]>([]);
+
+  // 새 구독자 이메일 상태 추가
+  const [newSubscriberEmail, setNewSubscriberEmail] = useState('');
+  const [subscriberError, setSubscriberError] = useState('');
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -255,6 +262,89 @@ export default function EditPage({ username }: { username: string }) {
     }
   };
 
+  // 구독자 목록 가져오기
+  useEffect(() => {
+    if (!ownerUid) return;
+    
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', ownerUid, 'settings', 'subscribers'),
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          const subscribersList = Object.values(data.users || {})
+            .filter((sub: any) => sub.email)
+            .map((sub: any) => ({ email: sub.email }));
+          setSubscribers(subscribersList);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, [ownerUid]);
+
+  // 구독 취소 처리
+  const handleUnsubscribe = async (emailToRemove: string) => {
+    if (!ownerUid) return;
+
+    try {
+      const subscribersRef = doc(db, 'users', ownerUid, 'settings', 'subscribers');
+      const subscribersDoc = await getDoc(subscribersRef);
+      
+      if (subscribersDoc.exists()) {
+        const currentSubscribers = subscribersDoc.data().users || {};
+        const updatedSubscribers = Object.entries(currentSubscribers)
+          .filter(([_, sub]: [string, any]) => sub.email !== emailToRemove)
+          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+        await setDoc(subscribersRef, { users: updatedSubscribers });
+      }
+    } catch (error) {
+      console.error('구독 취소 실패:', error);
+      setError('구독 취소에 실패했습니다.');
+    }
+  };
+
+  // 구독자 추가 처리
+  const handleAddSubscriber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubscriberEmail.trim() || !ownerUid) return;
+
+    try {
+      // 이메일 형식 검증
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newSubscriberEmail)) {
+        setSubscriberError('올바른 이메일 형식이 아닙니다.');
+        return;
+      }
+
+      const subscribersRef = doc(db, 'users', ownerUid, 'settings', 'subscribers');
+      const subscribersDoc = await getDoc(subscribersRef);
+      
+      const currentSubscribers = subscribersDoc.exists() ? subscribersDoc.data().users || {} : {};
+      
+      // 이미 구독 중인지 확인
+      if (Object.values(currentSubscribers).some((sub: any) => sub.email === newSubscriberEmail)) {
+        setSubscriberError('이미 구독 중인 이메일입니다.');
+        return;
+      }
+
+      // 새 구독자 추가
+      const newSubscriberId = Date.now().toString();
+      await setDoc(subscribersRef, {
+        users: {
+          ...currentSubscribers,
+          [newSubscriberId]: { email: newSubscriberEmail }
+        }
+      });
+
+      setNewSubscriberEmail('');
+      setSubscriberError('');
+    } catch (error) {
+      console.error('구독자 추가 실패:', error);
+      setSubscriberError('구독자 추가에 실패했습니다.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-screen flex justify-center items-center bg-gray-100">
@@ -403,6 +493,58 @@ export default function EditPage({ username }: { username: string }) {
             {allowedUsers.length === 0 && (
               <p className="text-gray-500 text-center py-4">
                 등록된 사용자가 없습니다.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* 구독자 목록 섹션 */}
+        <div className="bg-gray-50 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">소식 받는 이메일 목록</h2>
+          
+          {/* 구독자 추가 폼 */}
+          <form onSubmit={handleAddSubscriber} className="space-y-4 mb-6">
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={newSubscriberEmail}
+                onChange={(e) => setNewSubscriberEmail(e.target.value)}
+                placeholder="이메일 주소 입력"
+                className="flex-1 bg-blue-500/20 border-none text-gray-800 placeholder-gray-500"
+              />
+              <Button
+                type="submit"
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                추가
+              </Button>
+            </div>
+            {subscriberError && (
+              <p className="text-red-500 text-sm">{subscriberError}</p>
+            )}
+          </form>
+
+          {/* 구독자 목록 */}
+          <div className="space-y-2">
+            {subscribers.map((subscriber) => (
+              <div
+                key={subscriber.email}
+                className="flex items-center justify-between p-3 bg-gray-100 rounded-lg"
+              >
+                <span className="text-gray-700">{subscriber.email}</span>
+                <Button
+                  onClick={() => handleUnsubscribe(subscriber.email)}
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-500 hover:text-red-500 hover:bg-gray-200"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+            {subscribers.length === 0 && (
+              <p className="text-gray-500 text-center py-4">
+                구독 중인 이메일이 없습니다.
               </p>
             )}
           </div>

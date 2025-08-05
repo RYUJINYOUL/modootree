@@ -61,7 +61,7 @@ const ImageCarousel = ({ username, uid }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
-  const [carouselTitle, setCarouselTitle] = useState('대표 사진');
+  const [carouselTitle, setCarouselTitle] = useState('미디어');
   const [editingCarouselTitle, setEditingCarouselTitle] = useState(false);
   const [crop, setCrop] = useState();
   const [completedCrop, setCompletedCrop] = useState(null);

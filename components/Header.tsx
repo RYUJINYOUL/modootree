@@ -120,12 +120,17 @@ export default function Header() {
 
   const handleNavigation = async (path: string) => {
     try {
-      if (path === '/' || path === '/likes/all') {
+      // 특별 경로들은 바로 이동
+      if (path === '/' || 
+          path === '/likes/all' || 
+          path === '/login' || 
+          path === '/register') {
         setShowDropdown(false);
         router.push(path);
         return;
       }
 
+      // username 체크는 사용자 페이지 경로에만 적용
       const username = path.replace('/', '');
       const usernameDoc = await getDoc(doc(db, 'usernames', username));
       
