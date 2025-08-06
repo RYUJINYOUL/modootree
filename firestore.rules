@@ -31,6 +31,28 @@ service cloud.firestore {
 
     // users 컬렉션에 대한 규칙
     match /users/{userId} {
+      // 게시판(posts) 컬렉션에 대한 규칙
+      match /posts/{postId} {
+        allow read: if true;  // 모든 사용자가 읽기 가능
+        allow create: if isAuthenticated();  // 로그인한 사용자는 누구나 글 작성 가능
+        allow update, delete: if isAuthenticated() && (
+          resource.data.author.uid == request.auth.uid ||  // 글 작성자
+          userId == request.auth.uid ||  // 페이지 소유자
+          exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+          get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])  // 권한 있는 사용자
+        );
+
+        // 댓글 컬렉션에 대한 규칙
+        match /comments/{commentId} {
+          allow read: if true;
+          allow create: if isAuthenticated();  // 로그인한 사용자는 누구나 댓글 작성 가능
+          allow update, delete: if isAuthenticated() && (
+            resource.data.author.uid == request.auth.uid ||  // 댓글 작성자
+            userId == request.auth.uid  // 페이지 소유자
+          );
+        }
+      }
+
       // 방명록(comments) 컬렉션에 대한 규칙
       match /comments/{commentId} {
         allow read: if true;  // 모든 사용자가 읽기 가능
@@ -93,6 +115,16 @@ service cloud.firestore {
 
         // 이벤트 삭제 권한
         allow delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+
+      // 게시판 카테고리 설정에 대한 규칙
+      match /settings/boardCategories {
+        allow read: if true;  // 모든 사용자가 카테고리 목록 읽기 가능
+        allow write: if isAuthenticated() && (
+          userId == request.auth.uid ||  // 페이지 소유자
+          exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+          get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
+        );
       }
     }
 

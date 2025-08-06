@@ -1,20 +1,40 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    domains: [
-      'firebasestorage.googleapis.com',
-      'lh3.googleusercontent.com',
-      'k.kakaocdn.net',
-      'cdn.pixabay.com'
-    ],
-              },
-  webpack: (config) => {
-    config.module.rules.push({
-      test: /\.svg$/,
-      use: ['@svgr/webpack'],
-    });
-    return config;
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'modootree.vercel.app',
+          },
+        ],
+        destination: 'https://modootree.com/:path*',
+        permanent: true,
+      },
+    ];
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups'
+          }
+        ],
+      },
+    ]
+  },
+  images: {
+    domains: ['firebasestorage.googleapis.com', 'lh3.googleusercontent.com', 'img.youtube.com'],
+  },
+  webpack: (config) => {
+    config.resolve.fallback = { fs: false };
+    return config;
+  }
 };
 
 export default nextConfig; 

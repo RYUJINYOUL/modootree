@@ -64,11 +64,19 @@ import {
   PlusCircle,
   Edit2,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  PenSquare
 } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useDebounce } from '../../hooks/useDebounce';
+import CategoryManager from './CategoryManager';
+import useEmblaCarousel from 'embla-carousel-react';
+import { cn } from '@/lib/utils';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -82,6 +90,13 @@ const CATEGORIES = [
   { id: 'free', name: '자유게시판' },
   { id: 'qna', name: 'Q&A' },
   { id: 'share', name: '정보공유' },
+];
+
+// 색상 팔레트 추가
+const COLOR_PALETTE = [
+  'transparent',
+  '#000000', '#FFFFFF', '#F87171', '#FBBF24',
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6',
 ];
 
 const Board = ({ username, uid }) => {
@@ -105,10 +120,32 @@ const Board = ({ username, uid }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState(null);
-  const [categories, setCategories] = useState(CATEGORIES);
+  // categories 상태 초기화 수정
+  const [categories, setCategories] = useState([{ id: 'all', name: '전체' }]);
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [newCategory, setNewCategory] = useState({ id: '', name: '' });
   const [editingCategory, setEditingCategory] = useState(null);
+
+  // 컴포넌트 내부에 로컬 상태 추가
+  const [localNewCategory, setLocalNewCategory] = useState({ id: '', name: '' });
+  const [localEditingCategory, setLocalEditingCategory] = useState(null);
+
+  // 디바운스된 값 생성
+  const debouncedNewCategory = useDebounce(localNewCategory, 300);
+  const debouncedEditingCategory = useDebounce(localEditingCategory, 300);
+
+  // useEffect로 디바운스된 값이 변경될 때만 실제 상태 업데이트
+  useEffect(() => {
+    if (debouncedNewCategory) {
+      setNewCategory(debouncedNewCategory);
+    }
+  }, [debouncedNewCategory]);
+
+  useEffect(() => {
+    if (debouncedEditingCategory) {
+      setEditingCategory(debouncedEditingCategory);
+    }
+  }, [debouncedEditingCategory]);
 
   const { currentUser } = useSelector((state) => state.user);
   const finalUid = uid ?? currentUser?.uid;
@@ -135,24 +172,33 @@ const Board = ({ username, uid }) => {
     return userInfo;
   };
 
-  // 게시글 불러오기
+  // fetchPosts 함수 수정
   const fetchPosts = async (isFirstPage = false) => {
     try {
       let q;
+      const baseQuery = collection(db, 'users', finalUid, 'posts');
+      
+      // 정렬 조건 설정
+      const orderByConditions = sortBy === 'latest' 
+        ? [orderBy('createdAt', 'desc')]
+        : [orderBy('likes', 'desc'), orderBy('createdAt', 'desc')];
+
       if (selectedCategory === 'all') {
-        // 전체 카테고리일 때는 category 필드로 필터링하지 않음
+        // 전체 카테고리일 때
         q = query(
-          collection(db, 'users', finalUid, 'posts'),
-          orderBy('createdAt', 'desc'),
+          baseQuery,
+          ...orderByConditions,
+          orderBy('isNotice', 'desc'),
           limit(POSTS_PER_PAGE),
           ...(isFirstPage ? [] : [startAfter(lastVisible)])
         );
       } else {
         // 특정 카테고리 선택시
         q = query(
-          collection(db, 'users', finalUid, 'posts'),
+          baseQuery,
           where('category', '==', selectedCategory),
-          orderBy('createdAt', 'desc'),
+          ...orderByConditions,
+          orderBy('isNotice', 'desc'),
           limit(POSTS_PER_PAGE),
           ...(isFirstPage ? [] : [startAfter(lastVisible)])
         );
@@ -648,109 +694,33 @@ const Board = ({ username, uid }) => {
     }
   };
 
-  // 카테고리 관리 UI
-  const CategoryManager = () => (
-    <Dialog open={isEditingCategories} onOpenChange={setIsEditingCategories}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>카테고리 관리</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {/* 새 카테고리 추가 */}
-          <form onSubmit={handleCategorySubmit} className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="카테고리 ID (영문/숫자)"
-              value={newCategory.id}
-              onChange={(e) => setNewCategory(prev => ({ ...prev, id: e.target.value.toLowerCase() }))}
-              className="flex-1"
-            />
-            <Input
-              type="text"
-              placeholder="카테고리 이름"
-              value={newCategory.name}
-              onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
-              className="flex-1"
-            />
-            <Button type="submit">
-              <PlusCircle className="w-4 h-4 mr-1" />
-              추가
-            </Button>
-          </form>
-
-          {/* 카테고리 목록 */}
-          <div className="space-y-2">
-            {categories.map(category => (
-              <div key={category.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                {editingCategory?.id === category.id ? (
-                  <form 
-                    className="flex items-center gap-2 w-full"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleUpdateCategory(editingCategory);
-                    }}
-                  >
-                    <Input
-                      type="text"
-                      value={editingCategory.name}
-                      onChange={(e) => setEditingCategory(prev => ({ ...prev, name: e.target.value }))}
-                      className="flex-1"
-                    />
-                    <Button type="submit">저장</Button>
-                    <Button type="button" variant="ghost" onClick={() => setEditingCategory(null)}>
-                      취소
-                    </Button>
-                  </form>
-                ) : (
-                  <>
-                    <span className="flex-1">
-                      {category.name}
-                      <span className="text-sm text-gray-500 ml-2">({category.id})</span>
-              </span>
-                    {category.id !== 'all' && (
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => handleButtonClick(e, () => setEditingCategory(category))}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => handleButtonClick(e, () => handleDeleteCategory(category.id))}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </>
-              )}
-            </div>
-            ))}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
-  // 컴포넌트 마운트 시 게시글 로드
+  // 카테고리 변경 시 게시글 다시 로드
   useEffect(() => {
     if (!finalUid) return;
     fetchPosts(true);
   }, [finalUid, selectedCategory, sortBy]);
 
-  // 실시간 게시글 업데이트
+  // 실시간 업데이트 수정
   useEffect(() => {
     if (!finalUid) return;
 
-    const q = query(
-      collection(db, 'users', finalUid, 'posts'),
-      orderBy('createdAt', 'desc')
-    );
+    const baseQuery = collection(db, 'users', finalUid, 'posts');
+    let q;
+
+    if (selectedCategory === 'all') {
+      q = query(
+        baseQuery,
+        orderBy('createdAt', 'desc'),
+        orderBy('isNotice', 'desc')
+      );
+    } else {
+      q = query(
+        baseQuery,
+        where('category', '==', selectedCategory),
+        orderBy('createdAt', 'desc'),
+        orderBy('isNotice', 'desc')
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postList = snapshot.docs.map(doc => ({
@@ -770,7 +740,7 @@ const Board = ({ username, uid }) => {
     });
 
     return () => unsubscribe();
-  }, [finalUid]);
+  }, [finalUid, selectedCategory]);
 
   // 실시간 댓글 업데이트
   useEffect(() => {
@@ -800,7 +770,51 @@ const Board = ({ username, uid }) => {
     }
   }, [selectedPost]);
 
-  // 게시글 카드 컴포넌트 수정
+  // 카테고리 실시간 업데이트 리스너 추가
+  useEffect(() => {
+    if (!finalUid) return;
+
+    const docRef = doc(db, 'users', finalUid, 'settings', 'boardCategories');
+    const unsubscribe = onSnapshot(docRef, (doc) => {
+      if (doc.exists()) {
+        const loadedCategories = doc.data().categories;
+        setCategories([
+          { id: 'all', name: '전체' },
+          ...loadedCategories
+        ]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [finalUid]);
+
+  // 카테고리 변경 시 정렬 초기화
+  useEffect(() => {
+    if (selectedCategory !== 'all') {
+      setSortBy('latest'); // 전체가 아닌 카테고리 선택 시 항상 최신순으로
+    }
+  }, [selectedCategory]);
+
+  // 스크롤 상태 관리를 위한 state 추가
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true);
+
+  // 스크롤 이벤트 핸들러
+  const handleTabsScroll = (e) => {
+    const { scrollLeft, scrollWidth, clientWidth } = e.target;
+    setShowLeftScroll(scrollLeft > 0);
+    setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10);
+  };
+
+  // 캐로셀 설정 수정
+  const [emblaRef] = useEmblaCarousel({
+    align: 'start',
+    dragFree: true,
+    containScroll: false,
+    skipSnaps: true
+  });
+
+  // 카테고리 탭 부분 스타일 수정
   const PostCard = ({ post }) => {
     const authorName = post.author?.displayName || '익명';
     const authorInitial = authorName.charAt(0).toUpperCase();
@@ -808,7 +822,15 @@ const Board = ({ username, uid }) => {
 
     return (
       <div 
-        className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer relative"
+        className={cn(
+          "bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer relative",
+          styleSettings.rounded === 'none' && 'rounded-none',
+          styleSettings.rounded === 'sm' && 'rounded',
+          styleSettings.rounded === 'md' && 'rounded-lg',
+          styleSettings.rounded === 'lg' && 'rounded-xl',
+          styleSettings.rounded === 'full' && 'rounded-full'
+        )}
+        style={getStyleObject()}
         onClick={() => handlePostSelect(post)}
       >
         <div className="flex items-center justify-between mb-2">
@@ -935,50 +957,382 @@ const Board = ({ username, uid }) => {
             </div>
   );
 
+  // 공통 클래스 수정 - 배경색 관련 스타일 모두 제거
+  const tabTriggerClasses = "shrink-0 bg-transparent hover:bg-transparent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 h-8 rounded-full transition-colors";
+
+  // Board 컴포넌트 내부에 스타일 관련 상태 추가
+  const [showColorSettings, setShowColorSettings] = useState(false);
+  const [styleSettings, setStyleSettings] = useState({
+    bgColor: '#60A5FA',
+    textColor: '#FFFFFF',
+    bgOpacity: 0.2,
+    shadow: 'none',
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    rounded: 'md'
+  });
+
+  // 스타일 설정 저장 함수
+  const saveStyleSettings = async (newSettings) => {
+    if (!finalUid) return;
+    try {
+      await setDoc(doc(db, 'users', finalUid, 'settings', 'boardStyle'), newSettings, { merge: true });
+      setStyleSettings(newSettings);
+    } catch (error) {
+      console.error('스타일 설정 저장 실패:', error);
+    }
+  };
+
+  // 스타일 설정 불러오기
+  useEffect(() => {
+    const loadStyleSettings = async () => {
+      if (!finalUid) return;
+      try {
+        const docRef = doc(db, 'users', finalUid, 'settings', 'boardStyle');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setStyleSettings(docSnap.data());
+        }
+      } catch (error) {
+        console.error('스타일 설정 불러오기 실패:', error);
+      }
+    };
+    loadStyleSettings();
+  }, [finalUid]);
+
+  // 스타일 객체 생성 함수
+  const getStyleObject = () => {
+    const shadowColor = styleSettings.shadowColor 
+      ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+      : 'rgba(0, 0, 0, 0.2)';
+
+    const style = {
+      backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+      color: styleSettings.textColor
+    };
+
+    // 특정 그림자 스타일에 대해서만 테두리 추가
+    if (['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow)) {
+      style.borderColor = styleSettings.shadowColor || '#000000';
+      style.borderWidth = '2px';
+      style.borderStyle = 'solid';
+    }
+
+    // 그림자 스타일 적용
+    switch (styleSettings.shadow) {
+      case 'none':
+        style.boxShadow = 'none';
+        break;
+      case 'sm':
+        style.boxShadow = `0 1px 2px ${shadowColor}`;
+        break;
+      case 'md':
+        style.boxShadow = `0 4px 6px ${shadowColor}`;
+        break;
+      case 'lg':
+        style.boxShadow = `0 10px 15px ${shadowColor}`;
+        break;
+      case 'retro':
+        style.boxShadow = `8px 8px 0px 0px ${shadowColor}`;
+        break;
+      case 'float':
+        style.boxShadow = `0 10px 20px -5px ${shadowColor}`;
+        break;
+      case 'glow':
+        style.boxShadow = `0 0 20px ${shadowColor}`;
+        break;
+      case 'inner':
+        style.boxShadow = `inset 0 2px 4px ${shadowColor}`;
+        break;
+      case 'sharp':
+        style.boxShadow = `-10px 10px 0px ${shadowColor}`;
+        break;
+      case 'soft':
+        style.boxShadow = `0 5px 15px ${shadowColor}`;
+        break;
+      case 'stripe':
+        style.boxShadow = `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}`;
+        break;
+      case 'cross':
+        style.boxShadow = `4px 4px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, 4px -4px 0 ${shadowColor}, -4px 4px 0 ${shadowColor}`;
+        break;
+      case 'diagonal':
+        style.boxShadow = `4px 4px 0 ${shadowColor}, 8px 8px 0 ${shadowColor}, 12px 12px 0 ${shadowColor}, -4px -4px 0 ${shadowColor}, -8px -8px 0 ${shadowColor}, -12px -12px 0 ${shadowColor}`;
+        break;
+      default:
+        style.boxShadow = 'none';
+    }
+
+    return style;
+  };
+
+  // 스타일 설정 UI 렌더링 함수
+  const renderColorSettings = () => {
+    if (!isEditable) return null;
+
+    return (
+      <div className="w-full max-w-[1100px] mb-4">
+        <button
+          onClick={() => setShowColorSettings(!showColorSettings)}
+          className="w-full p-2 rounded-lg mb-2 hover:bg-opacity-30 transition-all"
+          style={{ 
+            backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
+            color: styleSettings.textColor 
+          }}
+        >
+          게시판 스타일 설정 {showColorSettings ? '닫기' : '열기'}
+        </button>
+
+        {showColorSettings && (
+          <div className="flex flex-col gap-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-700">
+            {/* 배경색 설정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">배경색</span>
+                <div className="flex flex-wrap gap-1">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveStyleSettings({ ...styleSettings, bgColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.bgColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.bgOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, bgOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.bgOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            {/* 텍스트 색상 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">텍스트</span>
+              <div className="flex flex-wrap gap-1">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className={cn(
+                      "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                      styleSettings.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* 그림자 설정 UI 수정 */}
+            <div className="flex flex-col gap-2 bg-gray-700/50 p-3 rounded-lg">
+              {/* 그림자 종류 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자 종류</span>
+                <select
+                  value={styleSettings.shadow || 'none'}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadow: e.target.value })}
+                  className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="none">없음</option>
+                  <option value="sm">약한</option>
+                  <option value="md">보통</option>
+                  <option value="lg">강한</option>
+                  <option value="retro">레트로</option>
+                  <option value="float">플로팅</option>
+                  <option value="glow">글로우</option>
+                  <option value="inner">이너</option>
+                  <option value="sharp">샤프</option>
+                  <option value="soft">소프트</option>
+                  <option value="stripe">스트라이프</option>
+                  <option value="cross">크로스</option>
+                  <option value="diagonal">대각선</option>
+                </select>
+              </div>
+              {/* 그림자 색상 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자 색상</span>
+                <div className="flex flex-wrap gap-1">
+                  {COLOR_PALETTE.map((color) => (
+                    <button
+                      key={`shadow-${color}`}
+                      onClick={() => saveStyleSettings({ ...styleSettings, shadowColor: color })}
+                      className={cn(
+                        "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                        styleSettings.shadowColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              {/* 그림자 투명도 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-100 w-24">그림자 투명도</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={styleSettings.shadowOpacity ?? 0.2}
+                  onChange={(e) => saveStyleSettings({ ...styleSettings, shadowOpacity: parseFloat(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-100 w-12 text-right">
+                  {(styleSettings.shadowOpacity ?? 0.2).toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            {/* 그림자 설정 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">모서리</span>
+              <select
+                value={styleSettings.rounded || 'md'}
+                onChange={(e) => saveStyleSettings({ ...styleSettings, rounded: e.target.value })}
+                className="px-3 py-1.5 bg-gray-800 text-gray-100 rounded-lg border border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">각진</option>
+                <option value="sm">약간 둥근</option>
+                <option value="md">둥근</option>
+                <option value="lg">많이 둥근</option>
+                <option value="full">완전 둥근</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 공통 카테고리 스타일 정의
+  const categoryStyles = "shrink-0 hover:!bg-gray-200 data-[state=active]:!text-black h-9 px-4 rounded-full transition-colors";
+
+  // 최상단에 스타일 정의
+  const baseTabStyles = {
+    container: "w-full [&_*]:!bg-transparent",
+    list: "flex gap-[5px] !justify-start pl-4 !p-0 !border-0 !bg-transparent",
+    trigger: "shrink-0 bg-gray-100 !bg-gray-100 data-[state=active]:!bg-white data-[state=active]:!text-black h-9 px-4 rounded-full transition-colors [&:not([data-state=active])]:!bg-gray-100"
+  };
+
   return (
     <div className="w-full max-w-[1100px] mx-auto p-4 space-y-6">
       {/* 헤더 영역 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">게시판</h1>
+      <div className={cn(
+        "relative flex items-center justify-between text-[21px] font-bold w-full max-w-[1100px] p-4 backdrop-blur-sm tracking-tight",
+        styleSettings.rounded === 'none' && 'rounded-none',
+        styleSettings.rounded === 'sm' && 'rounded',
+        styleSettings.rounded === 'md' && 'rounded-lg',
+        styleSettings.rounded === 'lg' && 'rounded-xl',
+        styleSettings.rounded === 'full' && 'rounded-full'
+      )} style={getStyleObject()}>
+        {/* 왼쪽 글쓰기 버튼 */}
+        <Button 
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={(e) => handleButtonClick(e, () => setIsWriting(true))}
+          className="w-9 h-9"
+        >
+          <PenSquare className="w-5 h-5" />
+        </Button>
+
+        {/* 중앙 제목 */}
+        <h1 className="text-xl font-semibold text-center">게시판</h1>
+
+        {/* 오른쪽 버튼들 */}
         <div className="flex gap-2">
           {isEditable && (
             <Button 
               type="button"
-              variant="outline" 
+              variant="ghost" 
+              size="icon"
               onClick={(e) => handleButtonClick(e, () => setIsEditingCategories(true))}
+              className="w-9 h-9"
             >
-              카테고리 관리
+              <Settings className="w-5 h-5" />
             </Button>
           )}
           <Button 
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={(e) => handleButtonClick(e, () => setIsWriting(true))}
+            className="w-9 h-9"
           >
-            글쓰기
+            <PenSquare className="w-5 h-5" />
           </Button>
         </div>
       </div>
 
+      {/* 스타일 설정 UI 추가 (헤더 바로 위에) */}
+      {renderColorSettings()}
+
       {/* 카테고리 관리 다이얼로그 */}
-      <CategoryManager />
+      <CategoryManager 
+        isOpen={isEditingCategories}
+        onOpenChange={setIsEditingCategories}
+        categories={categories}
+        onAddCategory={(newCategory) => {
+          const updatedCategories = [...categories, newCategory];
+          saveCategories(updatedCategories);
+        }}
+        onUpdateCategory={(category) => {
+          const updatedCategories = categories.map(cat =>
+            cat.id === category.id ? category : cat
+          );
+          saveCategories(updatedCategories);
+        }}
+        onDeleteCategory={handleDeleteCategory}
+      />
 
       {/* 카테고리 및 검색 */}
       <div className="flex flex-col gap-4">
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-          <TabsList>
-            {CATEGORIES.map(category => (
-              <TabsTrigger key={category.id} value={category.id}>
-                {category.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {/* 카테고리 탭 */}
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className={baseTabStyles.container}>
+          <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
+            <TabsList className={baseTabStyles.list}>
+              {categories.map(category => (
+                <TabsTrigger 
+                  key={category.id} 
+                  value={category.id}
+                  className={cn(baseTabStyles.trigger, "!bg-gray-100")}
+                  style={{ backgroundColor: category.id === selectedCategory ? 'white' : 'rgb(243 244 246)' }}
+                >
+                  {category.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
         </Tabs>
 
         <div className="flex gap-2">
           <select
             value={searchType}
             onChange={(e) => setSearchType(e.target.value)}
-            className="border rounded px-3 py-2"
+            className={cn(
+              "border px-3 py-2",
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full'
+            )}
+            style={getStyleObject()}
           >
             <option value="title">제목</option>
             <option value="content">내용</option>
@@ -988,20 +1342,41 @@ const Board = ({ username, uid }) => {
             placeholder="검색어를 입력하세요"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
+            className={cn(
+              "flex-1",
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full'
+            )}
+            style={getStyleObject()}
           />
-          <Button onClick={handleSearch}>
+          <Button 
+            onClick={handleSearch}
+            className={cn(
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full'
+            )}
+            style={getStyleObject()}
+          >
             <Search className="w-4 h-4" />
           </Button>
     </div>
 
+        {/* 정렬 옵션 UI 부분 수정 */}
         <div className="flex justify-end">
-        <Tabs value={sortBy} onValueChange={setSortBy}>
-          <TabsList>
-            <TabsTrigger value="latest">최신순</TabsTrigger>
-            <TabsTrigger value="likes">인기순</TabsTrigger>
-          </TabsList>
-        </Tabs>
+          {selectedCategory === 'all' && (
+            <Tabs value={sortBy} onValueChange={setSortBy}>
+              <TabsList>
+                <TabsTrigger value="latest">최신순</TabsTrigger>
+                <TabsTrigger value="likes">인기순</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
         </div>
       </div>
 
