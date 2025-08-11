@@ -1,5 +1,5 @@
 'use client';
-import { ComponentLibrary } from './ComponentLibrary';
+import { ComponentLibrary, ComponentKey } from './ComponentLibrary';
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -8,13 +8,13 @@ import {
 } from "@/components/ui/popover"
 
 interface EditorCanvasProps {
-  components: string[];
-  onComponentsUpdate: (components: string[]) => void;
+  components: ComponentKey[];
+  onComponentsUpdate: (components: ComponentKey[]) => void;
 }
 
 export default function EditorCanvas({ components, onComponentsUpdate }: EditorCanvasProps) {
   // 🔹 컴포넌트 추가
-  const handleAdd = (type: string) => {
+  const handleAdd = (type: ComponentKey) => {
     onComponentsUpdate([...components, type]);
   };
 
@@ -70,7 +70,7 @@ export default function EditorCanvas({ components, onComponentsUpdate }: EditorC
           </PopoverTrigger>
           <PopoverContent className="w-80">
             <div className="space-y-2">
-              {Object.keys(ComponentLibrary).map(type => (
+              {(Object.keys(ComponentLibrary) as ComponentKey[]).map(type => (
                 <div
                   key={type}
                   onClick={() => handleAdd(type)}
