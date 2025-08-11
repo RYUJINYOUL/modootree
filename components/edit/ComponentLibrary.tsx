@@ -9,6 +9,7 @@ import Title from '../template/Title';
 import Description from '../template/Description';
 import Divider from '../template/Divider';
 import QuestBook2 from '../template/QuestBook2';
+import SkillProgress from '../template/SkillProgress';
 
 
 export const ComponentLibrary: Record<string, React.FC<any>> = {
@@ -22,5 +23,6 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   게스트북: QuestBook,
   자유게시판:QuestBook2,
   달력: CalendarComponent,
-  일기장: Diary
+  일기장: Diary,
+  포트폴리오: SkillProgress,
 }; 

@@ -4,7 +4,7 @@
 import { db } from '../../firebase';
 import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { notFound, useParams } from 'next/navigation';
-import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
+import { componentLibrary } from '@/components/edit/ComponentLibrary';
 import Link from 'next/link';
 import UserEditButton from '@/components/ui/UserEditButton';
 import BackgroundSelector from '@/components/template/BackgroundSelector';
@@ -17,7 +17,6 @@ import ComponentRenderer from '@/components/ComponentRenderer';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase';
 import TranslateBanner from '@/app/components/ui/TranslateBanner';
-import Header from '@/components/Header';
 import Image from 'next/image';
 import { X } from 'lucide-react';
 import { useCallback } from 'react';
@@ -146,7 +145,6 @@ export default function UserPublicPage() {
   const [isAllowed, setIsAllowed] = useState(false);
   const [showBottomButton, setShowBottomButton] = useState(true);
   const [isAnimationEnabled, setIsAnimationEnabled] = useState(true);
-  const [showSettingButton, setShowSettingButton] = useState(true);
 
   const handleBackgroundChange = async (type: string, value: string) => {
     if (!userData?.uid) {
@@ -195,8 +193,17 @@ export default function UserPublicPage() {
 
         const data = userSnap.data();
         const uid = data?.uid;
+        
+        // users 컬렉션에서 추가 정보 가져오기
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+        
         if (!isSubscribed) return;
-        setUserData({ ...data, uid });
+        setUserData({ 
+          ...data, 
+          ...userData,  // 이메일 등 추가 정보 포함
+          uid 
+        });
 
         // uid가 확인된 후 나머지 데이터 로드
         const [settingsSnap, linksSnap] = await Promise.all([
@@ -361,7 +368,6 @@ export default function UserPublicPage() {
   return (
     <>
       <TranslateBanner />
-      <Header />
       <main className="min-h-screen flex flex-col items-center relative bg-black/70" style={getBackgroundStyles()}>
         <div className="absolute inset-0 z-0">
         {background.type !== 'none' && background.value && renderBackground()}
@@ -384,24 +390,12 @@ export default function UserPublicPage() {
           </div>
         </div>
         <div className="w-full z-10">
-          {currentUser?.uid === userData.uid && showSettingButton && (
-            <div className="fixed top-5 right-5 z-50 flex items-center gap-2">
-              <Link 
-                href="/backgrounds"
-                className="px-2 py-1.5 bg-white/30 backdrop-blur-sm rounded-lg hover:bg-white/40 transition-colors"
-              >
-                <span className="text-white text-xs">설정</span>
-              </Link>
-              <button
-                onClick={() => setShowSettingButton(false)}
-                className="p-1.5 bg-white/30 backdrop-blur-sm rounded-lg hover:bg-white/40 transition-colors"
-              >
-                <X className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          )}
           <div className="h-[50px]"></div>
-          <UserEditButton username={username} ownerUid={userData.uid} />
+          <UserEditButton 
+            username={username} 
+            ownerUid={userData.uid} 
+            userEmail={userData.email}  // 이메일 추가
+          />
           
           {/* 하단 버튼 */}
           {showBottomButton && (

@@ -23,6 +23,7 @@ import { Copy, Share2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import QRShare from './QRShare';
 
 type LogoProps = {
   username?: string;
@@ -626,6 +627,11 @@ export default function Gallery3({ username, uid }: LogoProps) {
               {/* 설명 */}
               <div className="text-center">
                 <p className="text-gray-600 text-lg">{desc}</p>
+              </div>
+
+              {/* QR 코드 */}
+              <div className="flex flex-col items-center gap-2">
+                <QRShare userId={finalUid} username={finalUsername} />
               </div>
 
               {/* 버튼들 */}

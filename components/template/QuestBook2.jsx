@@ -810,8 +810,7 @@ const Board = ({ username, uid }) => {
   const [emblaRef] = useEmblaCarousel({
     align: 'start',
     dragFree: true,
-    containScroll: false,
-    skipSnaps: true
+    containScroll: 'trimSnaps'
   });
 
   // 카테고리 탭 부분 스타일 수정
@@ -848,12 +847,22 @@ const Board = ({ username, uid }) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(post);
-                }}>
-                    삭제
-                  </DropdownMenuItem>
+                  {(isEditable || currentUser?.uid === post.author?.uid) && (
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingDiary(post);
+                    }}>
+                      수정
+                    </DropdownMenuItem>
+                  )}
+                  {(isEditable || currentUser?.uid === post.author?.uid) && (
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(post);
+                    }}>
+                      삭제
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -1224,436 +1233,546 @@ const Board = ({ username, uid }) => {
 
   // 최상단에 스타일 정의
   const baseTabStyles = {
-    container: "w-full [&_*]:!bg-transparent",
-    list: "flex gap-[5px] !justify-start pl-4 !p-0 !border-0 !bg-transparent",
-    trigger: "shrink-0 bg-gray-100 !bg-gray-100 data-[state=active]:!bg-white data-[state=active]:!text-black h-9 px-4 rounded-full transition-colors [&:not([data-state=active])]:!bg-gray-100"
+    container: "w-full",
+    list: "flex gap-[5px] justify-start pl-4 p-0 border-0 bg-transparent",
+    trigger: "shrink-0 transition-all"
   };
 
+  // handleEdit 함수 추가
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    if (!editingDiary || !editingDiary.title || !editingDiary.content) {
+      alert('제목과 내용을 모두 입력해주세요.');
+      return;
+    }
+
+    try {
+      const postRef = doc(db, 'users', finalUid, 'posts', editingDiary.id);
+      await updateDoc(postRef, {
+        title: editingDiary.title,
+        content: editingDiary.content,
+        updatedAt: new Date().toISOString()
+      });
+
+      setEditingDiary(null);
+      alert('게시글이 수정되었습니다.');
+    } catch (error) {
+      console.error('게시글 수정 실패:', error);
+      alert('게시글 수정에 실패했습니다.');
+    }
+  };
+
+  // editingDiary state 추가
+  const [editingDiary, setEditingDiary] = useState(null);
+
   return (
-    <div className="w-full max-w-[1100px] mx-auto p-4 space-y-6">
-      {/* 헤더 영역 */}
-      <div className={cn(
-        "relative flex items-center justify-between text-[21px] font-bold w-full max-w-[1100px] p-4 backdrop-blur-sm tracking-tight",
-        styleSettings.rounded === 'none' && 'rounded-none',
-        styleSettings.rounded === 'sm' && 'rounded',
-        styleSettings.rounded === 'md' && 'rounded-lg',
-        styleSettings.rounded === 'lg' && 'rounded-xl',
-        styleSettings.rounded === 'full' && 'rounded-full'
-      )} style={getStyleObject()}>
-        {/* 왼쪽 글쓰기 버튼 */}
-        <Button 
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={(e) => handleButtonClick(e, () => setIsWriting(true))}
-          className="w-9 h-9"
-        >
-          <PenSquare className="w-5 h-5" />
-        </Button>
-
-        {/* 중앙 제목 */}
-        <h1 className="text-xl font-semibold text-center">게시판</h1>
-
-        {/* 오른쪽 버튼들 */}
-        <div className="flex gap-2">
-          {isEditable && (
-            <Button 
-              type="button"
-              variant="ghost" 
-              size="icon"
-              onClick={(e) => handleButtonClick(e, () => setIsEditingCategories(true))}
-              className="w-9 h-9"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
-          )}
-          <Button 
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={(e) => handleButtonClick(e, () => setIsWriting(true))}
-            className="w-9 h-9"
+    <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full px-2'>
+      <div className="w-full max-w-[1100px] space-y-6 mt-8">
+        {renderColorSettings()}
+        {/* 헤더 영역 */}
+        <div className={cn(
+          "relative flex items-center justify-between text-[21px] font-bold w-full max-w-[1100px] p-4 backdrop-blur-sm tracking-tight",
+          styleSettings.rounded === 'none' && 'rounded-none',
+          styleSettings.rounded === 'sm' && 'rounded',
+          styleSettings.rounded === 'md' && 'rounded-lg',
+          styleSettings.rounded === 'lg' && 'rounded-xl',
+          styleSettings.rounded === 'full' && 'rounded-full'
+        )} style={getStyleObject()}>
+          {/* 왼쪽 글쓰기 버튼 */}
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleButtonClick(e, () => setIsWriting(true));
+            }}
+            className="p-2 rounded-lg hover:bg-opacity-30 transition-all"
+            style={{ 
+              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+              color: styleSettings.textColor 
+            }}
           >
-            <PenSquare className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
 
-      {/* 스타일 설정 UI 추가 (헤더 바로 위에) */}
-      {renderColorSettings()}
+          {/* 중앙 제목 */}
+          <h1 className="text-xl font-semibold text-center">게시판</h1>
 
-      {/* 카테고리 관리 다이얼로그 */}
-      <CategoryManager 
-        isOpen={isEditingCategories}
-        onOpenChange={setIsEditingCategories}
-        categories={categories}
-        onAddCategory={(newCategory) => {
-          const updatedCategories = [...categories, newCategory];
-          saveCategories(updatedCategories);
-        }}
-        onUpdateCategory={(category) => {
-          const updatedCategories = categories.map(cat =>
-            cat.id === category.id ? category : cat
-          );
-          saveCategories(updatedCategories);
-        }}
-        onDeleteCategory={handleDeleteCategory}
-      />
-
-      {/* 카테고리 및 검색 */}
-      <div className="flex flex-col gap-4">
-        {/* 카테고리 탭 */}
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className={baseTabStyles.container}>
-          <div className="overflow-hidden -mx-4 px-4" ref={emblaRef}>
-            <TabsList className={baseTabStyles.list}>
-              {categories.map(category => (
-                <TabsTrigger 
-                  key={category.id} 
-                  value={category.id}
-                  className={cn(baseTabStyles.trigger, "!bg-gray-100")}
-                  style={{ backgroundColor: category.id === selectedCategory ? 'white' : 'rgb(243 244 246)' }}
-                >
-                  {category.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </Tabs>
-
-        <div className="flex gap-2">
-          <select
-            value={searchType}
-            onChange={(e) => setSearchType(e.target.value)}
-            className={cn(
-              "border px-3 py-2",
-              styleSettings.rounded === 'none' && 'rounded-none',
-              styleSettings.rounded === 'sm' && 'rounded',
-              styleSettings.rounded === 'md' && 'rounded-lg',
-              styleSettings.rounded === 'lg' && 'rounded-xl',
-              styleSettings.rounded === 'full' && 'rounded-full'
-            )}
-            style={getStyleObject()}
-          >
-            <option value="title">제목</option>
-            <option value="content">내용</option>
-            <option value="author.displayName">작성자</option>
-          </select>
-          <Input
-            placeholder="검색어를 입력하세요"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              "flex-1",
-              styleSettings.rounded === 'none' && 'rounded-none',
-              styleSettings.rounded === 'sm' && 'rounded',
-              styleSettings.rounded === 'md' && 'rounded-lg',
-              styleSettings.rounded === 'lg' && 'rounded-xl',
-              styleSettings.rounded === 'full' && 'rounded-full'
-            )}
-            style={getStyleObject()}
-          />
-          <Button 
-            onClick={handleSearch}
-            className={cn(
-              styleSettings.rounded === 'none' && 'rounded-none',
-              styleSettings.rounded === 'sm' && 'rounded',
-              styleSettings.rounded === 'md' && 'rounded-lg',
-              styleSettings.rounded === 'lg' && 'rounded-xl',
-              styleSettings.rounded === 'full' && 'rounded-full'
-            )}
-            style={getStyleObject()}
-          >
-            <Search className="w-4 h-4" />
-          </Button>
-    </div>
-
-        {/* 정렬 옵션 UI 부분 수정 */}
-        <div className="flex justify-end">
-          {selectedCategory === 'all' && (
-            <Tabs value={sortBy} onValueChange={setSortBy}>
-              <TabsList>
-                <TabsTrigger value="latest">최신순</TabsTrigger>
-                <TabsTrigger value="likes">인기순</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-        </div>
-      </div>
-
-      {/* 게시글 목록 */}
-      <div className="space-y-4">
-        {posts.map(post => (
-          <PostCard key={post.id} post={post} />
-        ))}
-        {hasMore && (
-            <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => fetchPosts()}
-          >
-            <ChevronDown className="w-4 h-4 mr-2" />
-            더 보기
-            </Button>
-        )}
-      </div>
-
-      {/* 글쓰기 다이얼로그 */}
-      <Dialog open={isWriting} onOpenChange={setIsWriting}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>글쓰기</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full border rounded px-3 py-2"
-            >
-              {categories.filter(c => c.id !== 'all').map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            
-            <Input
-              type="text"
-              placeholder="제목을 입력하세요"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-
-        <Textarea
-              placeholder="내용을 입력하세요... (마크다운 사용 가능)"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[200px]"
-            />
-
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={(e) => handleButtonClick(e, () => handleRemoveTag(tag))}
-                >
-                  {tag} <X className="w-3 h-3 ml-1" />
-                </Badge>
-              ))}
-              <Input
-                type="text"
-                placeholder="태그 입력 후 Enter"
-                className="w-32"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag(e.target.value);
-                    e.target.value = '';
-                  }
+          {/* 오른쪽 버튼들 */}
+          <div className="flex gap-2">
+            {isEditable && (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleButtonClick(e, () => setIsEditingCategories(true));
                 }}
-              />
-            </div>
+                className="p-2 rounded-lg hover:bg-opacity-30 transition-all"
+                style={{ 
+                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                  color: styleSettings.textColor 
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleButtonClick(e, () => setIsWriting(true));
+              }}
+              className="p-2 rounded-lg hover:bg-opacity-30 transition-all"
+              style={{ 
+                backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
+                color: styleSettings.textColor 
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2">
+        {/* 카테고리 관리 다이얼로그 */}
+        <CategoryManager 
+          isOpen={isEditingCategories}
+          onOpenChange={setIsEditingCategories}
+          categories={categories}
+          onAddCategory={(newCategory) => {
+            const updatedCategories = [...categories, newCategory];
+            saveCategories(updatedCategories);
+          }}
+          onUpdateCategory={(category) => {
+            const updatedCategories = categories.map(cat =>
+              cat.id === category.id ? category : cat
+            );
+            saveCategories(updatedCategories);
+          }}
+          onDeleteCategory={handleDeleteCategory}
+        />
+
+        {/* 카테고리 및 검색 */}
+        <div className="flex flex-col gap-4">
+          {/* 카테고리 탭 */}
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className={baseTabStyles.container}>
+            <div className="relative">
+              <div className="overflow-hidden mx-[-1rem] px-4" ref={emblaRef}>
+                <TabsList className={baseTabStyles.list}>
+                  {categories.map(category => (
+                    <TabsTrigger 
+                      key={category.id} 
+                      value={category.id}
+                      className={cn(
+                        baseTabStyles.trigger,
+                        "h-9 px-4 rounded-full transition-all hover:bg-opacity-30"
+                      )}
+                      style={{ 
+                        backgroundColor: category.id === selectedCategory 
+                          ? `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`
+                          : `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
+                        color: styleSettings.textColor,
+                        ...(['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow) && {
+                          borderColor: styleSettings.shadowColor || '#000000',
+                          borderWidth: '2px',
+                          borderStyle: 'solid'
+                        })
+                      }}
+                    >
+                      {category.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            </div>
+          </Tabs>
+
+          <div 
+            className={cn(
+              "flex items-center gap-2 p-2",
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full'
+            )}
+            style={getStyleObject()}
+          >
+            <select
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value)}
+              className="px-3 py-2 bg-transparent border-none focus:outline-none text-inherit"
+            >
+              <option value="title">제목</option>
+              <option value="content">내용</option>
+              <option value="author.displayName">작성자</option>
+            </select>
             <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  setImageFile(file);
-                  const reader = new FileReader();
-                  reader.onload = (e) => setImagePreview(e.target.result);
-                  reader.readAsDataURL(file);
+              type="text"
+              placeholder="검색어 입력 후 엔터"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
                 }
               }}
-              className="hidden"
-              id="imageUpload"
+              className="flex-1 px-3 py-2 bg-transparent border-none focus:outline-none text-inherit placeholder-inherit"
             />
-            <Button
-                type="button"
-              variant="outline"
-                onClick={(e) => handleButtonClick(e, () => document.getElementById('imageUpload').click())}
-            >
-              <ImageIcon className="w-4 h-4 mr-2" />
-              이미지 첨부
-            </Button>
-            {imagePreview && (
-              <div className="relative">
-                <Image
-                  src={imagePreview}
-                  alt="미리보기"
-                  width={40}
-                  height={40}
-                  className="rounded object-cover"
-                />
-                <Button
-                    type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute -top-2 -right-2 p-0 h-5 w-5"
-                    onClick={(e) => handleButtonClick(e, () => {
-                    setImageFile(null);
-                    setImagePreview('');
-                    })}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            )}
           </div>
 
-            <DialogFooter>
-          <Button
-                type="button" 
-                variant="outline" 
-                onClick={(e) => handleButtonClick(e, () => setIsWriting(false))}
-          >
-                취소
-          </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? '저장 중...' : '저장'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* 게시글 상세보기 다이얼로그 */}
-      {selectedPost && (
-        <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <div className="flex items-center justify-between">
-                <DialogTitle>{selectedPost.title}</DialogTitle>
-                {(isEditable || currentUser?.uid === selectedPost.author?.uid) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => {
-                        if (window.confirm('게시글을 삭제하시겠습니까?')) {
-                          handleDelete(selectedPost);
-                          setSelectedPost(null);
-                        }
-                      }}>
-                        삭제
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+          {/* 정렬 옵션 UI 부분 수정 */}
+          <div className="flex justify-end">
+            {selectedCategory === 'all' && (
+              <Tabs value={sortBy} onValueChange={setSortBy}>
+                <TabsList>
+                  <TabsTrigger value="latest">최신순</TabsTrigger>
+                  <TabsTrigger value="likes">인기순</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+          </div>
         </div>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <div className="flex items-center gap-2">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={selectedPost.author.photoURL} />
-                    <AvatarFallback>
-                      {selectedPost.author.displayName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{selectedPost.author.displayName}</span>
-                </div>
-                <span>{selectedPost.createdAt.toLocaleString()}</span>
-      </div>
 
-              <div className="prose max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {selectedPost.content}
-                </ReactMarkdown>
+        {/* 게시글 목록 */}
+        <div className="space-y-4">
+          {posts.map(post => (
+            <PostCard key={post.id} post={post} />
+          ))}
+          {hasMore && (
+              <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => fetchPosts()}
+            >
+              <ChevronDown className="w-4 h-4 mr-2" />
+              더 보기
+              </Button>
+          )}
+        </div>
+
+        {/* 글쓰기 다이얼로그 */}
+        <Dialog open={isWriting} onOpenChange={setIsWriting}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>글쓰기</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              >
+                {categories.filter(c => c.id !== 'all').map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              
+              <Input
+                type="text"
+                placeholder="제목을 입력하세요"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+
+          <Textarea
+                placeholder="내용을 입력하세요... (마크다운 사용 가능)"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="min-h-[200px]"
+              />
+
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={(e) => handleButtonClick(e, () => handleRemoveTag(tag))}
+                  >
+                    {tag} <X className="w-3 h-3 ml-1" />
+                  </Badge>
+                ))}
+                <Input
+                  type="text"
+                  placeholder="태그 입력 후 Enter"
+                  className="w-32"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                />
               </div>
 
-              {selectedPost.image && (
-                <div className="mt-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setImageFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (e) => setImagePreview(e.target.result);
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="hidden"
+                id="imageUpload"
+              />
+              <Button
+                  type="button"
+                variant="outline"
+                onClick={(e) => handleButtonClick(e, () => document.getElementById('imageUpload').click())}
+              >
+                <ImageIcon className="w-4 h-4 mr-2" />
+                이미지 첨부
+              </Button>
+              {imagePreview && (
+                <div className="relative">
                   <Image
-                    src={selectedPost.image.url}
-                    alt="첨부 이미지"
-                    width={500}
-                    height={300}
-                    className="rounded-lg object-cover"
+                    src={imagePreview}
+                    alt="미리보기"
+                    width={40}
+                    height={40}
+                    className="rounded object-cover"
                   />
+                  <Button
+                      type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 p-0 h-5 w-5"
+                      onClick={(e) => handleButtonClick(e, () => {
+                      setImageFile(null);
+                      setImagePreview('');
+                      })}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
                 </div>
               )}
+            </div>
 
-              <div className="flex items-center gap-4">
-          <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleLike(selectedPost)}
-                  className={selectedPost.likedBy?.includes(currentUser?.uid) ? 'text-red-500' : ''}
-                >
-                  <Heart className="w-4 h-4 mr-1" />
-                  {selectedPost.likes}
-          </Button>
+              <DialogFooter>
+            <Button
+                  type="button" 
+                  variant="outline" 
+                  onClick={(e) => handleButtonClick(e, () => setIsWriting(false))}
+            >
+                  취소
+            </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? '저장 중...' : '저장'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* 게시글 상세보기 다이얼로그 */}
+        {selectedPost && (
+          <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>{selectedPost.title}</DialogTitle>
+                  {(isEditable || currentUser?.uid === selectedPost.author?.uid) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => {
+                          setEditingDiary(selectedPost);
+                          setSelectedPost(null);
+                        }}>
+                          수정
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          if (window.confirm('게시글을 삭제하시겠습니까?')) {
+                            handleDelete(selectedPost);
+                            setSelectedPost(null);
+                          }
+                        }}>
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+        </div>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={selectedPost.author.photoURL} />
+                      <AvatarFallback>
+                        {selectedPost.author.displayName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{selectedPost.author.displayName}</span>
+                  </div>
+                  <span>{selectedPost.createdAt.toLocaleString()}</span>
       </div>
 
-              {selectedPost.tags?.length > 0 && (
-                <div className="flex gap-1">
-                  {selectedPost.tags.map(tag => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* 댓글 섹션 추가 */}
-              <div className="mt-8 border-t pt-4">
-                <h3 className="text-lg font-semibold mb-4">
-                  댓글 {selectedPost.commentCount}
-                </h3>
-
-                {/* 댓글 작성 폼 */}
-                <div className="flex gap-2 mb-4">
-                  <Textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder={replyTo ? `${replyTo.author.displayName}님에게 답글 작성` : "댓글을 입력하세요"}
-                    className="flex-1"
-                  />
-          <Button
-                    className="self-end"
-                    onClick={() => handleAddComment(selectedPost.id)}
-          >
-                    작성
-          </Button>
+                <div className="prose max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {selectedPost.content}
+                  </ReactMarkdown>
                 </div>
 
-                {/* 답글 작성 중인 경우 표시 */}
-                {replyTo && (
-                  <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                    <MessageCircle className="w-4 h-4" />
-                    {replyTo.author.displayName}님에게 답글 작성 중
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setReplyTo(null)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                {selectedPost.image && (
+                  <div className="mt-4">
+                    <Image
+                      src={selectedPost.image.url}
+                      alt="첨부 이미지"
+                      width={500}
+                      height={300}
+                      className="rounded-lg object-cover"
+                    />
                   </div>
                 )}
 
-                {/* 댓글 목록 */}
-                <div className="space-y-4">
-                  {comments.map(comment => (
-                    <CommentCard 
-                      key={comment.id} 
-                      comment={comment}
-                      postId={selectedPost.id}
+                <div className="flex items-center gap-4">
+            <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleLike(selectedPost)}
+                    className={selectedPost.likedBy?.includes(currentUser?.uid) ? 'text-red-500' : ''}
+                  >
+                    <Heart className="w-4 h-4 mr-1" />
+                    {selectedPost.likes}
+            </Button>
+        </div>
+
+                {selectedPost.tags?.length > 0 && (
+                  <div className="flex gap-1">
+                    {selectedPost.tags.map(tag => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* 댓글 섹션 추가 */}
+                <div className="mt-8 border-t pt-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    댓글 {selectedPost.commentCount}
+                  </h3>
+
+                  {/* 댓글 작성 폼 */}
+                  <div className="flex gap-2 mb-4">
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder={replyTo ? `${replyTo.author.displayName}님에게 답글 작성` : "댓글을 입력하세요"}
+                      className="flex-1"
                     />
-                  ))}
-      </div>
+            <Button
+                      className="self-end"
+                      onClick={() => handleAddComment(selectedPost.id)}
+            >
+                      작성
+            </Button>
+                  </div>
+
+                  {/* 답글 작성 중인 경우 표시 */}
+                  {replyTo && (
+                    <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                      <MessageCircle className="w-4 h-4" />
+                      {replyTo.author.displayName}님에게 답글 작성 중
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReplyTo(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* 댓글 목록 */}
+                  <div className="space-y-4">
+                    {comments.map(comment => (
+                      <CommentCard 
+                        key={comment.id} 
+                        comment={comment}
+                        postId={selectedPost.id}
+                      />
+                    ))}
+        </div>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+        )}
+
+      {/* 게시글 수정 다이얼로그 */}
+      {editingDiary && (
+        <Dialog open={!!editingDiary} onOpenChange={() => setEditingDiary(null)}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>게시글 수정</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <input
+                type="text"
+                value={editingDiary.title}
+                onChange={(e) => setEditingDiary(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="제목"
+                className={cn(
+                  "w-full p-3 rounded-lg",
+                  styleSettings.rounded === 'none' && 'rounded-none',
+                  styleSettings.rounded === 'sm' && 'rounded',
+                  styleSettings.rounded === 'md' && 'rounded-lg',
+                  styleSettings.rounded === 'lg' && 'rounded-xl',
+                  styleSettings.rounded === 'full' && 'rounded-full'
+                )}
+                style={getStyleObject()}
+              />
+              <textarea
+                value={editingDiary.content}
+                onChange={(e) => setEditingDiary(prev => ({ ...prev, content: e.target.value }))}
+                placeholder="내용을 입력하세요..."
+                className={cn(
+                  "w-full h-48 p-3 rounded-lg resize-none",
+                  styleSettings.rounded === 'none' && 'rounded-none',
+                  styleSettings.rounded === 'sm' && 'rounded',
+                  styleSettings.rounded === 'md' && 'rounded-lg',
+                  styleSettings.rounded === 'lg' && 'rounded-xl',
+                  styleSettings.rounded === 'full' && 'rounded-full'
+                )}
+                style={getStyleObject()}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingDiary(null)}
+                >
+                  취소
+                </Button>
+                <Button type="submit">수정</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
+      </div>
     </div>
   );
 };
