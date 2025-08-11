@@ -4,7 +4,7 @@
 import { db } from '../../firebase';
 import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { notFound, useParams } from 'next/navigation';
-import { componentLibrary } from '@/components/edit/ComponentLibrary';
+import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 import Link from 'next/link';
 import UserEditButton from '@/components/ui/UserEditButton';
 import BackgroundSelector from '@/components/template/BackgroundSelector';
