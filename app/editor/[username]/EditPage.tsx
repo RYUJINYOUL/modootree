@@ -22,6 +22,7 @@ import EditorCanvas2 from '@/components/edit/EditorCanvas2';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ComponentKey } from '@/components/edit/ComponentLibrary';
 
 const db = getFirestore(app);
 
@@ -29,13 +30,13 @@ const db = getFirestore(app);
 type SiteType = "diary" | "schedule" | "links" | "portfolio" | "etc";
 
 // 사이트 타입별 기본 컴포넌트 설정
-const DEFAULT_COMPONENTS: Record<SiteType, string[]> = {
+const DEFAULT_COMPONENTS: Record<SiteType, ComponentKey[]> = {
   diary: ["일기장"],
   schedule: ["달력"],
   links: ["링크카드"],
   portfolio: ["사진첩"],
   etc: ["프로필카드", "링크카드", "달력", "게스트북"]
-};
+} as const;
 
 // 사이트 타입 한글명
 const TYPE_LABELS: Record<SiteType, string> = {
@@ -60,7 +61,7 @@ export default function EditPage({ username }: { username: string }) {
   const [error, setError] = useState('');
   const [siteType, setSiteType] = useState<SiteType | null>(null);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
-  const [components, setComponents] = useState<string[]>([]);
+  const [components, setComponents] = useState<ComponentKey[]>([]);
 
   // 구독자 목록 상태 추가
   const [subscribers, setSubscribers] = useState<{ email: string }[]>([]);
@@ -192,7 +193,7 @@ export default function EditPage({ username }: { username: string }) {
   }, [components, siteType, ownerUid]);
 
   // 컴포넌트 업데이트 핸들러
-  const handleComponentsUpdate = (newComponents: string[]) => {
+  const handleComponentsUpdate = (newComponents: ComponentKey[]) => {
     setComponents(newComponents);
   };
 
