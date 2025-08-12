@@ -358,18 +358,18 @@ export default function EditPage({ username }: { username: string }) {
 
   return (
     <div className="w-full min-h-screen flex justify-center items-start bg-gray-700">
-      <div className="w-full max-w-6xl md:w-4/5 bg-gray-300 rounded-2xl shadow-2xl mt-10 mb-10 p-4 flex flex-col gap-8">
-        <h1 className="font-bold text-center mt-6 mb-8 text-3xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500 after:rounded-full">
+      <div className="w-full max-w-6xl md:w-4/5 bg-gray-300 rounded-2xl shadow-2xl mt-3 mb-10 p-4 flex flex-col gap-8">
+        <h1 className="font-bold text-center mt-5 mb-5 text-3xl text-black tracking-wide relative after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500 after:rounded-full">
           에디터
         </h1>
 
         {/* 사이트 타입 선택 섹션 - 모바일 친화적 */}
-        <div className="bg-gray-50 rounded-xl p-6 shadow-lg">
+        <div className="bg-gray-50 rounded-xl p-3 shadow-lg">
           <div 
             className="flex items-center justify-between cursor-pointer"
             onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
           >
-            <h2 className="text-xl font-semibold text-gray-800">
+            <h2 className="text-lg font-semibold text-gray-800">
               사이트 타입 선택
               {siteType && <span className="ml-2 text-blue-500">- {TYPE_LABELS[siteType]}</span>}
             </h2>

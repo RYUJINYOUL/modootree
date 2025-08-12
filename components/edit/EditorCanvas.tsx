@@ -1,11 +1,8 @@
 'use client';
 import { ComponentLibrary, ComponentKey } from './ComponentLibrary';
 import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Drawer } from "vaul";
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface EditorCanvasProps {
   components: ComponentKey[];
@@ -63,25 +60,36 @@ export default function EditorCanvas({ components, onComponentsUpdate }: EditorC
       </div>
 
       {/* 🔹 모바일에서 컴포넌트 추가 */}
-      <div className='md:hidden fixed bottom-6 right-6'>
-        <Popover>
-          <PopoverTrigger asChild>
+      <div className='md:hidden fixed bottom-6 right-6 z-50'>
+        <Drawer.Root>
+          <Drawer.Trigger asChild>
             <Button variant="outline" className='text-white bg-blue-600 border-blue-600 text-[25px] hover:bg-blue-700'>+</Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            <div className="space-y-2">
-              {(Object.keys(ComponentLibrary) as ComponentKey[]).map(type => (
-                <div
-                  key={type}
-                  onClick={() => handleAdd(type)}
-                  className="p-3 bg-blue-500/70 text-white rounded-xl font-semibold text-center shadow cursor-pointer hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 transition"
-                >
-                  {type}
+          </Drawer.Trigger>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[999]" />
+            <Drawer.Content className="bg-zinc-100 flex flex-col rounded-t-[10px] h-[50vh] fixed bottom-0 left-0 right-0 z-[1000]">
+              <div className="p-4 bg-white rounded-t-[10px] flex-1">
+                <VisuallyHidden asChild>
+                  <Drawer.Title>컴포넌트 추가</Drawer.Title>
+                </VisuallyHidden>
+                <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
+                <div className="max-h-[40vh] overflow-y-auto">
+                  <div className="space-y-2">
+                    {(Object.keys(ComponentLibrary) as ComponentKey[]).map(type => (
+                      <div
+                        key={type}
+                        onClick={() => handleAdd(type)}
+                        className="p-3 bg-blue-500/70 text-white rounded-xl font-semibold text-center shadow cursor-pointer hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 transition"
+                      >
+                        {type}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
       </div>
     </div>
   );

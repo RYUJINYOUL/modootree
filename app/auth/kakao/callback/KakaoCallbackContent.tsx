@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithCustomToken, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useDispatch } from 'react-redux';
@@ -62,6 +62,9 @@ export default function KakaoCallbackContent() {
       }
 
       console.log('Firebase 인증 시작...');
+
+      // 세션 지속 시간 설정 (브라우저 탭을 닫으면 로그아웃)
+      await setPersistence(auth, browserSessionPersistence);
 
       // Firebase Custom Token으로 로그인
       const userCredential = await signInWithCustomToken(auth, responseData.customToken);

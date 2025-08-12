@@ -817,7 +817,6 @@ const Board = ({ username, uid }) => {
   const PostCard = ({ post }) => {
     const authorName = post.author?.displayName || '익명';
     const authorInitial = authorName.charAt(0).toUpperCase();
-    const canManagePost = isEditable || currentUser?.uid === post.author?.uid;
 
     return (
       <div 
@@ -832,81 +831,56 @@ const Board = ({ username, uid }) => {
         style={getStyleObject()}
         onClick={() => handlePostSelect(post)}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {post.isNotice && (
-              <Badge variant="destructive">공지</Badge>
-            )}
-            <h3 className="text-lg font-semibold">{post.title}</h3>
-          </div>
-          {canManagePost && (
-              <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {(isEditable || currentUser?.uid === post.author?.uid) && (
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingDiary(post);
-                    }}>
-                      수정
-                    </DropdownMenuItem>
-                  )}
-                  {(isEditable || currentUser?.uid === post.author?.uid) && (
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(post);
-                    }}>
-                      삭제
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        
-        <p className="text-gray-600 line-clamp-2 mb-4">{post.content}</p>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span className="flex items-center gap-1">
-              <Heart className={`w-4 h-4 ${post.likedBy?.includes(currentUser?.uid) ? 'fill-red-500 text-red-500' : ''}`} />
-              {post.likes || 0}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle className="w-4 h-4" />
-              {post.commentCount || 0}
-            </span>
-            <span className="flex items-center gap-1">
-              👁️ {post.viewCount || 0}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Avatar className="w-6 h-6">
-              <AvatarImage src={post.author?.photoURL || null} />
-              <AvatarFallback>
-                {authorInitial}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">
-              {authorName}
-            </span>
-          </div>
-        </div>
-
-        {post.tags?.length > 0 && (
-          <div className="flex gap-1 mt-2">
-            {post.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-base font-semibold" style={{ color: styleSettings.textColor }}>{post.title}</h3>
+              {post.isNotice && (
+                <Badge variant="destructive" className="text-xs px-2 py-0">공지</Badge>
+              )}
+              <Badge 
+                variant="outline" 
+                className="text-xs px-2 py-0"
+                style={{ color: styleSettings.textColor, borderColor: styleSettings.textColor }}
+              >
+                {categories.find(cat => cat.id === post.category)?.name || '자유게시판'}
               </Badge>
-            ))}
+            </div>
+            
+            <p className="text-sm line-clamp-2 mb-3" style={{ color: styleSettings.textColor }}>{post.content}</p>
+            
+            <div className="flex items-center gap-3 text-xs" style={{ color: styleSettings.textColor }}>
+              <span className="flex items-center gap-1">
+                <Heart className={`w-3 h-3 ${post.likedBy?.includes(currentUser?.uid) ? 'fill-red-500 text-red-500' : ''}`} />
+                {post.likes || 0}
+              </span>
+              <span className="flex items-center gap-1">
+                <MessageCircle className="w-3 h-3" />
+                {post.commentCount || 0}
+              </span>
+              <span className="flex items-center gap-1">
+                👁️ {post.viewCount || 0}
+              </span>
+              <Avatar className="w-5 h-5">
+                <AvatarImage src={post.author?.photoURL || null} />
+                <AvatarFallback className="text-xs">
+                  {authorInitial}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+
+          {post.image && (
+            <div className="flex-shrink-0 w-16 h-16 relative">
+              <Image
+                src={post.image.url}
+                alt="게시글 이미지"
+                fill
+                className="rounded-md object-cover"
+              />
             </div>
           )}
+        </div>
       </div>
     );
   };
@@ -1264,78 +1238,90 @@ const Board = ({ username, uid }) => {
 
   // editingDiary state 추가
   const [editingDiary, setEditingDiary] = useState(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
     <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full px-2'>
       <div className="w-full max-w-[1100px] space-y-6 mt-8">
         {renderColorSettings()}
-        {/* 헤더 영역 */}
-        <div className={cn(
-          "relative flex items-center justify-between text-[21px] font-bold w-full max-w-[1100px] p-4 backdrop-blur-sm tracking-tight",
-          styleSettings.rounded === 'none' && 'rounded-none',
-          styleSettings.rounded === 'sm' && 'rounded',
-          styleSettings.rounded === 'md' && 'rounded-lg',
-          styleSettings.rounded === 'lg' && 'rounded-xl',
-          styleSettings.rounded === 'full' && 'rounded-full'
-        )} style={getStyleObject()}>
-          {/* 왼쪽 글쓰기 버튼 */}
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleButtonClick(e, () => setIsWriting(true));
-            }}
-            className="p-2 rounded-lg hover:bg-opacity-30 transition-all"
-            style={{ 
-              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
-              color: styleSettings.textColor 
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-          </button>
 
-          {/* 중앙 제목 */}
-          <h1 className="text-xl font-semibold text-center">게시판</h1>
-
-          {/* 오른쪽 버튼들 */}
-          <div className="flex gap-2">
-            {isEditable && (
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleButtonClick(e, () => setIsEditingCategories(true));
-                }}
-                className="p-2 rounded-lg hover:bg-opacity-30 transition-all"
-                style={{ 
-                  backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
-                  color: styleSettings.textColor 
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
+        {/* 정렬 옵션 UI */}
+        <div className="flex justify-end">
+          <div 
+            className={cn(
+              "inline-block rounded-lg",
+              styleSettings.rounded === 'none' && 'rounded-none',
+              styleSettings.rounded === 'sm' && 'rounded',
+              styleSettings.rounded === 'md' && 'rounded-lg',
+              styleSettings.rounded === 'lg' && 'rounded-xl',
+              styleSettings.rounded === 'full' && 'rounded-full'
             )}
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleButtonClick(e, () => setIsWriting(true));
-              }}
-              className="p-2 rounded-lg hover:bg-opacity-30 transition-all"
-              style={{ 
-                backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`,
-                color: styleSettings.textColor 
-              }}
+            style={getStyleObject()}
+          >
+            <Tabs 
+              value={sortBy} 
+              onValueChange={setSortBy}
+              className="[&_button]:text-inherit"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
+              <TabsList className="h-11 bg-transparent">
+                {isEditable && (
+                  <TabsTrigger 
+                    value="category"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsEditingCategories(true);
+                      setSortBy('latest');
+                    }}
+                    style={{ color: styleSettings.textColor }}
+                    className="px-4 data-[state=active]:bg-white/10"
+                  >
+                    카테고리 설정
+                  </TabsTrigger>
+                )}
+                <TabsTrigger 
+                  value="write" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsWriting(true);
+                    setSortBy('latest');
+                  }}
+                  style={{ color: styleSettings.textColor }}
+                  className="px-4 data-[state=active]:bg-white/10"
+                >
+                  글쓰기
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="search"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsSearchOpen(true);
+                    setSortBy('latest');
+                  }}
+                  style={{ color: styleSettings.textColor }}
+                  className="px-4 data-[state=active]:bg-white/10"
+                >
+                  검색
+                </TabsTrigger>
+                {selectedCategory === 'all' && (
+                  <>
+                    <TabsTrigger 
+                      value="latest" 
+                      style={{ color: styleSettings.textColor }}
+                      className="px-4 data-[state=active]:bg-white/10"
+                    >
+                      최신순
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="likes" 
+                      style={{ color: styleSettings.textColor }}
+                      className="px-4 data-[state=active]:bg-white/10"
+                    >
+                      인기순
+                    </TabsTrigger>
+                  </>
+                )}
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
@@ -1357,89 +1343,39 @@ const Board = ({ username, uid }) => {
           onDeleteCategory={handleDeleteCategory}
         />
 
-        {/* 카테고리 및 검색 */}
-        <div className="flex flex-col gap-4">
-          {/* 카테고리 탭 */}
-          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className={baseTabStyles.container}>
-            <div className="relative">
-              <div className="overflow-hidden mx-[-1rem] px-4" ref={emblaRef}>
-                <TabsList className={baseTabStyles.list}>
-                  {categories.map(category => (
-                    <TabsTrigger 
-                      key={category.id} 
-                      value={category.id}
-                      className={cn(
-                        baseTabStyles.trigger,
-                        "h-9 px-4 rounded-full transition-all hover:bg-opacity-30"
-                      )}
-                      style={{ 
-                        backgroundColor: category.id === selectedCategory 
-                          ? `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`
-                          : `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
-                        color: styleSettings.textColor,
-                        ...(['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow) && {
-                          borderColor: styleSettings.shadowColor || '#000000',
-                          borderWidth: '2px',
-                          borderStyle: 'solid'
-                        })
-                      }}
-                    >
-                      {category.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
+        {/* 카테고리 탭 */}
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className={baseTabStyles.container}>
+          <div className="relative">
+            <div className="overflow-hidden mx-[-1rem] px-4" ref={emblaRef}>
+              <TabsList className={baseTabStyles.list}>
+                {categories.map(category => (
+                  <TabsTrigger 
+                    key={category.id} 
+                    value={category.id}
+                    className={cn(
+                      baseTabStyles.trigger,
+                      "h-9 px-4 rounded-full transition-all hover:bg-opacity-30"
+                    )}
+                    style={{ 
+                      backgroundColor: category.id === selectedCategory 
+                        ? `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.3) * 255).toString(16).padStart(2, '0')}`
+                        : `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
+                      color: styleSettings.textColor,
+                      ...(['retro', 'sharp', 'stripe', 'cross', 'diagonal'].includes(styleSettings.shadow) && {
+                        borderColor: styleSettings.shadowColor || '#000000',
+                        borderWidth: '2px',
+                        borderStyle: 'solid'
+                      })
+                    }}
+                  >
+                    {category.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          </Tabs>
-
-          <div 
-            className={cn(
-              "flex items-center gap-2 p-2",
-              styleSettings.rounded === 'none' && 'rounded-none',
-              styleSettings.rounded === 'sm' && 'rounded',
-              styleSettings.rounded === 'md' && 'rounded-lg',
-              styleSettings.rounded === 'lg' && 'rounded-xl',
-              styleSettings.rounded === 'full' && 'rounded-full'
-            )}
-            style={getStyleObject()}
-          >
-            <select
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-              className="px-3 py-2 bg-transparent border-none focus:outline-none text-inherit"
-            >
-              <option value="title">제목</option>
-              <option value="content">내용</option>
-              <option value="author.displayName">작성자</option>
-            </select>
-            <input
-              type="text"
-              placeholder="검색어 입력 후 엔터"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSearch();
-                }
-              }}
-              className="flex-1 px-3 py-2 bg-transparent border-none focus:outline-none text-inherit placeholder-inherit"
-            />
           </div>
-
-          {/* 정렬 옵션 UI 부분 수정 */}
-          <div className="flex justify-end">
-            {selectedCategory === 'all' && (
-              <Tabs value={sortBy} onValueChange={setSortBy}>
-                <TabsList>
-                  <TabsTrigger value="latest">최신순</TabsTrigger>
-                  <TabsTrigger value="likes">인기순</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-          </div>
-        </div>
-
+        </Tabs>
+        
         {/* 게시글 목록 */}
         <div className="space-y-4">
           {posts.map(post => (
@@ -1772,6 +1708,52 @@ const Board = ({ username, uid }) => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* 검색 다이얼로그 추가 */}
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>검색</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <select
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+              >
+                <option value="title">제목</option>
+                <option value="content">내용</option>
+                <option value="author.displayName">작성자</option>
+              </select>
+              <Input
+                placeholder="검색어를 입력하세요"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearch();
+                    setIsSearchOpen(false);
+                  }
+                }}
+                className="h-10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSearchOpen(false)}>
+              취소
+            </Button>
+            <Button onClick={() => {
+              handleSearch();
+              setIsSearchOpen(false);
+            }}>
+              검색
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );

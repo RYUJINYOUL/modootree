@@ -1637,7 +1637,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
                 <div
                   key={date.format('YYYY-MM-DD')}
                   className={cn(
-                    "min-h-[100px] p-2 rounded-lg transition-all relative cursor-pointer",
+                    "md:min-h-[100px] min-h-[60px] p-2 rounded-lg transition-all relative cursor-pointer",
                     isToday && "bg-blue-500/10",
                     isSelected && "ring-2 ring-blue-500",
                     !isCurrentMonth && "opacity-50"
@@ -1677,7 +1677,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
                 <div
                   key={date.format('YYYY-MM-DD')}
                   className={cn(
-                    "min-h-[80px] p-2 rounded-lg transition-all relative cursor-pointer",
+                    "md:min-h-[100px] min-h-[60px] p-2 rounded-lg transition-all relative cursor-pointer",
                     isToday && "bg-blue-500/10",
                     isSelected && "ring-2 ring-blue-500"
                   )}
@@ -1780,7 +1780,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
                   color: styleSettings.textColor 
                 }}
               >
-              일정 추가
+              일정+
             </button>
           )}
 
@@ -1792,7 +1792,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
               color: styleSettings.textColor 
             }}
           >
-            {showEventList ? '일정 목록 닫기' : '일정 목록 열기'}
+            {showEventList ? '닫기' : '열기'}
           </button>
         </div>
           </div>
