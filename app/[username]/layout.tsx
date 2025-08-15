@@ -3,13 +3,14 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { db } from '../../firebase';
 import { notFound } from 'next/navigation';
 
-//
+// Next 앱 라우터에서 메타데이터가 항상 최신 Firestore 값을 반영하도록 강제 동적 렌더링 및 캐시 비활성화
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Props 타입과 parent 인자를 모두 사용합니다.
 export async function generateMetadata(
-  { params }: {
-    params: Promise<{ username: string }>;
-  },
+  { params }: { params: Promise<{ username: string }> },
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
