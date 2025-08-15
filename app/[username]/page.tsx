@@ -1,6 +1,5 @@
 'use client';
 
-// app/[username]/page.tsx
 import { db } from '../../firebase';
 import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { notFound, useParams } from 'next/navigation';
