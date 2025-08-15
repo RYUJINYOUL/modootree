@@ -3,11 +3,16 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import { db } from '../../firebase';
 import { notFound } from 'next/navigation';
 
-export async function generateMetadata({
-  params,
-}: {
+type Props = {
   params: { username: string };
-}): Promise<Metadata> {
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+// Props 타입과 parent 인자를 모두 사용합니다.
+export async function generateMetadata(
+  { params, searchParams }: Props, // Props 타입을 통째로 적용
+  parent: ResolvingMetadata // parent 인자 추가
+): Promise<Metadata> {
   try {
     // 1. username으로 uid 가져오기
     const usernameDoc = await getDoc(doc(db, 'usernames', params.username));
@@ -25,7 +30,7 @@ export async function generateMetadata({
     const [userDoc, metadataDoc, galleryDoc] = await Promise.all([
       getDoc(doc(db, 'users', uid)),
       getDoc(doc(db, 'users', uid, 'settings', 'metadata')),
-      getDoc(doc(db, 'users', uid, 'info', 'details'))  // Gallery3 데이터
+      getDoc(doc(db, 'users', uid, 'info', 'details'))
     ]);
 
     const userData = userDoc.exists() ? userDoc.data() : {};
