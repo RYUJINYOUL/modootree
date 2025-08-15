@@ -1,0 +1,16 @@
+# Ignore build outputs and backups
+.next
+.next_bak*
+out
+dist
+
+# Dependencies
+node_modules
+
+# Logs and caches
+*.log
+coverage
+.cache
+cypress/videos
+cypress/screenshots
+
