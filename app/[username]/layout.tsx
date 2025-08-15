@@ -35,8 +35,11 @@ export async function generateMetadata(
       getDoc(doc(db, 'users', uid, 'info', 'details'))
     ]);
 
-    const userData = userDoc.exists() ? userDoc.data() : {};
-    const metadataData = metadataDoc.exists() ? metadataDoc.data() : {};
+    const userData = userDoc.exists() ? (userDoc.data() as Record<string, any>) : ({} as Record<string, any>);
+    // 폴백: 서브컬렉션 문서가 없으면 루트 문서의 metadata 필드 사용
+    const metadataData = metadataDoc.exists()
+      ? (metadataDoc.data() as Record<string, any>)
+      : ((userData?.metadata as Record<string, any>) || ({} as Record<string, any>));
     const galleryData = galleryDoc.exists() ? galleryDoc.data() : {};
 
     // 3. 메타데이터 구성 (우선순위: 메타데이터 > Gallery3 > 기본값)
