@@ -15,7 +15,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setUser, clearUser } from '../../store/userSlice';
 import UserSampleCarousel from '@/components/UserSampleCarousel';
 import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
 import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
@@ -80,19 +81,10 @@ const ParticlesComponent = () => {
 };
 
 export default function Page() {
-  const user = useSelector((state) => state.user);
-  const { currentUser } = user;
-  const [authUser, setAuthUser] = useState(null);
+  const dispatch = useDispatch();
+  const { currentUser } = useSelector((state) => state.user);
   const auth = getAuth();
   
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-    });
-
-    return () => unsubscribe();
-  }, [auth]);
-
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -103,16 +95,36 @@ export default function Page() {
   const { push } = useRouter();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
+  // Firebase 인증 상태 변경 감지
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // 사용자가 로그인한 경우
+        dispatch(setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }));
+      } else {
+        // 사용자가 로그아웃한 경우
+        dispatch(clearUser());
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, dispatch]);
+
+  // 사용자 데이터 로드
   useEffect(() => {
     const loadUserData = async () => {
-      const user = authUser || currentUser;
-      if (!user?.uid) {
+      if (!currentUser?.uid) {
         setLoading(false);
         return;
       }
 
       try {
-        const userRef = doc(db, 'users', user.uid);
+        const userRef = doc(db, 'users', currentUser.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           setUserData(userSnap.data());
@@ -133,7 +145,7 @@ export default function Page() {
             if (permissionsSnap.exists()) {
               const permissionsData = permissionsSnap.data();
               const allowedUsers = permissionsData.allowedUsers || [];
-              const isAllowed = allowedUsers.some(allowedUser => allowedUser.email === user.email);
+              const isAllowed = allowedUsers.some(allowedUser => allowedUser.email === currentUser.email);
               
               if (isAllowed) {
                 usernames.push({
@@ -154,7 +166,7 @@ export default function Page() {
     };
 
     loadUserData();
-  }, [authUser, currentUser]);
+  }, [currentUser]);
 
   const handleSaveUsername = async () => {
     if (!username) {
@@ -267,7 +279,7 @@ export default function Page() {
               >
                 공감 한 조각
               </Link>
-              {(authUser || currentUser) && allowedSites.length > 0 && (
+              {(currentUser?.uid) && allowedSites.length > 0 && (
                 <div className="relative">
                   <button
                     onClick={() => setShowAllowedSites(!showAllowedSites)}

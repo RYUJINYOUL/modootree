@@ -340,6 +340,24 @@ const SkillProgress = ({ username, uid }) => {
               </div>
             </div>
 
+            {/* 텍스트 색상 설정 추가 */}
+            <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-100 w-24">텍스트 색상</span>
+              <div className="flex flex-wrap gap-1">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={`text-${color}`}
+                    onClick={() => saveStyleSettings({ ...styleSettings, textColor: color })}
+                    className={cn(
+                      "w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110",
+                      styleSettings.textColor === color && "ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-800"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
             {/* 프로그레스 바 색상 */}
             <div className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
               <span className="text-sm font-medium text-gray-100 w-24">프로그레스 바</span>
@@ -548,15 +566,15 @@ const SkillProgress = ({ username, uid }) => {
               )}
               style={getStyleObject()}
             >
-              <h2 className="text-lg font-semibold mb-4">{category.name}</h2>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: styleSettings.textColor }}>{category.name}</h2>
               <div className="space-y-4">
                 {skills[category.id] && Object.entries(skills[category.id]).map(([skillName, skill]) => (
                   <div key={skillName} className="relative">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{skillName}</span>
+                        <span className="font-medium" style={{ color: styleSettings.textColor }}>{skillName}</span>
                         {skill.years > 0 && (
-                          <span className="text-sm opacity-70">{skill.years}년</span>
+                          <span className="text-sm" style={{ color: styleSettings.textColor, opacity: 0.7 }}>{skill.years}년</span>
                         )}
                       </div>
                       {isEditable && (
@@ -571,12 +589,14 @@ const SkillProgress = ({ username, uid }) => {
                               setIsEditing(true);
                             }}
                             className="p-1 hover:bg-white/10 rounded transition-colors"
+                            style={{ color: styleSettings.textColor }}
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteSkill(category.id, skillName)}
                             className="p-1 hover:bg-white/10 rounded transition-colors"
+                            style={{ color: styleSettings.textColor }}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -593,12 +613,19 @@ const SkillProgress = ({ username, uid }) => {
                       />
                     </div>
                     {skill.description && (
-                      <p className="mt-2 text-sm opacity-70">{skill.description}</p>
+                      <p className="mt-2 text-sm" style={{ color: styleSettings.textColor, opacity: 0.7 }}>{skill.description}</p>
                     )}
                     {skill.tags && skill.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {skill.tags.map(tag => (
-                          <span key={tag} className="text-xs bg-blue-500/20 text-blue-700 px-2 py-0.5 rounded-full">
+                          <span 
+                            key={tag} 
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ 
+                              backgroundColor: `${styleSettings.progressColor}20`,
+                              color: styleSettings.textColor
+                            }}
+                          >
                             {tag}
                           </span>
                         ))}

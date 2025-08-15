@@ -1,19 +1,27 @@
 // components/EditButton.tsx
 'use client';
 
-import { Edit, Hand, Plus, Settings, Home, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { Edit, Hand, Plus, Settings, Home, Mail, Bell, BellOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/firebase';
 
 interface UserEditButtonProps {
   username: string;
   ownerUid: string;
   userEmail?: string;
+}
+
+interface Subscriber {
+  email: string;
+  subscribedAt: Date;
 }
 
 export default function UserEditButton({ username, ownerUid, userEmail }: UserEditButtonProps) {
@@ -23,6 +31,73 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
   const [isSending, setIsSending] = useState(false);
   const { currentUser } = useSelector((state: any) => state.user);
   const [senderEmail, setSenderEmail] = useState('');
+  const [subscribeDialogOpen, setSubscribeDialogOpen] = useState(false);
+  const [subscribeEmail, setSubscribeEmail] = useState('');
+  const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // 구독 상태 확인
+  useEffect(() => {
+    if (!ownerUid) return;
+    
+    const checkSubscription = async () => {
+      try {
+        const subscribersRef = doc(db, 'users', ownerUid, 'settings', 'subscribers');
+        const unsubscribe = onSnapshot(subscribersRef, (doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            const emails = data.emails || [];
+            // 현재 사용자의 이메일이 구독 목록에 있는지 확인
+            setIsSubscribed(emails.includes(currentUser?.email));
+          }
+        });
+
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('구독 상태 확인 실패:', error);
+      }
+    };
+
+    checkSubscription();
+  }, [ownerUid, currentUser?.email]);
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setSubscribeEmail(email);
+    setIsEmailValid(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+  };
+
+  const handleSubscription = async () => {
+    if (!isEmailValid) return;
+    
+    try {
+      // 새로운 경로로 수정
+      const subscribersRef = doc(db, 'users', ownerUid, 'settings', 'subscribers');
+      
+      // 현재 구독자 목록 확인
+      const docSnap = await getDoc(subscribersRef);
+      const currentEmails = docSnap.exists() ? docSnap.data().emails || [] : [];
+      
+      // 이미 구독 중인지 확인
+      if (currentEmails.includes(subscribeEmail)) {
+        alert('이미 구독 중인 이메일입니다.');
+        return;
+      }
+
+      // 새 구독자 추가 (emails 배열 형태로 저장)
+      await setDoc(subscribersRef, {
+        emails: [...currentEmails, subscribeEmail],
+        updatedAt: new Date()
+      }, { merge: true });
+
+      setSubscribeDialogOpen(false);
+      setSubscribeEmail('');
+      alert('구독이 완료되었습니다.');
+    } catch (error) {
+      console.error('구독 처리 중 오류:', error);
+      alert('구독 처리 중 오류가 발생했습니다.');
+    }
+  };
 
   const handleSendSuggestion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +145,34 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
             <Home className="w-4 h-4" />
           </Link>
 
+          {/* 구독하기 버튼 - 본인이 아닐 때만 표시 */}
+          {currentUser?.uid !== ownerUid && (
+            <button
+              onClick={() => {
+                setSubscribeDialogOpen(true);
+                setIsOpen(false);
+              }}
+              className="bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
+              title={isSubscribed ? "구독 중" : "일정 알림 구독"}
+            >
+              {isSubscribed ? (
+                <BellOff className="w-4 h-4 relative">
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="100%"
+                    y2="100%"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="absolute"
+                  />
+                </BellOff>
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+            </button>
+          )}
+
           {/* 제안하기 버튼 */}
           {userEmail && (
             <button
@@ -110,7 +213,7 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
             href="/likes/all"
             className="bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
             onClick={() => setIsOpen(false)}
-            title="좋아요"
+            title="공감페이지"
           >
             <Hand className="w-4 h-4" />
           </Link>
@@ -164,6 +267,42 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 구독 다이얼로그 - 캘린더와 동일한 구현 */}
+      <Dialog open={subscribeDialogOpen} onOpenChange={setSubscribeDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">알림 구독하기</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              새로운 일정이 등록되면 이메일로 알림을 받아보세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="email" className="text-sm font-medium">
+                  이메일 주소
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  value={subscribeEmail}
+                  onChange={handleEmailChange}
+                  className="w-full"
+                />
+              </div>
+              <Button
+                onClick={handleSubscription}
+                disabled={!isEmailValid}
+                className="w-full"
+              >
+                구독하기
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

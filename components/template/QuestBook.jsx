@@ -170,17 +170,20 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name || !message) {
-      showToast("입력 오류", "이름과 메시지를 모두 입력해주세요.");
+    if (!name.trim() || !message.trim()) {
+      showToast("오류", "이름과 메시지를 모두 입력해주세요.");
       return
     }
 
     try {
       if (replyTo) {
-        // 답글 추가
+        // 답글 작성
         const commentRef = doc(db, 'users', finalUid, 'comments', replyTo.commentId)
+        const commentDoc = await getDoc(commentRef)
+        const currentReplies = commentDoc.data().replies || []
+
         await updateDoc(commentRef, {
-          replies: arrayUnion({
+          replies: [...currentReplies, {
             name,
             message,
             createdAt: new Date(),
@@ -188,21 +191,43 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
             profileImage: currentUser?.photoURL || null,
             likes: 0,
             likedBy: []
-          })
+          }]
         })
-        setReplyTo(null)
       } else {
-        // 새 댓글 추가
-      await addDoc(collection(db, 'users', finalUid, 'comments'), {
-        name,
-        message,
-        createdAt: new Date(),
-        uid: currentUser?.uid || null,
-        profileImage: currentUser?.photoURL || null,
+        // 새 방명록 작성
+        const docRef = await addDoc(collection(db, 'users', finalUid, 'comments'), {
+          name,
+          message,
+          createdAt: new Date(),
+          uid: currentUser?.uid || null,
+          profileImage: currentUser?.photoURL || null,
           likes: 0,
           likedBy: [],
           replies: []
-      })
+        })
+
+        // 구독자들에게 알림 전송
+        try {
+          await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ownerUid: finalUid,
+              username: name,
+              type: 'questbook',
+              data: {
+                title: `${name}님의 방명록`,
+                author: name,
+                content: message.substring(0, 200) // 내용 일부만 전송
+              }
+            })
+          });
+        } catch (error) {
+          console.error('알림 전송 실패:', error);
+          // 알림 전송 실패는 방명록 작성에 영향을 주지 않음
+        }
       }
       setName('')
       setMessage('')

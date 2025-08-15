@@ -17,20 +17,37 @@ const QRShare = ({ userId, username }) => {
   const getPageUrl = () => {
     if (typeof window !== 'undefined') {
       const baseUrl = window.location.origin;
-      return `${baseUrl}/user/${userId}`;
+      return `${baseUrl}/${username}`;
     }
     return '';
   };
 
   // QR 코드 이미지 다운로드
   const handleDownload = () => {
-    const canvas = document.querySelector('canvas');
-    if (canvas) {
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `${username || userId}_qr.png`;
-      link.href = url;
-      link.click();
+    const svg = document.querySelector('.qr-code-container svg');
+    if (svg) {
+      // SVG를 Canvas로 변환
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const img = new Image();
+      
+      canvas.width = svg.width.baseVal.value;
+      canvas.height = svg.height.baseVal.value;
+      
+      img.onload = () => {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        
+        const url = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `${username || userId}_qr.png`;
+        link.href = url;
+        link.click();
+      };
+      
+      img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
     }
   };
 
@@ -54,7 +71,7 @@ const QRShare = ({ userId, username }) => {
           <DialogTitle>QR 코드로 공유하기</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center gap-6 p-4">
-          <div className="bg-white p-4 rounded-xl">
+          <div className="bg-white p-4 rounded-xl qr-code-container">
             <QRCodeSVG
               value={getPageUrl()}
               size={200}

@@ -24,7 +24,7 @@ export default function useAuth() {
             throw error;
         }
     };
-
+    
     useEffect(() => {
         setLoading(true)
         const unsubscribe = onAuthStateChanged(auth, (user) => {

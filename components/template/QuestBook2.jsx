@@ -77,6 +77,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import CategoryManager from './CategoryManager';
 import useEmblaCarousel from 'embla-carousel-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -102,6 +103,10 @@ const COLOR_PALETTE = [
 const Board = ({ username, uid }) => {
   const pathname = usePathname();
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
+  const { toast } = useToast();
+  const { currentUser } = useSelector((state) => state.user);
+  const finalUid = uid ?? currentUser?.uid;
+
   const [posts, setPosts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [title, setTitle] = useState('');
@@ -120,11 +125,12 @@ const Board = ({ username, uid }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState(null);
-  // categories 상태 초기화 수정
   const [categories, setCategories] = useState([{ id: 'all', name: '전체' }]);
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [newCategory, setNewCategory] = useState({ id: '', name: '' });
   const [editingCategory, setEditingCategory] = useState(null);
+  // 글쓰기 폼의 카테고리 상태 추가
+  const [writeFormCategory, setWriteFormCategory] = useState('');
 
   // 컴포넌트 내부에 로컬 상태 추가
   const [localNewCategory, setLocalNewCategory] = useState({ id: '', name: '' });
@@ -146,9 +152,6 @@ const Board = ({ username, uid }) => {
       setEditingCategory(debouncedEditingCategory);
     }
   }, [debouncedEditingCategory]);
-
-  const { currentUser } = useSelector((state) => state.user);
-  const finalUid = uid ?? currentUser?.uid;
 
   // 현재 사용자 정보 가져오기
   const getCurrentUserInfo = () => {
@@ -239,9 +242,17 @@ const Board = ({ username, uid }) => {
     } catch (error) {
       console.error('이미지 업로드 실패:', error);
       if (error.code === 'storage/unauthorized') {
-        alert('이미지 업로드 권한이 없습니다. 관리자에게 문의하세요.');
+        toast({
+          title: "이미지 업로드 오류",
+          description: "이미지 업로드 권한이 없습니다. 관리자에게 문의하세요.",
+          duration: 5000
+        });
       } else {
-        alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+        toast({
+          title: "이미지 업로드 오류",
+          description: "이미지 업로드에 실패했습니다. 다시 시도해주세요.",
+          duration: 5000
+        });
       }
       throw error;
     }
@@ -285,18 +296,43 @@ const Board = ({ username, uid }) => {
     action();
   };
 
+  // 알림 표시 함수
+  const showToast = (title, description) => {
+    if (toast) {
+      toast({
+        title,
+        description,
+        duration: 3000
+      });
+    }
+  };
+
   // 게시글 작성 폼 제출 핸들러
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!title.trim() || !content.trim()) {
-      alert('제목과 내용을 모두 입력해주세요.');
+      toast({
+        title: "입력 오류",
+        description: "제목과 내용을 모두 입력해주세요."
+      });
+      return;
+    }
+
+    if (!writeFormCategory) {
+      toast({
+        title: "입력 오류",
+        description: "카테고리를 선택해주세요."
+      });
       return;
     }
 
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      toast({
+        title: "로그인 필요",
+        description: "로그인이 필요합니다."
+      });
       return;
     }
 
@@ -304,14 +340,26 @@ const Board = ({ username, uid }) => {
       setLoading(true);
       let imageData = null;
 
+      // 이미지 업로드 처리
       if (imageFile) {
-        imageData = await handleImageUpload(imageFile);
+        try {
+          imageData = await handleImageUpload(imageFile);
+        } catch (error) {
+          toast({
+            title: "이미지 업로드 실패",
+            description: error.code === 'storage/unauthorized' 
+              ? "이미지 업로드 권한이 없습니다. 관리자에게 문의하세요."
+              : "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+          });
+          setLoading(false);
+          return;
+        }
       }
 
       const postData = {
         title: title.trim(),
         content: content.trim(),
-        category: selectedCategory === 'all' ? 'free' : selectedCategory,
+        category: writeFormCategory,
         author: {
           uid: currentUser.uid,
           displayName: currentUser.displayName || username || currentUser.email?.split('@')[0] || '익명',
@@ -324,22 +372,59 @@ const Board = ({ username, uid }) => {
         likedBy: [],
         viewCount: 0,
         commentCount: 0,
-        isNotice: selectedCategory === 'notice',
+        isNotice: writeFormCategory === 'notice',
         tags: tags || [],
         ...(imageData && { image: imageData }),
       };
 
-      await addDoc(collection(db, 'users', finalUid, 'posts'), postData);
+      // 게시글 저장과 알림 전송을 병렬로 처리
+      const [postRef] = await Promise.all([
+        // 게시글 저장
+        addDoc(collection(db, 'users', finalUid, 'posts'), postData),
+        
+        // 구독자들에게 알림 전송 (실패해도 게시글 저장에는 영향 없음)
+        fetch('/api/send-notification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ownerUid: finalUid,
+            username: username || postData.author.displayName,
+            type: 'questbook',
+            data: {
+              title: postData.title,
+              author: postData.author.displayName,
+              content: postData.content.substring(0, 200)
+            }
+          })
+        }).catch(error => {
+          console.error('알림 전송 실패:', error);
+          return null;  // 알림 전송 실패를 무시
+        })
+      ]);
 
+      // 폼 초기화 (상태 업데이트를 한 번에 처리)
       setTitle('');
       setContent('');
       setImageFile(null);
       setImagePreview('');
       setTags([]);
+      setWriteFormCategory('');
       setIsWriting(false);
+      
+      // 성공 메시지
+      toast({
+        title: "성공",
+        description: "게시글이 작성되었습니다."
+      });
+
     } catch (error) {
       console.error('게시글 작성 실패:', error);
-      alert('게시글 작성에 실패했습니다.');
+      toast({
+        title: "오류",
+        description: "게시글 작성에 실패했습니다."
+      });
     } finally {
       setLoading(false);
     }
@@ -348,7 +433,11 @@ const Board = ({ username, uid }) => {
   // 게시글 삭제 함수 수정
   const handleDelete = async (post) => {
     if (!isEditable && currentUser?.uid !== post.author?.uid) {
-      alert('삭제 권한이 없습니다.');
+      toast({
+        title: "삭제 권한 오류",
+        description: "삭제 권한이 없습니다.",
+        duration: 3000
+      });
       return;
     }
 
@@ -387,17 +476,25 @@ const Board = ({ username, uid }) => {
       // 상세보기가 열려있었다면 닫기
       setSelectedPost(null);
       
-      alert('게시글이 삭제되었습니다.');
+      toast({
+        title: "성공",
+        description: "게시글이 삭제되었습니다.",
+        duration: 3000
+      });
     } catch (error) {
       console.error('게시글 삭제 실패:', error);
-      alert('게시글 삭제에 실패했습니다.');
+      toast({
+        title: "오류",
+        description: "게시글 삭제에 실패했습니다.",
+        duration: 3000
+      });
     }
   };
 
   // 좋아요 기능
   const handleLike = async (post) => {
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      showToast("로그인 필요", "로그인이 필요합니다.");
       return;
     }
 
@@ -451,12 +548,12 @@ const Board = ({ username, uid }) => {
   // 댓글 작성
   const handleAddComment = async (postId) => {
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      showToast("로그인 필요", "로그인이 필요합니다.");
       return;
     }
 
     if (!newComment.trim()) {
-      alert('댓글 내용을 입력해주세요.');
+      showToast("입력 오류", "댓글 내용을 입력해주세요.");
       return;
     }
 
@@ -491,9 +588,10 @@ const Board = ({ username, uid }) => {
 
       setNewComment('');
       setReplyTo(null);
+      showToast("성공", "댓글이 작성되었습니다.");
     } catch (error) {
       console.error('댓글 작성 실패:', error);
-      alert('댓글 작성에 실패했습니다.');
+      showToast("오류", "댓글 작성에 실패했습니다.");
     }
   };
 
@@ -513,16 +611,17 @@ const Board = ({ username, uid }) => {
       });
 
       fetchComments(postId);
+      showToast("성공", "댓글이 삭제되었습니다.");
     } catch (error) {
       console.error('댓글 삭제 실패:', error);
-      alert('댓글 삭제에 실패했습니다.');
+      showToast("오류", "댓글 삭제에 실패했습니다.");
     }
   };
 
   // 댓글 좋아요
   const handleCommentLike = async (postId, comment) => {
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      showToast("로그인 필요", "로그인이 필요합니다.");
       return;
     }
 
@@ -546,6 +645,7 @@ const Board = ({ username, uid }) => {
       });
 
       fetchComments(postId);
+      showToast("성공", "댓글 좋아요가 추가되었습니다.");
     } catch (error) {
       console.error('댓글 좋아요 실패:', error);
     }
@@ -621,7 +721,11 @@ const Board = ({ username, uid }) => {
       ]);
     } catch (error) {
       console.error('카테고리 저장 실패:', error);
-      alert('카테고리 저장에 실패했습니다.');
+      toast({
+        title: "오류",
+        description: "카테고리 저장에 실패했습니다.",
+        duration: 3000
+      });
     }
   };
 
@@ -631,24 +735,25 @@ const Board = ({ username, uid }) => {
     e.stopPropagation();
 
     if (!newCategory.id.trim() || !newCategory.name.trim()) {
-      alert('카테고리 ID와 이름을 모두 입력해주세요.');
+      showToast("입력 오류", "카테고리 ID와 이름을 모두 입력해주세요.");
       return;
     }
 
     if (categories.some(cat => cat.id === newCategory.id)) {
-      alert('이미 존재하는 카테고리 ID입니다.');
+      showToast("오류", "이미 존재하는 카테고리 ID입니다.");
       return;
     }
 
     const updatedCategories = [...categories, newCategory];
     await saveCategories(updatedCategories);
     setNewCategory({ id: '', name: '' });
+    showToast("성공", "카테고리가 추가되었습니다.");
   };
 
   // 카테고리 수정
   const handleUpdateCategory = async (category) => {
     if (!category.id.trim() || !category.name.trim()) {
-      alert('카테고리 ID와 이름을 모두 입력해주세요.');
+      showToast("입력 오류", "카테고리 ID와 이름을 모두 입력해주세요.");
       return;
     }
 
@@ -657,12 +762,13 @@ const Board = ({ username, uid }) => {
     );
     await saveCategories(updatedCategories);
     setEditingCategory(null);
+    showToast("성공", "카테고리가 수정되었습니다.");
   };
 
   // 카테고리 삭제
   const handleDeleteCategory = async (categoryId) => {
     if (categoryId === 'all') {
-      alert('기본 카테고리는 삭제할 수 없습니다.');
+      showToast("오류", "기본 카테고리는 삭제할 수 없습니다.");
       return;
     }
 
@@ -688,9 +794,14 @@ const Board = ({ username, uid }) => {
       await saveCategories(updatedCategories);
       
       await batch.commit();
+      showToast("성공", "카테고리가 삭제되었습니다.");
     } catch (error) {
       console.error('카테고리 삭제 실패:', error);
-      alert('카테고리 삭제에 실패했습니다.');
+      toast({
+        title: "오류",
+        description: "카테고리 삭제에 실패했습니다.",
+        duration: 3000
+      });
     }
   };
 
@@ -1216,7 +1327,7 @@ const Board = ({ username, uid }) => {
   const handleEdit = async (e) => {
     e.preventDefault();
     if (!editingDiary || !editingDiary.title || !editingDiary.content) {
-      alert('제목과 내용을 모두 입력해주세요.');
+      showToast("입력 오류", "제목과 내용을 모두 입력해주세요.");
       return;
     }
 
@@ -1229,10 +1340,10 @@ const Board = ({ username, uid }) => {
       });
 
       setEditingDiary(null);
-      alert('게시글이 수정되었습니다.');
+      showToast("성공", "게시글이 수정되었습니다.");
     } catch (error) {
       console.error('게시글 수정 실패:', error);
-      alert('게시글 수정에 실패했습니다.');
+      showToast("오류", "게시글 수정에 실패했습니다.");
     }
   };
 
@@ -1249,7 +1360,7 @@ const Board = ({ username, uid }) => {
         <div className="flex justify-end">
           <div 
             className={cn(
-              "inline-block rounded-lg",
+              "inline-flex rounded-lg",
               styleSettings.rounded === 'none' && 'rounded-none',
               styleSettings.rounded === 'sm' && 'rounded',
               styleSettings.rounded === 'md' && 'rounded-lg',
@@ -1261,9 +1372,9 @@ const Board = ({ username, uid }) => {
             <Tabs 
               value={sortBy} 
               onValueChange={setSortBy}
-              className="[&_button]:text-inherit"
+              className="[&_button]:text-inherit min-w-fit"
             >
-              <TabsList className="h-11 bg-transparent">
+              <TabsList className="h-9 bg-transparent p-1">
                 {isEditable && (
                   <TabsTrigger 
                     value="category"
@@ -1273,9 +1384,9 @@ const Board = ({ username, uid }) => {
                       setSortBy('latest');
                     }}
                     style={{ color: styleSettings.textColor }}
-                    className="px-4 data-[state=active]:bg-white/10"
+                    className="px-3 data-[state=active]:bg-white/10 text-sm"
                   >
-                    카테고리 설정
+                    카테고리
                   </TabsTrigger>
                 )}
                 <TabsTrigger 
@@ -1286,7 +1397,7 @@ const Board = ({ username, uid }) => {
                     setSortBy('latest');
                   }}
                   style={{ color: styleSettings.textColor }}
-                  className="px-4 data-[state=active]:bg-white/10"
+                  className="px-3 data-[state=active]:bg-white/10 text-sm"
                 >
                   글쓰기
                 </TabsTrigger>
@@ -1298,7 +1409,7 @@ const Board = ({ username, uid }) => {
                     setSortBy('latest');
                   }}
                   style={{ color: styleSettings.textColor }}
-                  className="px-4 data-[state=active]:bg-white/10"
+                  className="px-3 data-[state=active]:bg-white/10 text-sm"
                 >
                   검색
                 </TabsTrigger>
@@ -1307,14 +1418,14 @@ const Board = ({ username, uid }) => {
                     <TabsTrigger 
                       value="latest" 
                       style={{ color: styleSettings.textColor }}
-                      className="px-4 data-[state=active]:bg-white/10"
+                      className="px-3 data-[state=active]:bg-white/10 text-sm"
                     >
                       최신순
                     </TabsTrigger>
                     <TabsTrigger 
                       value="likes" 
                       style={{ color: styleSettings.textColor }}
-                      className="px-4 data-[state=active]:bg-white/10"
+                      className="px-3 data-[state=active]:bg-white/10 text-sm"
                     >
                       인기순
                     </TabsTrigger>
@@ -1401,10 +1512,11 @@ const Board = ({ username, uid }) => {
             </DialogHeader>
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={writeFormCategory}
+                onChange={(e) => setWriteFormCategory(e.target.value)}
                 className="w-full border rounded px-3 py-2"
               >
+                <option value="">카테고리 선택</option>
                 {categories.filter(c => c.id !== 'all').map(category => (
                   <option key={category.id} value={category.id}>
                     {category.name}

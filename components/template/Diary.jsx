@@ -409,6 +409,29 @@ const Diary = ({ username, uid, isEditable, isAllowed }) => {
 
       await addDoc(collection(db, 'users', finalUid, 'diary'), diaryData);
 
+      // 구독자들에게 알림 전송
+      try {
+        await fetch('/api/send-notification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ownerUid: finalUid,
+            username: username,
+            type: 'diary',
+            data: {
+              title: diaryData.title,
+              date: now,
+              content: diaryData.content.substring(0, 200) // 내용 일부만 전송
+            }
+          })
+        });
+      } catch (error) {
+        console.error('알림 전송 실패:', error);
+        // 알림 전송 실패는 일기 작성에 영향을 주지 않음
+      }
+
       setNewDiary({ title: '', content: '', isPrivate: false, images: [] });
       setSelectedImages([]);
       setIsWriting(false);

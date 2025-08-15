@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form';
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, browserSessionPersistence } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, browserLocalPersistence } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from 'react-redux';
 import useAuth from '@/hooks/useAuth'
@@ -47,8 +47,8 @@ const LoginPage = () => {
     try {
       setLoading(true)
 
-      // 세션 지속 시간 설정 (브라우저 탭을 닫으면 로그아웃)
-      await auth.setPersistence(browserSessionPersistence);
+      // 로컬 지속성으로 변경 (브라우저를 닫아도 로그인 유지)
+      await auth.setPersistence(browserLocalPersistence);
 
       await signInWithEmailAndPassword(auth, data.email, data.password);
 
@@ -65,8 +65,8 @@ const LoginPage = () => {
   const handleGoogleSign = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      // 세션 지속 시간 설정 (브라우저 탭을 닫으면 로그아웃)
-      await auth.setPersistence(browserSessionPersistence);
+      // 로컬 지속성으로 변경 (브라우저를 닫아도 로그인 유지)
+      await auth.setPersistence(browserLocalPersistence);
       
       const result = await signInWithPopup(auth, provider);
       const user = result.user;

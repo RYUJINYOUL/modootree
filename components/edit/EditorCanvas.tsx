@@ -74,17 +74,17 @@ export default function EditorCanvas({ components, onComponentsUpdate }: EditorC
                 </VisuallyHidden>
                 <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-zinc-300 mb-4" />
                 <div className="max-h-[40vh] overflow-y-auto">
-                  <div className="space-y-2">
-                    {(Object.keys(ComponentLibrary) as ComponentKey[]).map(type => (
-                      <div
-                        key={type}
-                        onClick={() => handleAdd(type)}
-                        className="p-3 bg-blue-500/70 text-white rounded-xl font-semibold text-center shadow cursor-pointer hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 transition"
-                      >
-                        {type}
-                      </div>
-                    ))}
-                  </div>
+            <div className="space-y-2">
+              {(Object.keys(ComponentLibrary) as ComponentKey[]).map(type => (
+                <div
+                  key={type}
+                  onClick={() => handleAdd(type)}
+                  className="p-3 bg-blue-500/70 text-white rounded-xl font-semibold text-center shadow cursor-pointer hover:bg-blue-600/90 hover:scale-105 active:bg-blue-800/90 transition"
+                >
+                  {type}
+                </div>
+              ))}
+            </div>
                 </div>
               </div>
             </Drawer.Content>

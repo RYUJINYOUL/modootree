@@ -4,9 +4,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
 import { db } from '@/firebase';
-import { clearUser } from '../../store/userSlice';
+import { clearUser, setUser } from '../../store/userSlice';
 
 export default function LoginOutButton() {
   const [hasMounted, setHasMounted] = useState(false);
@@ -17,12 +17,30 @@ export default function LoginOutButton() {
 
   useEffect(() => {
     setHasMounted(true);
-  }, []);
+    // Firebase 인증 상태 변경 리스너 추가
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // 사용자가 로그인한 경우
+        dispatch(setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }));
+      } else {
+        // 사용자가 로그아웃한 경우
+        dispatch(clearUser());
+      }
+    });
+
+    // 컴포넌트 언마운트 시 리스너 제거
+    return () => unsubscribe();
+  }, [dispatch, auth]);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-        dispatch(clearUser());
+      dispatch(clearUser());
       router.push('/');
     } catch (error) {
       console.error('로그아웃 에러:', error);
