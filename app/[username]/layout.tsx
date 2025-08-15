@@ -10,8 +10,11 @@ type Props = {
 
 // Props 타입과 parent 인자를 모두 사용합니다.
 export async function generateMetadata(
-  { params, searchParams }: Props, // Props 타입을 통째로 적용
-  parent: ResolvingMetadata // parent 인자 추가
+  { params, searchParams }: {
+    params: { username: string };
+    searchParams: { [key: string]: string | string[] | undefined };
+  },
+  parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
     // 1. username으로 uid 가져오기
