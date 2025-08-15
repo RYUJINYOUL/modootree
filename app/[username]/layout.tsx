@@ -1,6 +1,5 @@
 import { Metadata, ResolvingMetadata } from 'next';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import admin from '@/firebase-admin';
 import { notFound } from 'next/navigation';
 
 // Next 앱 라우터에서 메타데이터가 항상 최신 Firestore 값을 반영하도록 강제 동적 렌더링 및 캐시 비활성화
@@ -16,27 +15,28 @@ export async function generateMetadata(
   try {
     // 1. username으로 uid 가져오기
     const { username } = await params;
-    const usernameDoc = await getDoc(doc(db, 'usernames', username));
+    const dbAdmin = admin.firestore();
+    const usernameDoc = await dbAdmin.doc(`usernames/${username}`).get();
     
-    if (!usernameDoc.exists()) {
+    if (!usernameDoc.exists) {
       return {
         title: '페이지를 찾을 수 없습니다 - 모두트리',
         description: '요청하신 페이지를 찾을 수 없습니다.',
       };
     }
 
-    const uid = usernameDoc.data().uid;
+    const uid = usernameDoc.data()?.uid;
 
-    // 2. 사용자 정보와 페이지 컴포넌트 정보를 병렬로 가져오기
+    // 2. 사용자 정보와 페이지 컴포넌트 정보를 병렬로 가져오기 (Admin SDK)
     const [userDoc, metadataDoc, galleryDoc] = await Promise.all([
-      getDoc(doc(db, 'users', uid)),
-      getDoc(doc(db, 'users', uid, 'settings', 'metadata')),
-      getDoc(doc(db, 'users', uid, 'info', 'details'))
+      dbAdmin.doc(`users/${uid}`).get(),
+      dbAdmin.doc(`users/${uid}/settings/metadata`).get(),
+      dbAdmin.doc(`users/${uid}/info/details`).get(),
     ]);
 
-    const userData = userDoc.exists() ? userDoc.data() : {};
-    const metadataData = metadataDoc.exists() ? metadataDoc.data() : {};
-    const galleryData = galleryDoc.exists() ? galleryDoc.data() : {};
+    const userData = userDoc.exists ? (userDoc.data() as Record<string, any>) : ({} as Record<string, any>);
+    const metadataData = metadataDoc.exists ? (metadataDoc.data() as Record<string, any>) : ({} as Record<string, any>);
+    const galleryData = galleryDoc.exists ? (galleryDoc.data() as Record<string, any>) : ({} as Record<string, any>);
 
     // 3. 메타데이터 구성 (우선순위: 메타데이터 > Gallery3 > 기본값)
     const title = metadataData.title || galleryData.name || `${userData.name || username}님의 모두트리 페이지`;
