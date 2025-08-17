@@ -3,8 +3,8 @@ import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { notFound } from 'next/navigation';
 
-// Edge Runtime으로 변경
-export const runtime = 'edge';
+// Node.js Runtime 사용
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
