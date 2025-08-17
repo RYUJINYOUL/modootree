@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: '모두트리 - 나의 특별한 페이지',
-  description: '나만의 특별한 페이지를 만들어 가꾸어 보세요',
+  description: '나만의 특별한 페이지를 만들어 보세요',
   icons: {
     icon: [
       { url: '/Image/logo.png', type: 'image/png' },
