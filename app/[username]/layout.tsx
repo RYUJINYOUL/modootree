@@ -44,7 +44,7 @@ export async function generateMetadata(
 
     // 3. 메타데이터 구성 (우선순위: 메타데이터 > Gallery3 > 기본값)
     const title = metadataData.title || galleryData.name || `${userData.name || username}님의 모두트리 페이지`;
-    const description = metadataData.description || galleryData.desc || '나만의 특별한 페이지를 만들어 가꾸어 보세요.';
+    const description = metadataData.description || galleryData.desc || '나만의 특별한 페이지를 만들어 보세요.';
     const imageUrl = metadataData.ogImage || galleryData.logoUrl || '/Image/default-profile.png';
     const keywords = metadataData.keywords || [];
 
