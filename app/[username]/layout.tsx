@@ -3,22 +3,29 @@ import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { notFound } from 'next/navigation';
 
-export const runtime = 'nodejs';
+// Edge Runtime으로 변경
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+// 디버그 로깅 함수
+const log = (...args: any[]) => {
+  // Edge 환경에서도 작동하는 로깅
+  console.warn('[DEBUG]', ...args);
+};
 
 export async function generateMetadata(
   { params }: { params: Promise<{ username: string }> },
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  console.log('generateMetadata 시작:', { params });
+  log('generateMetadata 시작 [VERCEL]:', { params });
   try {
     // 1. username으로 uid 가져오기
     const { username } = await params;
-    console.log('username 추출:', username);
+    log('username 추출 [VERCEL]:', username);
     
     const usernameDoc = await getDoc(doc(db, 'usernames', username));
-    console.log('usernames 문서 조회 결과:', { exists: usernameDoc.exists(), data: usernameDoc.data() });
+    log('usernames 문서 조회 결과 [VERCEL]:', { exists: usernameDoc.exists(), data: usernameDoc.data() });
   
     if (!usernameDoc.exists()) {
     return {
@@ -35,14 +42,14 @@ export async function generateMetadata(
   // username은 이미 위에서 추출됨
 
     // 2. 사용자 문서와 메타데이터 문서를 병렬로 가져오기
-    console.log('uid 추출:', uid);
+    log('uid 추출 [VERCEL]:', uid);
     
     const [userDoc, metadataDoc] = await Promise.all([
       getDoc(doc(db, 'users', uid)),
       getDoc(doc(db, 'users', uid, 'settings', 'metadata'))
     ]);
     
-    console.log('문서 조회 결과:', {
+    log('문서 조회 결과 [VERCEL]:', {
       userExists: userDoc.exists(),
       userData: userDoc.data(),
       metadataExists: metadataDoc.exists(),
@@ -82,8 +89,8 @@ export async function generateMetadata(
     return metadata;
 
   } catch (error: any) {
-    console.error('메타데이터 생성 중 오류 발생:', error);
-    console.error('에러 상세:', {
+    log('메타데이터 생성 중 오류 발생 [VERCEL]:', error);
+    log('에러 상세 [VERCEL]:', {
       name: error?.name,
       message: error?.message,
       stack: error?.stack
