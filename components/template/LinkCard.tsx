@@ -74,6 +74,7 @@ const SNS_LOGOS = [
   { name: 'gmail', url: '/Image/sns/gmail.png' },
   { name: 'xxx', url: '/Image/sns/xxx.png' },
   { name: 'map', url: '/Image/sns/maps.png' },
+  { name: 'school', url: '/Image/sns/schoolLogo.png' },
   { name: 'Custom', url: '/Image/defaultLogo.png' },
 ];
 

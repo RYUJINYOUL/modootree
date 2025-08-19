@@ -86,18 +86,58 @@ const ParticlesComponent = () => {
 };
 
 // YouTube URL에서 비디오 ID를 추출하는 함수
+// 디버그 로깅 함수
+const log = (...args: any[]) => {
+  console.warn('[DEBUG-YouTube]', ...args);
+};
+
 const getYouTubeVideoId = (url: string) => {
   if (!url) return null;
   
-  // 일반 YouTube URL
-  const normalMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-  if (normalMatch) return normalMatch[1];
-  
-  // YouTube Shorts URL
-  const shortsMatch = url.match(/youtube\.com\/shorts\/([^&\s]+)/);
-  if (shortsMatch) return shortsMatch[1];
-  
-  return url; // 이미 비디오 ID인 경우
+  try {
+    log('URL 처리 시작:', url);
+    // URL 객체 생성 시도
+    const videoUrl = new URL(url);
+    log('URL 파싱 결과:', {
+      hostname: videoUrl.hostname,
+      pathname: videoUrl.pathname,
+      searchParams: Object.fromEntries(videoUrl.searchParams)
+    });
+    
+    // youtube.com/shorts/ 형식
+    if (videoUrl.pathname.includes('/shorts/')) {
+      const shortsId = videoUrl.pathname.split('/shorts/')[1];
+      const finalId = shortsId.split('?')[0];
+      log('Shorts ID 추출:', finalId);
+      return finalId;
+    }
+    
+    // youtube.com/watch?v= 형식
+    if (videoUrl.searchParams.has('v')) {
+      const videoId = videoUrl.searchParams.get('v');
+      log('Watch ID 추출:', videoId);
+      return videoId;
+    }
+    
+    // youtu.be/ 형식
+    if (videoUrl.hostname === 'youtu.be') {
+      const videoId = videoUrl.pathname.slice(1);
+      log('Youtu.be ID 추출:', videoId);
+      return videoId;
+    }
+    
+    // 직접 비디오 ID를 입력한 경우
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+      log('직접 입력된 ID:', url);
+      return url;
+    }
+    
+    log('추출된 비디오 ID가 없음:', url);
+    return null;
+  } catch (error) {
+    log('YouTube URL 파싱 오류:', error);
+    return null;
+  }
 };
 
 // 비디오 URL 유효성 검사 및 변환 함수
@@ -304,21 +344,30 @@ export default function UserPublicPage() {
     if (background.type === 'url' && background.value) {
       // YouTube 비디오 URL 처리
       if (background.value.includes('youtube.com') || background.value.includes('youtu.be')) {
+        log('YouTube 배경 처리 시작');
         const videoId = getYouTubeVideoId(background.value);
-        if (!videoId) return null;
+        log('최종 Video ID:', videoId);
+        if (!videoId) {
+          log('Video ID가 없어 배경 처리 중단');
+          return null;
+        }
         
         return (
           <>
             <div className="fixed inset-0 z-[-3] w-full h-full overflow-hidden pointer-events-none">
-              <div className="relative w-full h-full flex items-center justify-center">
+              <div className="relative w-full h-full">
                 <iframe
-                  src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  className="absolute w-[300%] h-[300%] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                  src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&rel=0&showinfo=0&modestbranding=1&iv_load_policy=3&enablejsapi=1&origin=${window.location.origin}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  sandbox="allow-same-origin allow-scripts allow-presentation"
+                  className="absolute w-[150%] h-[150%] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ border: 'none' }}
+                  onLoad={() => log('iframe 로드 완료, URL:', `https://www.youtube.com/embed/${videoId}`)}
+                  onError={(e) => log('iframe 로드 실패:', e)}
                 />
               </div>
             </div>
-            <div className="fixed inset-0 z-[-2] bg-black/30 pointer-events-none" />
+            <div className="fixed inset-0 z-[-2] bg-black/50 pointer-events-none" />
           </>
         );
       }

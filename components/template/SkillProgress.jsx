@@ -475,7 +475,7 @@ const SkillProgress = ({ username, uid }) => {
           )}
           style={getStyleObject()}
         >
-          <h1 className="text-xl font-semibold">기술 경력</h1>
+          <h1 className="text-xl font-semibold">포트폴리오</h1>
           <div className="flex gap-2">
             {isEditable && (
               <>

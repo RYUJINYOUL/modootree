@@ -8,24 +8,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// 디버그 로깅 함수
-const log = (...args: any[]) => {
-  // Edge 환경에서도 작동하는 로깅
-  console.warn('[DEBUG]', ...args);
-};
-
 export async function generateMetadata(
   { params }: { params: Promise<{ username: string }> },
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  log('generateMetadata 시작 [VERCEL]:', { params });
   try {
     // 1. username으로 uid 가져오기
     const { username } = await params;
-    log('username 추출 [VERCEL]:', username);
-    
     const usernameDoc = await getDoc(doc(db, 'usernames', username));
-    log('usernames 문서 조회 결과 [VERCEL]:', { exists: usernameDoc.exists(), data: usernameDoc.data() });
   
     if (!usernameDoc.exists()) {
     return {
@@ -38,23 +28,12 @@ export async function generateMetadata(
     };
   }
 
-  const uid = usernameDoc.data().uid;
-  // username은 이미 위에서 추출됨
-
-    // 2. 사용자 문서와 메타데이터 문서를 병렬로 가져오기
-    log('uid 추출 [VERCEL]:', uid);
+      const uid = usernameDoc.data().uid;
     
     const [userDoc, metadataDoc] = await Promise.all([
       getDoc(doc(db, 'users', uid)),
       getDoc(doc(db, 'users', uid, 'settings', 'metadata'))
     ]);
-    
-    log('문서 조회 결과 [VERCEL]:', {
-      userExists: userDoc.exists(),
-      userData: userDoc.data(),
-      metadataExists: metadataDoc.exists(),
-      metadataData: metadataDoc.data()
-    });
 
     const userData = userDoc.exists() ? userDoc.data() : null;
     const metadataData = metadataDoc.exists() ? metadataDoc.data() : null;
@@ -89,12 +68,6 @@ export async function generateMetadata(
     return metadata;
 
   } catch (error: any) {
-    log('메타데이터 생성 중 오류 발생 [VERCEL]:', error);
-    log('에러 상세 [VERCEL]:', {
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack
-    });
     return {
       title: '모두트리',
       description: '페이지 로딩 중 문제가 발생했습니다.',

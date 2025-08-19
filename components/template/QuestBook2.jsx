@@ -958,7 +958,7 @@ const Board = ({ username, uid }) => {
               </Badge>
             </div>
             
-            <p className="text-sm line-clamp-2 mb-3" style={{ color: styleSettings.textColor }}>{post.content}</p>
+            <p className="text-sm line-clamp-2 mb-3 whitespace-pre-wrap break-words" style={{ color: styleSettings.textColor }}>{post.content}</p>
             
             <div className="flex items-center gap-3 text-xs" style={{ color: styleSettings.textColor }}>
               <span className="flex items-center gap-1">
@@ -1488,10 +1488,18 @@ const Board = ({ username, uid }) => {
         </Tabs>
         
         {/* 게시글 목록 */}
-        <div className="space-y-4">
-          {posts.map(post => (
-            <PostCard key={post.id} post={post} />
-          ))}
+        <div className="space-y-4 min-h-[200px]">
+          {posts.length === 0 ? (
+            <div className="flex items-center justify-center h-[200px] bg-white/30 rounded-lg">
+              <p className="text-black">등록된 게시글이 없습니다.</p>
+            </div>
+          ) : (
+            <>
+              {posts.map(post => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </>
+          )}
           {hasMore && (
               <Button
               variant="outline"
@@ -1677,9 +1685,11 @@ const Board = ({ username, uid }) => {
       </div>
 
                 <div className="prose max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {selectedPost.content}
-                  </ReactMarkdown>
+                  <div className="whitespace-pre-wrap break-words">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {selectedPost.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
 
                 {selectedPost.image && (

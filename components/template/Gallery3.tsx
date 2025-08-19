@@ -201,22 +201,9 @@ export default function Gallery3({ username, uid }: LogoProps) {
     try {
       setIsUploading(true);
 
-      // 이전 이미지 삭제 시도
-      const oldUrl = cropType === "logo" ? logoUrl : bgUrl;
-      if (oldUrl && !oldUrl.startsWith("/Image/")) {
-        try {
-          // URL에서 파일 경로 추출
-          const decodedUrl = decodeURIComponent(oldUrl);
-          const pathMatch = decodedUrl.match(/o\/(.+?)\?/);
-          if (pathMatch && pathMatch[1]) {
-            const storagePath = pathMatch[1].replace(/%2F/g, '/');
-            await deleteImageFromStorage(storagePath);
-          }
-        } catch (deleteError) {
-          console.warn('이전 이미지 삭제 실패:', deleteError);
-          // 삭제 실패해도 계속 진행
-        }
-      }
+      const storagePath = cropType === "logo" 
+        ? `${finalUid}/logos/logo_${Date.now()}`
+        : `${finalUid}/backgrounds/bg_${Date.now()}`;
 
       const options = {
         ...(cropType === 'logo'
@@ -243,17 +230,43 @@ export default function Gallery3({ username, uid }: LogoProps) {
 
       const url = await uploadFn(compressedFile, finalUid);
 
+      // 이전 이미지 삭제 시도
+      const docRef = doc(db, 'users', finalUid, 'info', 'details');
+      const docSnap = await getDoc(docRef);
+      const data = docSnap.exists() ? docSnap.data() : null;
+      
+      if (cropType === "logo" && data?.logoStoragePath) {
+        try {
+          await deleteImageFromStorage(data.logoStoragePath);
+        } catch (deleteError) {
+          console.warn('이전 로고 이미지 삭제 실패:', deleteError);
+        }
+      } else if (cropType === "background" && data?.bgStoragePath) {
+        try {
+          await deleteImageFromStorage(data.bgStoragePath);
+        } catch (deleteError) {
+          console.warn('이전 배경 이미지 삭제 실패:', deleteError);
+        }
+      }
+
       if (cropType === "logo") {
         setLogoUrl(url);
-        await saveToFirestore({ logoUrl: url });
+        await saveToFirestore({ 
+          logoUrl: url,
+          logoStoragePath: storagePath
+        });
       } else {
         setBgUrl(url);
-        await saveToFirestore({ bgUrl: url });
+        await saveToFirestore({ 
+          bgUrl: url,
+          bgStoragePath: storagePath
+        });
       }
 
       alert("이미지가 성공적으로 업데이트되었습니다.");
 
     } catch (error) {
+      console.error('이미지 업로드 실패:', error);
       alert("이미지 업로드에 실패했습니다.");
     } finally {
       setIsUploading(false);
@@ -267,13 +280,26 @@ export default function Gallery3({ username, uid }: LogoProps) {
     const defaultBg = "/Image/bg.jpeg";
 
     try {
-      if (bgUrl && !bgUrl.startsWith("/Image/")) {
-        await deleteImageFromStorage(bgUrl);
+      const docRef = doc(db, 'users', finalUid, 'info', 'details');
+      const docSnap = await getDoc(docRef);
+      const data = docSnap.exists() ? docSnap.data() : null;
+      
+      if (data?.bgStoragePath) {
+        try {
+          await deleteImageFromStorage(data.bgStoragePath);
+        } catch (deleteError) {
+          console.warn('배경 이미지 삭제 실패:', deleteError);
+        }
       }
+      
       setBgUrl(defaultBg);
-      await saveToFirestore({ bgUrl: defaultBg });
+      await saveToFirestore({ 
+        bgUrl: defaultBg,
+        bgStoragePath: null
+      });
       alert("배경 이미지가 삭제되었습니다.");
     } catch (error) {
+      console.error('배경 이미지 삭제 실패:', error);
       alert("배경 이미지 삭제에 실패했습니다.");
     }
   };
@@ -404,7 +430,7 @@ export default function Gallery3({ username, uid }: LogoProps) {
           />
           <div className="mt-6 px-6 py-3 mb-8 text-center">
             <h1 className={`text-2xl font-bold ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
-            <p className={`text-sm mt-2 ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("desc")}>{desc}</p>
+            <p className={`text-sm mt-2 ${isEditable ? "cursor-pointer hover:underline" : ""} whitespace-pre-wrap break-words`} onClick={() => handleChangeText("desc")}>{desc}</p>
           </div>
 
           {isEditable && (
@@ -626,7 +652,7 @@ export default function Gallery3({ username, uid }: LogoProps) {
               
               {/* 설명 */}
               <div className="text-center">
-                <p className="text-gray-600 text-lg">{desc}</p>
+                <p className="text-gray-600 text-lg whitespace-pre-wrap break-words">{desc}</p>
               </div>
 
               {/* QR 코드 */}

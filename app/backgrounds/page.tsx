@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
+import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,6 +59,7 @@ interface MetaData {
 
 export default function BackgroundGallery() {
   const router = useRouter();
+  const toast = useToast();
   const { currentUser } = useSelector((state: any) => state.user);
   const [backgrounds, setBackgrounds] = useState<Background[]>([]);
   const [loading, setLoading] = useState(true);
@@ -870,16 +872,55 @@ export default function BackgroundGallery() {
               {/* URL 입력 필드 */}
               {backgroundType === 'url' && (
                 <div className="bg-gray-50 rounded-2xl p-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    배경 URL
-                  </label>
-                  <input
-                    type="text"
-                    value={customUrl}
-                    onChange={(e) => setCustomUrl(e.target.value)}
-                    placeholder="URL 입력 · 아래 갤러리 선택"
-                          className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
-                  />
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      배경 URL
+                    </label>
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        id="bgImageUpload"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            try {
+                              const storageRef = ref(storage, `backgrounds/${currentUser.uid}/bg_${Date.now()}`);
+                              const snapshot = await uploadBytes(storageRef, file);
+                              const url = await getDownloadURL(snapshot.ref);
+                              setCustomUrl(url);
+                            } catch (error) {
+                              console.error('이미지 업로드 실패:', error);
+                    
+                            }
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => document.getElementById('bgImageUpload')?.click()}
+                        className="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 text-sm"
+                      >
+                        배경업로드
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customUrl}
+                        onChange={(e) => setCustomUrl(e.target.value)}
+                        placeholder="URL을 입력하세요"
+                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                      />
+                    </div>
+                    {customUrl && (
+                      <div className="h-40 rounded-xl overflow-hidden">
+                        <img src={customUrl} alt="배경 미리보기" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
