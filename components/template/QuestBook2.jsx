@@ -29,8 +29,11 @@ import {
   deleteObject,
 } from 'firebase/storage';
 import app from '@/firebase';
-import { useSelector } from 'react-redux';
+import { getAuth, GoogleAuthProvider, signInWithPopup, browserLocalPersistence } from "firebase/auth";
+import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
+import { useSelector, useDispatch } from 'react-redux';
 import { usePathname } from 'next/navigation';
+import { setUser } from "@/store/userSlice";
 import Image from 'next/image';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -328,11 +331,8 @@ const Board = ({ username, uid }) => {
       return;
     }
 
-    if (!currentUser) {
-      toast({
-        title: "로그인 필요",
-        description: "로그인이 필요합니다."
-      });
+    if (!currentUser || !currentUser.uid) {
+      setShowLoginModal(true);
       return;
     }
 
@@ -493,8 +493,8 @@ const Board = ({ username, uid }) => {
 
   // 좋아요 기능
   const handleLike = async (post) => {
-    if (!currentUser) {
-      showToast("로그인 필요", "로그인이 필요합니다.");
+    if (!currentUser || !currentUser.uid) {
+      setShowLoginModal(true);
       return;
     }
 
@@ -547,8 +547,8 @@ const Board = ({ username, uid }) => {
 
   // 댓글 작성
   const handleAddComment = async (postId) => {
-    if (!currentUser) {
-      showToast("로그인 필요", "로그인이 필요합니다.");
+    if (!currentUser || !currentUser.uid) {
+      setShowLoginModal(true);
       return;
     }
 
@@ -620,8 +620,8 @@ const Board = ({ username, uid }) => {
 
   // 댓글 좋아요
   const handleCommentLike = async (postId, comment) => {
-    if (!currentUser) {
-      showToast("로그인 필요", "로그인이 필요합니다.");
+    if (!currentUser || !currentUser.uid) {
+      setShowLoginModal(true);
       return;
     }
 
@@ -1350,6 +1350,8 @@ const Board = ({ username, uid }) => {
   // editingDiary state 추가
   const [editingDiary, setEditingDiary] = useState(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const dispatch = useDispatch();
 
   return (
     <div className='pt-5 md:flex md:flex-col md:items-center md:justify-center md:w-full px-2'>
@@ -1393,6 +1395,10 @@ const Board = ({ username, uid }) => {
                   value="write" 
                   onClick={(e) => {
                     e.preventDefault();
+                    if (!currentUser || !currentUser.uid) {
+                      setShowLoginModal(true);
+                      return;
+                    }
                     setIsWriting(true);
                     setSortBy('latest');
                   }}
@@ -1436,8 +1442,102 @@ const Board = ({ username, uid }) => {
           </div>
         </div>
 
-        {/* 카테고리 관리 다이얼로그 */}
-        <CategoryManager 
+              {/* 로그인 모달 */}
+      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+        <DialogContent className="sm:max-w-md bg-white/10 backdrop-blur-sm border border-white/20">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-white text-center">로그인</DialogTitle>
+            <p className="text-white/80 text-center mb-2">모두트리에 오신 것을 환영합니다!</p>
+            {/KAKAOTALK/i.test(navigator?.userAgent) && (
+              <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-yellow-200 text-sm text-center">
+                  카카오톡 창 구글 로그인 미지원
+                  <br />
+                  아래 새창 열기 또는 카톡 로그인 이용하세요
+                </p>
+              </div>
+            )}
+          </DialogHeader>
+          <div className="w-full flex flex-col gap-6 py-4">
+            <button
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold shadow hover:bg-gray-100 transition-all hover:scale-[1.02]"
+              onClick={async () => {
+                const auth = getAuth(app);
+                const provider = new GoogleAuthProvider();
+                try {
+                  await auth.setPersistence(browserLocalPersistence);
+                  const result = await signInWithPopup(auth, provider);
+                  const user = result.user;
+
+                  // Firestore에 사용자 정보 저장
+                  const userRef = doc(db, "users", user.uid);
+                  const userDoc = await getDoc(userRef);
+
+                  if (!userDoc.exists()) {
+                    await setDoc(userRef, {
+                      email: user.email,
+                      photoURL: user.photoURL,
+                      provider: "google",
+                      createdAt: serverTimestamp(),
+                    });
+
+                    // 기본 설정 저장
+                    await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+                      type: 'image',
+                      value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                      animation: true
+                    });
+                  }
+
+                  // Redux store 업데이트
+                  dispatch(setUser({
+                    uid: user.uid,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    displayName: user.displayName
+                  }));
+
+                  setShowLoginModal(false);
+                } catch (error) {
+                  console.error("Google login error", error);
+                  alert("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+                }
+              }}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 533.5 544.3">
+                <path
+                  d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.1-117.4 81.1-200.2z"
+                  fill="#4285f4" />
+                <path
+                  d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26-92.6 26-71 0-131.2-47.9-152.8-112.3H28.9v70.1c46.2 91.9 140.3 149.9 243.2 149.9z"
+                  fill="#34a853" />
+                <path
+                  d="M119.3 324.3c-11.4-33.8-11.4-70.4 0-104.2V150H28.9c-38.6 76.9-38.6 167.5 0 244.4l90.4-70.1z"
+                  fill="#fbbc04" />
+                <path
+                  d="M272.1 107.7c38.8-.6 76.3 14 104.4 40.8l77.7-77.7C405 24.6 339.7-.8 272.1 0 169.2 0 75.1 58 28.9 150l90.4 70.1c21.5-64.5 81.8-112.4 152.8-112.4z"
+                  fill="#ea4335" />
+              </svg>
+              <span>Google로 로그인</span>
+            </button>
+            <KakaoAuthButton />
+            <div className="w-full flex justify-end mt-2">
+              <button
+                onClick={() => {
+                  setShowLoginModal(false);
+                  window.location.href = "/register";
+                }}
+                className="text-blue-300 hover:underline text-sm"
+              >
+                회원가입
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 카테고리 관리 다이얼로그 */}
+      <CategoryManager  
           isOpen={isEditingCategories}
           onOpenChange={setIsEditingCategories}
           categories={categories}

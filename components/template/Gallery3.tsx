@@ -418,16 +418,22 @@ export default function Gallery3({ username, uid }: LogoProps) {
 
         <div className="relative z-10 flex flex-col items-center pt-16 px-4" style={{ color: textColor }}>
           <input type="file" accept="image/*" className="hidden" ref={logoInputRef} onChange={(e) => handleFileChange(e, "logo")} />
-          <Image
-            src={logoUrl}
-            alt="로고"
-            width={120}
-            height={120}
-            priority
-            className="rounded-full shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
-            onClick={handleProfileClick}
-            title={isEditable ? "로고 클릭 시 변경" : "프로필 사진 클릭 시 상세보기"}
-          />
+          <div className="relative">
+            <Image
+              src={logoUrl}
+              alt="로고"
+              width={120}
+              height={120}
+              priority
+              className="rounded-full shadow-md cursor-pointer hover:scale-105 transition-all duration-200"
+              onClick={handleProfileClick}
+              title={isEditable ? "로고 클릭 시 변경" : "프로필 사진 클릭 시 상세보기"}
+            />
+            {!isEditable && (
+              <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-green-500 rounded-full shadow-sm animate-pulse border border-white/50">
+              </div>
+            )}
+          </div>
           <div className="mt-6 px-6 py-3 mb-8 text-center">
             <h1 className={`text-2xl font-bold ${isEditable ? "cursor-pointer hover:underline" : ""}`} onClick={() => handleChangeText("name")}>{name}</h1>
             <p className={`text-sm mt-2 ${isEditable ? "cursor-pointer hover:underline" : ""} whitespace-pre-wrap break-words`} onClick={() => handleChangeText("desc")}>{desc}</p>

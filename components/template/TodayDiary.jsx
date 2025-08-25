@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { usePathname } from 'next/navigation';
+import { setUser } from "@/store/userSlice";
 import { cn } from '@/lib/utils';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
@@ -10,7 +11,8 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
-import { Lock, Unlock, Pencil, Trash2, Image, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { Lock, Unlock, Pencil, Trash2, Image, ChevronLeft, ChevronRight, Heart, X } from 'lucide-react';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
@@ -37,7 +39,9 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAuth, GoogleAuthProvider, signInWithPopup, browserLocalPersistence } from "firebase/auth";
 import app from '@/firebase';
+import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -55,6 +59,7 @@ const TodayDiary = ({ username, uid, isEditable }) => {
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [likeModalOpen, setLikeModalOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedDiary, setSelectedDiary] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isLiking, setIsLiking] = useState(false);
@@ -75,6 +80,7 @@ const TodayDiary = ({ username, uid, isEditable }) => {
     rounded: 'md'
   });
   const { currentUser } = useSelector((state) => state.user);
+  const dispatch = useDispatch();
   const pathname = usePathname();
   const finalUid = uid ?? currentUser?.uid;
   
@@ -82,7 +88,11 @@ const TodayDiary = ({ username, uid, isEditable }) => {
   const [diaries, setDiaries] = useState([]);
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageViewer, setImageViewer] = useState({ 
+    isOpen: false, 
+    currentIndex: -1,
+    startRect: null 
+  });
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [page, setPage] = useState(1);
@@ -257,8 +267,10 @@ const TodayDiary = ({ username, uid, isEditable }) => {
               style={{ color: styleSettings.textColor }}
               onClick={() => {
                 // 로그인 체크
-                if (!currentUser) {
-                  alert('로그인이 필요합니다.');
+                console.log('Current User:', currentUser);
+                if (!currentUser || !currentUser.uid) {
+                  console.log('Opening login modal');
+                  setShowLoginModal(true);
                   return;
                 }
 
@@ -455,30 +467,62 @@ const TodayDiary = ({ username, uid, isEditable }) => {
               })()
             }}
           >
-            <div className="flex items-start justify-between mb-2">
+            <div className="flex flex-col h-full">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-3 mb-3">
                   <img
                     src={diary.author?.photoURL || '/Image/defaultLogo.png'}
                     alt="프로필"
-                    className="w-6 h-6 rounded-full"
+                    className="w-8 h-8 rounded-full"
                     onError={(e) => {
                       e.target.src = '/Image/defaultLogo.png';
                     }}
                   />
-                  <h3 className="font-medium flex items-center gap-2">
-                    {diary.isPrivate && <Lock className="w-4 h-4" />}
-                    {diary.title}
-                  </h3>
+                  <div>
+                    <h3 className="font-medium flex items-center gap-2">
+                      {diary.isPrivate && <Lock className="w-4 h-4" />}
+                      {diary.title || '제목 없음'}
+                    </h3>
+                    <span className="text-sm" style={{ color: styleSettings.textColor }}>
+                      {diary.author?.displayName || '사용자'}
+                    </span>
+                  </div>
                 </div>
                 <p 
-                  className="line-clamp-3"
+                  className="line-clamp-3 mb-4"
                   style={{ color: styleSettings.textColor }}
                 >
                   {diary.content}
                 </p>
+                {diary.images && diary.images.length > 0 && (
+                  <div className="mb-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {diary.images.slice(0, 3).map((image, index) => (
+                        <div key={index} className="aspect-square relative">
+                          {index === 2 && diary.images.length > 3 ? (
+                            <div 
+                              className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/80 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDiary(diary);
+                                setShowDetailModal(true);
+                              }}
+                            >
+                              <span className="text-gray-800 text-lg font-medium">+{diary.images.length - 2}</span>
+                            </div>
+                          ) : null}
+                          <img
+                            src={image}
+                            alt={`${diary.title} 이미지 ${index + 1}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex flex-col items-end gap-2 ml-4">
+              <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                 <span className="text-sm" style={{ color: styleSettings.textColor }}>
                   {dayjs(diary.createdAt).format('YY.MM.DD')}
                 </span>
@@ -489,8 +533,9 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-8 h-8 hover:bg-gray-100/10"
-                      onClick={() => {
+                      className="w-6 h-6 hover:bg-gray-100/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setWriteForm({
                           ...diary,
                           images: diary.images || []
@@ -498,14 +543,15 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                         setShowWriteForm(true);
                       }}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3 h-3" />
                     </Button>
                     {/* 삭제 버튼 */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-8 h-8 hover:bg-gray-100/10"
-                      onClick={async () => {
+                      className="w-6 h-6 hover:bg-gray-100/10"
+                      onClick={async (e) => {
+                        e.stopPropagation();
                         if (window.confirm('정말 삭제하시겠습니까?')) {
                           try {
                             await deleteDoc(doc(db, 'users', finalUid, 'diary', diary.id));
@@ -516,21 +562,22 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                         }
                       }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                     {/* 공감하기 버튼 */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-8 h-8 hover:bg-gray-100/10"
-                      onClick={() => {
+                      className="w-6 h-6 hover:bg-gray-100/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedDiary(diary);
                         setLikeModalOpen(true);
                       }}
                     >
                       <svg 
                         xmlns="http://www.w3.org/2000/svg" 
-                        className="w-4 h-4" 
+                        className="w-3 h-3" 
                         fill="none" 
                         viewBox="0 0 24 24" 
                         stroke="currentColor"
@@ -547,33 +594,6 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                 )}
               </div>
             </div>
-            {diary.images && diary.images.length > 0 && (
-              <div className="mt-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {diary.images.slice(0, 3).map((image, index) => (
-                    <div key={index} className="aspect-square relative">
-                      {index === 2 && diary.images.length > 3 ? (
-                        <div 
-                          className="absolute inset-0 bg-opacity-70 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-80 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDiary(diary);
-                            setShowDetailModal(true);
-                          }}
-                        >
-                          <span className="text-white text-lg font-medium">+{diary.images.length - 2}</span>
-                        </div>
-                      ) : null}
-                      <img
-                        src={image}
-                        alt={`${diary.title} 이미지 ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         ))}
         {page < totalPages && (
@@ -624,12 +644,14 @@ const TodayDiary = ({ username, uid, isEditable }) => {
     // 모든 일기에서 이미지 추출
 
     const allImages = diaries.reduce((acc, diary) => {
-
+      console.log('Processing diary images:', diary.images);
       if (diary.images && diary.images.length > 0) {
-        const images = diary.images.map(url => {
-
+        const images = diary.images.map(image => {
+          console.log('Processing image:', image);
+          const imageUrl = typeof image === 'string' ? image : image.url;
+          console.log('Image URL:', imageUrl);
           return {
-            url: url,
+            url: imageUrl,
             date: diary.createdAt,
             title: diary.title,
             content: diary.content,
@@ -640,6 +662,7 @@ const TodayDiary = ({ username, uid, isEditable }) => {
       }
       return acc;
     }, []);
+    console.log('All processed images:', allImages);
   
 
     return (
@@ -679,7 +702,20 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                   }
                 })()
               }}
-              onClick={() => setSelectedImage(image)}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const index = allImages.findIndex(img => img.url === image.url);
+                setImageViewer({ 
+                  isOpen: true, 
+                  currentIndex: index,
+                  startRect: {
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height
+                  }
+                });
+              }}
             >
               <div className="relative w-full h-full aspect-square">
                 <img
@@ -688,8 +724,9 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                   className="w-full h-full object-cover rounded-lg"
                   onError={(e) => {
                     console.error('Image load error:', e);
-                    e.target.src = '/placeholder.png'; // 에러 시 플레이스홀더 이미지
+                    e.target.src = '/Image/defaultLogo.png';
                   }}
+                  onLoad={() => console.log('Image loaded successfully:', image.url)}
                 />
                 <div className="absolute inset-0 bg-black-100 bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex flex-col items-center justify-center rounded-lg">
                   <div className="text-white opacity-0 group-hover:opacity-100 text-sm text-center p-2 space-y-1">
@@ -702,50 +739,93 @@ const TodayDiary = ({ username, uid, isEditable }) => {
           ))}
         </div>
 
-        {/* 이미지 상세보기 모달 */}
-        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                <div className="space-y-2">
-                  <div className="text-lg font-bold">{selectedImage?.title}</div>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={selectedImage?.author?.photoURL || '/Image/defaultLogo.png'}
-                      alt="프로필"
-                      className="w-8 h-8 rounded-full"
-                      onError={(e) => {
-                        e.target.src = '/Image/defaultLogo.png';
-                      }}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">
-                        {selectedImage?.author?.displayName || '사용자'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {dayjs(selectedImage?.date).format('YYYY년 MM월 DD일')}
+        {/* 이미지 상세보기 오버레이 */}
+        {imageViewer.isOpen && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 transition-all duration-500 ease-out"
+            style={{
+              opacity: 1,
+              transform: 'scale(1)'
+            }}
+            initial={{
+              opacity: 0,
+              transform: imageViewer.startRect ? `
+                translate(${imageViewer.startRect.x}px, ${imageViewer.startRect.y}px)
+                scale(${imageViewer.startRect.width / window.innerWidth})
+              ` : 'scale(0.8)'
+            }}
+          >
+            <div className="absolute top-4 right-4 z-50">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-black/20 hover:bg-black/40 text-white"
+                onClick={() => setImageViewer({ isOpen: false, currentIndex: -1 })}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="relative w-full h-full max-w-7xl mx-auto px-4">
+              <div className="absolute left-4 top-38">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-white/20 hover:bg-white/40 text-white"
+                  onClick={() => {
+                    const prevIndex = (imageViewer.currentIndex - 1 + allImages.length) % allImages.length;
+                    setImageViewer(prev => ({ ...prev, currentIndex: prevIndex }));
+                  }}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </Button>
+              </div>
+              <div className="absolute right-4 top-38">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-white/20 hover:bg-white/40 text-white"
+                  onClick={() => {
+                    const nextIndex = (imageViewer.currentIndex + 1) % allImages.length;
+                    setImageViewer(prev => ({ ...prev, currentIndex: nextIndex }));
+                  }}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </Button>
+              </div>
+              <div className="h-[80vh] flex flex-col">
+                                <div className="h-full flex flex-col items-center justify-center pt-46">
+                  <div className="text-white text-lg font-medium mb-4">
+                    {allImages[imageViewer.currentIndex].title || ''}
+                  </div>
+                  <img
+                    src={allImages[imageViewer.currentIndex].url}
+                    alt={allImages[imageViewer.currentIndex].title || '이미지'}
+                    className="max-w-full max-h-full object-contain transition-all duration-300 rounded-lg"
+                  />
+                </div>
+               
+                <div className="bg-black/50 text-white p-4 mt-0 rounded-b-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={allImages[imageViewer.currentIndex].author?.photoURL || '/Image/defaultLogo.png'}
+                        alt="프로필"
+                        className="w-6 h-6 rounded-full"
+                      />
+                      <span className="text-sm">
+                        {allImages[imageViewer.currentIndex].author?.displayName || '사용자'}
                       </span>
                     </div>
+                    <span className="text-sm">
+                      {dayjs(allImages[imageViewer.currentIndex].date).format('YY.MM.DD')}
+                    </span>
                   </div>
+            
                 </div>
-              </DialogTitle>
-            </DialogHeader>
-            {selectedImage && (
-              <div className="mt-4 space-y-4">
-                <img
-                  src={selectedImage.url}
-                  alt={selectedImage.title}
-                  className="w-full rounded-lg shadow-lg"
-                />
-                {selectedImage.content && (
-                  <p className="text-gray-700 whitespace-pre-wrap text-sm">
-                    {selectedImage.content}
-                  </p>
-                )}
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1216,37 +1296,12 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                 <span>{selectedDiary.date}의 일기</span>
               ) : (
                 // 단일 일기인 경우
-                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     {selectedDiary?.isPrivate && <Lock className="w-4 h-4" />}
-                    {selectedDiary?.title}
+                    <span className="font-medium">{selectedDiary?.title}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={selectedDiary?.author?.photoURL || '/Image/defaultLogo.png'}
-                      alt="프로필"
-                      className="w-8 h-8 rounded-full"
-                      onError={(e) => {
-                        e.target.src = '/Image/defaultLogo.png';
-                      }}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">
-                        {selectedDiary?.author?.displayName || '사용자'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {selectedDiary?.author?.email || ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
               )}
             </DialogTitle>
-            {!selectedDiary?.diaries && (
-              <div className="text-sm text-gray-500">
-                {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).format('YYYY년 MM월 DD일 HH:mm')}
-              </div>
-            )}
           </DialogHeader>
           <div className="mt-4">
             {selectedDiary?.diaries ? (
@@ -1255,84 +1310,200 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                 {selectedDiary.diaries.map((diary) => (
                   <div 
                     key={diary.id}
-                    className="p-4 bg-gray-50 rounded-lg space-y-2"
+                    className="p-4 bg-gray-50 rounded-lg"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={diary.author?.photoURL || '/Image/defaultLogo.png'}
-                          alt="프로필"
-                          className="w-6 h-6 rounded-full"
-                          onError={(e) => {
-                            e.target.src = '/Image/defaultLogo.png';
-                          }}
-                        />
-                        <div>
-                          <h3 className="font-medium flex items-center gap-2">
-                            {diary.isPrivate && <Lock className="w-4 h-4" />}
-                            {diary.title}
-                          </h3>
-                          <div className="text-sm text-gray-500">
-                            {diary.author?.displayName || '사용자'}
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1">
+                        <h3 className="font-medium flex items-center gap-2 mb-2">
+                          {diary.isPrivate && <Lock className="w-4 h-4" />}
+                          {diary.title}
+                        </h3>
+                        <p className="text-gray-700 whitespace-pre-wrap mb-4">
+                          {diary.content}
+                        </p>
+                        {diary.images && diary.images.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2 mb-4">
+                            {diary.images.map((imageUrl, index) => (
+                              <img
+                                key={index}
+                                src={imageUrl}
+                                alt={`일기 이미지 ${index + 1}`}
+                                className="w-full rounded-lg cursor-pointer"
+                                onClick={() => {
+                                  setSelectedImage({
+                                    url: imageUrl,
+                                    title: diary.title,
+                                    date: diary.createdAt
+                                  });
+                                }}
+                              />
+                            ))}
                           </div>
-                        </div>
+                        )}
                       </div>
-                      <span className="text-sm text-gray-500">
-                        {dayjs(diary.createdAt).format('HH:mm')}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 whitespace-pre-wrap">
-                      {diary.content}
-                    </p>
-                    {diary.images && diary.images.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {diary.images.map((imageUrl, index) => (
+                      <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                        <div className="flex items-center gap-2">
                           <img
-                            key={index}
-                            src={imageUrl}
-                            alt={`일기 이미지 ${index + 1}`}
-                            className="w-full rounded-lg cursor-pointer"
-                            onClick={() => {
-                              setSelectedImage({
-                                url: imageUrl,
-                                title: diary.title,
-                                date: diary.createdAt
-                              });
+                            src={diary.author?.photoURL || '/Image/defaultLogo.png'}
+                            alt="프로필"
+                            className="w-6 h-6 rounded-full"
+                            onError={(e) => {
+                              e.target.src = '/Image/defaultLogo.png';
                             }}
                           />
-                        ))}
+                          <span className="text-sm text-gray-500">
+                            {diary.author?.displayName || '사용자'}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {dayjs(diary.createdAt).format('YY.MM.DD')}
+                        </span>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
               // 단일 일기 표시
-              <>
-                <p className="text-gray-700 whitespace-pre-wrap mb-6">
-                  {selectedDiary?.content}
-                </p>
-                {selectedDiary?.images && selectedDiary.images.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedDiary.images.map((imageUrl, index) => (
-                      <img
-                        key={index}
-                        src={imageUrl}
-                        alt={`일기 이미지 ${index + 1}`}
-                        className="w-full rounded-lg cursor-pointer"
-                        onClick={() => {
-                          setSelectedImage({
-                            url: imageUrl,
-                            title: selectedDiary.title,
-                            date: selectedDiary.createdAt
-                          });
-                        }}
-                      />
-                    ))}
+              <div className="flex flex-col h-full">
+                <div className="flex-1">
+                  <p className="text-gray-700 whitespace-pre-wrap mb-6">
+                    {selectedDiary?.content}
+                  </p>
+                  {selectedDiary?.images && selectedDiary.images.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {selectedDiary.images.map((imageUrl, index) => (
+                        <img
+                          key={index}
+                          src={imageUrl}
+                          alt={`일기 이미지 ${index + 1}`}
+                          className="w-full rounded-lg cursor-pointer"
+                          onClick={() => {
+                            setSelectedImage({
+                              url: imageUrl,
+                              title: selectedDiary.title,
+                              date: selectedDiary.createdAt
+                            });
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={selectedDiary?.author?.photoURL || '/Image/defaultLogo.png'}
+                      alt="프로필"
+                      className="w-6 h-6 rounded-full"
+                      onError={(e) => {
+                        e.target.src = '/Image/defaultLogo.png';
+                      }}
+                    />
+                    <span className="text-sm text-gray-500">
+                      {selectedDiary?.author?.displayName || '사용자'}
+                    </span>
                   </div>
-                )}
-              </>
+                  <span className="text-sm text-gray-500">
+                    {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).format('YY.MM.DD')}
+                  </span>
+                </div>
+              </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 로그인 모달 */}
+      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+        <DialogContent className="sm:max-w-md bg-white/10 backdrop-blur-sm border border-white/20">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-white text-center">로그인</DialogTitle>
+            <p className="text-white/80 text-center mb-2">모두트리에 오신 것을 환영합니다!</p>
+            {/KAKAOTALK/i.test(navigator?.userAgent) && (
+              <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-yellow-200 text-sm text-center">
+                  카카오톡 창 구글 로그인 미지원
+                  <br />
+                  아래 새창 열기 또는 카톡 로그인 이용하세요
+                </p>
+              </div>
+            )}
+          </DialogHeader>
+          <div className="w-full flex flex-col gap-6 py-4">
+            <button
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold shadow hover:bg-gray-100 transition-all hover:scale-[1.02]"
+              onClick={async () => {
+                const auth = getAuth(app);
+                const provider = new GoogleAuthProvider();
+                try {
+                  await auth.setPersistence(browserLocalPersistence);
+                  const result = await signInWithPopup(auth, provider);
+                  const user = result.user;
+
+                  // Firestore에 사용자 정보 저장
+                  const userRef = doc(db, "users", user.uid);
+                  const userDoc = await getDoc(userRef);
+
+                  if (!userDoc.exists()) {
+                    await setDoc(userRef, {
+                      email: user.email,
+                      photoURL: user.photoURL,
+                      provider: "google",
+                      createdAt: serverTimestamp(),
+                    });
+
+                    // 기본 설정 저장
+                    await setDoc(doc(db, "users", user.uid, "settings", "background"), {
+                      type: 'image',
+                      value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                      animation: true
+                    });
+                  }
+
+                  // Redux store 업데이트
+                  dispatch(setUser({
+                    uid: user.uid,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    displayName: user.displayName
+                  }));
+
+                  setShowLoginModal(false);
+                } catch (error) {
+                  console.error("Google login error", error);
+                  alert("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+                }
+              }}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 533.5 544.3">
+                <path
+                  d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.1-117.4 81.1-200.2z"
+                  fill="#4285f4" />
+                <path
+                  d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26-92.6 26-71 0-131.2-47.9-152.8-112.3H28.9v70.1c46.2 91.9 140.3 149.9 243.2 149.9z"
+                  fill="#34a853" />
+                <path
+                  d="M119.3 324.3c-11.4-33.8-11.4-70.4 0-104.2V150H28.9c-38.6 76.9-38.6 167.5 0 244.4l90.4-70.1z"
+                  fill="#fbbc04" />
+                <path
+                  d="M272.1 107.7c38.8-.6 76.3 14 104.4 40.8l77.7-77.7C405 24.6 339.7-.8 272.1 0 169.2 0 75.1 58 28.9 150l90.4 70.1c21.5-64.5 81.8-112.4 152.8-112.4z"
+                  fill="#ea4335" />
+              </svg>
+              <span>Google로 로그인</span>
+            </button>
+            <KakaoAuthButton />
+            <div className="w-full flex justify-end mt-2">
+              <button
+                onClick={() => {
+                  setShowLoginModal(false);
+                  window.location.href = "/register";
+                }}
+                className="text-blue-300 hover:underline text-sm"
+              >
+                회원가입
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
