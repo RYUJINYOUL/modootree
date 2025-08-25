@@ -87,10 +87,10 @@ const POSTS_PER_PAGE = 10;
 // 카테고리 정의
 const CATEGORIES = [
   { id: 'all', name: '전체' },
-  { id: 'notice', name: '공지사항' },
-  { id: 'free', name: '자유게시판' },
-  { id: 'qna', name: 'Q&A' },
-  { id: 'share', name: '정보공유' },
+  { id: 'category', name: '카테고리1' },
+  { id: 'category2', name: '카테고리2' },
+  { id: 'category3', name: '카테고리3' },
+  { id: 'category4', name: '카테고리4' },
 ];
 
 // 색상 팔레트 추가
@@ -772,7 +772,7 @@ const Board = ({ username, uid }) => {
       return;
     }
 
-    if (!window.confirm('이 카테고리를 삭제하시겠습니까?\n해당 카테고리의 게시글은 자유게시판으로 이동됩니다.')) {
+    if (!window.confirm('이 카테고리를 삭제하시겠습니까?\n해당 카테고리의 게시글은 전체로 이동됩니다.')) {
       return;
     }
 

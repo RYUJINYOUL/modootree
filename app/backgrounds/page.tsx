@@ -525,22 +525,21 @@ export default function BackgroundGallery() {
     }));
   };
 
-  // 메타데이터 로드
+  // 메타데이터 실시간 로드
   useEffect(() => {
-    const fetchMetadata = async () => {
-      if (!currentUser?.uid) return;
-      
-      try {
-        const metadataDoc = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'metadata'));
-        if (metadataDoc.exists()) {
-          setMetadata(metadataDoc.data() as MetaData);
-        }
-      } catch (error) {
-        console.error('메타데이터 로드 중 오류:', error);
-      }
-    };
+    if (!currentUser?.uid) return;
 
-    fetchMetadata();
+    const metadataRef = doc(db, 'users', currentUser.uid, 'settings', 'metadata');
+    const unsubscribe = onSnapshot(metadataRef, (doc) => {
+      if (doc.exists()) {
+        setMetadata(doc.data() as MetaData);
+      }
+    }, (error) => {
+      console.error('메타데이터 실시간 로드 중 오류:', error);
+    });
+
+    // cleanup 함수에서 리스너 해제
+    return () => unsubscribe();
   }, [currentUser?.uid]);
 
   // OG 이미지 파일 업로드 핸들러

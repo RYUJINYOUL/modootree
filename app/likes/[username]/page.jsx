@@ -208,7 +208,7 @@ export default function LikesPage() {
           likesData.push({
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate(),
+            createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt),
             reactions: data.reactions || {
               awesome: 0,
               cheer: 0,
@@ -719,9 +719,9 @@ export default function LikesPage() {
                   
                   {/* 글자 수 제한된 내용 */}
                   <p className="text-gray-300 text-sm whitespace-pre-wrap mb-4">
-                    {like.content.length > CONTENT_PREVIEW_LENGTH
-                      ? `${like.content.slice(0, CONTENT_PREVIEW_LENGTH)}...`
-                      : like.content}
+                    {(like.content || '').length > CONTENT_PREVIEW_LENGTH
+                      ? `${(like.content || '').slice(0, CONTENT_PREVIEW_LENGTH)}...`
+                      : like.content || ''}
                   </p>
 
                   {/* 하단 정보 (답글 수, 공감 수) */}
@@ -807,7 +807,7 @@ export default function LikesPage() {
                     </div>
                   )}
 
-                    <p className="text-gray-300 whitespace-pre-wrap mb-6">{selectedPost.content}</p>
+                    <p className="text-gray-300 whitespace-pre-wrap mb-6">{selectedPost.content || ''}</p>
 
                     {/* 반응 버튼 */}
                     <div className="grid grid-cols-2 gap-2 mb-6">

@@ -4,6 +4,7 @@ import LinkCard from '../template/LinkCard';
 import QuestBook from '../template/QuestBook';
 import SnsButtons from '../template/SnsButtons';
 import Diary from '../template/Diary';
+import TodayDiary from '../template/TodayDiary';
 import ImageCarousel from '../template/ImageCarousel';
 import Title from '../template/Title';
 import Description from '../template/Description';
@@ -24,5 +25,6 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   자유게시판:QuestBook2,
   달력: CalendarComponent,
   일기장: Diary,
+  오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
 }; 
