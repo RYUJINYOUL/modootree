@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/drawer"
 import { IoClose } from "react-icons/io5"
 import { FaHeart, FaRegHeart, FaReply } from "react-icons/fa"
-import { Edit2 } from "lucide-react"
+import { Edit2, MessageCircle } from "lucide-react"
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -170,10 +170,13 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name.trim() || !message.trim()) {
-      showToast("오류", "이름과 메시지를 모두 입력해주세요.");
+    if (!message.trim()) {
+      showToast("오류", "메시지를 입력해주세요.");
       return
     }
+    
+    // 이름이 없을 경우 '익명'으로 설정
+    const finalName = name.trim() || '익명';
 
     try {
       if (replyTo) {
@@ -184,7 +187,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
 
         await updateDoc(commentRef, {
           replies: [...currentReplies, {
-            name,
+            name: finalName,
             message,
             createdAt: new Date(),
             uid: currentUser?.uid || null,
@@ -196,7 +199,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
       } else {
         // 새 방명록 작성
         const docRef = await addDoc(collection(db, 'users', finalUid, 'comments'), {
-          name,
+          name: finalName,
           message,
           createdAt: new Date(),
           uid: currentUser?.uid || null,
@@ -296,7 +299,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent className={`w-full h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
+      <DrawerContent className={`w-full max-h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
         <DrawerHeader>
           <DrawerTitle></DrawerTitle>
         </DrawerHeader>
@@ -304,17 +307,10 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
           {/* 방명록 작성 폼 */}
           <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded-xl shadow-sm">
             <div className="flex flex-col space-y-3">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="이름"
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-              />
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={replyTo ? `${replyTo.name}님에게 답글 쓰기` : "메시지를 입력하세요"}
+                placeholder={replyTo ? "답글 쓰기" : "메시지를 입력하세요"}
                 className="px-4 py-2 border border-gray-200 rounded-lg h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
               />
               <div className="flex justify-between items-center">
@@ -342,23 +338,16 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                 ref={index === entries.length - 1 ? lastEntryRef : null}
                 className="bg-white p-4 rounded-xl shadow-sm"
         >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="text-sm text-gray-600">
-                      {entry.name || '익명'}
-                    </div>
-          </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">{getTimeAgo(entry.createdAt)}</span>
-          {canDelete && (
-                      <button
-              onClick={() => handleDelete(entry.id)}
-                        className="text-red-500 hover:text-red-700"
-            >
-                        <IoClose size={20} />
-                      </button>
-          )}
-        </div>
+                <div className="flex items-center justify-end space-x-2">
+                  <span className="text-sm text-gray-500">{getTimeAgo(entry.createdAt)}</span>
+                  {canDelete && (
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <IoClose size={20} />
+                    </button>
+                  )}
                 </div>
                 <p className="mt-2 text-gray-700 whitespace-pre-wrap">{entry.message}</p>
                 <div className="mt-3 flex items-center space-x-4">
@@ -377,7 +366,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                     onClick={() => setReplyTo({ commentId: entry.id, name: entry.name })}
                     className="flex items-center space-x-1 text-gray-500 hover:text-blue-500"
       >
-                    <FaReply />
+                    <MessageCircle size={16} />
                     <span>답글</span>
       </button>
                 </div>
@@ -387,12 +376,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                   <div className="mt-4 ml-8 space-y-3">
                     {entry.replies.map((reply, replyIndex) => (
                       <div key={replyIndex} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div className="text-sm text-gray-600">
-                              {reply.name || '익명'}
-                            </div>
-                          </div>
+                        <div className="flex justify-end">
                           <span className="text-xs text-gray-500">{getTimeAgo(reply.createdAt)}</span>
                         </div>
                         <p className="mt-1 text-sm text-gray-700">{reply.message}</p>
@@ -769,7 +753,7 @@ export default function GuestbookTemplate({ username, uid }) {
   };
 
   return (
-    <div className='p-2 pt-9 md:flex md:flex-col md:items-center md:justify-center md:w-full'>
+    <div className='p-2 pt-4 md:flex md:flex-col md:items-center md:w-full overflow-y-auto'>
       <style jsx global>{`
         @keyframes floating {
           0%, 100% { transform: translateY(0px); }
@@ -783,7 +767,7 @@ export default function GuestbookTemplate({ username, uid }) {
       {/* 게스트북 제목 */}
       <div 
         className={cn(
-          "relative flex items-center justify-center text-[21px] font-bold w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm tracking-tight mt-8",
+          "relative flex items-center justify-center text-[21px] font-bold w-full max-w-[1100px] rounded-2xl p-4 backdrop-blur-sm tracking-tight mt-2",
           styleSettings.rounded === 'none' && 'rounded-none',
           styleSettings.rounded === 'sm' && 'rounded',
           styleSettings.rounded === 'md' && 'rounded-lg',
@@ -850,14 +834,14 @@ export default function GuestbookTemplate({ username, uid }) {
           </button>
         </HeaderDrawer>
       </div>
-      <div className='h-[20px]'/>
+      <div className='h-[12px]'/>
       {/* 메인 리스트 */}
-      <div className="w-full flex flex-col items-center gap-6">
+      <div className="w-full flex flex-col items-center gap-4">
         {previewEntries.map((entry) => (
           <HeaderDrawer key={entry.id} uid={finalUid}>
             <div 
               className={cn(
-                "w-full max-w-[1100px] p-6 backdrop-blur-sm transition-all duration-300 ease-in-out floating-animation",
+                "w-full max-w-[1100px] p-4 backdrop-blur-sm transition-all duration-300 ease-in-out floating-animation",
                 styleSettings.rounded === 'none' && 'rounded-none',
                 styleSettings.rounded === 'sm' && 'rounded',
                 styleSettings.rounded === 'md' && 'rounded-lg',
@@ -866,47 +850,41 @@ export default function GuestbookTemplate({ username, uid }) {
               )}
               style={getStyleObject()}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <div className="text-sm" style={{ color: styleSettings.textColor }}>
-                    {entry.name || '익명'}
-                  </div>
+              <p style={{ color: styleSettings.textColor }} className="leading-relaxed">
+                {entry.message}
+              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMainLike(entry.id);
+                    }}
+                    className="flex items-center space-x-1 transition-colors"
+                    style={{ color: styleSettings.textColor, opacity: 0.7 }}
+                  >
+                    <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : ""} />
+                    <span>{entry.likes || 0}</span>
+                  </button>
+                  {entry.replies?.length > 0 && (
+                    <div 
+                      className="flex items-center space-x-1"
+                      style={{ color: styleSettings.textColor, opacity: 0.7 }}
+                    >
+                      <MessageCircle size={16} />
+                      <span>{entry.replies.length}</span>
+                    </div>
+                  )}
                 </div>
                 <span 
-                  className="text-sm font-medium px-3 py-1.5 rounded-full"
+                  className="text-sm px-2 py-1 rounded-full"
                   style={{ 
-                    backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.2) * 255).toString(16).padStart(2, '0')}`,
                     color: styleSettings.textColor,
-                    opacity: 0.7 
+                    backgroundColor: `${styleSettings.bgColor}${Math.round(0.1 * 255).toString(16).padStart(2, '0')}`,
                   }}
                 >
                   {getTimeAgo(entry.createdAt)}
                 </span>
-              </div>
-              <p style={{ color: styleSettings.textColor }} className="leading-relaxed">
-                {entry.message}
-              </p>
-              <div className="mt-3 flex items-center space-x-4">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMainLike(entry.id);
-                  }}
-                  className="flex items-center space-x-1 transition-colors"
-                  style={{ color: styleSettings.textColor, opacity: 0.7 }}
-                >
-                  <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : ""} />
-                  <span>{entry.likes || 0}</span>
-                </button>
-                {entry.replies?.length > 0 && (
-                  <div 
-                    className="flex items-center space-x-1"
-                    style={{ color: styleSettings.textColor, opacity: 0.7 }}
-                  >
-                    <FaReply />
-                    <span>{entry.replies.length}</span>
-                  </div>
-                )}
               </div>
             </div>
           </HeaderDrawer>
@@ -915,9 +893,9 @@ export default function GuestbookTemplate({ username, uid }) {
 
       {/* 모달 컴포넌트 완전히 제거 */}
 
-      <div className="pt-4 w-full flex justify-center">
-        <div className="h-[40px]" />
-      </div>
+      {previewEntries.length > 0 && (
+        <div className="h-[20px]" />
+      )}
     </div>
   );
 }

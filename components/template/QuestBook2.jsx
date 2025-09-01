@@ -432,7 +432,7 @@ const Board = ({ username, uid }) => {
 
   // 게시글 삭제 함수 수정
   const handleDelete = async (post) => {
-    if (!isEditable && currentUser?.uid !== post.author?.uid) {
+    if (!isEditable && currentUser?.uid !== post.author?.uid && currentUser?.uid !== finalUid) {
       toast({
         title: "삭제 권한 오류",
         description: "삭제 권한이 없습니다.",
@@ -502,14 +502,38 @@ const Board = ({ username, uid }) => {
       const postRef = doc(db, 'users', finalUid, 'posts', post.id);
       const hasLiked = post.likedBy?.includes(currentUser.uid);
 
-      await updateDoc(postRef, {
+      // 낙관적 업데이트: UI를 즉시 업데이트
+      const updatedPost = {
+        ...post,
         likes: hasLiked ? (post.likes || 1) - 1 : (post.likes || 0) + 1,
         likedBy: hasLiked
           ? post.likedBy.filter(uid => uid !== currentUser.uid)
           : [...(post.likedBy || []), currentUser.uid],
+      };
+
+      // 선택된 게시글인 경우 업데이트
+      if (selectedPost?.id === post.id) {
+        setSelectedPost(updatedPost);
+      }
+
+      // 게시글 목록 업데이트
+      setPosts(prevPosts =>
+        prevPosts.map(p => p.id === post.id ? updatedPost : p)
+      );
+
+      // 서버 업데이트
+      await updateDoc(postRef, {
+        likes: updatedPost.likes,
+        likedBy: updatedPost.likedBy,
       });
     } catch (error) {
       console.error('좋아요 실패:', error);
+      // 에러 발생 시 원래 상태로 되돌리기
+      toast({
+        title: "오류",
+        description: "좋아요 처리에 실패했습니다.",
+        duration: 3000
+      });
     }
   };
 
@@ -1743,7 +1767,7 @@ const Board = ({ username, uid }) => {
               <DialogHeader>
                 <div className="flex items-center justify-between">
                   <DialogTitle>{selectedPost.title}</DialogTitle>
-                  {(isEditable || currentUser?.uid === selectedPost.author?.uid) && (
+                  {(isEditable || currentUser?.uid === selectedPost.author?.uid || currentUser?.uid === finalUid) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -1781,7 +1805,7 @@ const Board = ({ username, uid }) => {
                     </Avatar>
                     <span>{selectedPost.author.displayName}</span>
                   </div>
-                  <span>{selectedPost.createdAt.toLocaleString()}</span>
+                  <span>{selectedPost.createdAt.toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
       </div>
 
                 <div className="prose max-w-none">

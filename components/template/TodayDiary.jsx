@@ -496,7 +496,30 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                 </p>
                 {diary.images && diary.images.length > 0 && (
                   <div className="mb-4">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="hidden md:grid md:grid-cols-5 gap-2">
+                      {diary.images.slice(0, 5).map((image, index) => (
+                        <div key={index} className="aspect-[4/3] relative">
+                          {index === 4 && diary.images.length > 5 ? (
+                            <div 
+                              className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/80 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDiary(diary);
+                                setShowDetailModal(true);
+                              }}
+                            >
+                              <span className="text-gray-800 text-lg font-medium">+{diary.images.length - 4}</span>
+                            </div>
+                          ) : null}
+                          <img
+                            src={image}
+                            alt={`${diary.title} 이미지 ${index + 1}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid md:hidden grid-cols-3 gap-2">
                       {diary.images.slice(0, 3).map((image, index) => (
                         <div key={index} className="aspect-square relative">
                           {index === 2 && diary.images.length > 3 ? (

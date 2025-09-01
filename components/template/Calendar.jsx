@@ -50,12 +50,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   const router = useRouter();
   
   // 오늘 날짜 계산
-  const getTodayIn2025 = () => {
-    const today = dayjs();
-    return dayjs('2025-08-01').date(today.date());
-  };
-
-  const today = getTodayIn2025();
+  const today = dayjs();
   const [currentDate, setCurrentDate] = useState(today);
   const [selectedDate, setSelectedDate] = useState(today);
   const [showColorSettings, setShowColorSettings] = useState(false);
@@ -128,12 +123,12 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   // 권한 체크 함수 수정
   const canWrite = useMemo(() => {
     if (!currentUser) return false;
-    if (isEditable || currentUser.uid === uid) return true;
+    if (isEditable || currentUser.uid === uid || currentUser.uid === finalUid) return true;
     return isAllowed;  // isAllowed prop 사용
-  }, [currentUser, isEditable, uid, isAllowed]);
+  }, [currentUser, isEditable, uid, finalUid, isAllowed]);
 
   // canDelete 수정
-  const canDelete = isEditable || userRole === uid;  // 소유자와 편집 모드만 삭제 가능
+  const canDelete = isEditable || userRole === uid || currentUser?.uid === finalUid;  // 소유자, 작성자, 편집 모드 삭제 가능
 
   // 허용된 사용자 목록 가져오기
   useEffect(() => {
@@ -180,19 +175,15 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
     }
   };
 
-  // 주 이동 제한
+  // 주 이동
   const handlePrevWeek = () => {
     const newDate = currentDate.subtract(1, 'week');
-    if (newDate.year() === 2025 && newDate.month() === 7) {
-      setCurrentDate(newDate);
-    }
+    setCurrentDate(newDate);
   };
 
   const handleNextWeek = () => {
     const newDate = currentDate.add(1, 'week');
-    if (newDate.year() === 2025 && newDate.month() === 7) {
-      setCurrentDate(newDate);
-    }
+    setCurrentDate(newDate);
   };
 
   // 날짜 배열 계산
@@ -210,8 +201,8 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
   }
     return dates;
   })() : (() => {
-    // 주 보기일 때는 2025년 8월로 제한
-    const baseDate = dayjs('2025-08-01').date(currentDate.date());
+    // 주 보기일 때 현재 날짜 기준
+    const baseDate = currentDate;
     const startOfWeek = baseDate.startOf('week');
     const dates = [];
     for (let i = 0; i < 7; i++) {
@@ -456,7 +447,13 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
         endTime: updatedEvent.endTime,
         images: updatedEvent.images || [],  // 이미지 배열 추가
         lastModified: new Date().toISOString(),
-        lastModifiedBy: currentUser.uid
+        lastModifiedBy: currentUser.uid,
+        author: {
+          uid: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || authorUsername,
+          photoURL: currentUser.photoURL || '/Image/defaultLogo.png'
+        }
       });
 
       setSelectedEvent(null); // 수정 완료 후 편집 모드 해제
@@ -590,6 +587,12 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
             startTime: formState.startTime,
             endTime: formState.endTime,
             confirmCount: 0,
+            author: {
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: authorUsername,
+              photoURL: currentUser.photoURL || '/Image/defaultLogo.png'
+            },
             authorUid: currentUser.uid,
             authorEmail: currentUser.email || '',
             authorName: authorUsername,
@@ -767,7 +770,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
 
         {/* 이미지 크롭 다이얼로그 */}
         <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>
-          <DialogContent className="w-[95vw] md:w-[500px] p-4 max-h-[90vh] overflow-hidden">
+          <DialogContent className="w-[95vw] md:w-[800px] p-4 max-h-[90vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle className="text-lg font-semibold mb-2">이미지 크롭</DialogTitle>
             </DialogHeader>
@@ -779,16 +782,15 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
                     onChange={(_, percentCrop) => setCrop(percentCrop)}
                     onComplete={(c) => setCompletedCrop(c)}
                     aspect={1}
-                    className="max-w-full"
+                    className="w-full flex items-center justify-center"
                   >
                     <img
                       ref={imgRef}
                       src={currentImage}
                       alt="크롭할 이미지"
-                      className="max-w-full max-h-[50vh] object-contain"
+                      className="w-full h-[50vh] object-contain"
                       style={{
-                        maxWidth: isMobile ? '100%' : 'none',
-                        height: 'auto'
+                        maxHeight: '50vh'
                       }}
                     />
                   </ReactCrop>
@@ -989,7 +991,7 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
               >
                 답글 {event.replies?.length > 0 && `(${event.replies.length})`}
                 </button>
-              {(isEditable || event.authorUid === currentUser?.uid) && (
+              {(isEditable || event.authorUid === currentUser?.uid || currentUser?.uid === finalUid) && (
                   <>
                     <button
                     onClick={() => setSelectedEvent(event)}
@@ -1098,7 +1100,15 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
           {/* 시간과 작성자 정보 */}
           <div className="flex justify-between items-center text-sm opacity-70 mt-auto pt-2 border-t" style={{ borderColor: `${styleSettings.textColor}20` }}>
             <div>{event.startTime} - {event.endTime}</div>
-            <div>{event.authorName || '사용자'}</div>
+            <div className="flex items-center gap-2">
+              <img
+                src={event.author?.photoURL || '/Image/defaultLogo.png'}
+                alt={event.author?.displayName || event.authorName || '사용자'}
+                className="w-5 h-5 rounded-full object-cover"
+                onError={(e) => { e.target.src = '/Image/defaultLogo.png' }}
+              />
+              <span>{event.author?.displayName || event.authorName || '사용자'}</span>
+            </div>
           </div>
         </div>
       </div>

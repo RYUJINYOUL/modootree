@@ -637,47 +637,49 @@ export default function Gallery3({ username, uid }: LogoProps) {
 
         {/* 프로필 사진 팝업 모달 */}
         <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
-          <DialogContent className="sm:max-w-[500px] bg-white">
-            <DialogHeader>
-              <DialogTitle className="text-center text-xl font-bold text-gray-800">
+          <DialogContent className="sm:max-w-[500px] bg-gradient-to-br from-gray-900/90 via-gray-800/90 to-gray-900/90 backdrop-blur-md border-0">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-center text-2xl font-bold text-white">
                 {name}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* 프로필 사진 */}
               <div className="flex justify-center">
-                <Image
-                  src={logoUrl}
-                  alt="프로필 사진"
-                  width={200}
-                  height={200}
-                  priority
-                  className="rounded-full border-4 border-gray-200 shadow-lg"
-                />
+                <div className="p-1 rounded-full bg-white">
+                  <Image
+                    src={logoUrl}
+                    alt="프로필 사진"
+                    width={200}
+                    height={200}
+                    priority
+                    className="rounded-full"
+                  />
+                </div>
               </div>
               
               {/* 설명 */}
-              <div className="text-center">
-                <p className="text-gray-600 text-lg whitespace-pre-wrap break-words">{desc}</p>
+              <div className="text-center px-4">
+                <p className="text-white text-lg font-medium leading-relaxed whitespace-pre-wrap break-words">{desc}</p>
               </div>
 
               {/* QR 코드 */}
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
                 <QRShare userId={finalUid} username={finalUsername} />
               </div>
 
               {/* 버튼들 */}
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-3 justify-center">
                 <Button
                   onClick={handleCopyAddress}
-                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors"
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-xl transition-all duration-200 backdrop-blur-sm"
                 >
                   <Copy className="w-5 h-5" />
                   주소 복사
                 </Button>
                 <Button
                   onClick={handleShare}
-                  className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-colors"
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-xl transition-all duration-200 backdrop-blur-sm"
                 >
                   <Share2 className="w-5 h-5" />
                   공유하기
