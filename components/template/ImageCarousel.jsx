@@ -385,8 +385,8 @@ const ImageCarousel = ({ username, uid }) => {
         return;
       }
 
-      // 기본 썸네일 URL 사용
-      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      // 최고 품질의 썸네일 URL 사용 (maxresdefault가 없으면 자동으로 hqdefault로 대체됨)
+      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
       // 영상 제목 추출 시도
       let videoTitle = '';

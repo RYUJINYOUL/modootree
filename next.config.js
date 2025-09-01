@@ -3,7 +3,9 @@ const nextConfig = {
   images: {
     domains: [
       'firebasestorage.googleapis.com',  // Firebase Storage
-      'api.microlink.io',                // Microlink API (이전에 추가한 도메인)
+      'api.microlink.io',                // Microlink API
+      'img.youtube.com',                 // YouTube thumbnails
+      'i.ytimg.com',                     // YouTube thumbnails (alternative domain)
     ],
   },
 }
