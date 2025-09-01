@@ -45,8 +45,8 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
             -ms-overflow-style: none !important;
           }
           html {
-            zoom: ${isMobile ? '0.85' : '0.5'} !important;
-            -moz-transform: scale(${isMobile ? '0.85' : '0.5'});
+            zoom: ${isMobile ? '0.85' : '0.8'} !important;
+            -moz-transform: scale(${isMobile ? '0.85' : '0.8'});
             -moz-transform-origin: 0 0;
             overflow-y: auto !important;
             overflow-x: hidden !important;
@@ -74,6 +74,13 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
             padding-left: 1rem !important;
             padding-right: 1rem !important;
           }
+          main {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          [class*="max-w-"] {
+            max-width: 100% !important;
+          }
         `;
         iframeDoc.head.appendChild(styleTag);
 
@@ -84,6 +91,14 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
             mainContent.style.width = '375px';
             mainContent.style.maxWidth = '375px';
           }
+
+          // 모든 컨테이너 요소들의 크기 조정
+          const containers = iframeDoc.querySelectorAll('.container, [class*="max-w-"]');
+          containers.forEach(container => {
+            container.style.width = '100%';
+            container.style.maxWidth = '100%';
+            container.style.padding = '0 1rem';
+          });
         }
 
       } catch (e) {
@@ -145,8 +160,6 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
               overflowX: 'hidden',
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
-              width: '100%',
-              height: '100%',
             }}
             scrolling="yes"
           />

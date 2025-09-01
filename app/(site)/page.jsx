@@ -320,7 +320,7 @@ export default function Page() {
         <div className="relative z-10 py-16">
           <div className="flex flex-col items-center justify-center text-center mb-12">
           <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              모두트리는 대한민국 5,500만명에게
+              모두트리는 대한민국 5,500만명에게<br />
               작지만 의미 있는 한페이지를 선물합니다.
             </h2>
 
