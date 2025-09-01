@@ -33,7 +33,7 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
           viewport.name = 'viewport';
           iframeDoc.head.appendChild(viewport);
         }
-        viewport.content = 'width=370, initial-scale=1.0';
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
 
         const styleTag = iframeDoc.createElement('style');
         styleTag.textContent = `
@@ -45,23 +45,46 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
             -ms-overflow-style: none !important;
           }
           html {
-            zoom: ${isMobile ? '0.45' : '0.5'} !important;
-            -moz-transform: scale(${isMobile ? '0.45' : '0.5'});
+            zoom: ${isMobile ? '0.85' : '0.5'} !important;
+            -moz-transform: scale(${isMobile ? '0.85' : '0.5'});
             -moz-transform-origin: 0 0;
             overflow-y: auto !important;
             overflow-x: hidden !important;
+            width: ${isMobile ? '375px' : '450px'} !important;
+            height: 100% !important;
           }
           body {
-            width: ${isMobile ? '370px' : '450px'} !important;
-            max-width: ${isMobile ? '370px' : '450px'} !important;
+            width: ${isMobile ? '375px' : '450px'} !important;
+            max-width: ${isMobile ? '375px' : '450px'} !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             position: relative !important;
             margin: 0 !important;
             padding: 0 !important;
+            min-height: 100vh !important;
+            transform-origin: top left !important;
+          }
+          #__next {
+            width: 100% !important;
+            min-height: 100vh !important;
+          }
+          .container {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
           }
         `;
         iframeDoc.head.appendChild(styleTag);
+
+        // 모바일에서 iframe 내부 요소들의 크기를 조정
+        if (isMobile) {
+          const mainContent = iframeDoc.querySelector('main');
+          if (mainContent) {
+            mainContent.style.width = '375px';
+            mainContent.style.maxWidth = '375px';
+          }
+        }
 
       } catch (e) {
         console.log('Cannot access iframe content');
@@ -122,6 +145,8 @@ export default function LiveSitePreview({ siteUrl, previewImage }) {
               overflowX: 'hidden',
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
+              width: '100%',
+              height: '100%',
             }}
             scrolling="yes"
           />
