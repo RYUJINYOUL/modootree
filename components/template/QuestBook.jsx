@@ -299,11 +299,11 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent className={`w-full max-h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
+      <DrawerContent className={`w-full h-[85vh] flex flex-col bg-gray-50 ${drawerContentClassName}`}>
         <DrawerHeader>
           <DrawerTitle></DrawerTitle>
         </DrawerHeader>
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
           {/* 방명록 작성 폼 */}
           <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded-xl shadow-sm">
             <div className="flex flex-col space-y-3">
