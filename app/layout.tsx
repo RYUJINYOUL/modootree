@@ -12,7 +12,14 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: '모두트리 - 나의 특별한 페이지',
-  description: '나만의 특별한 페이지를 만들어 보세요',
+  description: '모두트리에서 나만의 특별한 페이지를 만들어 보세요',
+  keywords: '모두트리, 링크모음, 일기장, 포트폴리오, 동네게시판, 방명록, 일정표, ',
+  openGraph: {
+    title: '모두트리 - 나의 특별한 페이지',
+    description: '모두트리에서 나만의 특별한 페이지를 만들어 보세요',
+    locale: 'ko_KR',
+    type: 'website',
+  },
   icons: {
     icon: [
       { url: '/Image/logo.png', type: 'image/png' },
@@ -23,7 +30,6 @@ export const metadata: Metadata = {
     ],
   },
   verification: {
-    google: 'NJ5c04i2wKHQlFMfQK5_Ln-qYwjvbzDVUkyzaNXQXbQ',
     other: {
       'naver-site-verification': '9f741f94681059d45853466618ab08aecdc3852c',
     },

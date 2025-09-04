@@ -9,7 +9,7 @@ const sampleUsers = [
     username: 'questbook',
     siteUrl: 'https://www.modootree.com/questbook',
     previewImage: '/samples/link.png',
-    description: '방명록 - 카카오톡 연결'
+    description: '링크모음 - 인스타그램 연결'
   },
   {
     id: 2,
@@ -119,6 +119,7 @@ export default function UserSampleCarousel() {
                 >
                   <h3 className="text-lg font-semibold mb-1 hover:text-gray-200">{sample.description}</h3>
                   <p className="text-sm text-gray-300 hover:text-gray-400">modootree.com/{sample.username}</p>
+                  <p className="text-xs text-gray-400 mt-1">↕️ 페이지 자세히 보기 클릭</p>
                 </div>
               </div>
             </div>

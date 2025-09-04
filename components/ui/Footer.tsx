@@ -8,11 +8,10 @@ export default function Footer() {
   const pathname = usePathname();
   
   // 메인페이지, 로그인, 회원가입 페이지, username 페이지에서는 푸터를 숨김
-  const isMainPage = pathname === '/';
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isUserPage = /^\/[^/]+$/.test(pathname) && pathname !== '/inquiry'; // /username 형식의 경로 체크, inquiry 페이지 제외
 
-  if (isMainPage || isAuthPage || isUserPage) {
+  if (isAuthPage || isUserPage) {
     return null;
   }
 
@@ -54,9 +53,11 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* 카피라이트 */}
-          <div className="text-xs text-white/50">
-            © {new Date().getFullYear()} 모두트리
+          {/* 회사 정보 */}
+          <div className="flex flex-col items-center text-xs text-white/50 space-y-1">
+            <div>모두트리 1899-1651 farmtoolceo@naver.com</div>
+            <div>주식회사 팜툴 303-81-76392 유진열</div>
+            <div>© {new Date().getFullYear()} 모두트리</div>
           </div>
         </div>
       </div>
