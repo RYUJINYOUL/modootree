@@ -381,7 +381,7 @@ const Board = ({ username, uid }) => {
       try {
         await sendNotification(finalUid, {
           type: 'questbook2',
-          title: '새로운 방명록이 등록되었습니다',
+          title: '새로운 글이 등록되었습니다',
           content: `${postData.author.displayName}: ${postData.title}`,
           sourceTemplate: 'questbook2',
           metadata: {
