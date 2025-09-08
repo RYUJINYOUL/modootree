@@ -75,6 +75,7 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
     if (!isEmailValid) return;
     
     try {
+      // 새로운 경로로 수정
       const subscribersRef = doc(db, 'users', ownerUid, 'settings', 'subscribers');
       
       // 현재 구독자 목록 확인
@@ -119,7 +120,6 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
           }
         }, { merge: true });
       }
-
       setSubscribeDialogOpen(false);
       setSubscribeEmail('');
       alert('구독이 완료되었습니다.');

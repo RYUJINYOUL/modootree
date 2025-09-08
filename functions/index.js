@@ -10,13 +10,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
-const notifications = require('./src/notifications');
-
 admin.initializeApp();
-
-// 알림 관련 Cloud Functions 내보내기
-exports.sendNotificationEmail = notifications.sendNotificationEmail;
-
 // 이메일 전송을 위한 transporter 생성 함수
 const createTransporter = () => {
   return nodemailer.createTransport({

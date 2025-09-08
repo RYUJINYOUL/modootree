@@ -718,7 +718,6 @@ export default function GuestbookTemplate({ username, uid }) {
       }))
       setPreviewEntries(data)
     })
-
     // 전체 개수 가져오기
     const countQuery = query(collection(db, 'users', finalUid, 'comments'));
     getDocs(countQuery).then(snap => {

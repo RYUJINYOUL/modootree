@@ -617,7 +617,6 @@ const CalendarWithEvents = ({ username, uid, isEditable, isAllowed }) => {
             }
           }
           );
-
           setFormState({
             title: '',
             content: '',

@@ -1,0 +1,60 @@
+[debug] [2025-07-21T19:22:10.558Z] ----------------------------------------------------------------------
+[debug] [2025-07-21T19:22:10.561Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Administrator\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:secrets:set EMAIL_USER
+[debug] [2025-07-21T19:22:10.561Z] CLI Version:   14.6.0
+[debug] [2025-07-21T19:22:10.562Z] Platform:      win32
+[debug] [2025-07-21T19:22:10.562Z] Node Version:  v20.15.1
+[debug] [2025-07-21T19:22:10.562Z] Time:          Tue Jul 22 2025 04:22:10 GMT+0900 (대한민국 표준시)
+[debug] [2025-07-21T19:22:10.562Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-07-21T19:22:10.754Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-21T19:22:10.755Z] > authorizing via signed-in user (dalkomme@gmail.com)
+[debug] [2025-07-21T19:22:10.756Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:10.756Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:10.757Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com [none]
+[debug] [2025-07-21T19:22:10.757Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com x-goog-quota-user=projects/mtree-e0249
+[debug] [2025-07-21T19:22:11.310Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com 200
+[debug] [2025-07-21T19:22:11.310Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com [omitted]
+[debug] [2025-07-21T19:22:11.311Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:11.311Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:11.311Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com:enable [none]
+[debug] [2025-07-21T19:22:11.311Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com:enable x-goog-quota-user=projects/mtree-e0249
+[debug] [2025-07-21T19:22:12.026Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com:enable 200
+[debug] [2025-07-21T19:22:12.026Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com:enable [omitted]
+[debug] [2025-07-21T19:22:22.026Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:22.026Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:22.026Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com [none]
+[debug] [2025-07-21T19:22:22.026Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com x-goog-quota-user=projects/mtree-e0249
+[debug] [2025-07-21T19:22:23.210Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com 200
+[debug] [2025-07-21T19:22:23.210Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/secretmanager.googleapis.com [omitted]
+[debug] [2025-07-21T19:22:23.215Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-21T19:22:23.215Z] > authorizing via signed-in user (dalkomme@gmail.com)
+[debug] [2025-07-21T19:22:23.216Z] [iam] checking project mtree-e0249 for permissions ["firebase.projects.get","secretmanager.secrets.create","secretmanager.secrets.get","secretmanager.secrets.update","secretmanager.versions.add"]
+[debug] [2025-07-21T19:22:23.216Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:23.216Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:23.216Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249:testIamPermissions [none]
+[debug] [2025-07-21T19:22:23.216Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249:testIamPermissions x-goog-quota-user=projects/mtree-e0249
+[debug] [2025-07-21T19:22:23.216Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249:testIamPermissions {"permissions":["firebase.projects.get","secretmanager.secrets.create","secretmanager.secrets.get","secretmanager.secrets.update","secretmanager.versions.add"]}
+[debug] [2025-07-21T19:22:23.483Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249:testIamPermissions 200
+[debug] [2025-07-21T19:22:23.483Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249:testIamPermissions {"permissions":["firebase.projects.get","secretmanager.secrets.create","secretmanager.secrets.get","secretmanager.secrets.update","secretmanager.versions.add"]}
+[debug] [2025-07-21T19:22:23.483Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:23.483Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:23.483Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/cloudresourcemanager.googleapis.com [none]
+[debug] [2025-07-21T19:22:23.483Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/cloudresourcemanager.googleapis.com x-goog-quota-user=projects/mtree-e0249
+[debug] [2025-07-21T19:22:23.884Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/cloudresourcemanager.googleapis.com 200
+[debug] [2025-07-21T19:22:23.884Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/mtree-e0249/services/cloudresourcemanager.googleapis.com [omitted]
+[debug] [2025-07-21T19:22:23.885Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:23.885Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:23.885Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249 [none]
+[debug] [2025-07-21T19:22:24.130Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249 200
+[debug] [2025-07-21T19:22:24.130Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/mtree-e0249 {"projectNumber":"712740047046","projectId":"mtree-e0249","lifecycleState":"ACTIVE","name":"mtree","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-07-09T14:08:09.943907Z"}
+[debug] [2025-07-21T19:22:24.131Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:24.131Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:24.131Z] >>> [apiv2][query] GET https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets/EMAIL_USER [none]
+[debug] [2025-07-21T19:22:24.572Z] <<< [apiv2][status] GET https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets/EMAIL_USER 404
+[debug] [2025-07-21T19:22:24.572Z] <<< [apiv2][body] GET https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets/EMAIL_USER {"error":{"code":404,"message":"Secret [projects/712740047046/secrets/EMAIL_USER] not found.","status":"NOT_FOUND"}}
+[debug] [2025-07-21T19:22:24.573Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:24.574Z] Checked if tokens are valid: true, expires at: 1753127980911
+[debug] [2025-07-21T19:22:24.574Z] >>> [apiv2][query] POST https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets secretId=EMAIL_USER
+[debug] [2025-07-21T19:22:24.574Z] >>> [apiv2][body] POST https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets {"name":"EMAIL_USER","replication":{"automatic":{}},"labels":{"firebase-managed":"functions"}}
+[debug] [2025-07-21T19:22:26.060Z] <<< [apiv2][status] POST https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets 200
+[debug] [2025-07-21T19:22:26.060Z] <<< [apiv2][body] POST https://secretmanager.googleapis.com/v1/projects/mtree-e0249/secrets {"name":"projects/712740047046/secrets/EMAIL_USER","replication":{"automatic":{}},"createTime":"2025-07-21T19:22:24.436722Z","labels":{"firebase-managed":"functions"},"etag":"\"163a7565527303\""}

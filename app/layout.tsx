@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from 'next/font/google';
 import "./globals.css";
 import { Providers } from '@/components/providers';
-// import { Toaster } from 'react-hot-toast';
+import { Toaster } from 'sonner';
 import { cn } from '@/lib/utils';
 import Footer from '@/components/ui/Footer';
 import Header from '@/components/Header';
@@ -59,7 +59,7 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
-            {/* <Toaster /> */}
+            <Toaster />
           </Providers>
         </TranslateProvider>
       </body>

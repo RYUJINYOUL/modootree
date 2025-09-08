@@ -246,13 +246,15 @@ const Board = ({ username, uid }) => {
     } catch (error) {
       console.error('이미지 업로드 실패:', error);
       if (error.code === 'storage/unauthorized') {
-                  toast.error("이미지 업로드 권한이 없습니다. 관리자에게 문의하세요.", {
-            title: "이미지 업로드 오류",
-            duration: 5000
-          });
-      } else {
-        toast.error("이미지 업로드에 실패했습니다. 다시 시도해주세요.", {
+        toast({
           title: "이미지 업로드 오류",
+          description: "이미지 업로드 권한이 없습니다. 관리자에게 문의하세요.",
+          duration: 5000
+        });
+      } else {
+        toast({
+          title: "이미지 업로드 오류",
+          description: "이미지 업로드에 실패했습니다. 다시 시도해주세요.",
           duration: 5000
         });
       }
@@ -315,15 +317,17 @@ const Board = ({ username, uid }) => {
     e.stopPropagation();
 
     if (!title.trim() || !content.trim()) {
-      toast.error("제목과 내용을 모두 입력해주세요.", {
-        title: "입력 오류"
+      toast({
+        title: "입력 오류",
+        description: "제목과 내용을 모두 입력해주세요."
       });
       return;
     }
 
     if (!writeFormCategory) {
-      toast.error("카테고리를 선택해주세요.", {
-        title: "입력 오류"
+      toast({
+        title: "입력 오류",
+        description: "카테고리를 선택해주세요."
       });
       return;
     }
@@ -407,14 +411,16 @@ const Board = ({ username, uid }) => {
       setIsWriting(false);
       
       // 성공 메시지
-      toast.success("게시글이 작성되었습니다.", {
-        title: "성공"
+      toast({
+        title: "성공",
+        description: "게시글이 작성되었습니다."
       });
 
     } catch (error) {
       console.error('게시글 작성 실패:', error);
-      toast.error("게시글 작성에 실패했습니다.", {
-        title: "오류"
+      toast({
+        title: "오류",
+        description: "게시글 작성에 실패했습니다."
       });
     } finally {
       setLoading(false);
@@ -424,7 +430,11 @@ const Board = ({ username, uid }) => {
   // 게시글 삭제 함수 수정
   const handleDelete = async (post) => {
     if (!isEditable && currentUser?.uid !== post.author?.uid && currentUser?.uid !== finalUid) {
-      console.error("삭제 권한이 없습니다.");
+      toast({
+        title: "삭제 권한 오류",
+        description: "삭제 권한이 없습니다.",
+        duration: 3000
+      });
       return;
     }
 
@@ -433,16 +443,15 @@ const Board = ({ username, uid }) => {
     }
 
     try {
+      const batch = writeBatch(db);
       // 게시글에 달린 모든 댓글 삭제
       const commentsQuery = query(
         collection(db, 'users', finalUid, 'posts', post.id, 'comments')
       );
       const commentsSnapshot = await getDocs(commentsQuery);
-      const batch = writeBatch(db);
       commentsSnapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
       });
-      await batch.commit();
 
       // 게시글 이미지가 있다면 Storage에서 삭제
       if (post.image?.path) {
@@ -456,20 +465,25 @@ const Board = ({ username, uid }) => {
       }
 
       // 게시글 삭제
-      const postRef = doc(db, 'users', finalUid, 'posts', post.id);
-      await deleteDoc(postRef);
+      batch.delete(doc(db, 'users', finalUid, 'posts', post.id));
+
+      await batch.commit();
       
-      // 상태 업데이트
-      setPosts(prevPosts => prevPosts.filter(p => p.id !== post.id));
+      // 상세보기가 열려있었다면 닫기
       setSelectedPost(null);
-      setComments([]);
-      setNewComment('');
-      setReplyTo(null);
       
-      console.log("게시글이 삭제되었습니다.");
+      toast({
+        title: "성공",
+        description: "게시글이 삭제되었습니다.",
+        duration: 3000
+      });
     } catch (error) {
       console.error('게시글 삭제 실패:', error);
-      console.error("게시글 삭제에 실패했습니다.");
+      toast({
+        title: "오류",
+        description: "게시글 삭제에 실패했습니다.",
+        duration: 3000
+      });
     }
   };
 
@@ -821,59 +835,42 @@ const Board = ({ username, uid }) => {
   useEffect(() => {
     if (!finalUid) return;
 
-    let unsubscribe = () => {};
+    const baseQuery = collection(db, 'users', finalUid, 'posts');
+    let q;
 
-    const fetchAndSubscribe = async () => {
-      try {
-        const baseQuery = collection(db, 'users', finalUid, 'posts');
-        let q;
+    if (selectedCategory === 'all') {
+      q = query(
+        baseQuery,
+        orderBy('createdAt', 'desc'),
+        orderBy('isNotice', 'desc')
+      );
+    } else {
+      q = query(
+        baseQuery,
+        where('category', '==', selectedCategory),
+        orderBy('createdAt', 'desc'),
+        orderBy('isNotice', 'desc')
+      );
+    }
 
-        if (selectedCategory === 'all') {
-          q = query(
-            baseQuery,
-            orderBy('createdAt', 'desc'),
-            orderBy('isNotice', 'desc')
-          );
-        } else {
-          q = query(
-            baseQuery,
-            where('category', '==', selectedCategory),
-            orderBy('createdAt', 'desc'),
-            orderBy('isNotice', 'desc')
-          );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      }));
+      setPosts(postList);
+
+      // 현재 선택된 게시글이 있다면 해당 게시글 정보도 업데이트
+      if (selectedPost) {
+        const updatedPost = postList.find(post => post.id === selectedPost.id);
+        if (updatedPost) {
+          setSelectedPost(updatedPost);
         }
-
-        unsubscribe = onSnapshot(q, (snapshot) => {
-          const postList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date()
-          }));
-          
-          setPosts(postList);
-
-          // 현재 선택된 게시글이 있고, 해당 게시글이 삭제되었다면 선택 해제
-          if (selectedPost) {
-            const stillExists = postList.some(post => post.id === selectedPost.id);
-            if (!stillExists) {
-              setSelectedPost(null);
-            }
-          }
-        }, (error) => {
-          console.error('Posts snapshot error:', error);
-          console.error('게시글 목록을 불러오는데 실패했습니다.');
-        });
-      } catch (error) {
-        console.error('Subscribe error:', error);
-        console.error('게시글 목록 구독에 실패했습니다.');
       }
-    };
+    });
 
-    fetchAndSubscribe();
-
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [finalUid, selectedCategory]);
 
   // 실시간 댓글 업데이트
@@ -1760,175 +1757,147 @@ const Board = ({ username, uid }) => {
         </Dialog>
 
         {/* 게시글 상세보기 다이얼로그 */}
-        <Dialog 
-          open={!!selectedPost}
-          onOpenChange={(open) => {
-            if (!open) {
-              setSelectedPost(null);
-              setEditingDiary(null);
-              setComments([]);
-              setNewComment('');
-              setReplyTo(null);
-            }
-          }}
-        >
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            {selectedPost && (
-              <>
-                <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <DialogTitle>{selectedPost.title}</DialogTitle>
-                    {(isEditable || currentUser?.uid === selectedPost.author?.uid || currentUser?.uid === finalUid) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setEditingDiary(selectedPost);
-                              setSelectedPost(null);
-                            }}
-                          >
-                            수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              if (window.confirm('게시글을 삭제하시겠습니까?')) {
-                                handleDelete(selectedPost);
-                              }
-                            }}
-                          >
-                            삭제
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="w-6 h-6">
-                        <AvatarImage src={selectedPost.author.photoURL} />
-                        <AvatarFallback>
-                          {selectedPost.author.displayName[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{selectedPost.author.displayName}</span>
-                    </div>
-                    <span>
-                      {selectedPost.createdAt.toLocaleString('ko-KR', { 
-                        year: '2-digit', 
-                        month: '2-digit', 
-                        day: '2-digit', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="prose max-w-none">
-                    <div className="whitespace-pre-wrap break-words">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {selectedPost.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-
-                  {selectedPost.image && (
-                    <div className="mt-4">
-                      <Image
-                        src={selectedPost.image.url}
-                        alt="첨부 이미지"
-                        width={500}
-                        height={300}
-                        className="rounded-lg object-cover"
-                      />
-                    </div>
+        {selectedPost && (
+          <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>{selectedPost.title}</DialogTitle>
+                  {(isEditable || currentUser?.uid === selectedPost.author?.uid || currentUser?.uid === finalUid) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => {
+                          setEditingDiary(selectedPost);
+                          setSelectedPost(null);
+                        }}>
+                          수정
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          if (window.confirm('게시글을 삭제하시겠습니까?')) {
+                            handleDelete(selectedPost);
+                            setSelectedPost(null);
+                          }
+                        }}>
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
+                </div>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={selectedPost.author.photoURL} />
+                      <AvatarFallback>
+                        {selectedPost.author.displayName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{selectedPost.author.displayName}</span>
+                  </div>
+                  <span>{selectedPost.createdAt.toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
 
-                  <div className="flex items-center gap-4">
+                <div className="prose max-w-none">
+                  <div className="whitespace-pre-wrap break-words">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {selectedPost.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+
+                {selectedPost.image && (
+                  <div className="mt-4">
+                    <Image
+                      src={selectedPost.image.url}
+                      alt="첨부 이미지"
+                      width={500}
+                      height={300}
+                      className="rounded-lg object-cover"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleLike(selectedPost)}
+                    className={selectedPost.likedBy?.includes(currentUser?.uid) ? 'text-red-500' : ''}
+                  >
+                    <Heart className="w-4 h-4 mr-1" />
+                    {selectedPost.likes}
+                  </Button>
+                </div>
+
+                {selectedPost.tags?.length > 0 && (
+                  <div className="flex gap-1">
+                    {selectedPost.tags.map(tag => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* 댓글 섹션 추가 */}
+                <div className="mt-8 border-t pt-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    댓글 {selectedPost.commentCount}
+                  </h3>
+
+                  {/* 댓글 작성 폼 */}
+                  <div className="flex gap-2 mb-4">
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder={replyTo ? `${replyTo.author.displayName}님에게 답글 작성` : "댓글을 입력하세요"}
+                      className="flex-1"
+                    />
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleLike(selectedPost)}
-                      className={selectedPost.likedBy?.includes(currentUser?.uid) ? 'text-red-500' : ''}
+                      className="self-end"
+                      onClick={() => handleAddComment(selectedPost.id)}
                     >
-                      <Heart className="w-4 h-4 mr-1" />
-                      {selectedPost.likes}
+                      작성
                     </Button>
                   </div>
 
-                  {selectedPost.tags?.length > 0 && (
-                    <div className="flex gap-1">
-                      {selectedPost.tags.map(tag => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
+                  {/* 답글 작성 중인 경우 표시 */}
+                  {replyTo && (
+                    <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                      <MessageCircle className="w-4 h-4" />
+                      {replyTo.author.displayName}님에게 답글 작성 중
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReplyTo(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
                   )}
 
-                  <div className="mt-8 border-t pt-4">
-                    <h3 className="text-lg font-semibold mb-4">
-                      댓글 {selectedPost.commentCount}
-                    </h3>
-
-                    <div className="flex gap-2 mb-4">
-                      <Textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder={replyTo ? `${replyTo.author.displayName}님에게 답글 작성` : "댓글을 입력하세요"}
-                        className="flex-1"
+                  {/* 댓글 목록 */}
+                  <div className="space-y-4">
+                    {comments.map(comment => (
+                      <CommentCard 
+                        key={comment.id} 
+                        comment={comment}
+                        postId={selectedPost.id}
                       />
-                      <Button
-                        className="self-end"
-                        onClick={() => handleAddComment(selectedPost.id)}
-                      >
-                        작성
-                      </Button>
-                    </div>
-
-                    {replyTo && (
-                      <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                        <MessageCircle className="w-4 h-4" />
-                        {replyTo.author.displayName}님에게 답글 작성 중
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setReplyTo(null)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
-                      {comments.map(comment => (
-                        <CommentCard 
-                          key={comment.id} 
-                          comment={comment}
-                          postId={selectedPost.id}
-                        />
-                      ))}
-                    </div>
+                    ))}
                   </div>
                 </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
       {/* 게시글 수정 다이얼로그 */}
       {editingDiary && (
