@@ -385,7 +385,13 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
                      {allowedUsers.length > 0 ? (
                        allowedUsers.map((user, index) => (
                          <p key={index} className="text-sm text-white/60 pl-2 border-l border-white/10">
-                           {user.email}
+                           {(() => {
+                             const [username, domain] = user.email.split('@');
+                             const maskedUsername = username.length > 3 
+                               ? username.slice(0, 3) + '*'.repeat(username.length - 3)
+                               : username.slice(0, 1) + '*'.repeat(username.length - 1);
+                             return `${maskedUsername}@${domain}`;
+                           })()}
                          </p>
                        ))
                      ) : (

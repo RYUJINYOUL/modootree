@@ -421,6 +421,8 @@ const COLOR_PALETTE = [
 export default function GuestbookTemplate({ username, uid }) {
   const [previewEntries, setPreviewEntries] = useState([]);
   const [showColorSettings, setShowColorSettings] = useState(false);
+  const [visibleEntries, setVisibleEntries] = useState(5);
+  const [totalEntries, setTotalEntries] = useState(0);
   // 모달 관련 상태 제거 (주석 처리)
   // const [selectedEntry, setSelectedEntry] = useState(null);
   // const [showDetailModal, setShowDetailModal] = useState(false);
@@ -700,10 +702,19 @@ export default function GuestbookTemplate({ username, uid }) {
   // 최근 방명록 3개 로드
   useEffect(() => {
     if (!finalUid) return
+    
+    // 총 방명록 수 가져오기
+    const fetchTotalEntries = async () => {
+      const snapshot = await getDocs(collection(db, 'users', finalUid, 'comments'));
+      setTotalEntries(snapshot.size);
+    };
+    fetchTotalEntries();
+
+    // 방명록 목록 가져오기
     const q = query(
       collection(db, 'users', finalUid, 'comments'),
       orderBy('createdAt', 'desc'),
-      limit(3)
+      limit(visibleEntries)
     )
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((doc) => ({
@@ -716,7 +727,7 @@ export default function GuestbookTemplate({ username, uid }) {
       setPreviewEntries(data)
     })
     return () => unsub()
-  }, [finalUid])
+  }, [finalUid, visibleEntries])
 
   const [guestBookTitle, setGuestBookTitle] = useState('게스트북');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -892,7 +903,25 @@ export default function GuestbookTemplate({ username, uid }) {
       {/* 모달 컴포넌트 완전히 제거 */}
 
       {previewEntries.length > 0 && (
-        <div className="h-[20px]" />
+        <>
+          <div className="h-[20px]" />
+          {totalEntries > visibleEntries && (
+            <button
+              onClick={() => setVisibleEntries(prev => prev + 5)}
+              className={cn(
+                "w-full max-w-[1100px] p-4 backdrop-blur-sm transition-all duration-300 ease-in-out text-center",
+                styleSettings.rounded === 'none' && 'rounded-none',
+                styleSettings.rounded === 'sm' && 'rounded',
+                styleSettings.rounded === 'md' && 'rounded-lg',
+                styleSettings.rounded === 'lg' && 'rounded-xl',
+                styleSettings.rounded === 'full' && 'rounded-full'
+              )}
+              style={getStyleObject()}
+            >
+              더보기 ({visibleEntries}/{totalEntries})
+            </button>
+          )}
+        </>
       )}
     </div>
   );
