@@ -625,7 +625,7 @@ export default function UserPublicPage() {
           
           {/* 하단 버튼 */}
           {showBottomButton && (
-            <div className="fixed bottom-[39px] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+            <div className="fixed bottom-[25px] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
               <Link
                 href="/"
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all shadow-lg whitespace-nowrap"
