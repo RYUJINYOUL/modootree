@@ -4,30 +4,27 @@ import { useState } from 'react';
 import { ChevronUp } from 'lucide-react';
 
 export default function CollapsibleFooter() {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <div className="relative w-full">
-      {/* 접기/펼치기 버튼 */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white/70 backdrop-blur-sm hover:bg-white/90 transition-all px-4 py-1 rounded-t-xl shadow-lg flex items-center gap-2"
-      >
-        <ChevronUp className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        <span className="text-sm">광고</span>
-      </button>
-
-      {/* 광고 컨테이너 */}
-      <div 
-        className={`bg-white/70 backdrop-blur-sm transition-all duration-300 shadow-lg ${
-          isOpen ? 'h-[250px]' : 'h-0'
-        } overflow-hidden`}
-      >
-        <div className="w-full max-w-[1000px] mx-auto h-full flex items-center justify-center">
-          {/* 여기에 AdSense 코드가 들어갈 자리 */}
-          <div className="w-full h-[250px] flex items-center justify-center">
-            광고가 표시될 영역
-          </div>
+    <div className="w-full bg-white/70 backdrop-blur-sm py-2">
+      <div className="w-full max-w-[1000px] mx-auto px-4">
+        {/* 테스트 광고 */}
+        <div className="w-full h-[100px]">
+          <ins 
+            className="adsbygoogle"
+            style={{ display: 'block' }}
+            data-ad-client="ca-pub-6697023128093217"
+            data-ad-slot="1234567890"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+            data-adtest="on"
+          />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (adsbygoogle = window.adsbygoogle || []).push({});
+              `
+            }}
+          />
         </div>
       </div>
     </div>

@@ -649,10 +649,6 @@ export default function UserPublicPage() {
           )}
         </div>
       </main>
-      <CollapsibleFooter />
     </>
   );
 }
-
-// 구글 애드센스 컴포넌트
-import CollapsibleFooter from '@/components/ui/CollapsibleFooter';

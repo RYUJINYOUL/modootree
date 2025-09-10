@@ -44,6 +44,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6697023128093217"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body
         className={cn(
           inter.className,
