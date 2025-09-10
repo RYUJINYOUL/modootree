@@ -168,9 +168,9 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
         <div className={`absolute right-full mr-2 flex gap-1 transition-all duration-200 ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
           <Link
             href="/"
-            className="bg-white/30 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
+            className="bg-white/70 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/80 transition-all flex items-center justify-center"
             onClick={() => setIsOpen(false)}
-            title="홈으로"
+            title="모두트리홈"
           >
             <Home className="w-4 h-4" />
           </Link>
@@ -182,7 +182,7 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
                 setSubscribeDialogOpen(true);
                 setIsOpen(false);
               }}
-              className="bg-white/30 backdrop-blur-sm text-white p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
+              className="bg-white/70 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/80 transition-all flex items-center justify-center"
               title={isSubscribed ? "구독 중" : "일정 알림 구독"}
             >
               {isSubscribed ? (
@@ -203,14 +203,14 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
             </button>
           )}
 
-          {/* 제안하기 버튼 */}
-          {userEmail && (
+          {/* 제안하기 버튼 - 이메일이 있고 본인이 아닐 때만 */}
+          {userEmail && currentUser?.uid !== ownerUid && (
             <button
               onClick={() => {
                 setShowSuggestionDialog(true);
                 setIsOpen(false);
               }}
-              className="bg-white/30 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
+              className="bg-white/70 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/80 transition-all flex items-center justify-center"
               title="제안하기"
             >
               <Mail className="w-4 h-4" />
@@ -221,7 +221,7 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
             <>
               <Link
                 href={`/editor/${username}`}
-                className="bg-white/30 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
+                className="bg-white/70 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/80 transition-all flex items-center justify-center"
                 onClick={() => setIsOpen(false)}
                 title="편집하기"
               >
@@ -230,7 +230,7 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
 
               <Link
                 href="/backgrounds"
-                className="bg-white/30 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
+                className="bg-white/70 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/80 transition-all flex items-center justify-center"
                 onClick={() => setIsOpen(false)}
                 title="배경설정"
               >
@@ -239,14 +239,6 @@ export default function UserEditButton({ username, ownerUid, userEmail }: UserEd
             </>
           )}
 
-          <Link
-            href="/likes/all"
-            className="bg-white/30 backdrop-blur-sm text-black p-2.5 rounded-lg hover:bg-white/40 transition-all flex items-center justify-center"
-            onClick={() => setIsOpen(false)}
-            title="공감페이지"
-          >
-            <Hand className="w-4 h-4" />
-          </Link>
         </div>
 
         {/* 메인 토글 버튼 */}

@@ -559,10 +559,15 @@ export default function BackgroundGallery() {
       return;
     }
 
-    // 임시 URL 생성
+    // 임시 URL 생성 및 미리보기 표시
     const reader = new FileReader();
     reader.onload = () => {
-      setTempImageUrl(reader.result as string);
+      const result = reader.result as string;
+      setTempImageUrl(result);
+      setMetadata(prev => ({
+        ...prev,
+        ogImage: result
+      }));
       setCropDialogOpen(true);
     };
     reader.readAsDataURL(file);
@@ -1071,33 +1076,64 @@ export default function BackgroundGallery() {
                       <Label className="text-gray-200">키워드 (쉼표로 구분)</Label>
                       <Input
                         id="keywords"
-                        value={metadata.keywords.join(', ')}
-                        onChange={(e) => setMetadata({ 
-                          ...metadata, 
-                          keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k)
-                        })}
+                        value={Array.isArray(metadata.keywords) ? metadata.keywords.join(', ') : metadata.keywords}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          setMetadata({ 
+                            ...metadata, 
+                            keywords: inputValue.endsWith(',') 
+                              ? [inputValue] 
+                              : inputValue.split(',').map(k => k.trim()).filter(k => k)
+                          });
+                        }}
+                        onBlur={(e) => {
+                          // 포커스를 잃을 때 최종적으로 배열로 변환
+                          const value = e.target.value;
+                          setMetadata(prev => ({
+                            ...prev,
+                            keywords: value.split(',').map(k => k.trim()).filter(Boolean)
+                          }));
+                        }}
                         placeholder="키워드1, 키워드2, 키워드3"
                         className="h-12"
                       />
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-gray-200">대표 이미지</Label>
+                     
                       <div className="space-y-4">
-                        <div className="grid gap-3">
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleOgImageSelect}
-                            className="h-12"
-                          />
-                          <div className="text-sm text-gray-400">또는</div>
-                          <Input
-                            placeholder="이미지 URL을 입력하세요"
-                            value={metadata.ogImage}
-                            onChange={(e) => setMetadata({ ...metadata, ogImage: e.target.value })}
-                            className="h-12"
-                          />
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <label className="text-sm font-medium text-gray-200">
+                              대표 이미지 URL
+                            </label>
+                            <div>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                id="ogImageUpload"
+                                onChange={handleOgImageSelect}
+                              />
+                              <Button
+                                onClick={() => document.getElementById('ogImageUpload')?.click()}
+                                className="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 text-sm"
+                              >
+                                이미지 업로드
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={metadata.ogImage}
+                                onChange={(e) => setMetadata({ ...metadata, ogImage: e.target.value })}
+                                placeholder="URL을 입력하세요"
+                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 placeholder-gray-500"
+                              />
+                            </div>
+                          </div>
                         </div>
                         
                         {metadata.ogImage && (

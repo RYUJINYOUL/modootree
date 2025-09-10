@@ -170,7 +170,7 @@ export default function Header() {
           >
             <Image
               src="/Image/logo.png"
-              alt="ModooTree Logo"
+              alt="모두트리 로고"
               width={120}
               height={120}
               className="w-4 h-4"

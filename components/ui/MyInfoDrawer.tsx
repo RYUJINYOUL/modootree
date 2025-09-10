@@ -59,15 +59,6 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
     await setDoc(doc(db, 'users', ownerUid, 'settings', 'notifications'), newSettings);
   };
 
-  const handleDeleteNotification = async (notification: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    const notificationsRef = doc(db, 'users', ownerUid, 'notifications', 'list');
-    await updateDoc(notificationsRef, {
-      [`notifications.${notification.id}`]: null
-    });
-  };
-
   const router = useRouter();
   const { currentUser } = useSelector((state: any) => state.user);
   
@@ -175,10 +166,19 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
 
     // 사용자 상세 정보 가져오기
     const fetchUserDetails = async () => {
+      // 기본 사용자 정보 가져오기
       const userDoc = await getDoc(doc(db, "users", ownerUid));
-      if (userDoc.exists()) {
-        setUserDetails(userDoc.data());
-      }
+      const userData = userDoc.exists() ? userDoc.data() : {};
+      
+      // 추가 상세 정보 가져오기 (logoUrl 등)
+      const detailsDoc = await getDoc(doc(db, "users", ownerUid, "info", "details"));
+      const detailsData = detailsDoc.exists() ? detailsDoc.data() : {};
+      
+      // 두 정보 합치기
+      setUserDetails({
+        ...userData,
+        ...detailsData
+      });
     };
 
     // 방문 통계 가져오기
@@ -257,17 +257,23 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
         // 2. 구독 중인 페이지의 알림 가져오기
         const subscriptionsRef = doc(db, 'users', ownerUid, 'settings', 'subscriptions');
         const subscriptionsDoc = await getDoc(subscriptionsRef);
-        const subscribedPages = subscriptionsDoc.exists() ? subscriptionsDoc.data().subscribedPages || {} : {};
+        const subscribedPagesData = subscriptionsDoc.exists() ? subscriptionsDoc.data().subscribedPages || {} : {};
 
         // 3. 구독 중인 페이지의 알림 가져오기
         const subscribedNotifications = await Promise.all(
-          Object.entries(subscribedPages).map(async ([pageOwnerId, pageData]: [string, any]) => {
+          Object.entries(subscribedPagesData).map(async ([pageOwnerId, pageData]: [string, any]) => {
             const pageNotificationsRef = doc(db, 'users', pageOwnerId, 'notifications', 'list');
             const pageNotificationsDoc = await getDoc(pageNotificationsRef);
             if (pageNotificationsDoc.exists()) {
               const notifications = pageNotificationsDoc.data().notifications || {};
               return Object.entries(notifications)
-                .filter(([_, notification]) => notification !== null)
+                .filter(([_, notification]: [string, any]) => {
+                  if (!notification) return false;
+                  const createdAt = notification.createdAt?.toDate();
+                  if (!createdAt) return false;
+                  // 12시간 이내의 알림만 표시
+                  return Date.now() - createdAt.getTime() <= 12 * 60 * 60 * 1000;
+                })
                 .map(([id, notification]: [string, any]) => ({
                   id,
                   ...notification,
@@ -284,7 +290,13 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
         // 4. 모든 알림 합치기
         const allNotifications = [
           ...Object.entries(myNotifications)
-            .filter(([_, notification]) => notification !== null)
+            .filter(([_, notification]: [string, any]) => {
+              if (!notification) return false;
+              const createdAt = notification.createdAt?.toDate();
+              if (!createdAt) return false;
+              // 12시간 이내의 알림만 표시
+              return Date.now() - createdAt.getTime() <= 12 * 60 * 60 * 1000;
+            })
             .map(([id, notification]: [string, any]) => ({
               id,
               ...notification,
@@ -325,25 +337,25 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="bg-black/70 border-t border-white/20">
-        <div className="mx-auto w-full max-w-sm">
-          <DrawerHeader className="border-b border-white/10">
+      <DrawerContent className="bg-black/70 border-t border-white/20 h-[100dvh] overflow-hidden">
+        <div className="mx-auto w-full max-w-sm h-full flex flex-col">
+          <DrawerHeader className="border-b border-white/10 flex-shrink-0">
             <DrawerTitle className="text-2xl font-bold text-center text-white">내 정보</DrawerTitle>
           </DrawerHeader>
           
-          <div className="px-4 py-6 pb-10 space-y-6 max-h-[calc(85vh-80px)] overflow-y-auto custom-scrollbar">
+          <div className="px-4 py-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar overscroll-contain">
             {/* 프로필 정보 */}
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-white/10 border border-white/20">
-                                 <img 
-                   src={userDetails?.photoURL || "/modoo.png"} 
-                   alt="프로필" 
-                   className="w-full h-full object-cover"
-                 />
+                <img 
+                  src={userDetails?.logoUrl || userDetails?.photoURL || "/Image/logo.png"} 
+                  alt="프로필" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">
-                  {userDetails?.displayName || ownerUsername || '익명'}
+                  {userDetails?.name || userDetails?.displayName || ownerUsername || '익명'}
                 </h3>
                 <p className="text-sm text-white/60">{userDetails?.email}</p>
                 <p className="text-sm text-white/60">
@@ -367,11 +379,122 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
               </div>
             </div>
 
-                         {/* 허용된 사용자 - 사이트 소유자만 볼 수 있음 */}
+            {/* 새로운 소식 - 페이지 소유자만 볼 수 있음 */}
+            {currentUser?.uid === ownerUid && (
+              <Collapsible className="space-y-2">
+                <CollapsibleTrigger className="flex items-center justify-between w-full bg-white/10 rounded-lg p-4 backdrop-blur-sm hover:bg-white/20 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-md font-semibold text-white">새로운 소식</h3>
+                    {notifications?.filter(n => !n?.readAt)?.length > 0 && (
+                      <span className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">
+                        {notifications?.filter(n => !n?.readAt)?.length}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-white/60 transition-transform duration-200 collapsible-open:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="bg-white/5 rounded-lg p-4 space-y-4 backdrop-blur-sm mt-2">
+                    {/* 필터와 설정 */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setNotificationFilter('all')}
+                          className={`px-3 py-1 rounded-full text-sm ${
+                            notificationFilter === 'all' 
+                              ? 'bg-white/20 text-white' 
+                              : 'text-white/60 hover:bg-white/10'
+                          }`}
+                        >
+                          전체
+                        </button>
+                        <button
+                          onClick={() => setNotificationFilter('unread')}
+                          className={`px-3 py-1 rounded-full text-sm ${
+                            notificationFilter === 'unread'
+                              ? 'bg-white/20 text-white'
+                              : 'text-white/60 hover:bg-white/10'
+                          }`}
+                        >
+                          읽지 않음
+                        </button>
+                        <button
+                          onClick={() => setNotificationFilter('read')}
+                          className={`px-3 py-1 rounded-full text-sm ${
+                            notificationFilter === 'read'
+                              ? 'bg-white/20 text-white'
+                              : 'text-white/60 hover:bg-white/10'
+                          }`}
+                        >
+                          읽음
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setShowSettings(true)}
+                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-white/60" />
+                      </button>
+                    </div>
+
+                    {/* 알림 목록 */}
+                    <div className="space-y-3">
+                      {notifications?.filter(notification => {
+                          if (!notification) return false;
+                          if (notificationFilter === 'unread') return !notification.readAt;
+                          if (notificationFilter === 'read') return notification.readAt;
+                          return true;
+                        })
+                        .map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`w-full text-left border-l ${notification.readAt ? 'border-white/10' : 'border-blue-400'} pl-2 hover:bg-white/5 rounded transition-colors group cursor-pointer`}
+                          >
+                            <div className="flex items-start gap-2" onClick={() => handleNotificationClick(notification)}>
+                              {getNotificationIcon(notification.type)}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className={`text-sm ${notification.readAt ? 'text-white/60' : 'text-white'}`}>
+                                    {notification.title}
+                                  </p>
+                                  {notification.sourceUserId && notification.sourceUserId !== ownerUid && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-white/10 rounded text-white/60">
+                                      {notification.sourceUsername || '알 수 없음'}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className={`text-sm ${notification.readAt ? 'text-white/40' : 'text-white/60'}`}>
+                                  {notification.content}
+                                </p>
+                                <p className="text-xs text-white/40 mt-1">
+                                  {notification.createdAt ? new Date(notification.createdAt).toLocaleString('ko-KR', {
+                                    year: '2-digit',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                  }) : '시간 정보 없음'}
+                                </p>
+                              </div>
+                              {/* 12시간 후 자동으로 사라지므로 삭제 버튼 제거 */}
+                            </div>
+                          </div>
+                        ))}
+                      {notifications.length === 0 && (
+                        <p className="text-sm text-white/40 text-center">새로운 소식이 없습니다</p>
+                      )}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* 허용된 사용자 - 사이트 소유자만 볼 수 있음 */}
              {currentUser?.uid === ownerUid && (
                <Collapsible className="space-y-2">
                  <CollapsibleTrigger className="flex items-center justify-between w-full bg-white/10 rounded-lg p-4 backdrop-blur-sm hover:bg-white/20 transition-colors">
-                   <h3 className="text-md font-semibold text-white">허용된 사용자</h3>
+                   <h3 className="text-md font-semibold text-white">초대한 사용자</h3>
                    <ChevronDown className="w-4 h-4 text-white/60 transition-transform duration-200 collapsible-open:rotate-180" />
                  </CollapsibleTrigger>
                  <CollapsibleContent>
@@ -380,7 +503,7 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
                        href={`/editor/${ownerUsername}`}
                        className="block w-full text-sm text-center py-2 mb-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-white/80"
                      >
-                       허용된 사용자 관리하기
+                       초대한 사용자 관리하기
                      </Link>
                      {allowedUsers.length > 0 ? (
                        allowedUsers.map((user, index) => (
@@ -475,122 +598,6 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
                </CollapsibleContent>
              </Collapsible>
 
-             {/* 새로운 소식 */}
-             <Collapsible className="space-y-2">
-               <CollapsibleTrigger className="flex items-center justify-between w-full bg-white/10 rounded-lg p-4 backdrop-blur-sm hover:bg-white/20 transition-colors">
-                 <div className="flex items-center gap-2">
-                   <h3 className="text-md font-semibold text-white">새로운 소식</h3>
-                   {notifications.filter(n => !n.readAt).length > 0 && (
-                     <span className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">
-                       {notifications.filter(n => !n.readAt).length}
-                     </span>
-                   )}
-                 </div>
-                 <ChevronDown className="w-4 h-4 text-white/60 transition-transform duration-200 collapsible-open:rotate-180" />
-               </CollapsibleTrigger>
-               <CollapsibleContent>
-                 <div className="bg-white/5 rounded-lg p-4 space-y-4 backdrop-blur-sm mt-2">
-                   {/* 필터와 설정 */}
-                   <div className="flex items-center justify-between">
-                     <div className="flex gap-2">
-                       <button
-                         onClick={() => setNotificationFilter('all')}
-                         className={`px-3 py-1 rounded-full text-sm ${
-                           notificationFilter === 'all' 
-                             ? 'bg-white/20 text-white' 
-                             : 'text-white/60 hover:bg-white/10'
-                         }`}
-                       >
-                         전체
-                       </button>
-                       <button
-                         onClick={() => setNotificationFilter('unread')}
-                         className={`px-3 py-1 rounded-full text-sm ${
-                           notificationFilter === 'unread'
-                             ? 'bg-white/20 text-white'
-                             : 'text-white/60 hover:bg-white/10'
-                         }`}
-                       >
-                         읽지 않음
-                       </button>
-                       <button
-                         onClick={() => setNotificationFilter('read')}
-                         className={`px-3 py-1 rounded-full text-sm ${
-                           notificationFilter === 'read'
-                             ? 'bg-white/20 text-white'
-                             : 'text-white/60 hover:bg-white/10'
-                         }`}
-                       >
-                         읽음
-                       </button>
-                     </div>
-                     <button
-                       onClick={() => setShowSettings(true)}
-                       className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                     >
-                       <Settings className="w-4 h-4 text-white/60" />
-                     </button>
-                   </div>
-
-                   {/* 알림 목록 */}
-                   <div className="space-y-3">
-                     {notifications
-                       .filter(notification => {
-                         if (notificationFilter === 'unread') return !notification.readAt;
-                         if (notificationFilter === 'read') return notification.readAt;
-                         return true;
-                       })
-                       .map((notification) => (
-                         <div
-                           key={notification.id}
-                           className={`w-full text-left border-l ${notification.readAt ? 'border-white/10' : 'border-blue-400'} pl-2 hover:bg-white/5 rounded transition-colors group cursor-pointer`}
-                         >
-                           <div className="flex items-start gap-2" onClick={() => handleNotificationClick(notification)}>
-                             {getNotificationIcon(notification.type)}
-                             <div className="flex-1">
-                               <div className="flex items-center gap-2">
-                                 <p className={`text-sm ${notification.readAt ? 'text-white/60' : 'text-white'}`}>
-                                   {notification.title}
-                                 </p>
-                                 {notification.sourceUserId !== ownerUid && (
-                                   <span className="text-xs px-1.5 py-0.5 bg-white/10 rounded text-white/60">
-                                     {notification.sourceUsername}
-                                   </span>
-                                 )}
-                               </div>
-                               <p className={`text-sm ${notification.readAt ? 'text-white/40' : 'text-white/60'}`}>
-                                 {notification.content}
-                               </p>
-                               <p className="text-xs text-white/40 mt-1">
-                                 {new Date(notification.createdAt).toLocaleString('ko-KR', {
-                                   year: '2-digit',
-                                   month: '2-digit',
-                                   day: '2-digit',
-                                   hour: '2-digit',
-                                   minute: '2-digit',
-                                   hour12: false
-                                 })}
-                               </p>
-                             </div>
-                             <div 
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 handleDeleteNotification(notification, e);
-                               }}
-                               className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all cursor-pointer"
-                             >
-                               <X className="w-4 h-4 text-white/60" />
-                             </div>
-                           </div>
-                         </div>
-                       ))}
-                     {notifications.length === 0 && (
-                       <p className="text-sm text-white/40 text-center">새로운 소식이 없습니다</p>
-                     )}
-                   </div>
-                 </div>
-               </CollapsibleContent>
-             </Collapsible>
 
              {/* 알림 설정 모달 */}
              <Dialog open={showSettings} onOpenChange={setShowSettings}>

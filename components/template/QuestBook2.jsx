@@ -832,14 +832,16 @@ const Board = ({ username, uid }) => {
           q = query(
             baseQuery,
             orderBy('createdAt', 'desc'),
-            orderBy('isNotice', 'desc')
+            orderBy('isNotice', 'desc'),
+            limit(POSTS_PER_PAGE)
           );
         } else {
           q = query(
             baseQuery,
             where('category', '==', selectedCategory),
             orderBy('createdAt', 'desc'),
-            orderBy('isNotice', 'desc')
+            orderBy('isNotice', 'desc'),
+            limit(POSTS_PER_PAGE)
           );
         }
 

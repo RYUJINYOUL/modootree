@@ -779,14 +779,14 @@ const TodayDiary = ({ username, uid, isEditable }) => {
               ` : 'scale(0.8)'
             }}
           >
-            <div className="absolute top-4 right-4 z-50">
+            <div className="absolute top-20 right-4 z-50">
               <Button
                 variant="ghost"
                 size="icon"
-                className="bg-black/20 hover:bg-black/40 text-white"
+                className="bg-black/20 hover:bg-black/40 text-white rounded-full"
                 onClick={() => setImageViewer({ isOpen: false, currentIndex: -1 })}
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
             <div className="relative w-full h-full max-w-7xl mx-auto px-4">

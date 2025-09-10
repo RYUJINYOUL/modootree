@@ -38,27 +38,27 @@ export default function MainHeader() {
         <div className="flex items-center">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center space-x-3 bg-white/10 hover:bg-white/20 transition-all duration-200 rounded-full px-4 py-2 backdrop-blur-md"
+            className="flex items-center space-x-2 md:space-x-3 bg-white/10 hover:bg-white/20 transition-all duration-200 rounded-full px-3 md:px-4 py-1.5 md:py-2 backdrop-blur-md"
           >
             <Image
               src="/Image/logo.png"
               alt="ModooTree Logo"
               width={120}
               height={120}
-              className="w-8 h-8"
+              className="w-6 h-6 md:w-8 md:h-8"
             />
-            <span className="text-white/90 text-sm font-medium">
+            <span className="text-white/90 text-xs md:text-sm font-medium">
               {user?.currentUser?.uid ? '로그인 중' : '로그아웃 중'}
             </span>
-            <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
+            <ChevronDown className={`w-3 h-3 md:w-4 md:h-4 text-white/70 transition-transform duration-200 ${
               showDropdown ? 'rotate-180' : ''
             }`} />
           </button>
           <button
             onClick={() => setShowHeader(false)}
-            className="ml-2 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-200 backdrop-blur-md"
+            className="ml-1.5 md:ml-2 p-1.5 md:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-200 backdrop-blur-md"
           >
-            <X className="w-4 h-4 text-white/70" />
+            <X className="w-3 h-3 md:w-4 md:h-4 text-white/70" />
           </button>
         </div>
 

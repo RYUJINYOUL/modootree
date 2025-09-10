@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   verification: {
     other: {
       'naver-site-verification': '9f741f94681059d45853466618ab08aecdc3852c',
+      'google-adsense-account': 'ca-pub-6697023128093217',
     },
   },
 }

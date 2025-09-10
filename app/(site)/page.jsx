@@ -260,7 +260,7 @@ export default function Page() {
             <div className="animate-swing mb-4">
               <Image
                 src="/Image/logo.png"
-                alt="ModooTree Logo"
+                alt="모두트리 로고"
                 width={300}
                 height={300}
                 priority

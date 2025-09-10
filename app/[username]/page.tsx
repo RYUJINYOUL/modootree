@@ -17,7 +17,7 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebase';
 import TranslateBanner from '@/app/components/ui/TranslateBanner';
 import Image from 'next/image';
-import { X, Bell } from 'lucide-react';
+import { X, Bell, Menu, ArrowRight } from 'lucide-react';
 import MyInfoDrawer from '@/components/ui/MyInfoDrawer';
 import { useCallback } from 'react';
 import Particles from "react-tsparticles";
@@ -187,6 +187,7 @@ export default function UserPublicPage() {
   const [showBottomButton, setShowBottomButton] = useState(true);
   const [isAnimationEnabled, setIsAnimationEnabled] = useState(true);
   const [isMyInfoOpen, setIsMyInfoOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   // 알림 개수 초기화 함수
@@ -499,16 +500,93 @@ export default function UserPublicPage() {
   return (
     <>
       <TranslateBanner />
-      <div className="absolute top-4 left-4 z-50">
-        <button
-          onClick={() => setIsMyInfoOpen(true)}
-          className="flex items-center justify-center w-9 h-9 bg-white/70 backdrop-blur-sm rounded-full hover:bg-white/90 transition-all shadow-lg relative"
-        >
-          <Bell className="w-5 h-5 text-black" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full" />
-          )}
-        </button>
+       <div className="absolute top-4 left-0 right-0 z-50">
+         <div className="w-full max-w-[1000px] mx-auto md:px-[24px]">
+           <div className="flex justify-between px-[10px] md:px-0">
+            <button
+              onClick={() => setIsMyInfoOpen(true)}
+              className="flex items-center justify-center w-9 h-9 bg-white/50 backdrop-blur-sm rounded-full hover:bg-white/90 transition-all shadow-lg relative"
+            >
+              <Image 
+                src={userData?.bellIcon || "/Image/sns/bell-icon.png"}
+                alt="알림"
+                width={20}
+                height={20}
+                className="w-5 h-5 object-contain"
+              />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="flex items-center justify-center w-9 h-9 bg-white/50 backdrop-blur-sm rounded-full hover:bg-white/90 transition-all shadow-lg"
+            >
+              <Image 
+                src={userData?.menuIcon || "/Image/sns/menu-icon.png"}
+                alt="메뉴"
+                width={20}
+                height={20}
+                className="w-5 h-5 object-contain"
+              />
+            </button>
+
+            {/* 전체 화면 메뉴 오버레이 */}
+            <div 
+              className={`fixed inset-0 bg-black/90 backdrop-blur-md z-[100] transition-all duration-500 ${
+                isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
+            >
+              {/* 닫기 버튼 */}
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="absolute top-4 right-4 md:right-[calc((100%-1000px)/2+18px)] flex items-center justify-center w-9 h-9 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition-all"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+
+              {/* 메뉴 컨텐츠 */}
+              <div className="w-full max-w-[1000px] mx-auto h-full px-[18px] pt-20">
+                <div className={`transform transition-all duration-500 ${
+                  isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+                }`}>
+                  <nav className="flex flex-col gap-6">
+                    <Link 
+                      href="/"
+                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">모두트리 홈</span>
+                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      </div>
+                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
+                    </Link>
+                    <Link 
+                      href="/likes/all"
+                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">공감 한조각</span>
+                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      </div>
+                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
+                    </Link>
+                    <Link 
+                      href="/inquiry"
+                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">문의게시판</span>
+                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      </div>
+                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
+                    </Link>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <MyInfoDrawer 
           isOpen={isMyInfoOpen}
           onClose={() => setIsMyInfoOpen(false)}
@@ -524,7 +602,7 @@ export default function UserPublicPage() {
           <ParticlesComponent />
         )}
         <div className="flex-grow flex flex-col items-center w-full z-10 relative">
-          <div className="md:w-[1000px] w-full px-[10px] relative">   
+          <div className="md:w-[1000px] w-full md:px-[10px] relative">   
             {components.map((component, index) => (
               <ComponentRenderer
                 key={index}
@@ -547,7 +625,7 @@ export default function UserPublicPage() {
           
           {/* 하단 버튼 */}
           {showBottomButton && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+            <div className="fixed bottom-[39px] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
               <Link
                 href="/"
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all shadow-lg whitespace-nowrap"
@@ -571,6 +649,10 @@ export default function UserPublicPage() {
           )}
         </div>
       </main>
+      <CollapsibleFooter />
     </>
   );
 }
+
+// 구글 애드센스 컴포넌트
+import CollapsibleFooter from '@/components/ui/CollapsibleFooter';

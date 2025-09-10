@@ -28,6 +28,15 @@ const nextConfig = {
       },
     ]
   },
+  // Google AdSense 스크립트 허용
+  async rewrites() {
+    return [
+      {
+        source: '/pagead/js/adsbygoogle.js',
+        destination: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
+      }
+    ];
+  },
   images: {
     domains: ['firebasestorage.googleapis.com', 'lh3.googleusercontent.com', 'img.youtube.com'],
   },

@@ -208,7 +208,7 @@ export default function LikesPage() {
           likesData.push({
             id: doc.id,
             ...data,
-            createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
             reactions: data.reactions || {
               awesome: 0,
               cheer: 0,
@@ -403,7 +403,7 @@ export default function LikesPage() {
         userId: commentUserInfo.userId,
         userName: commentUserInfo.userName,
         userEmail: commentUserInfo.userEmail,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       };
 
       await addDoc(collection(db, 'comments'), commentData);
@@ -541,7 +541,23 @@ export default function LikesPage() {
               {getUserDisplayName(comment)}
             </span>
             <span className="text-xs text-white/50">
-              {comment.createdAt?.toDate().toLocaleString()}
+              {(() => {
+                try {
+                  if (!comment.createdAt) return '시간 정보 없음';
+                  const date = comment.createdAt.toDate ? comment.createdAt.toDate() : new Date(comment.createdAt);
+                  return date.toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  });
+                } catch (error) {
+                  console.error('날짜 변환 오류:', error);
+                  return '시간 정보 오류';
+                }
+              })()}
             </span>
           </div>
           {editingComment?.id === comment.id ? (
@@ -712,7 +728,20 @@ export default function LikesPage() {
                       <Eye className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-500">{like.viewCount || 0}</span>
                       <span className="text-xs text-gray-500">
-                        {like.createdAt?.toLocaleDateString()}
+                        {(() => {
+                          try {
+                            if (!like.createdAt) return '시간 정보 없음';
+                            const date = like.createdAt.toDate ? like.createdAt.toDate() : new Date(like.createdAt);
+                            return date.toLocaleString('ko-KR', {
+                              year: '2-digit',
+                              month: '2-digit',
+                              day: '2-digit'
+                            });
+                          } catch (error) {
+                            console.error('날짜 변환 오류:', error);
+                            return '시간 정보 오류';
+                          }
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -882,6 +911,10 @@ export default function LikesPage() {
         </Dialog>
         </div>
       </div>
+      <CollapsibleFooter />
     </>
   );
-} 
+}
+
+// 구글 애드센스 컴포넌트
+import CollapsibleFooter from '@/components/ui/CollapsibleFooter'; 

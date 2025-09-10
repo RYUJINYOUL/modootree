@@ -7,11 +7,12 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
   
-  // 메인페이지, 로그인, 회원가입 페이지, username 페이지에서는 푸터를 숨김
+  // 로그인, 회원가입 페이지, username 페이지에서는 푸터를 숨김
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isUserPage = /^\/[^/]+$/.test(pathname) && pathname !== '/inquiry'; // /username 형식의 경로 체크, inquiry 페이지 제외
+  const isLikesPage = pathname === '/likes/all'; // /likes/all 페이지 체크
 
-  if (isAuthPage || isUserPage) {
+  if (isAuthPage || isUserPage || isLikesPage) {
     return null;
   }
 
@@ -23,7 +24,7 @@ export default function Footer() {
           <div className="flex items-center gap-2">
             <Image
               src="/Image/logo.png"
-              alt="ModooTree Logo"
+              alt="모두트리 로고"
               width={120}
               height={120}
               className="w-8 h-8"

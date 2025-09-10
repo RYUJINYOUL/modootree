@@ -382,7 +382,7 @@ export default function Gallery3({ username, uid }: LogoProps) {
 
   return (
     <>
-    <div className="flex items-center justify-center w-full p-[10px]">
+    <div className="flex items-center justify-center w-full md:p-[10px]">
       <div 
         className={cn(
           "relative w-full md:w-[1000px] overflow-hidden",
