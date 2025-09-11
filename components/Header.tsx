@@ -21,11 +21,12 @@ export default function Header() {
   const [isVisible, setIsVisible] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);  // 푸터 표시 상태
   
-  // 메인페이지, 로그인, 회원가입 페이지에서는 헤더를 숨김
+  // 메인페이지, 로그인, 회원가입, 문의하기 페이지에서는 헤더를 숨김
   const isMainPage = pathname === '/';
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isInquiryPage = pathname === '/inquiry';
 
-  if (isMainPage || isAuthPage) {
+  if (isMainPage || isAuthPage || isInquiryPage) {
     return null;
   }
 
@@ -124,7 +125,8 @@ export default function Header() {
       if (path === '/' || 
           path === '/likes/all' || 
           path === '/login' || 
-          path === '/register') {
+          path === '/register' ||
+          path === '/inquiry') {
         setShowDropdown(false);
         router.push(path);
         return;

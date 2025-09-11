@@ -27,15 +27,16 @@ import { ComponentKey } from '@/components/edit/ComponentLibrary';
 const db = getFirestore(app);
 
 // 사이트 타입 정의
-type SiteType = "diary" | "schedule" | "links" | "portfolio" | "etc";
+type SiteType = "diary" | "schedule" | "links" | "portfolio" | "etc" | "community";
 
 // 사이트 타입별 기본 컴포넌트 설정
 const DEFAULT_COMPONENTS: Record<SiteType, ComponentKey[]> = {
-  diary: ["일기장"],
-  schedule: ["달력"],
-  links: ["링크카드"],
-  portfolio: ["사진첩"],
-  etc: ["프로필카드", "링크카드", "달력", "게스트북"]
+  diary: ["프로필카드","오늘일기","사진첩"],
+  schedule: ["프로필카드","달력","게스트북"],
+  links: ["프로필카드","링크카드","사진첩"],
+  portfolio: ["프로필카드","링크카드","포트폴리오","사진첩"],
+  community: ["프로필카드", "자유게시판", "사진첩", "게스트북"],
+  etc: []
 } as const;
 
 // 사이트 타입 한글명
@@ -44,6 +45,7 @@ const TYPE_LABELS: Record<SiteType, string> = {
   schedule: "일정표",
   links: "링크모음",
   portfolio: "포트폴리오",
+  community: "커뮤니티",
   etc: "기타"
 };
 
@@ -449,7 +451,7 @@ export default function EditPage({ username }: { username: string }) {
 
         {/* 허용된 사용자 관리 섹션 */}
         <div className="bg-gray-50 rounded-xl p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">허용된 사용자 관리</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">초대 사용자 관리</h2>
           
           {/* 사용자 추가 폼 */}
           <form onSubmit={handleAddUser} className="space-y-4 mb-6">

@@ -240,7 +240,7 @@ export default function InquiryPage() {
               />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -248,6 +248,14 @@ export default function InquiryPage() {
               >
                 {isSubmitting ? '등록 중...' : '등록하기'}
               </button>
+              <a
+                href="http://pf.kakao.com/_pGNPn/chat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+              >
+                카톡문의
+              </a>
             </div>
           </form>
         </div>
