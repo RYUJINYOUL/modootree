@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { useSelector } from 'react-redux';
 import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -521,17 +522,27 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
 
   const renderButtons = () => {
     const buttons: ButtonConfig[] = [
-      ...((!isEditable) ? [
-        { field: 'views', icon: BsEyeFill, label: '', color: 'text-blue-400/80', count: contactInfo.views || 0 },
-        { field: 'likes', icon: FaHeart, label: '', color: 'text-red-500', onClick: handleLike, count: contactInfo.likedBy?.length || 0, isActive: hasLiked }
-      ] : []),
-      { field: 'phone', icon: BsPhone, label: '전화번호', color: 'text-gray-100/90' },
+      // 좋아요와 조회수 제거
+      { field: 'phone', icon: BsPhone, label: '전화번호', color: 'text-blue-500/90' },
       { field: 'location', icon: IoLocationSharp, label: '위치', color: 'text-red-500/90' },
-      { field: 'instagram', icon: FaInstagram, label: '인스타그램', color: 'text-pink-500/90' },
+      { field: 'instagram', icon: FaInstagram, label: '인스타', color: 'text-pink-500/90' },
       { field: 'facebook', icon: FaFacebook, label: '페이스북', color: 'text-blue-600/90' },
       { field: 'youtube', icon: FaYoutube, label: '유튜브', color: 'text-red-600/90' },
       { field: 'kakao', icon: RiKakaoTalkFill, label: '카카오톡', color: 'text-yellow-400/90' },
-      { field: 'naver', icon: SiNaver, label: '네이버', color: 'text-green-500/90' },
+      { 
+        field: 'naver', 
+        icon: () => (
+          <Image 
+            src="/Image/sns/naver.png" 
+            alt="네이버" 
+            width={30} 
+            height={30} 
+            className="opacity-90"
+          />
+        ), 
+        label: '네이버', 
+        color: 'text-green-500/90' 
+      },
       { field: 'website', icon: BsGlobe2, label: '웹사이트', color: 'text-blue-400/90' },
       { field: 'shop', icon: FaShoppingBag, label: '쇼핑몰', color: 'text-purple-500/90' },
       { field: 'blog', icon: FaBlogger, label: '블로그', color: 'text-orange-500/90' },
@@ -541,7 +552,7 @@ export default function ContactButtons({ username, uid }: ContactButtonsProps) {
     const filteredButtons = isEditable 
       ? buttons 
       : buttons.filter(button => {
-          if (button.field === 'views' || button.field === 'likes') return true;
+          // 좋아요와 조회수 조건 제거
           return contactInfo[button.field as keyof ContactInfo] && contactInfo[button.field as keyof ContactInfo] !== '';
         });
 

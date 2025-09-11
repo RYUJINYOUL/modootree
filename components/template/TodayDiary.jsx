@@ -1550,10 +1550,10 @@ const TodayDiary = ({ username, uid, isEditable }) => {
       </Dialog>
 
       {renderColorSettings()}
-      <Tabs defaultValue="calendar" className="w-full">
+      <Tabs defaultValue="calendar" className="w-full min-h-[600px] flex flex-col">
         <TabsList 
           className={cn(
-            "grid w-full grid-cols-3 mb-8",
+            "grid w-full grid-cols-3 mb-8 h-[60px] place-items-center",
             styleSettings.rounded === 'none' && 'rounded-none',
             styleSettings.rounded === 'sm' && 'rounded',
             styleSettings.rounded === 'md' && 'rounded-lg',
@@ -1586,21 +1586,21 @@ const TodayDiary = ({ username, uid, isEditable }) => {
         >
           <TabsTrigger 
             value="calendar" 
-            className="data-[state=active]:bg-white/10"
+            className="data-[state=active]:bg-white/10 h-full flex items-center justify-center text-lg"
             style={{ color: styleSettings.textColor }}
           >
             달력
           </TabsTrigger>
           <TabsTrigger 
             value="list"
-            className="data-[state=active]:bg-white/10"
+            className="data-[state=active]:bg-white/10 h-full flex items-center justify-center text-lg"
             style={{ color: styleSettings.textColor }}
           >
             목록
           </TabsTrigger>
           <TabsTrigger 
             value="gallery"
-            className="data-[state=active]:bg-white/10"
+            className="data-[state=active]:bg-white/10 h-full flex items-center justify-center text-lg"
             style={{ color: styleSettings.textColor }}
           >
             사진첩
