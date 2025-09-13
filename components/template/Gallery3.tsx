@@ -674,14 +674,14 @@ export default function Gallery3({ username, uid }: LogoProps) {
                   onClick={handleCopyAddress}
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-xl transition-all duration-200 backdrop-blur-sm"
                 >
-                  <Copy className="w-5 h-5" />
+                  <Copy className="w-[18px] h-[18px]" />
                   주소 복사
                 </Button>
                 <Button
                   onClick={handleShare}
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-xl transition-all duration-200 backdrop-blur-sm"
                 >
-                  <Share2 className="w-5 h-5" />
+                  <Share2 className="w-[18px] h-[18px]" />
                   공유하기
                 </Button>
               </div>

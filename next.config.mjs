@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: true,
   async redirects() {
     return [
       {
@@ -23,6 +26,14 @@ const nextConfig = {
           {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin-allow-popups'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          },
+          {
+            key: 'Content-Encoding',
+            value: 'gzip'
           }
         ],
       },
@@ -39,6 +50,10 @@ const nextConfig = {
   },
   images: {
     domains: ['firebasestorage.googleapis.com', 'lh3.googleusercontent.com', 'img.youtube.com'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/webp'],
+    minimumCacheTTL: 60,
   },
   webpack: (config) => {
     config.resolve.fallback = { fs: false };

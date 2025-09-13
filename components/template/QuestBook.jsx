@@ -89,6 +89,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   const [message, setMessage] = useState('')
   const [replyTo, setReplyTo] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [saveStatus, setSaveStatus] = useState('')
   const [lastVisible, setLastVisible] = useState(null)
   const [hasMore, setHasMore] = useState(true)
   const observer = useRef()
@@ -172,9 +173,12 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!message.trim()) {
-      showToast("오류", "메시지를 입력해주세요.");
       return
     }
+
+    // 저장 시작
+    const messageToSave = message;
+    setSaveStatus('저장 중...');
     
     // 이름이 없을 경우 '익명'으로 설정
     const finalName = name.trim() || '익명';
@@ -186,28 +190,77 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         const commentDoc = await getDoc(commentRef)
         const currentReplies = commentDoc.data().replies || []
 
+        // AI 답변 생성
+        let aiResponse = '';
+        try {
+          const response = await fetch('/api/ai-response', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: message })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            aiResponse = data.response;
+          }
+        } catch (error) {
+          console.error('AI 답변 생성 중 오류:', error);
+          aiResponse = '죄송합니다. AI 답변을 생성하는 중에 오류가 발생했습니다.';
+        }
+
         await updateDoc(commentRef, {
           replies: [...currentReplies, {
             name: finalName,
-            message,
+            message: messageToSave,
             createdAt: new Date(),
             uid: currentUser?.uid || null,
             profileImage: currentUser?.photoURL || null,
             likes: 0,
-            likedBy: []
+            likedBy: [],
+            aiResponse
           }]
         })
       } else {
         // 새 방명록 작성
+        // AI 답변 생성
+        let aiResponse = '';
+        setSaveStatus('AI 답변을 생성하고 있습니다...');
+        try {
+          const response = await fetch('/api/ai-response', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: messageToSave })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            aiResponse = data.response;
+          }
+        } catch (error) {
+          console.error('AI 답변 생성 중 오류:', error);
+          aiResponse = '죄송합니다. AI 답변을 생성하는 중에 오류가 발생했습니다.';
+        }
+        
+        // 저장 완료 후 폼 초기화
+        setMessage('');
+        setName('');
+        setIsFormOpen(false);
+        setSaveStatus('');
+
         const docRef = await addDoc(collection(db, 'users', finalUid, 'comments'), {
           name: finalName,
-          message,
+          message: messageToSave,
           createdAt: new Date(),
           uid: currentUser?.uid || null,
           profileImage: currentUser?.photoURL || null,
           likes: 0,
           likedBy: [],
-          replies: []
+          replies: [],
+          aiResponse
         })
 
         // 구독자들에게 알림 전송
@@ -230,13 +283,13 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
           // 알림 전송 실패는 방명록 작성에 영향을 주지 않음
         }
       }
-      setName('')
-      setMessage('')
-      setIsFormOpen(false)
-      showToast("성공", replyTo ? "답글이 등록되었습니다." : "방명록이 등록되었습니다.");
     } catch (error) {
       console.error('방명록 작성 실패:', error)
-      showToast("오류", "작성에 실패했습니다. 다시 시도해주세요.");
+      // 에러 발생 시 메시지 복원
+      setMessage(messageToSave);
+      setName(finalName);
+      setIsFormOpen(true);
+      setSaveStatus('');
     }
   }
 
@@ -244,10 +297,8 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
     try {
       await deleteDoc(doc(db, 'users', finalUid, 'comments', id))
-      showToast("삭제 완료", "방명록이 삭제되었습니다.");
     } catch (error) {
       console.error('삭제 실패:', error)
-      showToast("오류", "삭제에 실패했습니다.");
     }
   }
 
@@ -284,11 +335,8 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
             : arrayUnion(userId)
         })
       }
-      
-      showToast("좋아요", "반영되었습니다.", 1000);
   } catch (error) {
       console.error('좋아요 처리 실패:', error)
-      showToast("오류", "좋아요 처리에 실패했습니다.");
     }
   }
 
@@ -304,12 +352,18 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
         <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
           {/* 방명록 작성 폼 */}
           <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded-xl shadow-sm">
+            {saveStatus && (
+              <div className="mb-3 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                {saveStatus}
+              </div>
+            )}
             <div className="flex flex-col space-y-3">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={replyTo ? "답글 쓰기" : "메시지를 입력하세요"}
                 className="px-4 py-2 border border-gray-200 rounded-lg h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                disabled={saveStatus !== ''}
               />
               <div className="flex justify-between items-center">
                 {replyTo && (
@@ -373,24 +427,64 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
                 {entry.replies && entry.replies.length > 0 && (
                   <div className="mt-4 ml-8 space-y-3">
                     {entry.replies.map((reply, replyIndex) => (
-                      <div key={replyIndex} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-end">
-                          <span className="text-xs text-gray-500">{getTimeAgo(reply.createdAt)}</span>
+                      <div key={replyIndex} className="space-y-3">
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-end">
+                            <span className="text-xs text-gray-500">{getTimeAgo(reply.createdAt)}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-gray-700">{reply.message}</p>
+                          <div className="mt-2">
+                            <button
+                              onClick={() => handleLike(entry.id, true, replyIndex)}
+                              className="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-500"
+                            >
+                              {reply.likedBy?.includes(currentUser?.uid || 'anonymous') ? (
+                                <FaHeart className="text-red-500" size={12} />
+                              ) : (
+                                <FaRegHeart size={12} />
+                              )}
+                              <span>{reply.likes || 0}</span>
+                            </button>
+                          </div>
                         </div>
-                        <p className="mt-1 text-sm text-gray-700">{reply.message}</p>
-                        <div className="mt-2">
-        <button
-                            onClick={() => handleLike(entry.id, true, replyIndex)}
-                            className="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-500"
-                          >
-                            {reply.likedBy?.includes(currentUser?.uid || 'anonymous') ? (
-                              <FaHeart className="text-red-500" size={12} />
-                            ) : (
-                              <FaRegHeart size={12} />
+                        {reply.aiResponse && (
+                          <div 
+                            className={cn(
+                              "p-3 backdrop-blur-sm ml-4",
+                              styleSettings.rounded === 'none' && 'rounded-none',
+                              styleSettings.rounded === 'sm' && 'rounded',
+                              styleSettings.rounded === 'md' && 'rounded-lg',
+                              styleSettings.rounded === 'lg' && 'rounded-xl',
+                              styleSettings.rounded === 'full' && 'rounded-full'
                             )}
-                            <span>{reply.likes || 0}</span>
-        </button>
-                        </div>
+                            style={{
+                              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
+                              boxShadow: (() => {
+                                const shadowColor = styleSettings.shadowColor 
+                                  ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+                                  : 'rgba(0, 0, 0, 0.2)';
+                                return styleSettings.shadow === 'none' ? 'none' : `0 2px 4px ${shadowColor}`;
+                              })()
+                            }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <div 
+                                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                                  style={{ 
+                                    backgroundColor: `${styleSettings.bgColor}${Math.round(0.2 * 255).toString(16).padStart(2, '0')}`,
+                                    border: `1px solid ${styleSettings.textColor}20`
+                                  }}
+                                >
+                                  <span className="text-xs font-medium" style={{ color: styleSettings.textColor }}>AI</span>
+                                </div>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm whitespace-pre-wrap" style={{ color: styleSettings.textColor }}>{reply.aiResponse}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -691,11 +785,8 @@ export default function GuestbookTemplate({ username, uid }) {
           ? arrayRemove(userId)
           : arrayUnion(userId)
       })
-      
-      showToast("좋아요", "반영되었습니다.", 1000);
     } catch (error) {
       console.error('좋아요 처리 실패:', error)
-      showToast("오류", "좋아요 처리에 실패했습니다.");
     }
   };
 
@@ -862,28 +953,69 @@ export default function GuestbookTemplate({ username, uid }) {
               <p style={{ color: styleSettings.textColor }} className="leading-relaxed">
                 {entry.message}
               </p>
+              {entry.aiResponse && (
+                <div 
+                  className={cn(
+                    "mt-4 p-3 backdrop-blur-sm",
+                    styleSettings.rounded === 'none' && 'rounded-none',
+                    styleSettings.rounded === 'sm' && 'rounded',
+                    styleSettings.rounded === 'md' && 'rounded-lg',
+                    styleSettings.rounded === 'lg' && 'rounded-xl',
+                    styleSettings.rounded === 'full' && 'rounded-full'
+                  )}
+                  style={{
+                    backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
+                    boxShadow: (() => {
+                      const shadowColor = styleSettings.shadowColor 
+                        ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
+                        : 'rgba(0, 0, 0, 0.2)';
+                      return styleSettings.shadow === 'none' ? 'none' : `0 2px 4px ${shadowColor}`;
+                    })()
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <div 
+                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                        style={{ 
+                          backgroundColor: `${styleSettings.bgColor}${Math.round(0.2 * 255).toString(16).padStart(2, '0')}`,
+                          border: `1px solid ${styleSettings.textColor}20`
+                        }}
+                      >
+                        <span className="text-xs font-medium" style={{ color: styleSettings.textColor }}>AI</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm" style={{ color: styleSettings.textColor }}>{entry.aiResponse}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMainLike(entry.id);
-                    }}
-                    className="flex items-center space-x-1 transition-colors"
-                    style={{ color: styleSettings.textColor, opacity: 0.7 }}
-                  >
-                    <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : ""} />
-                    <span>{entry.likes || 0}</span>
-                  </button>
-                  {entry.replies?.length > 0 && (
-                    <div 
-                      className="flex items-center space-x-1"
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMainLike(entry.id);
+                      }}
+                      className="flex items-center space-x-1 transition-colors"
                       style={{ color: styleSettings.textColor, opacity: 0.7 }}
                     >
-                      <MessageCircle size={16} />
-                      <span>{entry.replies.length}</span>
-                    </div>
-                  )}
+                      <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : ""} />
+                      <span>{entry.likes || 0}</span>
+                    </button>
+                    <HeaderDrawer uid={finalUid}>
+                      <button
+                        className="flex items-center space-x-1 transition-colors"
+                        style={{ color: styleSettings.textColor, opacity: 0.7 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MessageCircle size={16} />
+                        <span>{entry.replies?.length || 0}</span>
+                      </button>
+                    </HeaderDrawer>
+                  </div>
                 </div>
                 <span 
                   className="text-sm px-2 py-1 rounded-full"
