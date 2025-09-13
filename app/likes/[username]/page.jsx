@@ -15,15 +15,16 @@ import {
   addDoc,
   where,
   onSnapshot,
-  setDoc
+  setDoc,
+  serverTimestamp
 } from 'firebase/firestore';
-import { getStorage, ref, deleteObject } from 'firebase/storage';
+import { getStorage, ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 import Link from 'next/link';
 import CategoryCarousel from '../../components/CategoryCarousel';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
-import { Trash2, MessageCircle, Edit, Send, Eye } from 'lucide-react';
+import { Trash2, MessageCircle, Edit, Send, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -169,7 +170,7 @@ export default function LikesPage() {
   const [reacting, setReacting] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedLike, setSelectedLike] = useState(null);
-  const { currentUser } = useSelector((state) => state.user);
+  const { currentUser } = useSelector((state) => state.user) || {};
   const auth = getAuth();
   
   // 답글 관련 상태 추가
@@ -181,6 +182,18 @@ export default function LikesPage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [userReactions, setUserReactions] = useState({});  // 사용자가 누른 공감 버튼 추적
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
+  const [currentImageSet, setCurrentImageSet] = useState([]);
+  const [showWriteForm, setShowWriteForm] = useState(false);
+  const [writeForm, setWriteForm] = useState({
+    title: '',
+    content: '',
+    images: [],
+    pendingImages: [],
+    category: '일상'  // 기본 카테고리
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   // 관리자 UID 목록
   const isAdmin = currentUser?.uid && ADMIN_UIDS.includes(currentUser.uid);
@@ -196,14 +209,14 @@ export default function LikesPage() {
   }, []);
 
   useEffect(() => {
-    const fetchLikes = async () => {
+    const likesRef = collection(db, 'likes');
+    const q = query(likesRef, orderBy('createdAt', 'desc'));
+
+    // 실시간 업데이트를 위한 리스너 설정
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       try {
-        const likesRef = collection(db, 'likes');
-        const q = query(likesRef, orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
         const likesData = [];
-        for (const doc of querySnapshot.docs) {
+        snapshot.forEach((doc) => {
           const data = doc.data();
           likesData.push({
             id: doc.id,
@@ -216,17 +229,17 @@ export default function LikesPage() {
               same: 0
             }
           });
-        }
+        });
         
         setLikes(likesData);
+        setLoading(false);
       } catch (error) {
         console.error('공감 목록 가져오기 실패:', error);
-      } finally {
-        setLoading(false);
       }
-    };
+    });
 
-    fetchLikes();
+    // 컴포넌트 언마운트 시 리스너 해제
+    return () => unsubscribe();
   }, []);
 
   // 실시간 업데이트를 위한 useEffect 추가
@@ -651,10 +664,192 @@ export default function LikesPage() {
         <ParticlesComponent />
         <div className="container mx-auto px-4 py-10 relative z-10">
         
-          {/* 제목 추가 */}
-          <h1 className="text-2xl font-bold text-center text-white mb-6">
-            공감 한조각
-          </h1>
+          {/* 제목과 작성 버튼 */}
+          <div className="relative flex items-center justify-center mb-6">
+            <h1 className="text-2xl font-bold text-white text-center">
+              공감 한조각
+            </h1>
+            {currentUser?.uid && (
+              <div className="absolute right-0">
+                <Button
+                  onClick={() => setShowWriteForm(true)}
+                  className="bg-blue-500 hover:bg-blue-600"
+                >
+                  글쓰기
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* 작성 모달 */}
+          <Dialog open={showWriteForm} onOpenChange={setShowWriteForm}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>공감 글 작성</DialogTitle>
+              </DialogHeader>
+                <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">카테고리</label>
+                  <select
+                    value={writeForm.category}
+                    onChange={(e) => setWriteForm({ ...writeForm, category: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">제목</label>
+                  <input
+                    type="text"
+                    value={writeForm.title}
+                    onChange={(e) => setWriteForm({ ...writeForm, title: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="제목을 입력하세요"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">내용</label>
+                  <textarea
+                    value={writeForm.content}
+                    onChange={(e) => setWriteForm({ ...writeForm, content: e.target.value })}
+                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="내용을 입력하세요"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">사진</label>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => document.getElementById('image-upload').click()}
+                      >
+                        사진 선택
+                      </Button>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const previewUrls = files.map(file => URL.createObjectURL(file));
+                          setWriteForm(prev => ({
+                            ...prev,
+                            images: [...prev.images, ...previewUrls],
+                            pendingImages: [...(prev.pendingImages || []), ...files]
+                          }));
+                        }}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {/* 이미지 미리보기 */}
+                    {writeForm.images.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {writeForm.images.map((url, index) => (
+                          <div key={index} className="aspect-square relative group">
+                            <img
+                              src={url}
+                              alt={`업로드 이미지 ${index + 1}`}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                            <button
+                              onClick={() => {
+                                setWriteForm(prev => ({
+                                  ...prev,
+                                  images: prev.images.filter((_, i) => i !== index),
+                                  pendingImages: prev.pendingImages.filter((_, i) => i !== index)
+                                }));
+                              }}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowWriteForm(false)}>
+                  취소
+                </Button>
+                <Button
+                  disabled={isSaving || !writeForm.title.trim() || !writeForm.content.trim()}
+                  onClick={async () => {
+                    if (!currentUser) {
+                      alert('로그인이 필요합니다.');
+                      return;
+                    }
+
+                    setIsSaving(true);
+                    try {
+                      const storage = getStorage();
+                      const uploadedUrls = [];
+
+                      // 이미지 업로드
+                      if (writeForm.pendingImages?.length > 0) {
+                        for (const file of writeForm.pendingImages) {
+                          const fileRef = ref(storage, `likes/${currentUser.uid}/${Date.now()}_${file.name}`);
+                          await uploadBytes(fileRef, file);
+                          const url = await getDownloadURL(fileRef);
+                          uploadedUrls.push(url);
+                        }
+                      }
+
+                      // likes 컬렉션에 저장
+                      const likeData = {
+                        title: writeForm.title.trim(),
+                        content: writeForm.content.trim(),
+                        images: uploadedUrls,
+                        createdAt: serverTimestamp(),  // 서버 타임스탬프 사용
+                        userId: currentUser.uid,
+                        category: writeForm.category,  // 선택된 카테고리 사용
+                        author: {
+                          uid: currentUser.uid,
+                          displayName: currentUser.displayName || currentUser.email?.split('@')[0],
+                          email: currentUser.email,
+                          photoURL: currentUser.photoURL
+                        },
+                        reactions: {
+                          awesome: 0,
+                          cheer: 0,
+                          sad: 0,
+                          same: 0
+                        },
+                        viewCount: 0
+                      };
+
+                      await addDoc(collection(db, 'likes'), likeData);
+                      setShowWriteForm(false);
+                      setWriteForm({
+                        title: '',
+                        content: '',
+                        images: [],
+                        pendingImages: [],
+                        category: '일상'  // 기본값으로 리셋
+                      });
+                    } catch (error) {
+                      console.error('저장 중 오류:', error);
+                      alert('저장 중 오류가 발생했습니다.');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                >
+                  {isSaving ? '저장 중...' : '저장'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           
 
           {/* 카테고리 필터 */}
@@ -709,16 +904,28 @@ export default function LikesPage() {
                   {/* 이미지 섹션을 상단으로 이동 */}
                   {like.images && like.images.length > 0 && (
                     <div className="mb-4">
-                      <img
-                        src={like.images[0]}
-                        alt="첫 번째 이미지"
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      {like.images.length > 1 && (
-                        <div className="mt-2 text-sm text-gray-400 text-center">
-                          +{like.images.length - 1}장의 사진 더보기
-                        </div>
-                      )}
+                      <div>
+                        <img
+                          src={like.images[0]}
+                          alt="첫 번째 이미지"
+                          className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedImage(like.images[0]);
+                            setCurrentImageSet(like.images.map(url => ({
+                              url,
+                              title: like.category,
+                              date: like.createdAt
+                            })));
+                            setShowImageViewer(true);
+                          }}
+                        />
+                        {like.images.length > 1 && (
+                          <div className="mt-2 text-sm text-gray-400 text-center">
+                            +{like.images.length - 1}장의 사진 더보기
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -826,15 +1033,26 @@ export default function LikesPage() {
                     {selectedPost.images && selectedPost.images.length > 0 && (
                       <div className="mb-6 grid grid-cols-2 gap-2">
                         {selectedPost.images.map((imageUrl, index) => (
-                        <img
-                          key={index}
-                          src={imageUrl}
-                          alt={`공감 이미지 ${index + 1}`}
-                            className="w-full h-48 object-cover rounded-lg"
-                        />
-                      ))}
-                    </div>
-                  )}
+                          <div key={index} className="relative">
+                            <img
+                              src={imageUrl}
+                              alt={`공감 이미지 ${index + 1}`}
+                              className="w-full h-48 object-cover rounded-lg cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedImage(imageUrl);
+                                setCurrentImageSet(selectedPost.images.map(url => ({
+                                  url,
+                                  title: selectedPost.category,
+                                  date: selectedPost.createdAt
+                                })));
+                                setShowImageViewer(true);
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     <p className="text-gray-300 whitespace-pre-wrap mb-6">{selectedPost.content || ''}</p>
 
@@ -907,6 +1125,99 @@ export default function LikesPage() {
                 삭제
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* 이미지 뷰어 모달 */}
+        <Dialog open={showImageViewer} onOpenChange={setShowImageViewer}>
+          <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 bg-black/90">
+            <DialogHeader className="sr-only">
+              <DialogTitle>이미지 상세보기</DialogTitle>
+            </DialogHeader>
+            <div className="relative w-full h-full flex items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 text-white hover:bg-white/20 z-50"
+                onClick={() => setShowImageViewer(false)}
+              >
+                <X className="w-6 h-6" />
+              </Button>
+              
+              {/* 이전 버튼 */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIndex = currentImageSet.findIndex(img => img.url === selectedImage);
+                  if (currentIndex > 0) {
+                    setSelectedImage(currentImageSet[currentIndex - 1].url);
+                  }
+                }}
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </Button>
+
+              {/* 다음 버튼 */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIndex = currentImageSet.findIndex(img => img.url === selectedImage);
+                  if (currentIndex < currentImageSet.length - 1) {
+                    setSelectedImage(currentImageSet[currentIndex + 1].url);
+                  }
+                }}
+              >
+                <ChevronRight className="w-8 h-8" />
+              </Button>
+
+              <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                <img
+                  src={selectedImage}
+                  alt="확대된 이미지"
+                  className="max-w-full max-h-[80vh] object-contain"
+                />
+                {/* 이미지 정보 */}
+                <div className="mt-4 text-white text-center">
+                  {(() => {
+                    const currentImage = currentImageSet.find(img => img.url === selectedImage);
+                    if (currentImage) {
+                      return (
+                        <>
+                          <div className="font-medium text-lg">{currentImage.title || '제목 없음'}</div>
+                          <div className="text-sm text-gray-300">
+                            {currentImage.date?.toLocaleDateString ? 
+                              currentImage.date.toLocaleDateString() : 
+                              new Date(currentImage.date).toLocaleDateString()}
+                          </div>
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
+
+              {/* 이미지 인디케이터 */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
+                {currentImageSet.map((image, index) => (
+                  <button
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      image.url === selectedImage 
+                        ? 'bg-white w-4' 
+                        : 'bg-white/50 hover:bg-white/80'
+                    }`}
+                    onClick={() => setSelectedImage(image.url)}
+                  />
+                ))}
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
         </div>

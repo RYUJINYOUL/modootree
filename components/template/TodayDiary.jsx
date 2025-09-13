@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useRouter as useNavigation } from 'next/navigation';
 import { setUser } from "@/store/userSlice";
 import { cn } from '@/lib/utils';
 import { sendNotification } from '@/lib/utils/notification-manager';
@@ -30,10 +31,12 @@ import {
   getFirestore,
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   addDoc,
   deleteDoc,
@@ -56,6 +59,7 @@ const COLOR_PALETTE = [
 const CATEGORIES = ['일상', '감정', '관계', '목표/취미', '특별한 날', '기타/자유'];
 
 const TodayDiary = ({ username, uid, isEditable }) => {
+  const router = useNavigation();
   const [showColorSettings, setShowColorSettings] = useState(false);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [likeModalOpen, setLikeModalOpen] = useState(false);
@@ -95,11 +99,77 @@ const TodayDiary = ({ username, uid, isEditable }) => {
   const [loading, setLoading] = useState(true);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+  const [currentImageSet, setCurrentImageSet] = useState([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
   const [permissions, setPermissions] = useState(null);
+  const [likedDiaries, setLikedDiaries] = useState({});
+
+  // 공감하기 함수
+  const handleLike = async (diary) => {
+    if (!currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+    
+    if (!diary || !diary.id) {
+      console.error('일기 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      setIsLiking(true);
+      const userLikeRef = doc(db, 'users', currentUser.uid, 'likes', diary.id);
+
+      // 공감하기 저장 - likes 컬렉션에 저장
+      const likeData = {
+        diaryId: diary.id,
+        userId: finalUid,
+        category: selectedCategory,
+        createdAt: new Date(),
+        content: diary.content,
+        title: diary.title,
+        images: diary.images || [],
+        author: {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0],
+          email: currentUser.email,
+          photoURL: currentUser.photoURL
+        }
+      };
+
+      // likes 컬렉션에 저장
+      await setDoc(doc(db, 'likes', diary.id), likeData);
+
+      // 사용자의 likes 컬렉션에도 저장
+      await setDoc(userLikeRef, likeData);
+
+      // 공감 알림 보내기
+      if (finalUid !== currentUser.uid) {
+        await sendNotification(finalUid, {
+          type: 'like',
+          title: '새로운 공감이 있습니다',
+          content: `${currentUser.displayName || currentUser.email}: ${diary.title}`,
+          sourceTemplate: 'todayDiary',
+          metadata: {
+            diaryId: diary.id,
+            diaryTitle: diary.title,
+            likerName: currentUser.displayName || currentUser.email
+          }
+        });
+      }
+
+      setLikeModalOpen(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('공감 처리 중 오류:', error);
+      alert('공감 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsLiking(false);
+    }
+  };
 
   // 스타일 설정 저장
   const saveStyleSettings = async (newSettings) => {
@@ -503,16 +573,34 @@ const TodayDiary = ({ username, uid, isEditable }) => {
 
               {/* 이미지 */}
               {diary.images && diary.images.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  {diary.images.slice(0, 3).map((image, index) => (
-                    <div key={index} className="aspect-square relative">
-                      <img
-                        src={image}
-                        alt={`${diary.title} 이미지 ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    </div>
-                  ))}
+                <div className="mt-4">
+                  <div className="hidden md:grid md:grid-cols-5 gap-2">
+                    {diary.images.slice(0, 5).map((image, index) => (
+                      <div key={index} className="aspect-square relative">
+                        <img
+                          src={image}
+                          alt={`${diary.title} 이미지 ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 md:hidden">
+                    {diary.images.slice(0, 3).map((image, index) => (
+                      <div key={index} className="aspect-square relative">
+                        {index === 2 && diary.images.length > 3 && (
+                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-lg font-bold">+{diary.images.length - 2}</span>
+                          </div>
+                        )}
+                        <img
+                          src={image}
+                          alt={`${diary.title} 이미지 ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -608,20 +696,23 @@ const TodayDiary = ({ username, uid, isEditable }) => {
     }, []);
 
     return (
-      <div className="grid grid-cols-3 gap-2">
-        {allImages.map((image, index) => (
-          <div
-            key={index}
-            className={cn(
-              "aspect-square relative cursor-pointer group backdrop-blur-sm",
-              styleSettings.rounded === 'none' && 'rounded-none',
-              styleSettings.rounded === 'sm' && 'rounded',
-              styleSettings.rounded === 'md' && 'rounded-lg',
-              styleSettings.rounded === 'lg' && 'rounded-xl',
-              styleSettings.rounded === 'full' && 'rounded-full'
-            )}
+      <div>
+        {/* PC 뷰 */}
+        <div className="hidden md:grid md:grid-cols-5 gap-2">
+          {allImages.map((image, index) => (
+            <div
+              key={index}
+              className={cn(
+                "aspect-square relative cursor-pointer group backdrop-blur-sm",
+                styleSettings.rounded === 'none' && 'rounded-none',
+                styleSettings.rounded === 'sm' && 'rounded',
+                styleSettings.rounded === 'md' && 'rounded-lg',
+                styleSettings.rounded === 'lg' && 'rounded-xl',
+                styleSettings.rounded === 'full' && 'rounded-full'
+              )}
             onClick={() => {
               setSelectedImage(image.url);
+              setCurrentImageSet(allImages);
               setShowImageViewer(true);
             }}
           >
@@ -630,15 +721,54 @@ const TodayDiary = ({ username, uid, isEditable }) => {
               src={image.url}
               alt={image.title || '일기 이미지'}
               className="w-full h-full object-cover rounded-lg"
-            />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-              <div className="text-white text-center p-2">
-                <div className="font-medium">{image.title || '제목 없음'}</div>
-                <div>{dayjs(image.date).format('YYYY.MM.DD')}</div>
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                <div className="text-white text-center p-2">
+                  <div className="font-medium">{image.title || '제목 없음'}</div>
+                  <div>{dayjs(image.date).format('YYYY.MM.DD')}</div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        {/* 모바일 뷰 */}
+        <div className="grid grid-cols-3 gap-2 md:hidden">
+          {allImages.slice(0, 3).map((image, index) => (
+            <div
+              key={index}
+              className={cn(
+                "aspect-square relative cursor-pointer group backdrop-blur-sm",
+                styleSettings.rounded === 'none' && 'rounded-none',
+                styleSettings.rounded === 'sm' && 'rounded',
+                styleSettings.rounded === 'md' && 'rounded-lg',
+                styleSettings.rounded === 'lg' && 'rounded-xl',
+                styleSettings.rounded === 'full' && 'rounded-full'
+              )}
+              onClick={() => {
+                setSelectedImage(image.url);
+                setShowImageViewer(true);
+              }}
+            >
+              {index === 2 && allImages.length > 3 && (
+                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">+{allImages.length - 2}</span>
+                </div>
+              )}
+              <img
+                id={`image-${index}`}
+                src={image.url}
+                alt={image.title || '일기 이미지'}
+                className="w-full h-full object-cover rounded-lg"
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                <div className="text-white text-center p-2">
+                  <div className="font-medium">{image.title || '제목 없음'}</div>
+                  <div>{dayjs(image.date).format('YYYY.MM.DD')}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -929,20 +1059,20 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                 });
 
                 // 1. 먼저 이미지 없이 일기 저장
-                const diaryData = {
-                  title: writeForm.title,
-                  content: writeForm.content,
-                  images: [],  // 이미지는 나중에 업로드
-                  isPrivate: writeForm.isPrivate || false,
-                  createdAt: writeForm.selectedDate,
-                  updatedAt: new Date().toISOString(),
-                  author: userInfo,
-                  authorUid: currentUser.uid,
-                  viewCount: 0,
-                  likeCount: 0,
-                  likedBy: [],
-                  aiResponse: '답변 생성 중...'
-                };
+                  const diaryData = {
+                    title: writeForm.title,
+                    content: writeForm.content,
+                    images: [],  // 이미지는 나중에 업로드
+                    isPrivate: writeForm.isPrivate || false,
+                    createdAt: writeForm.createdAt || writeForm.selectedDate || new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    author: userInfo,
+                    authorUid: currentUser.uid,
+                    viewCount: 0,
+                    likeCount: 0,
+                    likedBy: [],
+                    aiResponse: '답변 생성 중...'
+                  };
 
                 const docRef = await addDoc(diaryRef, diaryData);
 
@@ -1061,12 +1191,75 @@ const TodayDiary = ({ username, uid, isEditable }) => {
             >
               <X className="w-6 h-6" />
             </Button>
-            <div className="w-full h-full flex items-center justify-center p-4">
+            
+            {/* 이전 버튼 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const currentIndex = currentImageSet.findIndex(img => img.url === selectedImage);
+                if (currentIndex > 0) {
+                  setSelectedImage(currentImageSet[currentIndex - 1].url);
+                }
+              }}
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </Button>
+
+            {/* 다음 버튼 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const currentIndex = currentImageSet.findIndex(img => img.url === selectedImage);
+                if (currentIndex < currentImageSet.length - 1) {
+                  setSelectedImage(currentImageSet[currentIndex + 1].url);
+                }
+              }}
+            >
+              <ChevronRight className="w-8 h-8" />
+            </Button>
+
+            <div className="w-full h-full flex flex-col items-center justify-center p-4">
               <img
                 src={selectedImage}
                 alt="확대된 이미지"
                 className="max-w-full max-h-[80vh] object-contain"
               />
+              {/* 이미지 정보 */}
+              <div className="mt-4 text-white text-center">
+                {(() => {
+                  const currentImage = currentImageSet.find(img => img.url === selectedImage);
+                  if (currentImage) {
+                    return (
+                      <>
+                        <div className="font-medium text-lg">{currentImage.title || '제목 없음'}</div>
+                        <div className="text-sm text-gray-300">{dayjs(currentImage.date).format('YYYY년 MM월 DD일')}</div>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+
+            {/* 이미지 인디케이터 */}
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
+              {currentImageSet.map((image, index) => (
+                <button
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    image.url === selectedImage 
+                      ? 'bg-white w-4' 
+                      : 'bg-white/50 hover:bg-white/80'
+                  }`}
+                  onClick={() => setSelectedImage(image.url)}
+                />
+              ))}
             </div>
           </div>
         </DialogContent>
@@ -1117,6 +1310,11 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                                 className="w-full rounded-lg cursor-pointer"
                                 onClick={() => {
                                   setSelectedImage(imageUrl);
+                                  setCurrentImageSet(diary.images.map(url => ({
+                                    url,
+                                    title: diary.title,
+                                    date: diary.createdAt
+                                  })));
                                   setShowImageViewer(true);
                                 }}
                               />
@@ -1179,6 +1377,11 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                           className="w-full rounded-lg cursor-pointer"
                           onClick={() => {
                             setSelectedImage(imageUrl);
+                            setCurrentImageSet(selectedDiary.images.map(url => ({
+                              url,
+                              title: selectedDiary.title,
+                              date: selectedDiary.createdAt
+                            })));
                             setShowImageViewer(true);
                           }}
                         />
@@ -1219,6 +1422,36 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                   <div className="flex items-center gap-2">
                     {currentUser && (selectedDiary?.author?.uid === currentUser.uid || finalUid === currentUser.uid) && (
                       <>
+                        {/* 공감하기 버튼 */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-6 h-6 hover:bg-gray-100/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!currentUser) {
+                              setShowLoginModal(true);
+                              return;
+                            }
+                            setSelectedDiary(selectedDiary);
+                            setLikeModalOpen(true);
+                          }}
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="w-4 h-4" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
+                            />
+                          </svg>
+                        </Button>
                         {/* 수정 버튼 */}
                         <Button
                           variant="ghost"
@@ -1228,7 +1461,8 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                             e.stopPropagation();
                             setWriteForm({
                               ...selectedDiary,
-                              images: selectedDiary.images || []
+                              images: selectedDiary.images || [],
+                              createdAt: selectedDiary.createdAt || new Date().toISOString()
                             });
                             setShowDetailModal(false);
                             setShowWriteForm(true);
@@ -1258,13 +1492,100 @@ const TodayDiary = ({ username, uid, isEditable }) => {
                         </Button>
                       </>
                     )}
-                    <span className="text-sm text-gray-500 ml-2">
+                    <span className="text-sm text-gray-500">
                       {selectedDiary?.createdAt && dayjs(selectedDiary.createdAt).format('YY.MM.DD')}
                     </span>
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공감하기 모달 */}
+      <Dialog open={likeModalOpen} onOpenChange={setLikeModalOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>공감하기</DialogTitle>
+            <DialogDescription>
+              이 일기에 공감하고 싶은 카테고리를 선택해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-gray-700 whitespace-pre-wrap mb-6">
+              {selectedDiary?.content}
+            </p>
+            {selectedDiary?.images && selectedDiary.images.length > 0 && (
+              <div className="mb-6 grid grid-cols-2 gap-2">
+                {selectedDiary.images.map((imageUrl, index) => (
+                  <img
+                    key={index}
+                    src={imageUrl}
+                    alt={`일기 이미지 ${index + 1}`}
+                    className="w-full rounded-lg"
+                  />
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="카테고리 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => handleLike(selectedDiary)}
+                disabled={isLiking || !selectedCategory}
+                className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
+              >
+                {isLiking ? '저장 중...' : '공감하기'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공감 완료 모달 */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>공감이 저장되었습니다</DialogTitle>
+            <DialogDescription>
+              공감한 일기는 공감 한 조각 페이지에서 확인하실 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <p className="text-gray-600">
+              공감 한 조각 페이지에서 확인하시겠습니까?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowSuccessModal(false)}
+              >
+                닫기
+              </Button>
+              <Button
+                className="bg-violet-500 hover:bg-violet-600 text-white"
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push('/likes/all');
+                }}
+              >
+                공감 한 조각으로 이동
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

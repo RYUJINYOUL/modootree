@@ -74,7 +74,7 @@ const getTimeAgo = (date) => {
   return `${diffInYears}년 전`;
 };
 
-const HeaderDrawer = ({ children, drawerContentClassName, uid, ...props }) => {
+const HeaderDrawer = ({ children, drawerContentClassName, uid, styleSettings, ...props }) => {
   const pathname = usePathname()
   const isEditable = pathname ? pathname.startsWith('/editor') : false;
   const { currentUser } = useSelector((state) => state.user)
@@ -876,7 +876,7 @@ export default function GuestbookTemplate({ username, uid }) {
         )}
         style={getStyleObject()}
       >
-        <HeaderDrawer uid={finalUid}>
+        <HeaderDrawer uid={finalUid} styleSettings={styleSettings}>
           <button 
             className="absolute left-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
             style={{ 
@@ -920,7 +920,7 @@ export default function GuestbookTemplate({ username, uid }) {
             </div>
           )}
         </div>
-        <HeaderDrawer uid={finalUid}>
+        <HeaderDrawer uid={finalUid} styleSettings={styleSettings}>
           <button 
             className="absolute right-4 p-2 rounded-lg hover:bg-opacity-30 transition-all"
             style={{ 
@@ -938,7 +938,7 @@ export default function GuestbookTemplate({ username, uid }) {
       {/* 메인 리스트 */}
       <div className="w-full flex flex-col items-center gap-4">
         {previewEntries.map((entry) => (
-          <HeaderDrawer key={entry.id} uid={finalUid}>
+          <HeaderDrawer key={entry.id} uid={finalUid} styleSettings={styleSettings}>
             <div 
               className={cn(
                 "w-full max-w-[1100px] p-4 backdrop-blur-sm transition-all duration-300 ease-in-out floating-animation",
@@ -1005,7 +1005,7 @@ export default function GuestbookTemplate({ username, uid }) {
                       <FaHeart className={entry.likedBy?.includes(currentUser?.uid || 'anonymous') ? "text-red-500" : ""} />
                       <span>{entry.likes || 0}</span>
                     </button>
-                    <HeaderDrawer uid={finalUid}>
+                    <HeaderDrawer uid={finalUid} styleSettings={styleSettings}>
                       <button
                         className="flex items-center space-x-1 transition-colors"
                         style={{ color: styleSettings.textColor, opacity: 0.7 }}
