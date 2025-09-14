@@ -1056,6 +1056,84 @@ export default function LikesPage() {
 
                     <p className="text-gray-300 whitespace-pre-wrap mb-6">{selectedPost.content || ''}</p>
 
+                    {/* AI 답변 표시 */}
+                    {selectedPost.aiResponse && (
+                      <div className="bg-violet-500/10 p-4 rounded-lg mb-6">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center">
+                              <span className="text-sm font-medium text-violet-200">AI</span>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-violet-100 whitespace-pre-wrap">
+                              {selectedPost.aiResponse}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI 답변 생성 버튼 */}
+                    {currentUser?.uid && !selectedPost.aiResponse && (
+                      <div className="mb-6">
+                        <Button
+                          onClick={async () => {
+                            try {
+                              // AI 답변 생성 버튼 비활성화
+                              const button = event.target;
+                              button.disabled = true;
+                              button.textContent = 'AI 답변 생성 중...';
+
+                              // AI 답변 생성
+                              const response = await fetch('/api/ai-response', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ content: selectedPost.content })
+                              });
+
+                              if (response.ok) {
+                                const data = await response.json();
+                                
+                                // likes 컬렉션에 AI 답변 저장
+                                await setDoc(doc(db, 'likes', selectedPost.id), {
+                                  aiResponse: data.response
+                                }, { merge: true });
+
+                                // 현재 선택된 게시글의 상태 업데이트
+                                setSelectedPost(prev => ({
+                                  ...prev,
+                                  aiResponse: data.response
+                                }));
+
+                                // likes 배열에서도 해당 게시글 업데이트
+                                setLikes(prevLikes => 
+                                  prevLikes.map(like => 
+                                    like.id === selectedPost.id 
+                                      ? { ...like, aiResponse: data.response }
+                                      : like
+                                  )
+                                );
+                              }
+                            } catch (error) {
+                              console.error('AI 답변 생성 중 오류:', error);
+                              alert('AI 답변 생성에 실패했습니다.');
+                            } finally {
+                              // 버튼 상태 복원
+                              const button = event.target;
+                              button.disabled = false;
+                              button.textContent = 'AI 답변 생성';
+                            }
+                          }}
+                          className="w-full bg-violet-500 hover:bg-violet-600 text-white"
+                        >
+                          AI 답변 생성
+                        </Button>
+                      </div>
+                    )}
+
                     {/* 반응 버튼 */}
                     <div className="grid grid-cols-2 gap-2 mb-6">
                     {REACTIONS.map((reaction) => (

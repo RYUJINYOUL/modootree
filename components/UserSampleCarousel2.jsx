@@ -78,6 +78,13 @@ const sampleUsers = [
     thumbnail: '/samples/contact.png',
     description: '공유 기능',
     bgColor: 'bg-[#56ab91]'
+  },
+  {
+    id: 8,
+    username: '일기글과 오늘 메모글의 AI 답변 기능이 기본 탑재되어 위로 격려를 받을 수 있습니다',
+    thumbnail: '/samples/ai.png',
+    description: 'AI 답변',
+    bgColor: 'bg-[#56ab91]'
   }
 ];
 

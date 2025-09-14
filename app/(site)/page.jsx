@@ -338,11 +338,11 @@ export default function Page() {
         <div className="max-w-[1100px] mx-auto px-4 py-16">
           <div className="flex flex-col items-center justify-center text-center">
             <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 기능을 만나보세요 
+              세심하게 설계된 에디터 간편 기능<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
             </h2>
 
             <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 기능을 만나보세요 
+            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
             </h2>
           </div>
           <UserSampleCarousel2 />
@@ -354,11 +354,11 @@ export default function Page() {
         <div className="max-w-[1100px] mx-auto px-4 py-16">
           <div className="flex flex-col items-center justify-center text-center">
             <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북
+              모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
             </h2>
 
             <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-            모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북
+            모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
             </h2>
           </div>
           <UserSampleCarousel3 />
@@ -482,6 +482,10 @@ const faqs = [
   {
     question: '추가 개선하고 싶은 기능은 있나요?',
     answer: '게시판에 글 남겨주시면 최대한 반영하겠습니다.'
+  },
+  {
+    question: 'AI 기능은 어떤 컴포넌트에서 가능한가요?',
+    answer: '현재 다이어리 또는 게스트북을 오늘 메모로 사용하면 AI 기능을 사용할 수 있습니다'
   },
   {
     question: '제작하는 방법을 잘 모르겠습니다?',

@@ -128,6 +128,17 @@ service cloud.firestore {
       }
     }
 
+    // likes 컬렉션에 대한 규칙
+    match /likes/{likeId} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isAuthenticated();  // 로그인한 사용자만 생성 가능
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||  // 작성자 본인
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiResponse'])  // AI 답변 추가만 허용
+      );
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;  // 작성자만 삭제 가능
+    }
+
     // 나머지 모든 컬렉션에 대한 기본 규칙
     match /{document=**} {
       allow read: if true;  // 모든 문서 읽기 허용

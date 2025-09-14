@@ -4,7 +4,6 @@ import CalendarComponent from '../template/Calendar';
 import LinkCard from '../template/LinkCard';
 import QuestBook from '../template/QuestBook';
 import SnsButtons from '../template/SnsButtons';
-import Diary from '../template/Diary';
 import TodayDiary from '../template/TodayDiary';
 import ImageCarousel from '../template/ImageCarousel';
 import Title from '../template/Title';
@@ -24,7 +23,6 @@ export type ComponentKey =
   | '게스트북'
   | '자유게시판'
   | '달력'
-  | '일기장'
   | '오늘일기'
   | '포트폴리오';
 
@@ -39,7 +37,6 @@ export const ComponentLibrary: Record<ComponentKey, React.FC<any>> = {
   게스트북: QuestBook,
   자유게시판: QuestBook2,
   달력: CalendarComponent,
-  일기장: Diary,
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
 }; 
