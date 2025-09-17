@@ -195,21 +195,22 @@ export default function JoyPage() {
 
   // AI 분석 요청 처리
     const handleAnalyze = async (post, e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      if (analyzingPosts[post.id]) {
-        console.log('이미 분석 중인 게시물');
-        return;
-      }
-      if (post.aiResponse) {
-        console.log('이미 분석 완료된 게시물');
-        alert('이미 분석이 완료된 사진입니다.');
-        return;
-      }
-      
-      console.log('분석 시작:', post.id);
-      setAnalyzingPosts(prev => ({ ...prev, [post.id]: true }));
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (analyzingPosts[post.id]) {
+      console.log('이미 분석 중인 게시물');
+      return;
+    }
+    if (post.aiResponse) {
+      console.log('이미 분석 완료된 게시물');
+      alert('이미 분석이 완료된 사진입니다.');
+      return;
+    }
+    
+    console.log('분석 시작:', post.id);
+    setAnalyzingPosts(prev => ({ ...prev, [post.id]: true }));
+
     try {
       console.log('AI 분석 시작:', {
         category: post.category,
@@ -217,53 +218,57 @@ export default function JoyPage() {
         imageUrl: post.imageUrl
       });
       
-      const response = await fetch('/api/analyze', {
+      const response = await fetch('/api/analyze-interest', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           imageUrls: post.images || [post.imageUrl],
-          description: post.description,
-          category: post.category || 'gathering'
+          description: post.description
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API 오류 응답:', errorData);
-        throw new Error(errorData.error || '분석 요청이 실패했습니다.');
-      }
+      let responseData;
+      try {
+        responseData = await response.text();
+        if (!response.ok) {
+          console.error('API 오류 응답:', responseData);
+          throw new Error(`API 오류: ${response.status} ${response.statusText}`);
+        }
+        const data = JSON.parse(responseData);
+        console.log('분석 결과:', data);
 
-      const data = await response.json();
-      console.log('분석 결과:', data);
-
-      const aiResponse = typeof data.response === 'object' 
-        ? JSON.stringify(data.response, null, 2)
-        : data.response;
-      
-      // Firestore 업데이트
-      const postRef = doc(db, 'joy', post.id);
-      await setDoc(postRef, {
-        aiResponse
-      }, { merge: true });
-
-      // 상태 업데이트
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === post.id ? { ...p, aiResponse } : p
-        )
-      );
-
-      // 선택된 게시물이 현재 분석 중인 게시물이면 상태 업데이트
-      if (selectedPost?.id === post.id) {
-        setSelectedPost(prev => ({
-          ...prev,
+        const aiResponse = typeof data.response === 'object' 
+          ? JSON.stringify(data.response, null, 2)
+          : data.response;
+        
+        // Firestore 업데이트
+        const postRef = doc(db, 'joy', post.id);
+        await setDoc(postRef, {
           aiResponse
-        }));
-      }
+        }, { merge: true });
 
-      alert('분석이 완료되었습니다!');
+        // 상태 업데이트
+        setPosts(prevPosts => 
+          prevPosts.map(p => 
+            p.id === post.id ? { ...p, aiResponse } : p
+          )
+        );
+
+        // 선택된 게시물이 현재 분석 중인 게시물이면 상태 업데이트
+        if (selectedPost?.id === post.id) {
+          setSelectedPost(prev => ({
+            ...prev,
+            aiResponse
+          }));
+        }
+
+        alert('분석이 완료되었습니다!');
+      } catch (parseError) {
+        console.error('응답 처리 오류:', parseError);
+        throw new Error('API 응답을 처리하는 중 오류가 발생했습니다.');
+      }
     } catch (error) {
       console.error('AI 분석 실패:', error);
       alert(error.message || 'AI 분석 중 오류가 발생했습니다.');
@@ -275,7 +280,6 @@ export default function JoyPage() {
       });
     }
   };
-  // ... (이전 코드와 동일)
 
   return (
     <>
