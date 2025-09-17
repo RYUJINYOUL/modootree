@@ -616,6 +616,7 @@ export default function Gallery3({ username, uid }: LogoProps) {
        
         {cropImageSrc && cropType && (
           <CropperModal
+            isOpen={true}
             imageUrl={cropImageSrc}
             onClose={() => {
               setCropImageSrc(null);

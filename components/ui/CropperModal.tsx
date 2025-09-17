@@ -5,24 +5,22 @@ import Cropper from 'react-cropper'
 import 'cropperjs/dist/cropper.css'
 
 // 타입 정의
-interface CropperInstance extends Cropper {
-  cropper: {
-    getCroppedCanvas: (options?: any) => HTMLCanvasElement;
-    getData: () => any;
-  };
+import { ReactCropperElement } from 'react-cropper';
+
+interface CropperInstance extends ReactCropperElement {
+  cropper: Cropper;
 }
 
 type Props = {
   isOpen: boolean
-  imageUrl?: string | null
+  imageUrl: string
   onClose: () => void
   onSave: (croppedBlob: Blob) => Promise<void>
 }
 
 export default function CropperModal({ isOpen, imageUrl, onClose, onSave }: Props) {
-  const cropperRef = useRef<HTMLImageElement>(null)
+  const cropperRef = useRef<CropperInstance>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [cropper, setCropper] = useState<Cropper>()
 
   useEffect(() => {
     if (isOpen && imageUrl) {
@@ -41,7 +39,9 @@ export default function CropperModal({ isOpen, imageUrl, onClose, onSave }: Prop
     
     console.log('크롭 적용 시작');
     
-    if (!cropper) {
+    // 타입 안전성을 위해 Cropper 인스턴스 체크
+    const cropperInstance = cropperRef.current?.cropper;
+    if (!cropperInstance) {
       console.error('Cropper instance not found');
       return;
     }
@@ -49,12 +49,12 @@ export default function CropperModal({ isOpen, imageUrl, onClose, onSave }: Prop
     setIsUploading(true);
     try {
       // 크롭 데이터 확인
-      const cropData = cropper.getData();
+      const cropData = cropperInstance.getData();
       console.log('크롭 데이터:', cropData);
 
       // 캔버스 생성
       console.log('캔버스 생성 시작');
-      const canvas = cropper.getCroppedCanvas({
+      const canvas = cropperInstance.getCroppedCanvas({
         width: Math.min(cropData.width, 1200),    // 최대 너비 제한
         height: Math.min(cropData.height, 1200),  // 최대 높이 제한
         imageSmoothingEnabled: true,
@@ -105,10 +105,7 @@ export default function CropperModal({ isOpen, imageUrl, onClose, onSave }: Prop
   return (
     <div 
       className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClose();
-      }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div 
         className="bg-gray-900 p-4 rounded-md shadow-md w-full max-w-2xl relative text-white"
@@ -125,29 +122,27 @@ export default function CropperModal({ isOpen, imageUrl, onClose, onSave }: Prop
           guides={true}
           viewMode={1}
           ref={cropperRef}
-          onInitialized={(instance) => {
-            console.log('Cropper initialized');
-            setCropper(instance);
-          }}
-          dragMode="crop"
-          autoCropArea={1}
-          background={true}
-          responsive={true}
-          restore={true}
-          checkOrientation={false}
-          cropBoxMovable={true}
+          zoomable={true}
           cropBoxResizable={true}
+          cropBoxMovable={true}
+          autoCropArea={1}
+          responsive={true}
+          background={true}
+          dragMode="crop"
           toggleDragModeOnDblclick={false}
           minCropBoxWidth={50}
           minCropBoxHeight={50}
+          onInitialized={(instance) => {
+            console.log('Cropper initialized:', instance);
+          }}
+          onError={(e) => {
+            console.error('Cropper error:', e);
+          }}
         />
 
         <div className="mt-4 flex justify-end gap-2">
           <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
+            onClick={onClose} 
             className="px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
           >
             취소

@@ -13,7 +13,9 @@ import {
   setDoc,
   serverTimestamp,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  where,
+  getDoc
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trash2, Upload } from 'lucide-react';
+import { Trash2, Upload, Heart, MessageCircle, Send, Share2 } from 'lucide-react';
 import CropperModal from '@/components/ui/CropperModal';
 import Header from '@/components/Header';
 import LoginOutButton from '@/components/ui/LoginOutButton';
@@ -47,7 +49,7 @@ const CATEGORIES = {
   },
   relationship: { 
     id: 'relationship', 
-    title: '오늘남친여친',
+    title: '오늘우리나너',
     uploadTitle: '이성친구 분석',
     description: 'AI가 분석하는 이성친구와의 관계',
     maxImages: 3
@@ -82,6 +84,83 @@ export default function JoyPage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [analyzingPosts, setAnalyzingPosts] = useState({});
   const [isDeleting, setIsDeleting] = useState(false);
+  const [comments, setComments] = useState({});
+  const [newComment, setNewComment] = useState('');
+  const [likes, setLikes] = useState({});
+  const [liking, setLiking] = useState(false);
+
+  // 좋아요 처리
+  const handleLike = async (post, e) => {
+    e?.stopPropagation();
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    if (liking) return;
+
+    setLiking(true);
+    try {
+      const likeRef = doc(db, 'joyLikes', `${currentUser.uid}_${post.id}`);
+      const likeDoc = await getDoc(likeRef);
+
+      if (likeDoc.exists()) {
+        // 좋아요 취소
+        await deleteDoc(likeRef);
+        await setDoc(doc(db, 'joy', post.id), {
+          likeCount: (post.likeCount || 0) - 1
+        }, { merge: true });
+      } else {
+        // 좋아요 추가
+        await setDoc(likeRef, {
+          userId: currentUser.uid,
+          postId: post.id,
+          createdAt: serverTimestamp()
+        });
+        await setDoc(doc(db, 'joy', post.id), {
+          likeCount: (post.likeCount || 0) + 1
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.error('좋아요 처리 실패:', error);
+      alert('좋아요 처리 중 오류가 발생했습니다.');
+    } finally {
+      setLiking(false);
+    }
+  };
+
+  // 댓글 작성 처리
+  const handleAddComment = async (postId) => {
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    if (!newComment.trim()) return;
+
+    try {
+      const commentRef = await addDoc(collection(db, 'joyComments'), {
+        postId,
+        userId: currentUser.uid,
+        content: newComment.trim(),
+        createdAt: serverTimestamp(),
+        author: {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0],
+          email: currentUser.email,
+          photoURL: currentUser.photoURL
+        }
+      });
+
+      // 게시물의 댓글 수 업데이트
+      await setDoc(doc(db, 'joy', postId), {
+        commentCount: (selectedPost?.commentCount || 0) + 1
+      }, { merge: true });
+
+      setNewComment('');
+    } catch (error) {
+      console.error('댓글 작성 실패:', error);
+      alert('댓글 작성 중 오류가 발생했습니다.');
+    }
+  };
 
   // 게시물 삭제 처리
   const handleDelete = async (post, e) => {
@@ -119,6 +198,55 @@ export default function JoyPage() {
       setIsDeleting(false);
     }
   };
+
+  // 좋아요 실시간 로드
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const likesQuery = query(
+      collection(db, 'joyLikes'),
+      where('userId', '==', currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(likesQuery, (snapshot) => {
+      const newLikes = {};
+      snapshot.forEach((doc) => {
+        const [userId, postId] = doc.id.split('_');
+        newLikes[postId] = true;
+      });
+      setLikes(newLikes);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
+
+  // 댓글 실시간 로드
+  useEffect(() => {
+    if (!selectedPost) return;
+
+    const commentsQuery = query(
+      collection(db, 'joyComments'),
+      where('postId', '==', selectedPost.id),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
+      const newComments = [];
+      snapshot.forEach((doc) => {
+        newComments.push({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate()
+        });
+      });
+      setComments(prev => ({
+        ...prev,
+        [selectedPost.id]: newComments
+      }));
+    });
+
+    return () => unsubscribe();
+  }, [selectedPost?.id]);
 
   // 게시물 실시간 로드
   useEffect(() => {
@@ -194,81 +322,113 @@ export default function JoyPage() {
   }, []);
 
   // AI 분석 요청 처리
-    const handleAnalyze = async (post, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (analyzingPosts[post.id]) {
-      console.log('이미 분석 중인 게시물');
-      return;
-    }
+  const handleAnalyze = async (post) => {
+    if (analyzingPosts[post.id]) return;
     if (post.aiResponse) {
-      console.log('이미 분석 완료된 게시물');
       alert('이미 분석이 완료된 사진입니다.');
       return;
     }
     
-    console.log('분석 시작:', post.id);
     setAnalyzingPosts(prev => ({ ...prev, [post.id]: true }));
-
     try {
-      console.log('AI 분석 시작:', {
-        category: post.category,
-        hasImages: !!post.images?.length,
-        imageUrl: post.imageUrl
+      // 분석할 이미지 URL 결정
+      const analysisImageUrl = Array.isArray(post.images) ? post.images[0] : post.imageUrl;
+      
+      console.log('📸 AI 분석 요청 정보:', {
+        '전체 이미지 수': Array.isArray(post.images) ? post.images.length : 1,
+        '실제 분석할 이미지': '첫 번째 이미지만 분석',
+        '분석 이미지 URL': analysisImageUrl,
+        '카테고리': post.category,
+        '게시물 ID': post.id
       });
       
+      // 모든 이미지 URL 출력
+      if (Array.isArray(post.images) && post.images.length > 1) {
+        console.log('🖼️ 업로드된 전체 이미지 목록:');
+        post.images.forEach((url, index) => {
+          console.log(`${index + 1}번째 이미지${index === 0 ? ' (분석 대상)' : ''}: ${url}`);
+        });
+      }
+
       const response = await fetch('/api/analyze-interest', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          imageUrls: post.images || [post.imageUrl],
-          description: post.description
+          imageUrl: analysisImageUrl,
+          description: post.description,
+          postId: post.id,
+          category: post.category
         }),
       });
 
-      let responseData;
-      try {
-        responseData = await response.text();
-        if (!response.ok) {
-          console.error('API 오류 응답:', responseData);
-          throw new Error(`API 오류: ${response.status} ${response.statusText}`);
-        }
-        const data = JSON.parse(responseData);
-        console.log('분석 결과:', data);
-
-        const aiResponse = typeof data.response === 'object' 
-          ? JSON.stringify(data.response, null, 2)
-          : data.response;
-        
-        // Firestore 업데이트
-        const postRef = doc(db, 'joy', post.id);
-        await setDoc(postRef, {
-          aiResponse
-        }, { merge: true });
-
-        // 상태 업데이트
-        setPosts(prevPosts => 
-          prevPosts.map(p => 
-            p.id === post.id ? { ...p, aiResponse } : p
-          )
-        );
-
-        // 선택된 게시물이 현재 분석 중인 게시물이면 상태 업데이트
-        if (selectedPost?.id === post.id) {
-          setSelectedPost(prev => ({
-            ...prev,
-            aiResponse
-          }));
-        }
-
-        alert('분석이 완료되었습니다!');
-      } catch (parseError) {
-        console.error('응답 처리 오류:', parseError);
-        throw new Error('API 응답을 처리하는 중 오류가 발생했습니다.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API 오류 응답:', errorData);
+        throw new Error(errorData.error || '분석 요청이 실패했습니다.');
       }
+
+      const data = await response.json();
+      console.log('분석 결과:', data);
+
+      let aiResponse = '';
+      if (typeof data.response === 'object') {
+        const res = data.response;
+        
+        // 모든 카테고리에 공통으로 적용되는 간단한 포맷
+        const formatResponse = (obj) => {
+          // 정해진 순서대로 데이터 추출
+          const getData = (obj, path) => {
+            return path.split('.').reduce((acc, part) => acc?.[part], obj);
+          };
+
+          // 원하는 순서와 실제 데이터 경로 매핑
+          const order = [
+            { value: obj.overview },  // overview는 항상 첫 줄
+            { value: getData(obj, 'funComment') },
+            { value: getData(obj, 'careTip') },
+            { value: getData(obj, 'emotionAnalysis.dominantEmotion') || getData(obj, 'analysis.dominantEmotion') },
+            { value: getData(obj, 'emotionAnalysis.details.eyes') || getData(obj, 'analysis.details.eyes') },
+            { value: getData(obj, 'emotionAnalysis.details.bodyLanguage') || getData(obj, 'analysis.details.bodyLanguage') },
+            { value: getData(obj, 'score') }
+          ];
+
+          // 값이 있는 항목만 필터링하고 줄바꿈으로 연결
+          return order
+            .filter(item => item.value)  // 값이 있는 항목만 선택
+            .map(item => item.value)     // 값만 추출
+            .join('\n\n')                // 줄바꿈으로 연결
+            .trim();                     // 앞뒤 공백 제거
+        };
+
+        aiResponse = formatResponse(res);
+      } else {
+        aiResponse = data.response;
+      }
+      
+      // Firestore 업데이트
+      const postRef = doc(db, 'joy', post.id);
+      await setDoc(postRef, {
+        aiResponse
+      }, { merge: true });
+
+      // 상태 업데이트
+      setPosts(prevPosts => 
+        prevPosts.map(p => 
+          p.id === post.id ? { ...p, aiResponse } : p
+        )
+      );
+
+      // 선택된 게시물이 현재 분석 중인 게시물이면 상태 업데이트
+      if (selectedPost?.id === post.id) {
+        setSelectedPost(prev => ({
+          ...prev,
+          aiResponse
+        }));
+      }
+
+      alert('분석이 완료되었습니다!');
     } catch (error) {
       console.error('AI 분석 실패:', error);
       alert(error.message || 'AI 분석 중 오류가 발생했습니다.');
@@ -280,6 +440,7 @@ export default function JoyPage() {
       });
     }
   };
+  // ... (이전 코드와 동일)
 
   return (
     <>
@@ -287,17 +448,16 @@ export default function JoyPage() {
       <Header />
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90 relative">
         <div className="container mx-auto px-4 py-10">
-          {/* 제목과 업로드 버튼 */}
+          {/* 제목 수정 */}
           <div className="mb-10">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex-1" />
-              <div className="flex-1 text-center">
+            <div className="flex justify-between items-center mb-8">
+              <div className="text-center flex-grow">
                 <h1 className="text-2xl font-bold text-white mb-2">
                   모두트리 AI
                 </h1>
               </div>
-              <div className="flex-1 flex justify-end">
-                {currentUser?.uid && (
+              {currentUser?.uid && (
+                <div className="flex-shrink-0 ml-4">
                   <Button
                     onClick={() => setShowUploadForm(true)}
                     variant="default"
@@ -305,8 +465,8 @@ export default function JoyPage() {
                   >
                     업로드
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* 카테고리 필터 */}
@@ -755,25 +915,59 @@ export default function JoyPage() {
                       className="w-full h-full object-cover"
                     />
                   )}
-                  {/* 삭제 버튼 */}
-                  {(currentUser?.uid === post.userId || currentUser?.uid === "vW1OuC6qMweyOqu73N0558pv4b03") && (
+                  {/* 상단 버튼들 */}
+                  <div className="absolute top-2 left-2">
+                    {/* 공유 버튼 */}
                     <button
-                      onClick={(e) => handleDelete(post, e)}
-                      disabled={isDeleting}
-                      className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 rounded-full text-white shadow-lg transition-colors"
-                      title={currentUser?.uid === "vW1OuC6qMweyOqu73N0558pv4b03" ? "관리자 삭제" : "삭제"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // 기본적인 공유 기능
+                        if (navigator.share) {
+                          navigator.share({
+                            title: '모두트리 AI',
+                            text: post.description,
+                            url: window.location.href
+                          }).catch(err => console.log('공유 실패:', err));
+                        } else {
+                          // 공유 API를 지원하지 않는 경우
+                          alert('이 브라우저는 공유 기능을 지원하지 않습니다.');
+                        }
+                      }}
+                      className="p-1.5 bg-blue-500 hover:bg-blue-600 rounded-full text-white shadow-lg transition-colors"
                     >
-                      <Trash2 size={16} />
+                      <Share2 size={14} />
                     </button>
+                  </div>
+
+                  {/* 삭제 버튼 - 오른쪽 상단 */}
+                  {(currentUser?.uid === post.userId || currentUser?.uid === "vW1OuC6qMweyOqu73N0558pv4b03") && (
+                    <div className="absolute top-2 right-2">
+                      <button
+                        onClick={(e) => handleDelete(post, e)}
+                        disabled={isDeleting}
+                        className="p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white shadow-lg transition-colors"
+                        title={currentUser?.uid === "vW1OuC6qMweyOqu73N0558pv4b03" ? "관리자 삭제" : "삭제"}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
 
                 {/* 설명 및 AI 분석 영역 */}
                 <div className="p-3 space-y-2">
-                  {/* 사용자 설명 */}
+                  {/* 작성자 정보 및 설명 */}
                   <div className="border-b border-gray-700 pb-2">
-                    <h3 className="text-xs font-medium text-gray-400 mb-1">사용자 설명</h3>
-                    <p className="text-sm text-gray-200 line-clamp-2">{post.description}</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-medium text-gray-400">작성자:</span>
+                      <span className="text-xs text-gray-300">
+                        {post.author?.displayName || post.author?.email?.split('@')[0] || '익명'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-200 line-clamp-2 min-h-[2.5rem]">{post.description}</p>
+                    {post.description.length > 50 && (
+                      <p className="text-xs text-gray-400 mt-1">더보기...</p>
+                    )}
                   </div>
 
                   {/* AI 분석 결과 또는 분석 요청 버튼 */}
@@ -781,11 +975,14 @@ export default function JoyPage() {
                     <h3 className="text-xs font-medium text-gray-400 mb-1">AI 분석</h3>
                     {post.aiResponse ? (
                       <div className="p-2 bg-blue-500/20 rounded border border-blue-500/30">
-                        <p className="text-sm text-blue-200 line-clamp-3 leading-snug">{post.aiResponse}</p>
+                        <pre className="text-sm text-blue-200 line-clamp-3 leading-snug whitespace-pre-wrap font-sans">{post.aiResponse}</pre>
                       </div>
                     ) : currentUser?.uid === post.userId && (
                       <Button
-                        onClick={(e) => handleAnalyze(post, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAnalyze(post);
+                        }}
                         className="w-full bg-blue-500 hover:bg-blue-600 h-8 text-sm font-medium"
                         disabled={analyzingPosts[post.id]}
                       >
@@ -799,6 +996,32 @@ export default function JoyPage() {
                         )}
                       </Button>
                     )}
+                  </div>
+
+                  {/* 좋아요와 댓글 수 */}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-700">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={(e) => handleLike(post, e)}
+                        className={`flex items-center gap-1 text-sm ${
+                          likes[post.id] ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+                        }`}
+                        disabled={liking}
+                      >
+                        <Heart className={`w-4 h-4 ${likes[post.id] ? 'fill-current' : ''}`} />
+                        <span>{post.likeCount || 0}</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPost(post);
+                        }}
+                        className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>{post.commentCount || 0}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -816,7 +1039,7 @@ export default function JoyPage() {
           }}>
             <DialogContent className="max-w-2xl bg-gray-900 text-white border border-gray-700 max-h-[90vh] overflow-y-auto">
               <DialogHeader className="sticky top-0 bg-gray-900 z-10 pb-4">
-                <DialogTitle className="text-white">AI 관심도 분석</DialogTitle>
+                <DialogTitle className="text-white">모두트리 AI</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="relative aspect-video group">
@@ -897,20 +1120,88 @@ export default function JoyPage() {
                 </div>
                 <div className="space-y-2">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-400">설명</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-400">작성자:</span>
+                      <span className="text-sm text-gray-300">
+                        {selectedPost?.author?.displayName || selectedPost?.author?.email?.split('@')[0] || '익명'}
+                      </span>
+                    </div>
                     <p className="text-gray-300">{selectedPost?.description}</p>
                   </div>
                   {selectedPost?.aiResponse && (
                     <div>
                       <h3 className="text-sm font-medium text-gray-400 mb-2">AI 분석 결과</h3>
                       <div className="p-4 bg-blue-500/20 rounded-lg">
-                        <p className="text-blue-200">{selectedPost.aiResponse}</p>
+                        <pre className="text-blue-200 whitespace-pre-wrap font-sans text-sm">{selectedPost.aiResponse}</pre>
                       </div>
+                    </div>
+                  )}
+
+                  {/* 좋아요와 댓글 */}
+                  {selectedPost && (
+                    <div className="border-t border-gray-700 pt-4 mt-4">
+                      <div className="flex items-center gap-4 mb-4">
+                        <button
+                          onClick={(e) => handleLike(selectedPost, e)}
+                          className={`flex items-center gap-1 text-sm ${
+                            likes[selectedPost.id] ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+                          }`}
+                          disabled={liking}
+                        >
+                          <Heart className={`w-5 h-5 ${likes[selectedPost.id] ? 'fill-current' : ''}`} />
+                          <span>{selectedPost.likeCount || 0}</span>
+                        </button>
+                        <div className="flex items-center gap-1 text-sm text-gray-400">
+                          <MessageCircle className="w-5 h-5" />
+                          <span>{selectedPost.commentCount || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* 댓글 목록 */}
+                      <div className="space-y-4 mb-4">
+                        {comments[selectedPost.id]?.map((comment) => (
+                          <div key={comment.id} className="bg-gray-800/50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-gray-300">
+                                {comment.author?.displayName || comment.author?.email?.split('@')[0] || '익명'}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {comment.createdAt?.toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-300">{comment.content}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 댓글 입력 */}
+                      {currentUser?.uid && (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="댓글을 입력하세요..."
+                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAddComment(selectedPost.id);
+                              }
+                            }}
+                          />
+                          <Button
+                            onClick={() => handleAddComment(selectedPost.id)}
+                            className="bg-blue-500 hover:bg-blue-600 px-4"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
-              
             </DialogContent>
           </Dialog>
         </div>
