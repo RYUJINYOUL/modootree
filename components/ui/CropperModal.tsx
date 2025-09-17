@@ -1,85 +1,169 @@
-// components/CropperModal.tsx
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import Cropper from 'react-cropper'
 import 'cropperjs/dist/cropper.css'
 
-type Props = {
-  image: string
-  onCancel: () => void
-  onCrop: (croppedBlob: Blob) => Promise<void>
-  type: 'logo' | 'background'
+// 타입 정의
+interface CropperInstance extends Cropper {
+  cropper: {
+    getCroppedCanvas: (options?: any) => HTMLCanvasElement;
+    getData: () => any;
+  };
 }
 
-export default function CropperModal({ image, onCancel, onCrop, type }: Props) {
+type Props = {
+  isOpen: boolean
+  imageUrl?: string | null
+  onClose: () => void
+  onSave: (croppedBlob: Blob) => Promise<void>
+}
+
+export default function CropperModal({ isOpen, imageUrl, onClose, onSave }: Props) {
   const cropperRef = useRef<HTMLImageElement>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [cropper, setCropper] = useState<Cropper>()
 
-  const handleApply = async () => {
-    const cropper = (cropperRef.current as any)?.cropper
-    if (!cropper) return
+  useEffect(() => {
+    if (isOpen && imageUrl) {
+      console.log('CropperModal opened with image:', imageUrl);
+    }
+  }, [isOpen, imageUrl]);
 
-    setIsUploading(true)
+  if (!isOpen || !imageUrl) {
+    console.log('CropperModal not showing:', { isOpen, hasImageUrl: !!imageUrl });
+    return null;
+  }
+
+  const handleApply = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('크롭 적용 시작');
+    
+    if (!cropper) {
+      console.error('Cropper instance not found');
+      return;
+    }
+
+    setIsUploading(true);
     try {
-      const canvas = cropper.getCroppedCanvas({ 
-        ...(type === 'logo' 
-          ? {
-              maxWidth: 800,  // 더 큰 크기로 증가
-              maxHeight: 800,
-              imageSmoothingEnabled: true,
-              imageSmoothingQuality: 'high',
-              fillColor: '#fff',
-              minWidth: 400,  // 최소 크기 설정
-              minHeight: 400
-            }
-          : {
-              maxWidth: 1920,
-              maxHeight: 1080,
-              imageSmoothingQuality: 'high'
-            }
-        )
-      })
+      // 크롭 데이터 확인
+      const cropData = cropper.getData();
+      console.log('크롭 데이터:', cropData);
 
-      // 로고 이미지의 경우 PNG 형식으로 저장 (투명도 유지 및 무손실)
-      const blob = await new Promise<Blob>((resolve) => 
-        type === 'logo' 
-          ? canvas.toBlob(resolve!, 'image/png', 1.0)  // PNG 형식, 최대 품질
-          : canvas.toBlob(resolve!, 'image/jpeg', 0.95)  // JPEG 형식, 95% 품질
-      )
-      await onCrop(blob!)
+      // 캔버스 생성
+      console.log('캔버스 생성 시작');
+      const canvas = cropper.getCroppedCanvas({
+        width: Math.min(cropData.width, 1200),    // 최대 너비 제한
+        height: Math.min(cropData.height, 1200),  // 최대 높이 제한
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+        fillColor: '#fff'
+      });
+
+      if (!canvas) {
+        throw new Error('캔버스 생성 실패');
+      }
+      console.log('캔버스 생성 완료:', {
+        width: canvas.width,
+        height: canvas.height
+      });
+
+      // Blob 생성
+      console.log('Blob 생성 시작');
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              console.log('Blob 생성 성공:', {
+                size: blob.size,
+                type: blob.type
+              });
+              resolve(blob);
+            } else {
+              reject(new Error('Blob 생성 실패'));
+            }
+          },
+          'image/jpeg',
+          0.92  // 약간 낮춘 품질로 파일 크기 최적화
+        );
+      });
+
+      // 결과 저장
+      console.log('onSave 호출');
+      await onSave(blob);
+      console.log('크롭 완료');
+    } catch (error) {
+      console.error('크롭 처리 중 에러:', error);
+      alert(error instanceof Error ? error.message : '이미지 처리 중 오류가 발생했습니다.');
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
-      <div className="bg-white p-4 rounded-md shadow-md w-full max-w-2xl relative">
+    <div 
+      className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div 
+        className="bg-gray-900 p-4 rounded-md shadow-md w-full max-w-2xl relative text-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-lg font-semibold mb-2">
-          {type === 'logo' ? '로고 자르기' : '배경 자르기'}
+          이미지 자르기
         </h2>
 
         <Cropper
-          src={image}
+          src={imageUrl}
           style={{ height: 400, width: '100%' }}
-          aspectRatio={type === 'logo' ? 1 : 16 / 9}
+          aspectRatio={1}
           guides={true}
           viewMode={1}
           ref={cropperRef}
+          onInitialized={(instance) => {
+            console.log('Cropper initialized');
+            setCropper(instance);
+          }}
+          dragMode="crop"
+          autoCropArea={1}
+          background={true}
+          responsive={true}
+          restore={true}
+          checkOrientation={false}
+          cropBoxMovable={true}
+          cropBoxResizable={true}
+          toggleDragModeOnDblclick={false}
+          minCropBoxWidth={50}
+          minCropBoxHeight={50}
         />
 
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCancel} className="border px-4 py-2 rounded">취소</button>
-          <button onClick={handleApply} className="bg-blue-500 text-white px-4 py-2 rounded">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
+          >
+            취소
+          </button>
+          <button 
+            onClick={handleApply} 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
+          >
             적용
           </button>
         </div>
 
         {isUploading && (
-          <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center text-sm z-10">
+          <div className="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center text-sm z-10">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-            업로드 중입니다...
+            처리 중...
           </div>
         )}
       </div>

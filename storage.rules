@@ -1,6 +1,31 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // 기본 함수
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 이미지 파일 검증
+    function isImageFile() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // 파일 크기 검증 (5MB)
+    function isValidFileSize() {
+      return request.resource.size <= 5 * 1024 * 1024;
+    }
+
+    // 허용된 사용자 확인 함수
+    function isAllowedUser(userId) {
+      return isAuthenticated() && (
+        request.auth.uid == userId ||  // 페이지 소유자
+        // 허용된 사용자 확인
+        exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
+        get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
+      );
+    }
+
     // guestbook2 폴더 권한
     match /guestbook2/{userId}/{fileName} {
       // 읽기: 모든 사용자
@@ -25,31 +50,6 @@ service firebase.storage {
           request.auth.uid == userId ||
           exists(/databases/$(database.projectId)/documents/users/$(request.auth.uid)/roles/admin)
         );
-    }
-  }
-    // 기본 함수
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // 이미지 파일 검증
-    function isImageFile() {
-      return request.resource.contentType.matches('image/.*');
-    }
-
-    // 파일 크기 검증 (5MB)
-    function isValidFileSize() {
-      return request.resource.size <= 5 * 1024 * 1024;
-    }
-
-    // 허용된 사용자 확인 함수
-    function isAllowedUser(userId) {
-      return isAuthenticated() && (
-        request.auth.uid == userId ||  // 페이지 소유자
-        // 허용된 사용자 확인
-        exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
-        get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
-      );
     }
 
     // 투표 이미지에 대한 규칙
@@ -76,10 +76,27 @@ service firebase.storage {
       allow delete: if isAllowedUser(userId);
     }
 
+    // 바탕화면 이미지에 대한 규칙
+    match /desktop/{userId}/{fileName} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if request.auth != null && request.auth.uid == userId && isImageFile() && isValidFileSize();
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 관심도 분석 이미지에 대한 규칙
+    match /joy/{userId}/{fileName} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if request.auth != null && request.auth.uid == userId && isImageFile() && isValidFileSize();
+      allow delete: if request.auth != null && (
+        request.auth.uid == userId || 
+        request.auth.uid == "vW1OuC6qMweyOqu73N0558pv4b03"  // 관리자 권한
+      );
+    }
+
     // 나머지 모든 파일에 대한 기본 규칙
     match /{allPaths=**} {
       allow read: if true;  // 모든 파일 읽기 허용
       allow write: if isAuthenticated() && isImageFile() && isValidFileSize();  // 로그인한 사용자만 이미지 업로드 가능
     }
   }
-} 
+}

@@ -221,6 +221,7 @@ export default function LikesPage() {
           likesData.push({
             id: doc.id,
             ...data,
+            currentImageIndex: 0,  // 이미지 캐러셀 인덱스 초기화
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
             reactions: data.reactions || {
               awesome: 0,
@@ -904,26 +905,72 @@ export default function LikesPage() {
                   {/* 이미지 섹션을 상단으로 이동 */}
                   {like.images && like.images.length > 0 && (
                     <div className="mb-4">
-                      <div>
-                        <img
-                          src={like.images[0]}
-                          alt="첫 번째 이미지"
-                          className="w-full h-32 object-cover rounded-lg cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedImage(like.images[0]);
-                            setCurrentImageSet(like.images.map(url => ({
-                              url,
-                              title: like.category,
-                              date: like.createdAt
-                            })));
-                            setShowImageViewer(true);
-                          }}
-                        />
+                      <div className="relative aspect-square group">
+                        {/* 이미지 캐러셀 */}
+                        <div className="relative w-full h-full rounded-lg overflow-hidden">
+                          {like.images.map((imageUrl, index) => (
+                            <div
+                              key={index}
+                              className={`absolute inset-0 transition-opacity duration-300
+                                ${like.currentImageIndex === index ? 'opacity-100' : 'opacity-0'}`}
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={`${like.title || ''} ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 이미지가 2장 이상일 때만 네비게이션 표시 */}
                         {like.images.length > 1 && (
-                          <div className="mt-2 text-sm text-gray-400 text-center">
-                            +{like.images.length - 1}장의 사진 더보기
-                          </div>
+                          <>
+                            {/* 좌우 버튼 */}
+                            <button
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full 
+                                opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newIndex = ((like.currentImageIndex || 0) - 1 + like.images.length) % like.images.length;
+                                setLikes(prev => prev.map(p => 
+                                  p.id === like.id ? { ...p, currentImageIndex: newIndex } : p
+                                ));
+                              }}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full 
+                                opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newIndex = ((like.currentImageIndex || 0) + 1) % like.images.length;
+                                setLikes(prev => prev.map(p => 
+                                  p.id === like.id ? { ...p, currentImageIndex: newIndex } : p
+                                ));
+                              }}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+
+                            {/* 하단 인디케이터 */}
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
+                              {like.images.map((_, index) => (
+                                <button
+                                  key={index}
+                                  className={`w-1.5 h-1.5 rounded-full transition-colors
+                                    ${like.currentImageIndex === index ? 'bg-white' : 'bg-white/50'}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLikes(prev => prev.map(p => 
+                                      p.id === like.id ? { ...p, currentImageIndex: index } : p
+                                    ));
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1031,26 +1078,77 @@ export default function LikesPage() {
                   <div className="mt-4">
                     {/* 이미지 갤러리를 상단으로 이동 */}
                     {selectedPost.images && selectedPost.images.length > 0 && (
-                      <div className="mb-6 grid grid-cols-2 gap-2">
-                        {selectedPost.images.map((imageUrl, index) => (
-                          <div key={index} className="relative">
-                            <img
-                              src={imageUrl}
-                              alt={`공감 이미지 ${index + 1}`}
-                              className="w-full h-48 object-cover rounded-lg cursor-pointer"
+                      <div className="relative aspect-video group mb-6">
+                        {/* 이미지 캐러셀 */}
+                        <div className="relative w-full h-full rounded-lg overflow-hidden">
+                          {selectedPost.images.map((imageUrl, index) => (
+                            <div
+                              key={index}
+                              className={`absolute inset-0 transition-opacity duration-300
+                                ${selectedPost.currentImageIndex === index ? 'opacity-100' : 'opacity-0'}`}
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={`${selectedPost.title || ''} ${index + 1}`}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedImage(imageUrl);
+                                  setCurrentImageSet(selectedPost.images.map(url => ({
+                                    url,
+                                    title: selectedPost.category,
+                                    date: selectedPost.createdAt
+                                  })));
+                                  setShowImageViewer(true);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 이미지가 2장 이상일 때만 네비게이션 표시 */}
+                        {selectedPost.images.length > 1 && (
+                          <>
+                            {/* 좌우 버튼 */}
+                            <button
+                              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 text-white p-2 rounded-full 
+                                opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedImage(imageUrl);
-                                setCurrentImageSet(selectedPost.images.map(url => ({
-                                  url,
-                                  title: selectedPost.category,
-                                  date: selectedPost.createdAt
-                                })));
-                                setShowImageViewer(true);
+                                const newIndex = ((selectedPost.currentImageIndex || 0) - 1 + selectedPost.images.length) % selectedPost.images.length;
+                                setSelectedPost(prev => ({ ...prev, currentImageIndex: newIndex }));
                               }}
-                            />
-                          </div>
-                        ))}
+                            >
+                              <ChevronLeft className="h-6 w-6" />
+                            </button>
+                            <button
+                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 text-white p-2 rounded-full 
+                                opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newIndex = ((selectedPost.currentImageIndex || 0) + 1) % selectedPost.images.length;
+                                setSelectedPost(prev => ({ ...prev, currentImageIndex: newIndex }));
+                              }}
+                            >
+                              <ChevronRight className="h-6 w-6" />
+                            </button>
+
+                            {/* 하단 인디케이터 */}
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                              {selectedPost.images.map((_, index) => (
+                                <button
+                                  key={index}
+                                  className={`w-2 h-2 rounded-full transition-colors
+                                    ${selectedPost.currentImageIndex === index ? 'bg-white' : 'bg-white/50'}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPost(prev => ({ ...prev, currentImageIndex: index }));
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 
