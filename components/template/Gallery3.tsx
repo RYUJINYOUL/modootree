@@ -616,14 +616,13 @@ export default function Gallery3({ username, uid }: LogoProps) {
        
         {cropImageSrc && cropType && (
           <CropperModal
-            image={cropImageSrc}
-            type={cropType}
-            onCancel={() => {
+            imageUrl={cropImageSrc}
+            onClose={() => {
               setCropImageSrc(null);
               setCropType(null);
               setIsUploading(false); // 취소 시 업로드 상태도 초기화
             }}
-            onCrop={handleCropApply}
+            onSave={handleCropApply}
           />
         )}
         {isUploading && !cropImageSrc && ( // 모달이 떠있지 않을 때만 전체 화면 로더 표시
