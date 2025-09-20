@@ -1324,29 +1324,75 @@ export default function JoyPage() {
       </div>
       {/* 공유 다이얼로그 */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>게시물 공유하기</DialogTitle>
+        <DialogContent className="sm:max-w-[500px] w-[95%] p-4 sm:p-6 gap-4">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">게시물 공유하기</DialogTitle>
+            <p className="text-sm text-gray-500">이 게시물을 다른 사람과 공유해보세요</p>
           </DialogHeader>
-          <div className="mt-4 space-y-4">
+          <div className="space-y-4">
             {/* 미리보기 */}
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <p className="font-medium mb-2">{shareDialogPost?.title}</p>
-              <p className="text-sm text-gray-600 mb-2">{shareDialogPost?.description}</p>
+            <div className="bg-gray-100 p-3 sm:p-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                {shareDialogPost?.image && (
+                  <div className="w-20 h-20 flex-shrink-0">
+                    <img 
+                      src={shareDialogPost.image} 
+                      alt="미리보기" 
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm sm:text-base mb-1 line-clamp-1">{shareDialogPost?.title}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{shareDialogPost?.description}</p>
+                </div>
+              </div>
               {shareDialogPost?.aiAnalysis && (
-                <p className="text-sm text-gray-600 border-t border-gray-200 pt-2 mt-2">
-                  {shareDialogPost.aiAnalysis}
-                </p>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-3">
+                    {shareDialogPost.aiAnalysis}
+                  </p>
+                </div>
               )}
-              <p className="text-sm text-blue-500 mt-2">{shareDialogPost?.url}</p>
+              <p className="text-xs sm:text-sm text-blue-500 mt-2 break-all">{shareDialogPost?.url}</p>
             </div>
             {/* 공유 옵션 */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {/* 카카오톡 공유 */}
               <Button
                 onClick={async () => {
                   if (!shareDialogPost) return;
                   try {
+                    // 로컬 환경 체크
+                    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    
+                    if (isLocalhost) {
+                      console.log('로컬 환경에서는 카카오톡 공유가 제한됩니다. 공유될 내용:', {
+                        title: shareDialogPost.title,
+                        description: shareDialogPost.description + shareDialogPost.aiAnalysis,
+                        imageUrl: shareDialogPost.image,
+                        url: shareDialogPost.url
+                      });
+                      alert('로컬 환경에서는 카카오톡 공유가 제한됩니다.\n실제 도메인에서 테스트해주세요.');
+                      return;
+                    }
+
+                    if (!window.Kakao?.isInitialized()) {
+                      console.log('카카오 SDK 초기화 시도');
+                      await window.Kakao?.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
+                    }
+                    
+                    if (!window.Kakao?.Share) {
+                      throw new Error('카카오 공유 기능을 사용할 수 없습니다.');
+                    }
+
+                    console.log('카카오 공유 시작:', {
+                      title: shareDialogPost.title,
+                      description: shareDialogPost.description,
+                      imageUrl: shareDialogPost.image,
+                      url: shareDialogPost.url
+                    });
+
                     await window.Kakao.Share.sendDefault({
                       objectType: 'feed',
                       content: {
@@ -1374,8 +1420,13 @@ export default function JoyPage() {
                     alert('카카오톡 공유에 실패했습니다.');
                   }
                 }}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black"
+                className="bg-yellow-400 hover:bg-yellow-500 text-black h-10 sm:h-11 text-sm sm:text-base px-2 sm:px-4"
               >
+                <img 
+                  src="/Image/sns/kakaotalk.png" 
+                  alt="카카오톡" 
+                  className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5"
+                />
                 카카오톡 공유
               </Button>
               {/* 클립보드 복사 */}
@@ -1426,9 +1477,12 @@ export default function JoyPage() {
                     alert('클립보드 복사에 실패했습니다.');
                   }
                 }}
-                className="bg-blue-500 hover:bg-blue-600"
+                className="bg-blue-500 hover:bg-blue-600 h-10 sm:h-11 text-sm sm:text-base px-2 sm:px-4 flex items-center justify-center gap-1.5"
               >
-                {copied ? '복사됨!' : '클립보드 복사'}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                {copied ? '복사 완료!' : '클립보드 복사'}
               </Button>
               {/* 기본 공유 */}
               {canShare && (
@@ -1446,8 +1500,9 @@ export default function JoyPage() {
                       console.error('공유 실패:', error);
                     }
                   }}
-                  className="col-span-2 bg-gray-500 hover:bg-gray-600"
+                  className="col-span-2 bg-gray-500 hover:bg-gray-600 h-10 sm:h-11 text-sm sm:text-base flex items-center justify-center gap-1.5"
                 >
+                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   다른 앱으로 공유
                 </Button>
               )}
