@@ -21,7 +21,8 @@ import UserSampleCarousel from '@/components/UserSampleCarousel';
 import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
 import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Plus, Download } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import MainHeader from '@/components/MainHeader';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
@@ -257,16 +258,69 @@ export default function Page() {
       <div className="w-full zinc-900 rounded-3xl">
         <div className="max-w-[1100px] mx-auto px-4">
           <div className="flex flex-col items-center justify-center pt-6 pb-6 md:py-10 text-center mb-8">
-            <div className="animate-swing mb-4">
-              <Image
-                src="/Image/logo.png"
-                alt="모두트리 로고"
-                width={300}
-                height={300}
-                priority
-                className="w-24 h-24 md:w-32 md:h-32"
-              />
-            </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <div className="animate-swing mb-4 relative cursor-pointer">
+                  <Image
+                    src="/Image/logo.png"
+                    alt="모두트리 로고"
+                    width={300}
+                    height={300}
+                    priority
+                    className="w-24 h-24 md:w-32 md:h-32"
+                  />
+                  <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1.5 shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-gray-900/95 border-gray-800 overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle className="text-white">모두트리 로고 다운로드</SheetTitle>
+                  <p className="text-gray-400 text-sm">다양한 스타일의 모두트리 로고를 다운로드할 수 있습니다.</p>
+                </SheetHeader>
+                <div className="mt-8 grid grid-cols-2 gap-4">
+                  {[
+                    { name: '웃음 모두트리', path: '/logos/m1.png', type: 'png' },
+                    { name: '건방 모두트리', path: '/logos/m2.png', type: 'png' },
+                    { name: '놀람 모두트리', path: '/logos/m3.png', type: 'png' },
+                    { name: '부끄 모두트리', path: '/logos/m4.png', type: 'png' },
+                    { name: '건달 모두트리', path: '/logos/m5.png', type: 'png' },
+                    { name: '울음 모두트리', path: '/logos/m6.png', type: 'png' },
+                    { name: '흘림 모두트리', path: '/logos/m7.png', type: 'png' },
+                    { name: '어머 모두트리', path: '/logos/m8.png', type: 'png' },
+                    { name: '화남 모두트리', path: '/logos/m9.png', type: 'png' },
+                    { name: '뽀뽀 모두트리', path: '/logos/m10.png', type: 'png' },
+                    { name: '방긋 모두트리', path: '/logos/m11.png', type: 'png' },
+                    { name: '산타 모두트리', path: '/logos/m12.png', type: 'png' },
+                    { name: '심슨 모두트리', path: '/logos/m13.png', type: 'png' },
+                    { name: '괴물 모두트리', path: '/logos/m14.png', type: 'png' },
+                  ].map((logo, index) => (
+                    <div key={index} className="bg-gray-800/50 rounded-xl p-3 hover:bg-gray-800/70 transition-colors group">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-white text-sm font-medium truncate pr-2">{logo.name}</h3>
+                        <a 
+                          href={logo.path} 
+                          download 
+                          className="text-blue-400 hover:text-blue-300 transition-colors p-1.5 hover:bg-blue-500/10 rounded-full"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                      <div className="relative aspect-square w-full bg-black/20 rounded-lg overflow-hidden">
+                        <Image
+                          src={logo.path}
+                          alt={logo.name}
+                          fill
+                          className="object-contain p-3"
+                        />
+                      </div>
+                      <p className="text-gray-500 text-xs mt-1 text-right">{logo.type.toUpperCase()}</p>
+                    </div>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
             <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
             <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
 
@@ -278,6 +332,12 @@ export default function Page() {
                 className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
               >
                 공감 한 조각
+              </Link>
+              <Link
+                href="/joy"
+                className="bg-violet-500 hover:bg-violet-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
+              >
+                사진 한 조각
               </Link>
               {(currentUser?.uid) && allowedSites.length > 0 && (
                 <div className="relative">

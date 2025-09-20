@@ -217,6 +217,12 @@ export default function Header() {
               공감한조각
             </button>
             <button
+              onClick={() => handleNavigation('/joy')}
+              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
+            >
+              사진한조각
+            </button>
+            <button
               onClick={handleInquiry}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
             >

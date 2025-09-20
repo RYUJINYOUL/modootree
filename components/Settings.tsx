@@ -112,7 +112,7 @@ export default function Settings() {
           <h1 className="text-2xl font-bold text-white mb-6">설정</h1>
           
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-white">허용된 사용자 관리</h2>
+            <h2 className="text-xl font-semibold text-white">초대 사용자 관리</h2>
             
             <form onSubmit={handleAddUser} className="space-y-4">
               <div className="flex gap-2">

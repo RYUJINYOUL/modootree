@@ -15,7 +15,9 @@ import {
   addDoc,
   deleteDoc,
   where,
-  getDoc
+  getDoc,
+  getDocs,
+  Timestamp
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
@@ -163,6 +165,54 @@ export default function JoyPage() {
   };
 
   // 게시물 삭제 처리
+  // 오늘 업로드 여부 확인
+  const [todayUploadCount, setTodayUploadCount] = useState(0);
+
+  const checkDailyUpload = async (userId) => {
+    try {
+      // 오늘 자정 시간을 Timestamp로 변환
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTimestamp = Timestamp.fromDate(today);
+      
+      // 내일 자정 시간을 Timestamp로 변환
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowTimestamp = Timestamp.fromDate(tomorrow);
+
+      const postsQuery = query(
+        collection(db, 'joy'),
+        where('userId', '==', userId),
+        where('createdAt', '>=', todayTimestamp),
+        where('createdAt', '<', tomorrowTimestamp),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(postsQuery);
+      const todayPosts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        createdAt: doc.data().createdAt?.toDate()
+      }));
+      
+      console.log('오늘 업로드 현황:', {
+        userId,
+        오늘시작: todayTimestamp.toDate().toLocaleString(),
+        내일시작: tomorrowTimestamp.toDate().toLocaleString(),
+        업로드수: todayPosts.length,
+        게시물목록: todayPosts.map(post => ({
+          id: post.id,
+          시간: post.createdAt?.toLocaleString()
+        }))
+      });
+
+      setTodayUploadCount(todayPosts.length);
+      return todayPosts.length > 0;
+    } catch (error) {
+      console.error('업로드 확인 중 오류:', error);
+      return false;
+    }
+  };
+
   const handleDelete = async (post, e) => {
     e.stopPropagation();
     
@@ -249,6 +299,30 @@ export default function JoyPage() {
   }, [selectedPost?.id]);
 
   // 게시물 실시간 로드
+  // 실시간으로 오늘 업로드 수 확인
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setTodayUploadCount(0);
+      return;
+    }
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const uploadCountRef = doc(db, 'userDailyUploads', `${currentUser.uid}_${dateStr}`);
+
+    const unsubscribe = onSnapshot(uploadCountRef, (doc) => {
+      const count = doc.exists() ? 1 : 0;
+      console.log('실시간 업로드 수 업데이트:', {
+        userId: currentUser.uid,
+        날짜: dateStr,
+        count,
+        데이터: doc.exists() ? doc.data() : '없음'
+      });
+      setTodayUploadCount(count);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
+
   useEffect(() => {
     const postsQuery = query(
       collection(db, 'joy'),
@@ -450,24 +524,29 @@ export default function JoyPage() {
         <div className="container mx-auto px-4 py-10">
           {/* 제목 수정 */}
           <div className="mb-10">
-            <div className="flex justify-between items-center mb-8">
-              <div className="text-center flex-grow">
-                <h1 className="text-2xl font-bold text-white mb-2">
-                  모두트리 AI
-                </h1>
-              </div>
-              {currentUser?.uid && (
-                <div className="flex-shrink-0 ml-4">
-                  <Button
-                    onClick={() => setShowUploadForm(true)}
-                    variant="default"
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                  >
-                    업로드
-                  </Button>
+              <div className="flex justify-between items-center mb-8">
+                <div className="text-center flex-grow">
+                  <h1 className="text-2xl font-bold text-white mb-2">
+                    모두트리 AI
+                  </h1>
+                  {currentUser?.uid && (
+                    <p className="text-sm text-gray-400">
+                      오늘 업로드: {todayUploadCount}회 {todayUploadCount > 0 && '(하루 1회 제한)'}
+                    </p>
+                  )}
                 </div>
-              )}
-            </div>
+                {currentUser?.uid && (
+                  <div className="flex-shrink-0 ml-4">
+                    <Button
+                      onClick={() => setShowUploadForm(true)}
+                      variant="default"
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      업로드
+                    </Button>
+                  </div>
+                )}
+              </div>
 
             {/* 카테고리 필터 */}
             <div className="flex flex-wrap gap-2 justify-center">
@@ -742,6 +821,25 @@ export default function JoyPage() {
                       return;
                     }
 
+                    // 오늘 날짜 문자열 생성 (YYYY-MM-DD 형식)
+                    const today = new Date();
+                    const dateStr = today.toISOString().split('T')[0];
+                    
+                    // 사용자의 오늘 업로드 정보 확인
+                    const uploadCountRef = doc(db, 'userDailyUploads', `${currentUser.uid}_${dateStr}`);
+                    const uploadCountDoc = await getDoc(uploadCountRef);
+                    
+                    console.log('업로드 체크:', {
+                      사용자: currentUser.uid,
+                      날짜: dateStr,
+                      현재문서: uploadCountDoc.exists() ? uploadCountDoc.data() : '없음'
+                    });
+
+                    if (uploadCountDoc.exists()) {
+                      alert('오늘은 이미 게시물을 업로드하셨습니다.\n내일 다시 시도해주세요!');
+                      return;
+                    }
+
                     setIsUploading(true);
                     try {
                       const storage = getStorage();
@@ -778,6 +876,7 @@ export default function JoyPage() {
                       console.log('모든 이미지 업로드 완료:', uploadedUrls);
 
                       // Firestore에 데이터 저장
+                      // 게시물 추가
                       const docRef = await addDoc(collection(db, 'joy'), {
                         userId: currentUser.uid,
                         imageUrl: uploadedUrls[0], // 이전 버전 호환성
@@ -795,6 +894,15 @@ export default function JoyPage() {
                       });
 
                       console.log('Firestore 문서 생성 완료:', docRef.id);
+
+                      // 일일 업로드 카운트 저장
+                      await setDoc(uploadCountRef, {
+                        userId: currentUser.uid,
+                        date: dateStr,
+                        count: 1,
+                        lastUpload: serverTimestamp(),
+                        postId: docRef.id
+                      });
 
                       // 폼 초기화
                       setUploadForm({

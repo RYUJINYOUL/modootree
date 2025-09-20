@@ -572,6 +572,16 @@ export default function UserPublicPage() {
                       <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
                     </Link>
                     <Link 
+                      href="/joy"
+                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사진 한조각</span>
+                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      </div>
+                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
+                    </Link>
+                    <Link 
                       href="/inquiry"
                       className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
                     >

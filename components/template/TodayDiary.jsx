@@ -732,8 +732,8 @@ const TodayDiary = ({ username, uid, isEditable }) => {
           ))}
         </div>
         {/* 모바일 뷰 */}
-        <div className="grid grid-cols-3 gap-2 md:hidden">
-          {allImages.slice(0, 3).map((image, index) => (
+        <div className="grid grid-cols-5 gap-2 md:hidden">
+          {allImages.map((image, index) => (
             <div
               key={index}
               className={cn(
@@ -746,14 +746,10 @@ const TodayDiary = ({ username, uid, isEditable }) => {
               )}
               onClick={() => {
                 setSelectedImage(image.url);
+                setCurrentImageSet(allImages);
                 setShowImageViewer(true);
               }}
             >
-              {index === 2 && allImages.length > 3 && (
-                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-lg font-bold">+{allImages.length - 2}</span>
-                </div>
-              )}
               <img
                 id={`image-${index}`}
                 src={image.url}
@@ -762,8 +758,8 @@ const TodayDiary = ({ username, uid, isEditable }) => {
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
                 <div className="text-white text-center p-2">
-                  <div className="font-medium">{image.title || '제목 없음'}</div>
-                  <div>{dayjs(image.date).format('YYYY.MM.DD')}</div>
+                  <div className="font-medium text-xs">{image.title || '제목 없음'}</div>
+                  <div className="text-xs">{dayjs(image.date).format('YYYY.MM.DD')}</div>
                 </div>
               </div>
             </div>
