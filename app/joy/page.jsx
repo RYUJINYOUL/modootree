@@ -29,6 +29,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Trash2, Upload, Heart, MessageCircle, Send, Share2 } from 'lucide-react';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom/client';
 import CropperModal from '@/components/ui/CropperModal';
 import Header from '@/components/Header';
 import LoginOutButton from '@/components/ui/LoginOutButton';
@@ -90,6 +92,15 @@ export default function JoyPage() {
   const [newComment, setNewComment] = useState('');
   const [likes, setLikes] = useState({});
   const [liking, setLiking] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareDialogPost, setShareDialogPost] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+
+  // 공유 기능 지원 여부 체크
+  useEffect(() => {
+    setCanShare(typeof navigator !== 'undefined' && !!navigator.share);
+  }, []);
 
   // 좋아요 처리
   const handleLike = async (post, e) => {
@@ -1029,17 +1040,14 @@ export default function JoyPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        // 기본적인 공유 기능
-                        if (navigator.share) {
-                          navigator.share({
-                            title: '모두트리 AI',
-                            text: post.description,
-                            url: window.location.href
-                          }).catch(err => console.log('공유 실패:', err));
-                        } else {
-                          // 공유 API를 지원하지 않는 경우
-                          alert('이 브라우저는 공유 기능을 지원하지 않습니다.');
-                        }
+                        setShareDialogPost({
+                          title: '모두트리 AI',
+                          description: post.description,
+                          aiAnalysis: post.aiResponse ? `\n\nAI 분석:\n${post.aiResponse}` : '',
+                          url: `${window.location.origin}/joy/${post.id}`,
+                          image: post.images?.[0] || post.imageUrl
+                        });
+                        setShowShareDialog(true);
                       }}
                       className="p-1.5 bg-blue-500 hover:bg-blue-600 rounded-full text-white shadow-lg transition-colors"
                     >
@@ -1314,6 +1322,140 @@ export default function JoyPage() {
           </Dialog>
         </div>
       </div>
+      {/* 공유 다이얼로그 */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>게시물 공유하기</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            {/* 미리보기 */}
+            <div className="bg-gray-100 p-4 rounded-lg">
+              <p className="font-medium mb-2">{shareDialogPost?.title}</p>
+              <p className="text-sm text-gray-600 mb-2">{shareDialogPost?.description}</p>
+              {shareDialogPost?.aiAnalysis && (
+                <p className="text-sm text-gray-600 border-t border-gray-200 pt-2 mt-2">
+                  {shareDialogPost.aiAnalysis}
+                </p>
+              )}
+              <p className="text-sm text-blue-500 mt-2">{shareDialogPost?.url}</p>
+            </div>
+            {/* 공유 옵션 */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* 카카오톡 공유 */}
+              <Button
+                onClick={async () => {
+                  if (!shareDialogPost) return;
+                  try {
+                    await window.Kakao.Share.sendDefault({
+                      objectType: 'feed',
+                      content: {
+                        title: shareDialogPost.title,
+                        description: shareDialogPost.description + shareDialogPost.aiAnalysis,
+                        imageUrl: shareDialogPost.image,
+                        link: {
+                          mobileWebUrl: shareDialogPost.url,
+                          webUrl: shareDialogPost.url
+                        }
+                      },
+                      buttons: [
+                        {
+                          title: '자세히 보기',
+                          link: {
+                            mobileWebUrl: shareDialogPost.url,
+                            webUrl: shareDialogPost.url
+                          }
+                        }
+                      ]
+                    });
+                    setShowShareDialog(false);
+                  } catch (error) {
+                    console.error('카카오 공유 실패:', error);
+                    alert('카카오톡 공유에 실패했습니다.');
+                  }
+                }}
+                className="bg-yellow-400 hover:bg-yellow-500 text-black"
+              >
+                카카오톡 공유
+              </Button>
+              {/* 클립보드 복사 */}
+              <Button
+                onClick={async () => {
+                  if (!shareDialogPost) return;
+                  try {
+                    // 텍스트 준비
+                    const shareText = [
+                      `[모두트리 AI]`,
+                      '',
+                      `${shareDialogPost.description}`,
+                      '',
+                      shareDialogPost.aiAnalysis,
+                      '',
+                      `🔗 ${shareDialogPost.url}`
+                    ].filter(Boolean).join('\n');
+
+                    // 이미지와 텍스트를 함께 클립보드에 복사
+                    try {
+                      const clipboardItems = [
+                        new ClipboardItem({
+                          'text/plain': new Blob([shareText], { type: 'text/plain' })
+                        })
+                      ];
+
+                      // 이미지가 있는 경우에만 이미지 복사 시도
+                      if (shareDialogPost.image) {
+                        const imageResponse = await fetch(shareDialogPost.image);
+                        const imageBlob = await imageResponse.blob();
+                        clipboardItems[0] = new ClipboardItem({
+                          'text/plain': new Blob([shareText], { type: 'text/plain' }),
+                          [imageBlob.type]: imageBlob
+                        });
+                      }
+
+                      await navigator.clipboard.write(clipboardItems);
+                    } catch (clipError) {
+                      // 고급 클립보드 API가 실패하면 기본 텍스트만 복사
+                      console.warn('이미지 복사 실패, 텍스트만 복사합니다:', clipError);
+                      await navigator.clipboard.writeText(shareText);
+                    }
+
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch (error) {
+                    console.error('클립보드 복사 실패:', error);
+                    alert('클립보드 복사에 실패했습니다.');
+                  }
+                }}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {copied ? '복사됨!' : '클립보드 복사'}
+              </Button>
+              {/* 기본 공유 */}
+              {canShare && (
+                <Button
+                  onClick={async () => {
+                    if (!shareDialogPost) return;
+                    try {
+                      await navigator.share({
+                        title: shareDialogPost.title,
+                        text: shareDialogPost.description + shareDialogPost.aiAnalysis,
+                        url: shareDialogPost.url
+                      });
+                      setShowShareDialog(false);
+                    } catch (error) {
+                      console.error('공유 실패:', error);
+                    }
+                  }}
+                  className="col-span-2 bg-gray-500 hover:bg-gray-600"
+                >
+                  다른 앱으로 공유
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <CropperModal
         isOpen={showCropper}
         imageUrl={cropImage?.url}

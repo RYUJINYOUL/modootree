@@ -276,8 +276,8 @@ export default function Page() {
               </SheetTrigger>
               <SheetContent side="right" className="bg-gray-900/95 border-gray-800 overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle className="text-white">모두트리 로고 다운로드</SheetTitle>
-                  <p className="text-gray-400 text-sm">다양한 스타일의 모두트리 로고를 다운로드할 수 있습니다.</p>
+                  <SheetTitle className="text-white">모두트리 로고</SheetTitle>
+                  <p className="text-gray-400 text-sm">모두트리 로고를 다운로드 하세요.</p>
                 </SheetHeader>
                 <div className="mt-8 grid grid-cols-2 gap-4">
                   {[

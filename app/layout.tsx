@@ -50,6 +50,19 @@ export default function RootLayout({
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_ID || 'ca-pub-6697023128093217'}`}
           crossOrigin="anonymous"
         />
+        <script
+          async
+          src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"
+          integrity="sha384-6MFdIr0zOira1DhCDHDuFrEUdYZXyglZWM9ViVK2KMF1/PDxHQ/OoqnYyO6jSBO"
+          crossOrigin="anonymous"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.Kakao && window.Kakao.init('${process.env.NEXT_PUBLIC_KAKAO_JS_ID}');
+            `
+          }}
+        />
       </head>
       <body
         className={cn(
