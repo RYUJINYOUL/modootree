@@ -1327,7 +1327,7 @@ export default function JoyPage() {
         <DialogContent className="sm:max-w-[500px] w-[95%] p-4 sm:p-6 gap-4">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-lg sm:text-xl">게시물 공유하기</DialogTitle>
-            <p className="text-sm text-gray-500">이 게시물을 다른 사람과 공유해보세요</p>
+            <p className="text-sm text-gray-500">아래 내용이 클립보드에 복사됩니다</p>
           </DialogHeader>
           <div className="space-y-4">
             {/* 미리보기 */}
@@ -1343,170 +1343,50 @@ export default function JoyPage() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm sm:text-base mb-1 line-clamp-1">{shareDialogPost?.title}</p>
-                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{shareDialogPost?.description}</p>
+                  <p className="font-medium text-sm sm:text-base mb-1">{shareDialogPost?.title}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{shareDialogPost?.description}</p>
+                  {shareDialogPost?.aiAnalysis && (
+                    <p className="text-xs sm:text-sm text-gray-600 mt-2 pt-2 border-t border-gray-200">
+                      {shareDialogPost.aiAnalysis}
+                    </p>
+                  )}
                 </div>
               </div>
-              {shareDialogPost?.aiAnalysis && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-3">
-                    {shareDialogPost.aiAnalysis}
-                  </p>
-                </div>
-              )}
-              <p className="text-xs sm:text-sm text-blue-500 mt-2 break-all">{shareDialogPost?.url}</p>
             </div>
-            {/* 공유 옵션 */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {/* 카카오톡 공유 */}
-              <Button
-                onClick={async () => {
-                  if (!shareDialogPost) return;
-                  try {
-                    // 로컬 환경 체크
-                    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                    
-                    if (isLocalhost) {
-                      console.log('로컬 환경에서는 카카오톡 공유가 제한됩니다. 공유될 내용:', {
-                        title: shareDialogPost.title,
-                        description: shareDialogPost.description + shareDialogPost.aiAnalysis,
-                        imageUrl: shareDialogPost.image,
-                        url: shareDialogPost.url
-                      });
-                      alert('로컬 환경에서는 카카오톡 공유가 제한됩니다.\n실제 도메인에서 테스트해주세요.');
-                      return;
-                    }
+            {/* 복사 버튼 */}
+            <Button
+              onClick={async () => {
+                if (!shareDialogPost) return;
+                try {
+                  const shareText = [
+                    `[모두트리 AI]`,
+                    '',
+                    `${shareDialogPost.description}`,
+                    '',
+                    shareDialogPost.aiAnalysis,
+                    '',
+                    '모두트리에서 더 많은 AI 분석을 만나보세요!',
+                    'https://modootree.com/joy'
+                  ].filter(Boolean).join('\n');
 
-                    if (!window.Kakao?.isInitialized()) {
-                      console.log('카카오 SDK 초기화 시도');
-                      await window.Kakao?.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
-                    }
-                    
-                    if (!window.Kakao?.Share) {
-                      throw new Error('카카오 공유 기능을 사용할 수 없습니다.');
-                    }
-
-                    console.log('카카오 공유 시작:', {
-                      title: shareDialogPost.title,
-                      description: shareDialogPost.description,
-                      imageUrl: shareDialogPost.image,
-                      url: shareDialogPost.url
-                    });
-
-                    await window.Kakao.Share.sendDefault({
-                      objectType: 'feed',
-                      content: {
-                        title: shareDialogPost.title,
-                        description: shareDialogPost.description + shareDialogPost.aiAnalysis,
-                        imageUrl: shareDialogPost.image,
-                        link: {
-                          mobileWebUrl: shareDialogPost.url,
-                          webUrl: shareDialogPost.url
-                        }
-                      },
-                      buttons: [
-                        {
-                          title: '자세히 보기',
-                          link: {
-                            mobileWebUrl: shareDialogPost.url,
-                            webUrl: shareDialogPost.url
-                          }
-                        }
-                      ]
-                    });
+                  await navigator.clipboard.writeText(shareText);
+                  setCopied(true);
+                  setTimeout(() => {
+                    setCopied(false);
                     setShowShareDialog(false);
-                  } catch (error) {
-                    console.error('카카오 공유 실패:', error);
-                    alert('카카오톡 공유에 실패했습니다.');
-                  }
-                }}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black h-10 sm:h-11 text-sm sm:text-base px-2 sm:px-4"
-              >
-                <img 
-                  src="/Image/sns/kakaotalk.png" 
-                  alt="카카오톡" 
-                  className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5"
-                />
-                카카오톡 공유
-              </Button>
-              {/* 클립보드 복사 */}
-              <Button
-                onClick={async () => {
-                  if (!shareDialogPost) return;
-                  try {
-                    // 텍스트 준비
-                    const shareText = [
-                      `[모두트리 AI]`,
-                      '',
-                      `${shareDialogPost.description}`,
-                      '',
-                      shareDialogPost.aiAnalysis,
-                      '',
-                      `🔗 ${shareDialogPost.url}`
-                    ].filter(Boolean).join('\n');
-
-                    // 이미지와 텍스트를 함께 클립보드에 복사
-                    try {
-                      const clipboardItems = [
-                        new ClipboardItem({
-                          'text/plain': new Blob([shareText], { type: 'text/plain' })
-                        })
-                      ];
-
-                      // 이미지가 있는 경우에만 이미지 복사 시도
-                      if (shareDialogPost.image) {
-                        const imageResponse = await fetch(shareDialogPost.image);
-                        const imageBlob = await imageResponse.blob();
-                        clipboardItems[0] = new ClipboardItem({
-                          'text/plain': new Blob([shareText], { type: 'text/plain' }),
-                          [imageBlob.type]: imageBlob
-                        });
-                      }
-
-                      await navigator.clipboard.write(clipboardItems);
-                    } catch (clipError) {
-                      // 고급 클립보드 API가 실패하면 기본 텍스트만 복사
-                      console.warn('이미지 복사 실패, 텍스트만 복사합니다:', clipError);
-                      await navigator.clipboard.writeText(shareText);
-                    }
-
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  } catch (error) {
-                    console.error('클립보드 복사 실패:', error);
-                    alert('클립보드 복사에 실패했습니다.');
-                  }
-                }}
-                className="bg-blue-500 hover:bg-blue-600 h-10 sm:h-11 text-sm sm:text-base px-2 sm:px-4 flex items-center justify-center gap-1.5"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                {copied ? '복사 완료!' : '클립보드 복사'}
-              </Button>
-              {/* 기본 공유 */}
-              {canShare && (
-                <Button
-                  onClick={async () => {
-                    if (!shareDialogPost) return;
-                    try {
-                      await navigator.share({
-                        title: shareDialogPost.title,
-                        text: shareDialogPost.description + shareDialogPost.aiAnalysis,
-                        url: shareDialogPost.url
-                      });
-                      setShowShareDialog(false);
-                    } catch (error) {
-                      console.error('공유 실패:', error);
-                    }
-                  }}
-                  className="col-span-2 bg-gray-500 hover:bg-gray-600 h-10 sm:h-11 text-sm sm:text-base flex items-center justify-center gap-1.5"
-                >
-                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                  다른 앱으로 공유
-                </Button>
-              )}
-            </div>
+                  }, 1500);
+                } catch (error) {
+                  console.error('클립보드 복사 실패:', error);
+                  alert('클립보드 복사에 실패했습니다.');
+                }
+              }}
+              className="w-full bg-blue-500 hover:bg-blue-600 h-11 sm:h-12 text-base sm:text-lg flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              {copied ? '복사 완료!' : '클립보드에 복사하기'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
