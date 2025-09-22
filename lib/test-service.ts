@@ -1,5 +1,5 @@
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
 
 interface TestData {
   title: string;
@@ -30,6 +30,29 @@ export const testService = {
     } catch (error) {
       console.error('Error creating test:', error);
       throw new Error('테스트 저장에 실패했습니다.');
+    }
+  },
+
+  incrementShareCount: async (testId: string) => {
+    try {
+      const testRef = doc(db, 'modoo-ai-tests', testId);
+      await runTransaction(db, async (transaction) => {
+        const testDoc = await transaction.get(testRef);
+        if (!testDoc.exists()) {
+          throw new Error('테스트를 찾을 수 없습니다.');
+        }
+
+        const currentStats = testDoc.data().stats || { shareCount: 0 };
+        const newShareCount = (currentStats.shareCount || 0) + 1;
+
+        transaction.update(testRef, {
+          'stats.shareCount': newShareCount,
+          updatedAt: serverTimestamp()
+        });
+      });
+    } catch (error) {
+      console.error('공유 수 증가 실패:', error);
+      throw new Error('공유 수 업데이트에 실패했습니다.');
     }
   }
 };
