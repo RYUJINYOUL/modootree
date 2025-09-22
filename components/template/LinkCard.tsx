@@ -249,7 +249,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   const addNewLink = async () => {
     const newLink: LinkItem = {
-      image: '/Image/defaultLogo.png' as string,  // 기존 logo.png 파일 사용
+      image: '/Image/defaultLogo.png',  // 기본 이미지 경로
       title: '제목,링크 등록',
       url: '',
       bgColor: '#ffffff',
@@ -423,7 +423,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
               {/* 이미지 */}
               <div className="flex-shrink-0">
                 <Image
-                  src={link.image}
+                  src={link.image || '/Image/defaultLogo.png'}
                   width={50}
                   height={50}
                   alt="link"
