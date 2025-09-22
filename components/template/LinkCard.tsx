@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 interface LinkItem {
-  image: string;
+  image: string | null;
   title: string;
   url: string;
   bgColor?: string;
@@ -146,9 +146,13 @@ export default function LinkCards({ username, uid }: LogoProps) {
         await deleteImageFromStorage(linkToDelete.image);
       }
       const url = await uploadLinkImage(file, finalUid);
-      const updated = [...links];
-      updated[index].image = url;
-      await saveLinks(updated);
+      if (url) {
+        const updated = [...links];
+        updated[index].image = url;
+        await saveLinks(updated);
+      } else {
+        console.error('이미지 업로드 실패');
+      }
     } catch (err) {
       console.error('이미지 업로드 실패:', err);
     }
@@ -245,7 +249,7 @@ export default function LinkCards({ username, uid }: LogoProps) {
 
   const addNewLink = async () => {
     const newLink: LinkItem = {
-      image: '/Image/defaultLogo.png',  // 기존 logo.png 파일 사용
+      image: '/Image/defaultLogo.png' as string,  // 기존 logo.png 파일 사용
       title: '제목,링크 등록',
       url: '',
       bgColor: '#ffffff',
