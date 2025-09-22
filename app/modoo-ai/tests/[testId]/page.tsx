@@ -29,7 +29,8 @@ interface Test {
   };
 }
 
-export default function TestPage({ params }: { params: { testId: string } }) {
+export default function TestPage({ params }: { params: Promise<{ testId: string }> }) {
+  const { testId } = use(params);
   const router = useRouter();
   const [test, setTest] = useState<Test | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +41,14 @@ export default function TestPage({ params }: { params: { testId: string } }) {
     if (typeof window === 'undefined' || !test) return false;
     
     // 첫 번째 질문에 대한 투표 여부 확인
-    const votedKey = `voted_${params.testId}_0`;
+    const votedKey = `voted_${testId}_0`;
     return localStorage.getItem(votedKey) === 'true';
   };
 
   useEffect(() => {
     const fetchTest = async () => {
       try {
-        const testDoc = await getDoc(doc(db, 'modoo-ai-tests', params.testId));
+        const testDoc = await getDoc(doc(db, 'modoo-ai-tests', testId));
         if (testDoc.exists()) {
           setTest(testDoc.data() as Test);
         }
@@ -59,7 +60,7 @@ export default function TestPage({ params }: { params: { testId: string } }) {
     };
 
     fetchTest();
-  }, [params.testId]);
+  }, [testId]);
 
   // 투표 상태 체크
   useEffect(() => {
@@ -67,7 +68,7 @@ export default function TestPage({ params }: { params: { testId: string } }) {
       const voted = checkVoteStatus();
       setHasVoted(voted);
     }
-  }, [test, params.testId]);
+  }, [test, testId]);
 
   if (loading) {
     return (
@@ -154,7 +155,7 @@ export default function TestPage({ params }: { params: { testId: string } }) {
           {/* 버튼 섹션 */}
           <div className="flex flex-col gap-4 px-3 md:px-5">
             <Button
-              onClick={() => router.push(`/modoo-ai/tests/${params.testId}/questions/1`)}
+              onClick={() => router.push(`/modoo-ai/tests/${testId}/questions/1`)}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white text-base md:text-lg py-4 rounded-lg"
             >
               공감 시작하기
@@ -162,7 +163,7 @@ export default function TestPage({ params }: { params: { testId: string } }) {
 
             {hasVoted && (
               <Button
-                onClick={() => router.push(`/modoo-ai/tests/${params.testId}/results/1`)}
+                onClick={() => router.push(`/modoo-ai/tests/${testId}/results/1`)}
                 className="w-full bg-gray-700/50 hover:bg-gray-700 text-white text-base md:text-lg py-4 rounded-lg"
               >
                 결과 페이지 보기
