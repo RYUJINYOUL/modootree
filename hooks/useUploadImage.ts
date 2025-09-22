@@ -2,6 +2,13 @@ import { useState, useCallback } from 'react';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useSelector } from 'react-redux';
 
+export const deleteImageFromStorage = async (urlToDelete: string) => {
+  if (!urlToDelete) return;
+  const storage = getStorage();
+  const imageRef = ref(storage, urlToDelete);
+  await deleteObject(imageRef);
+};
+
 interface ImageUploadOptions {
   maxFileSizeMB?: number;
   maxWidth?: number;
@@ -113,13 +120,6 @@ export const useUploadImage = (options?: ImageUploadOptions) => {
       setLoading(false);
     }
   }, [currentUser?.uid, options]);
-
-  export const deleteImageFromStorage = async (urlToDelete: string) => {
-    if (!urlToDelete) return;
-    const storage = getStorage();
-    const imageRef = ref(storage, urlToDelete);
-    await deleteObject(imageRef);
-  };
 
   const deleteImage = useCallback(async (urlToDelete: string) => {
     if (!urlToDelete) return;
