@@ -29,7 +29,12 @@ interface Test {
   };
 }
 
-export default function TestPage({ params }: { params: { testId: string } }) {
+interface PageProps {
+  params: { testId: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default function TestPage({ params }: PageProps) {
   const router = useRouter();
   const [test, setTest] = useState<Test | null>(null);
   const [loading, setLoading] = useState(true);
