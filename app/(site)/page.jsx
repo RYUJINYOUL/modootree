@@ -93,6 +93,7 @@ export default function Page() {
   const [error, setError] = useState('');
   const [allowedSites, setAllowedSites] = useState([]);
   const [showAllowedSites, setShowAllowedSites] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const { push } = useRouter();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
@@ -327,18 +328,54 @@ export default function Page() {
             <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
               {renderViewSiteButton('main')}
               {renderViewSiteButton('sub')}
-              <Link
-                href="/likes/all"
-                className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
-              >
-                공감 한 조각
-              </Link>
-              <Link
-                href="/joy"
-                className="bg-violet-500 hover:bg-violet-600 text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors"
-              >
-                사진 한 조각
-              </Link>
+              <div className="relative w-full">
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center relative"
+                >
+                  모두 한 조각
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`absolute right-6 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                  >
+                    <path d="m6 9 6 6 6-6"/>
+                  </svg>
+                </button>
+
+                {showDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-blue-400 rounded-2xl overflow-hidden shadow-lg z-10">
+                    <Link
+                      href="/likes/all"
+                      className="flex items-center px-6 py-3 hover:bg-blue-600 text-white"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-rose-500 mr-3"></div>
+                      공감 한 조각
+                    </Link>
+                    <Link
+                      href="/joy"
+                      className="flex items-center px-6 py-3 hover:bg-blue-600 text-white"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-violet-500 mr-3"></div>
+                      사진 한 조각
+                    </Link>
+                    <Link
+                      href="/modoo-ai"
+                      className="flex items-center px-6 py-3 hover:bg-blue-600 text-white"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mr-3"></div>
+                      사연 한 조각
+                    </Link>
+                  </div>
+                )}
+              </div>
               {(currentUser?.uid) && allowedSites.length > 0 && (
                 <div className="relative">
                   <button

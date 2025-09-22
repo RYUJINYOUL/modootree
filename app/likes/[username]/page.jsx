@@ -209,9 +209,9 @@ export default function LikesPage() {
   }, []);
 
   useEffect(() => {
-    const likesRef = collection(db, 'likes');
-    const q = query(likesRef, orderBy('createdAt', 'desc'));
-
+        const likesRef = collection(db, 'likes');
+        const q = query(likesRef, orderBy('createdAt', 'desc'));
+        
     // 실시간 업데이트를 위한 리스너 설정
     const unsubscribe = onSnapshot(q, (snapshot) => {
       try {
@@ -668,8 +668,8 @@ export default function LikesPage() {
           {/* 제목과 작성 버튼 */}
           <div className="relative flex items-center justify-center mb-6">
             <h1 className="text-2xl font-bold text-white text-center">
-              공감 한조각
-            </h1>
+            공감 한조각
+          </h1>
             {currentUser?.uid && (
               <div className="absolute right-0">
                 <Button
@@ -930,8 +930,8 @@ export default function LikesPage() {
                             <button
                               className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full 
                                 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                          onClick={(e) => {
+                            e.stopPropagation();
                                 const newIndex = ((like.currentImageIndex || 0) - 1 + like.images.length) % like.images.length;
                                 setLikes(prev => prev.map(p => 
                                   p.id === like.id ? { ...p, currentImageIndex: newIndex } : p
@@ -969,7 +969,7 @@ export default function LikesPage() {
                                   }}
                                 />
                               ))}
-                            </div>
+                          </div>
                           </>
                         )}
                       </div>
@@ -1081,29 +1081,29 @@ export default function LikesPage() {
                       <div className="relative aspect-video group mb-6">
                         {/* 이미지 캐러셀 */}
                         <div className="relative w-full h-full rounded-lg overflow-hidden">
-                          {selectedPost.images.map((imageUrl, index) => (
+                        {selectedPost.images.map((imageUrl, index) => (
                             <div
                               key={index}
                               className={`absolute inset-0 transition-opacity duration-300
                                 ${selectedPost.currentImageIndex === index ? 'opacity-100' : 'opacity-0'}`}
                             >
-                              <img
-                                src={imageUrl}
+                            <img
+                              src={imageUrl}
                                 alt={`${selectedPost.title || ''} ${index + 1}`}
                                 className="w-full h-full object-cover cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedImage(imageUrl);
-                                  setCurrentImageSet(selectedPost.images.map(url => ({
-                                    url,
-                                    title: selectedPost.category,
-                                    date: selectedPost.createdAt
-                                  })));
-                                  setShowImageViewer(true);
-                                }}
-                              />
-                            </div>
-                          ))}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedImage(imageUrl);
+                                setCurrentImageSet(selectedPost.images.map(url => ({
+                                  url,
+                                  title: selectedPost.category,
+                                  date: selectedPost.createdAt
+                                })));
+                                setShowImageViewer(true);
+                              }}
+                            />
+                          </div>
+                        ))}
                         </div>
 
                         {/* 이미지가 2장 이상일 때만 네비게이션 표시 */}

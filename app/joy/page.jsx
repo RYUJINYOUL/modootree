@@ -34,6 +34,7 @@ import * as ReactDOM from 'react-dom/client';
 import CropperModal from '@/components/ui/CropperModal';
 import Header from '@/components/Header';
 import LoginOutButton from '@/components/ui/LoginOutButton';
+import CollapsibleFooter from '@/components/ui/CollapsibleFooter';
 
 const CATEGORIES = {
   all: { id: 'all', title: '전체' },
@@ -1391,6 +1392,7 @@ export default function JoyPage() {
         </DialogContent>
       </Dialog>
 
+      <CollapsibleFooter />
       <CropperModal
         isOpen={showCropper}
         imageUrl={cropImage?.url}
