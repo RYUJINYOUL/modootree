@@ -114,6 +114,13 @@ export const useUploadImage = (options?: ImageUploadOptions) => {
     }
   }, [currentUser?.uid, options]);
 
+  export const deleteImageFromStorage = async (urlToDelete: string) => {
+    if (!urlToDelete) return;
+    const storage = getStorage();
+    const imageRef = ref(storage, urlToDelete);
+    await deleteObject(imageRef);
+  };
+
   const deleteImage = useCallback(async (urlToDelete: string) => {
     if (!urlToDelete) return;
     setLoading(true);
