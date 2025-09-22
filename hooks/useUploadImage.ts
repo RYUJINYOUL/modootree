@@ -9,6 +9,26 @@ export const deleteImageFromStorage = async (urlToDelete: string) => {
   await deleteObject(imageRef);
 };
 
+export const uploadLogoImage = async (file: File, options?: ImageUploadOptions) => {
+  try {
+    const maxFileSize = (options?.maxFileSizeMB || 2) * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      throw new Error(`파일 크기가 ${options?.maxFileSizeMB || 2}MB를 초과합니다.`);
+    }
+
+    const resizedBlob = await resizeImage(file, options || {});
+    const storage = getStorage();
+    const folder = options?.folder || 'uploads';
+    const storageRef = ref(storage, `${folder}/logos/${Date.now()}_${file.name}`);
+
+    await uploadBytes(storageRef, resizedBlob);
+    return await getDownloadURL(storageRef);
+  } catch (err: any) {
+    console.error('이미지 업로드 실패:', err);
+    return null;
+  }
+};
+
 export const uploadLinkImage = async (file: File, options?: ImageUploadOptions) => {
   try {
     const maxFileSize = (options?.maxFileSizeMB || 2) * 1024 * 1024;
