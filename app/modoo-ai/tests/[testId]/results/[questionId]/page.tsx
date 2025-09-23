@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Test {
@@ -16,6 +16,17 @@ interface Test {
       score: number;
     }>;
   }>;
+  recommendations?: {
+    movie?: string;
+    movieReason?: string;
+    music?: string;
+    musicArtist?: string;
+    musicReason?: string;
+    book?: string;
+    bookAuthor?: string;
+    bookReason?: string;
+    message?: string;
+  };
 }
 
 export default function QuestionResultPage({ 
@@ -31,6 +42,8 @@ export default function QuestionResultPage({
   const [comments, setComments] = useState<any[]>([]);
   const [comment, setComment] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
 
   const resolvedParams = use(params);
   const questionIndex = parseInt(resolvedParams.questionId) - 1;
@@ -169,6 +182,62 @@ export default function QuestionResultPage({
             <h1 className="text-2xl md:text-2xl font-bold text-white text-center">{currentQuestion.text}</h1>
           </div>
 
+          {/* 추천 컨텐츠 */}
+          {test.recommendations && (
+            <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">추천 컨텐츠</h3>
+              <div className="space-y-4">
+                {test.recommendations.movie && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🎬</span>
+                      <span className="font-medium text-white">{test.recommendations.movie}</span>
+                    </div>
+                    {test.recommendations.movieReason && (
+                      <p className="text-sm text-gray-400 ml-8">{test.recommendations.movieReason}</p>
+                    )}
+                  </div>
+                )}
+                {test.recommendations.music && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🎵</span>
+                      <span className="font-medium text-white">
+                        {test.recommendations.music}
+                        {test.recommendations.musicArtist && ` - ${test.recommendations.musicArtist}`}
+                      </span>
+                    </div>
+                    {test.recommendations.musicReason && (
+                      <p className="text-sm text-gray-400 ml-8">{test.recommendations.musicReason}</p>
+                    )}
+                  </div>
+                )}
+                {test.recommendations.book && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">📚</span>
+                      <span className="font-medium text-white">
+                        {test.recommendations.book}
+                        {test.recommendations.bookAuthor && ` - ${test.recommendations.bookAuthor}`}
+                      </span>
+                    </div>
+                    {test.recommendations.bookReason && (
+                      <p className="text-sm text-gray-400 ml-8">{test.recommendations.bookReason}</p>
+                    )}
+                  </div>
+                )}
+                {test.recommendations.message && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">💌</span>
+                      <span className="font-medium text-white">{test.recommendations.message}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 투표 결과 */}
           <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
             <h3 className="text-lg font-semibold text-white mb-4">투표 결과</h3>
@@ -227,26 +296,115 @@ export default function QuestionResultPage({
               <div className="space-y-4">
                 {comments.map((comment) => (
                   <div key={comment.id} className="bg-gray-700/50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      {comment.userPhoto ? (
-                        <img 
-                          src={comment.userPhoto} 
-                          alt={comment.userName} 
-                          className="w-8 h-8 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm">
-                          {comment.userName?.[0] || '?'}
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-sm font-medium">{comment.userName}</div>
-                        <div className="text-xs text-gray-400">
-                          {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : '방금 전'}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {comment.userPhoto ? (
+                          <img 
+                            src={comment.userPhoto} 
+                            alt={comment.userName} 
+                            className="w-8 h-8 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm">
+                            {comment.userName?.[0] || '?'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-medium">{comment.userName}</div>
+                          <div className="text-xs text-gray-400">
+                            {comment.createdAt ? 
+                              new Date(comment.createdAt).toLocaleString('ko-KR', {
+                                year: '2-digit',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false
+                              }).replace(/\s/g, '') 
+                              : '방금 전'}
+                          </div>
                         </div>
                       </div>
+                      {currentUser?.uid === comment.userId && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingCommentId(comment.id);
+                              setEditingCommentText(comment.comment);
+                            }}
+                            className="text-gray-400 hover:text-white transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                              <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm('정말로 이 답글을 삭제하시겠습니까?')) {
+                                try {
+                                  await deleteDoc(doc(db, 'modoo-ai-comments', comment.id));
+                                  await fetchComments();
+                                } catch (error) {
+                                  console.error('답글 삭제 실패:', error);
+                                  alert('답글 삭제에 실패했습니다. 다시 시도해주세요.');
+                                }
+                              }
+                            }}
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                              <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-300">{comment.comment}</p>
+                    {editingCommentId === comment.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingCommentText}
+                          onChange={(e) => setEditingCommentText(e.target.value)}
+                          className="w-full h-20 bg-gray-600/50 rounded-lg p-2 text-white text-sm resize-none"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            onClick={() => {
+                              setEditingCommentId(null);
+                              setEditingCommentText('');
+                            }}
+                            variant="outline"
+                            className="bg-gray-700/50 hover:bg-gray-700 text-white text-sm py-1 h-8"
+                          >
+                            취소
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              if (!editingCommentText.trim()) return;
+                              try {
+                                const commentRef = doc(db, 'modoo-ai-comments', comment.id);
+                                await updateDoc(commentRef, {
+                                  comment: editingCommentText.trim(),
+                                  updatedAt: serverTimestamp()
+                                });
+                                setEditingCommentId(null);
+                                setEditingCommentText('');
+                                await fetchComments();
+                              } catch (error) {
+                                console.error('답글 수정 실패:', error);
+                                alert('답글 수정에 실패했습니다. 다시 시도해주세요.');
+                              }
+                            }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 h-8"
+                          >
+                            수정 완료
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-gray-300">{comment.comment}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

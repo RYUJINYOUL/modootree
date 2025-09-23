@@ -14,7 +14,10 @@ const KakaoAuthButton = () => {
     }
 
     const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
-    window.location.href = KAKAO_AUTH_URL;
+    // 현재 URL을 state로 저장
+    const currentUrl = window.location.href;
+    const kakaoAuthUrlWithState = `${KAKAO_AUTH_URL}&state=${encodeURIComponent(currentUrl)}`;
+    window.location.href = kakaoAuthUrlWithState;
   };
 
   // ... rest of the component

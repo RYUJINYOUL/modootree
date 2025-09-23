@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { doc, getDoc, runTransaction, collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Test {
@@ -176,21 +176,6 @@ export default function QuestionPage({
   const currentQuestion = test.questions[questionIndex];
   const progress = ((questionIndex + 1) / test.questions.length) * 100;
   
-  if (!currentQuestion) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90">
-        <div className="container mx-auto px-4 py-10">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">질문을 찾을 수 없습니다</h1>
-            <Button onClick={() => router.push('/modoo-ai')}>
-              테스트 목록으로 돌아가기
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // 투표 결과 가져오기
   const fetchVoteResults = async () => {
     try {
@@ -206,12 +191,50 @@ export default function QuestionPage({
     }
   };
 
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90">
+        <div className="container mx-auto px-4 py-10">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">질문을 찾을 수 없습니다</h1>
+            <Button onClick={() => router.push('/modoo-ai')}>
+              테스트 목록으로 돌아가기
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 투표 여부 확인
+  const checkVoteStatus = async () => {
+    if (!currentUser?.uid) return false;
+    
+    try {
+      const userVoteQuery = query(
+        collection(db, 'user-votes'),
+        where('testId', '==', testId),
+        where('userId', '==', currentUser.uid)
+      );
+      const snapshot = await getDocs(userVoteQuery);
+      return !snapshot.empty;
+    } catch (error) {
+      console.error('투표 상태 확인 실패:', error);
+      return false;
+    }
+  };
+
   // 투표하기
   const handleAnswer = async (index: number) => {
     try {
+      if (!currentUser?.uid) {
+        alert('투표하려면 로그인이 필요합니다.');
+        return;
+      }
+
       // 이미 투표한 경우 처리
-      const votedKey = `voted_${testId}_${questionIndex}`;
-      if (localStorage.getItem(votedKey)) {
+      const hasVoted = await checkVoteStatus();
+      if (hasVoted) {
         alert('이미 투표하셨습니다.');
         return;
       }
@@ -235,18 +258,19 @@ export default function QuestionPage({
         }, { merge: true });
       });
 
+      // 사용자의 투표 기록 저장
+      await setDoc(doc(db, 'user-votes', `${currentUser.uid}_${testId}`), {
+        userId: currentUser.uid,
+        testId: testId,
+        selectedOption: index,
+        createdAt: serverTimestamp()
+      });
+
       // 결과와 답글 다시 가져오기
       await Promise.all([
         fetchVoteResults(),
         fetchComments()
       ]);
-      
-      // 로컬 스토리지에 답변과 투표 여부 저장
-      const newAnswers = [...answers];
-      newAnswers[questionIndex] = index;
-      setAnswers(newAnswers);
-      localStorage.setItem(`test_${testId}_answers`, JSON.stringify(newAnswers));
-      localStorage.setItem(`voted_${testId}_${questionIndex}`, 'true');
       
       // 답글 목록 로드 및 입력 폼 표시
       await fetchComments();
@@ -433,7 +457,7 @@ export default function QuestionPage({
               variant="outline"
               className="w-full bg-gray-700/50 hover:bg-gray-700 text-white py-3 rounded-lg"
             >
-              나중에 공감하기
+              투표 페이지로 이동
             </Button>
           </div>
         </div>

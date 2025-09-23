@@ -223,7 +223,13 @@ export default function Header() {
               사진한조각
             </button>
             <button
-              onClick={handleInquiry}
+              onClick={() => handleNavigation('/modoo-ai')}
+              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
+            >
+              사연한조각
+            </button>
+            <button
+              onClick={() => handleNavigation('/inquiry')}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
             >
               문의하기

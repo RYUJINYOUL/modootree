@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import Image from 'next/image';
+import { loadSlim } from "tsparticles-slim";
+import Particles from "react-tsparticles";
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +34,95 @@ interface AIResponse {
 interface FormattedVote {
   questions: VoteQuestion[];
 }
+
+const ParticlesComponent = () => {
+  const particlesInit = useCallback(async (engine: any) => {
+    await loadSlim(engine);
+  }, []);
+
+  return (
+    <Particles
+      className="absolute inset-0"
+      init={particlesInit}
+      options={{
+        background: {
+          color: "transparent"
+        },
+        fpsLimit: 120,
+        particles: {
+          color: {
+            value: ["#3498db", "#2980b9", "#8e44ad", "#2ecc71", "#16a085"]
+          },
+          collisions: {
+            enable: false
+          },
+          move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+              default: "out"
+            },
+            random: true,
+            speed: 0.5,
+            straight: false,
+            attract: {
+              enable: true,
+              rotateX: 600,
+              rotateY: 1200
+            }
+          },
+          number: {
+            density: {
+              enable: true,
+              area: 800
+            },
+            value: 100
+          },
+          opacity: {
+            animation: {
+              enable: true,
+              minimumValue: 0.1,
+              speed: 1,
+              sync: false
+            },
+            random: true,
+            value: { min: 0.1, max: 0.5 }
+          },
+          shape: {
+            type: "circle"
+          },
+          size: {
+            animation: {
+              enable: true,
+              minimumValue: 0.1,
+              speed: 2,
+              sync: false
+            },
+            random: true,
+            value: { min: 1, max: 4 }
+          }
+        },
+        detectRetina: true,
+        interactivity: {
+          events: {
+            onHover: {
+              enable: true,
+              mode: "bubble"
+            }
+          },
+          modes: {
+            bubble: {
+              distance: 200,
+              duration: 2,
+              opacity: 0.8,
+              size: 6
+            }
+          }
+        }
+      }}
+    />
+  );
+};
 
 export default function CreateTestPage() {
   const router = useRouter();
@@ -119,12 +211,13 @@ export default function CreateTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90">
-      <div className="container mx-auto px-4 py-10">
-        <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 relative overflow-hidden">
+      <ParticlesComponent />
+      <div className="w-full px-0 md:container md:mx-auto md:px-4 py-10 relative z-10">
+        <div className="w-full md:max-w-3xl md:mx-auto">
           <h1 className="text-2xl font-bold text-center mb-8">모두트리 공감 투표 만들기</h1>
 
-          <div className="bg-gray-800/50 p-6 rounded-lg shadow-lg space-y-8">
+          <div className="bg-gray-800/50 p-4 md:p-6 rounded-none md:rounded-lg shadow-lg space-y-8">
             {/* 1. 사연 입력 */}
             <div>
               <h2 className="text-xl font-semibold mb-4">1. 사연을 들려주세요</h2>
@@ -140,37 +233,52 @@ export default function CreateTestPage() {
             <Collapsible>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800">
-                  <h2 className="text-xl font-semibold">2. 현재 감정을 선택해주세요</h2>
-                  <span className="text-gray-400">
-                    {emotion === 'happy' ? '😊 행복해요' :
-                     emotion === 'sad' ? '😢 슬퍼요' :
-                     emotion === 'angry' ? '😠 화나요' :
-                     emotion === 'anxious' ? '😨 불안해요' :
-                     emotion === 'peaceful' ? '😌 편안해요' :
-                     '🤔 고민이에요'}
-                  </span>
+                  <h2 className="text-xl font-semibold">2. 현재 감정 선택</h2>
+                  <div className="flex items-center gap-2">
+                    <Image 
+                      src={emotion === 'happy' ? '/logos/m1.png' :
+                           emotion === 'sad' ? '/logos/m6.png' :
+                           emotion === 'angry' ? '/logos/m9.png' :
+                           emotion === 'anxious' ? '/logos/m5.png' :
+                           emotion === 'peaceful' ? '/logos/m4.png' :
+                           '/logos/m14.png'} 
+                      alt="감정 아이콘" 
+                      width={24}
+                      height={24}
+                      className="w-6 h-6"
+                    />
+                    <span className="text-gray-400">
+                      {emotion === 'happy' ? '행복함' :
+                       emotion === 'sad' ? '슬퍼요' :
+                       emotion === 'angry' ? '화나요' :
+                       emotion === 'anxious' ? '불안함' :
+                       emotion === 'peaceful' ? '편안함' :
+                       '고민임'}
+                    </span>
+                  </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
                   {[
-                    { value: 'happy', label: '😊 행복해요' },
-                    { value: 'sad', label: '😢 슬퍼요' },
-                    { value: 'angry', label: '😠 화나요' },
-                    { value: 'anxious', label: '😨 불안해요' },
-                    { value: 'peaceful', label: '😌 편안해요' },
-                    { value: 'worried', label: '🤔 고민이에요' },
+                    { value: 'happy', label: '행복', icon: '/logos/m1.png' },
+                    { value: 'sad', label: '슬픔', icon: '/logos/m6.png' },
+                    { value: 'angry', label: '화남', icon: '/logos/m9.png' },
+                    { value: 'anxious', label: '불안', icon: '/logos/m5.png' },
+                    { value: 'peaceful', label: '편안', icon: '/logos/m4.png' },
+                    { value: 'worried', label: '고민', icon: '/logos/m14.png' },
                   ].map((item) => (
                     <Button
                       key={item.value}
-                      className={`h-12 w-full ${
+                      className={`h-16 w-full ${
                         emotion === item.value
                           ? 'bg-blue-500 hover:bg-blue-600 text-white'
                           : 'bg-gray-800/50 hover:bg-gray-800/70 text-gray-100'
-                      }`}
+                      } flex items-center justify-center gap-2`}
                       onClick={() => setEmotion(item.value)}
                     >
-                      {item.label}
+                      <Image src={item.icon} alt={item.label} width={32} height={32} className="w-8 h-8" />
+                      <span>{item.label}</span>
                     </Button>
                   ))}
                 </div>
@@ -181,22 +289,24 @@ export default function CreateTestPage() {
             <Collapsible>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-800">
-                  <h2 className="text-xl font-semibold">3. 이야기의 주제를 선택해주세요</h2>
+                  <h2 className="text-xl font-semibold">3. 사연 주제 선택</h2>
                   <span className="text-gray-400">
-                    {category === 'daily' ? '💫 일상' :
-                     category === 'relationship' ? '💝 관계' :
-                     category === 'worry' ? '💭 고민' :
-                     '🌟 위로'}
+                    {category === 'daily' ? '일상' :
+                      category === 'relationship' ? '관계' :
+                      category === 'worry' ? '고민' :
+                      category === 'comfort' ? '위로' :
+                      '기타'}
                   </span>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  {[
-                    { value: 'daily', label: '💫 일상' },
-                    { value: 'relationship', label: '💝 관계' },
-                    { value: 'worry', label: '💭 고민' },
-                    { value: 'comfort', label: '🌟 위로' },
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                    {[
+                     { value: 'daily', label: '일상' },
+                     { value: 'relationship', label: '관계' },
+                     { value: 'worry', label: '고민' },
+                     { value: 'comfort', label: '위로' },
+                     { value: 'etc', label: '기타' },
                   ].map((item) => (
                     <Button
                       key={item.value}
@@ -228,7 +338,7 @@ export default function CreateTestPage() {
           {aiResponse && (
             <div className="mt-8 space-y-8">
               {/* 4. 공감 투표 */}
-              <div className="bg-gray-800/50 p-6 rounded-lg shadow-lg">
+              <div className="bg-gray-800/50 p-4 md:p-6 rounded-none md:rounded-lg shadow-lg">
                 <h2 className="text-xl font-semibold mb-4">4. 공감 투표</h2>
                 <div className="space-y-6">
                   {/* 투표 질문 표시 */}
@@ -319,7 +429,7 @@ export default function CreateTestPage() {
               </div>
 
               {/* 5. 추천 컨텐츠 */}
-              <div className="bg-gray-800/50 p-6 rounded-lg shadow-lg">
+              <div className="bg-gray-800/50 p-4 md:p-6 rounded-none md:rounded-lg shadow-lg">
                 <h2 className="text-xl font-semibold mb-4">5. 추천 컨텐츠</h2>
                 <Tabs defaultValue="movie" className="w-full">
                   <TabsList className="w-full grid grid-cols-4 mb-4">

@@ -109,7 +109,9 @@ export default function KakaoCallbackContent() {
 
       console.log('로그인 성공!');
       setIsLoading(false);
-      router.push('/');
+      // state 파라미터에서 원래 페이지 URL 가져오기
+      const returnUrl = searchParams.get('state') || '/';
+      window.location.href = decodeURIComponent(returnUrl);
     } catch (error) {
       console.error('인증 처리 중 오류:', error);
       setErrorMessage(

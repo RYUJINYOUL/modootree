@@ -702,14 +702,14 @@ export default function JoyPage() {
                         reader.onload = (e) => {
                           const img = new Image();
                           img.onload = () => {
-                            const MAX_FILE_SIZE = 500 * 1024; // 500KB
-                            const MAX_WIDTH = 1600;           // 최대 너비
+                            const MAX_FILE_SIZE = 1.5 * 1024 * 1024; // 1.5MB
+                            const MAX_WIDTH = 2048;           // 최대 너비
                             const MIN_WIDTH = 800;           // 최소 너비
-                            let quality = 0.7;               // 초기 품질
+                            let quality = 0.9;               // 초기 품질 (높게 시작)
                             let width = img.width;
                             let height = img.height;
 
-                            // 이미지 크기 초기 설정
+                            // 이미지 크기 초기 설정 (가로세로 비율 유지)
                             if (width > MAX_WIDTH) {
                               height *= MAX_WIDTH / width;
                               width = MAX_WIDTH;
@@ -737,18 +737,19 @@ export default function JoyPage() {
                             // 크기 조절 반복 함수
                             const adjustSize = async () => {
                               let blob = await tryResize(quality);
-                              console.log('첫 시도:', {
-                                size: blob.size,
-                                quality,
-                                width,
-                                height
+                              console.log('압축 시작:', {
+                                원본크기: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+                                압축크기: (blob.size / 1024 / 1024).toFixed(2) + 'MB',
+                                품질: quality,
+                                가로: width,
+                                세로: height
                               });
 
                               // 파일 크기가 목표보다 크면 품질 또는 크기 조절
-                              while (blob.size > MAX_FILE_SIZE && width > MIN_WIDTH) {
+                              while (blob.size > MAX_FILE_SIZE && (quality > 0.3 || width > MIN_WIDTH)) {
                                 if (quality > 0.3) {
-                                  // 먼저 품질 낮추기 시도
-                                  quality -= 0.1;
+                                  // 먼저 품질 낮추기 시도 (더 세밀하게)
+                                  quality -= 0.05;
                                 } else {
                                   // 품질을 더 낮출 수 없으면 크기 줄이기
                                   width *= 0.9;
@@ -756,15 +757,15 @@ export default function JoyPage() {
                                   canvas.width = width;
                                   canvas.height = height;
                                   ctx.drawImage(img, 0, 0, width, height);
-                                  quality = 0.7; // 품질 리셋
+                                  quality = 0.8; // 품질 리셋 (약간 낮춰서)
                                 }
 
                                 blob = await tryResize(quality);
-                                console.log('재시도:', {
-                                  size: blob.size,
-                                  quality,
-                                  width,
-                                  height
+                                console.log('압축 진행:', {
+                                  크기: (blob.size / 1024 / 1024).toFixed(2) + 'MB',
+                                  품질: quality.toFixed(2),
+                                  가로: Math.round(width),
+                                  세로: Math.round(height)
                                 });
                               }
 
@@ -773,13 +774,13 @@ export default function JoyPage() {
                                 lastModified: Date.now(),
                               });
 
-                              console.log('최종 결과:', {
-                                originalSize: file.size,
-                                resizedSize: resizedFile.size,
-                                width,
-                                height,
-                                quality,
-                                reduction: Math.round((1 - resizedFile.size / file.size) * 100) + '%'
+                              console.log('압축 완료:', {
+                                원본: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+                                결과: (resizedFile.size / 1024 / 1024).toFixed(2) + 'MB',
+                                가로: Math.round(width),
+                                세로: Math.round(height),
+                                품질: quality.toFixed(2),
+                                감소율: Math.round((1 - resizedFile.size / file.size) * 100) + '%'
                               });
 
                               resolve({
