@@ -3,6 +3,26 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
+
+interface FeedItem {
+  id: string;
+  type: 'likes' | 'joy' | 'modoo-ai';
+  displayType: string;
+  title?: string;
+  content?: string;
+  description?: string;
+  images?: string[];
+  emotionIcon?: string;
+  emotion?: string;
+  createdAt: any;
+  stats?: {
+    likeCount?: number;
+    participantCount?: number;
+  };
+  likes?: number;
+  comments?: number;
+  username?: string;
+};
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Image from 'next/image';
@@ -14,7 +34,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import CategoryCarousel from '../../components/CategoryCarousel';
 
 // 감정별 이모티콘 매핑
@@ -32,7 +51,7 @@ export default function FeedPage() {
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
   const [loading, setLoading] = useState(true);
-  const [feedItems, setFeedItems] = useState([]);
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
 
   useEffect(() => {
@@ -68,7 +87,7 @@ export default function FeedPage() {
     }
   };
 
-  const fetchFromCollection = async (collectionName: string, itemLimit: number = 10) => {
+  const fetchFromCollection = async (collectionName: string, itemLimit: number = 10): Promise<any[]> => {
     const q = query(
       collection(db, collectionName),
       orderBy('createdAt', 'desc'),
@@ -83,7 +102,7 @@ export default function FeedPage() {
     }));
   };
 
-  const formatData = async (data: any[], type: string) => {
+  const formatData = async (data: any[], type: string): Promise<FeedItem[]> => {
     const formattedData = await Promise.all(data.map(async (item) => {
       // 댓글 수 가져오기
       const commentsQuery = query(
@@ -117,7 +136,7 @@ export default function FeedPage() {
           type === 'joy' ? '사진 한조각' :
           '사연 한조각',
         previewContent: item.content || item.description || '',
-        emotionIcon: type === 'modoo-ai' ? EMOTION_ICONS[item.emotion || 'default'] : null,
+        emotionIcon: type === 'modoo-ai' ? EMOTION_ICONS[(item.emotion as keyof typeof EMOTION_ICONS) || 'default'] : null,
         comments: commentCount,
         likes: likeCount
       };
