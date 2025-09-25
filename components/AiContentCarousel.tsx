@@ -11,8 +11,24 @@ interface AiContentCarouselProps {
   type: 'likes' | 'joy' | 'modoo-ai';
 }
 
+interface FeedItem {
+  id: string;
+  createdAt: Date;
+  title?: string;
+  content?: string;
+  description?: string;
+  images?: string[];
+  emotion?: string;
+  stats?: {
+    likeCount?: number;
+    participantCount?: number;
+  };
+  comments?: number;
+  likes?: number;
+}
+
 export default function AiContentCarousel({ type }: AiContentCarouselProps) {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const options = {
@@ -57,10 +73,12 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
           const docData = doc.data();
           console.log('Document data:', docData);
           
-          const item = {
+          const item: FeedItem = {
             id: doc.id,
             ...docData,
-            createdAt: docData.createdAt?.toDate()
+            createdAt: docData.createdAt?.toDate(),
+            comments: 0,
+            likes: 0
           };
 
           // 댓글 수 가져오기
@@ -99,7 +117,7 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
   };
 
   // 카드 컴포넌트
-  const Card = ({ item }: { item: any }) => (
+  const Card = ({ item }: { item: FeedItem }) => (
     <div className="flex-[0_0_280px] min-w-0 px-2">
       <div className="mx-2">
         <div className="relative w-[260px] h-[320px] bg-white/10 rounded-3xl overflow-hidden shadow-lg backdrop-blur-sm">
@@ -109,7 +127,7 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
               {type === 'modoo-ai' ? (
                 <div className="w-24 h-24">
                   <img
-                    src={EMOTION_ICONS[item.emotion || 'default']}
+                    src={EMOTION_ICONS[item.emotion as keyof typeof EMOTION_ICONS || 'default']}
                     alt="감정 이모티콘"
                     className="w-full h-full object-contain"
                   />
