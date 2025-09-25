@@ -11,13 +11,15 @@ export default function Footer() {
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isUserPage = /^\/[^/]+$/.test(pathname) && pathname !== '/inquiry'; // /username 형식의 경로 체크, inquiry 페이지 제외
   const isLikesPage = pathname === '/likes/all'; // /likes/all 페이지 체크
+  const isMainPage = pathname === '/'; // 메인 페이지 체크
+  const isModooAiTestPage = pathname.startsWith('/modoo-ai/tests/'); // 모두AI 테스트 페이지 체크
 
-  if (isAuthPage || isUserPage || isLikesPage) {
+  if (isAuthPage || isUserPage || isLikesPage || isMainPage || isModooAiTestPage) {
     return null;
   }
 
   return (
-    <footer className="w-full py-6 mt-auto bg-black/80">
+    <footer className="w-full py-6 bg-black/80">
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center gap-4">
           {/* 로고 섹션 */}

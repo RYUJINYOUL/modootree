@@ -73,77 +73,117 @@ export function BottomTabs() {
     <>
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <div className="bg-gray-900/95 backdrop-blur-lg border-t border-blue-500/20">
-          <div className="max-w-[2000px] mx-auto">
-            <div className="grid grid-cols-3 h-16">
-              <button
-                onClick={() => router.push('/')}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-colors",
-                  pathname === '/' 
-                    ? "text-blue-500" 
-                    : "text-white/70 hover:text-white hover:bg-white/5"
-                )}
-              >
-                <div className="relative w-6 h-6">
-                  <Image
-                    src="/logos/m1.png"
-                    alt="홈"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <span className="text-xs font-medium">홈</span>
-              </button>
+          <div className="max-w-[1100px] mx-auto">
+            <div className="grid grid-cols-5 h-16">
+            <button
+              onClick={() => router.push('/feed')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-colors",
+                pathname === '/feed'
+                  ? "text-blue-500"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <div className="relative w-6 h-6">
+                <Image
+                  src="/logos/m1.png"
+                  alt="피드"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="text-xs font-medium">피드</span>
+            </button>
 
-              <button
-                onClick={() => router.push('/feed')}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-colors",
-                  pathname === '/feed'
-                    ? "text-blue-500"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
-                )}
-              >
-                <div className="relative w-6 h-6">
-                  <Image
-                    src="/logos/m4.png"
-                    alt="피드"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <span className="text-xs font-medium">피드</span>
-              </button>
+            <button
+              onClick={() => router.push('/likes/all')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-colors",
+                pathname === '/likes/all'
+                  ? "text-blue-500"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <div className="relative w-6 h-6">
+                <Image
+                  src="/logos/m3.png"
+                  alt="공감"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="text-xs font-medium">공감 AI</span>
+            </button>
 
-              <button
-                onClick={() => {
-                  if (!currentUser?.uid) {
-                    router.push('/login');
-                    return;
-                  }
-                  if (userData?.username) {
-                    router.push(`/${userData.username}`);
-                  } else {
-                    setIsOpen(true);
-                  }
-                }}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-colors",
-                  pathname === `/${userData?.username}`
-                    ? "text-blue-500"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
-                )}
-              >
-                <div className="relative w-6 h-6">
-                  <Image
-                    src="/logos/m8.png"
-                    alt="내 사이트"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <span className="text-xs font-medium">내 사이트</span>
-              </button>
+            <button
+              onClick={() => router.push('/joy')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-colors",
+                pathname === '/joy'
+                  ? "text-blue-500"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <div className="relative w-6 h-6">
+                <Image
+                  src="/logos/m3.png"
+                  alt="사진"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="text-xs font-medium">사진 AI</span>
+            </button>
+
+            <button
+              onClick={() => router.push('/modoo-ai')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-colors",
+                pathname === '/modoo-ai'
+                  ? "text-blue-500"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <div className="relative w-6 h-6">
+                <Image
+                  src="/logos/m3.png"
+                  alt="사연"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="text-xs font-medium">사연 AI</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (!currentUser?.uid) {
+                  router.push('/login');
+                  return;
+                }
+                if (userData?.username) {
+                  router.push(`/${userData.username}`);
+                } else {
+                  setIsOpen(true);
+                }
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-colors",
+                pathname === `/${userData?.username}`
+                  ? "text-blue-500"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <div className="relative w-6 h-6">
+                <Image
+                  src="/logos/m12.png"
+                  alt="내 사이트"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="text-xs font-medium">내 사이트</span>
+            </button>
             </div>
           </div>
         </div>
