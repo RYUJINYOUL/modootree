@@ -16,20 +16,11 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
   const [loading, setLoading] = useState(true);
 
   const options = {
-    align: 'start',
-    containScroll: 'trimSnaps',
+    align: "center" as const,
+    containScroll: "trimSnaps" as const,
     dragFree: true,
     loop: true,
-    startIndex: 1,
-    breakpoints: {
-      '(min-width: 768px)': {
-        align: 'start',
-        containScroll: 'trimSnaps',
-        dragFree: true,
-        loop: true,
-        startIndex: 1
-      }
-    }
+    startIndex: 1
   };
 
   const [emblaRef] = useEmblaCarousel(options);
