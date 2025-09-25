@@ -4,14 +4,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import useEmblaCarousel from 'embla-carousel-react';
 
-interface Sample {
-  id: number;
-  username: string;
-  thumbnail: string;
-  description: string;
-  bgColor: string;
-}
-
 // 애니메이션 키프레임 스타일 추가
 const animationStyle = `
   @keyframes diagonal-float {
@@ -36,6 +28,14 @@ const animationStyle = `
     animation: diagonal-float 6s ease-in-out infinite;
   }
 `;
+
+interface Sample {
+  id: number;
+  username: string;
+  thumbnail: string;
+  description: string;
+  bgColor: string;
+}
 
 const sampleUsers: Sample[] = [
   {
@@ -100,15 +100,15 @@ export default function UserSampleCarousel2() {
   const [isMobile, setIsMobile] = useState(false);
 
   const options = {
-    align: 'start',
-    containScroll: 'trimSnaps',
+    align: "start" as const,
+    containScroll: "trimSnaps" as const,
     dragFree: true,
     loop: true,
     startIndex: 1,
     breakpoints: {
       '(min-width: 768px)': {
-        align: 'start',
-        containScroll: 'trimSnaps',
+        align: "start" as const,
+        containScroll: "trimSnaps" as const,
         dragFree: true,
         loop: true,
         startIndex: 1
