@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -177,66 +178,10 @@ export default function QuestionResultPage({
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900 text-white/90">
       <div className="container mx-auto px-4 py-6 md:py-10">
         <div className="max-w-2xl mx-auto space-y-4">
-          {/* 질문 섹션 */}
+          {/* 제목 섹션 */}
           <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
             <h1 className="text-2xl md:text-2xl font-bold text-white text-center">{currentQuestion.text}</h1>
           </div>
-
-          {/* 추천 컨텐츠 */}
-          {test.recommendations && (
-            <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">추천 컨텐츠</h3>
-              <div className="space-y-4">
-                {test.recommendations.movie && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🎬</span>
-                      <span className="font-medium text-white">{test.recommendations.movie}</span>
-                    </div>
-                    {test.recommendations.movieReason && (
-                      <p className="text-sm text-gray-400 ml-8">{test.recommendations.movieReason}</p>
-                    )}
-                  </div>
-                )}
-                {test.recommendations.music && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🎵</span>
-                      <span className="font-medium text-white">
-                        {test.recommendations.music}
-                        {test.recommendations.musicArtist && ` - ${test.recommendations.musicArtist}`}
-                      </span>
-                    </div>
-                    {test.recommendations.musicReason && (
-                      <p className="text-sm text-gray-400 ml-8">{test.recommendations.musicReason}</p>
-                    )}
-                  </div>
-                )}
-                {test.recommendations.book && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">📚</span>
-                      <span className="font-medium text-white">
-                        {test.recommendations.book}
-                        {test.recommendations.bookAuthor && ` - ${test.recommendations.bookAuthor}`}
-                      </span>
-                    </div>
-                    {test.recommendations.bookReason && (
-                      <p className="text-sm text-gray-400 ml-8">{test.recommendations.bookReason}</p>
-                    )}
-                  </div>
-                )}
-                {test.recommendations.message && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">💌</span>
-                      <span className="font-medium text-white">{test.recommendations.message}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* 투표 결과 */}
           <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
@@ -264,27 +209,59 @@ export default function QuestionResultPage({
             </div>
           </div>
 
-          {/* 답글 작성 */}
-          <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">답글 작성</h3>
-            <div className="space-y-4">
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="다른 참여자들에게 하고 싶은 말을 남겨주세요..."
-                className="w-full h-24 bg-gray-700/50 rounded-lg p-3 text-white text-sm resize-none"
-              />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSubmitComment}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
-                  disabled={!comment.trim()}
-                >
-                  작성하기
-                </Button>
-              </div>
+          {/* 추천 컨텐츠 */}
+          {test.recommendations && (
+            <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">추천 컨텐츠</h3>
+              <Tabs defaultValue="movie" className="w-full">
+                <TabsList className="w-full grid grid-cols-4 mb-4">
+                  <TabsTrigger value="movie">🎬 영화</TabsTrigger>
+                  <TabsTrigger value="music">🎵 음악</TabsTrigger>
+                  <TabsTrigger value="book">📚 도서</TabsTrigger>
+                  <TabsTrigger value="quote">💌 한마디</TabsTrigger>
+                </TabsList>
+                <TabsContent value="movie" className="bg-gray-700/50 p-4 rounded-lg">
+                  {test.recommendations.movie ? (
+                    <div className="space-y-2">
+                      <div className="font-medium text-white">{test.recommendations.movie}</div>
+                      {test.recommendations.movieReason && (
+                        <p className="text-sm text-gray-400">{test.recommendations.movieReason}</p>
+                      )}
+                    </div>
+                  ) : '추천 영화가 없습니다.'}
+                </TabsContent>
+                <TabsContent value="music" className="bg-gray-700/50 p-4 rounded-lg">
+                  {test.recommendations.music ? (
+                    <div className="space-y-2">
+                      <div className="font-medium text-white">
+                        {test.recommendations.music}
+                        {test.recommendations.musicArtist && ` - ${test.recommendations.musicArtist}`}
+                      </div>
+                      {test.recommendations.musicReason && (
+                        <p className="text-sm text-gray-400">{test.recommendations.musicReason}</p>
+                      )}
+                    </div>
+                  ) : '추천 음악이 없습니다.'}
+                </TabsContent>
+                <TabsContent value="book" className="bg-gray-700/50 p-4 rounded-lg">
+                  {test.recommendations.book ? (
+                    <div className="space-y-2">
+                      <div className="font-medium text-white">
+                        {test.recommendations.book}
+                        {test.recommendations.bookAuthor && ` - ${test.recommendations.bookAuthor}`}
+                      </div>
+                      {test.recommendations.bookReason && (
+                        <p className="text-sm text-gray-400">{test.recommendations.bookReason}</p>
+                      )}
+                    </div>
+                  ) : '추천 도서가 없습니다.'}
+                </TabsContent>
+                <TabsContent value="quote" className="bg-gray-700/50 p-4 rounded-lg">
+                  {test.recommendations.message || '위로의 한마디가 없습니다.'}
+                </TabsContent>
+              </Tabs>
             </div>
-          </div>
+          )}
 
           {/* 참여자 답글 목록 */}
           <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
@@ -414,6 +391,28 @@ export default function QuestionResultPage({
                 <p className="text-sm mt-2">첫 번째 답글을 작성해보세요!</p>
               </div>
             )}
+          </div>
+
+          {/* 답글 작성 */}
+          <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">답글 작성</h3>
+            <div className="space-y-4">
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="다른 참여자들에게 하고 싶은 말을 남겨주세요..."
+                className="w-full h-24 bg-gray-700/50 rounded-lg p-3 text-white text-sm resize-none"
+              />
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSubmitComment}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  disabled={!comment.trim()}
+                >
+                  작성하기
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* 하단 버튼 */}

@@ -27,8 +27,18 @@ interface VoteQuestion {
 }
 
 interface AIResponse {
-  recommendations: string;
-  vote: string;
+  recommendations: {
+    movie?: string;
+    movieReason?: string;
+    music?: string;
+    musicArtist?: string;
+    musicReason?: string;
+    book?: string;
+    bookAuthor?: string;
+    bookReason?: string;
+    message?: string;
+  };
+  vote: any[];
 }
 
 interface FormattedVote {
@@ -159,32 +169,8 @@ export default function CreateTestPage() {
       const data = await response.json();
       setAiResponse(data);
 
-      // 공감 투표 데이터 파싱
-      const voteLines = data.vote.split('\n').filter((line: string) => line.trim());
-      const questions: VoteQuestion[] = [];
-      let currentQuestion: VoteQuestion | null = null;
-
-      voteLines.forEach((line: string) => {
-        if (line.startsWith('Q.')) {
-          if (currentQuestion) {
-            questions.push(currentQuestion);
-          }
-          currentQuestion = {
-            text: line.replace('Q.', '').trim(),
-            options: []
-          };
-        } else if (line.match(/^\d\)/) && currentQuestion) {
-          currentQuestion.options.push({
-            text: line.replace(/^\d\)/, '').trim()
-          });
-        }
-      });
-
-      if (currentQuestion) {
-        questions.push(currentQuestion);
-      }
-
-      setFormattedVote({ questions });
+      // API에서 이미 파싱된 vote 데이터를 사용
+      setFormattedVote({ questions: data.vote });
     } catch (error) {
       console.error('AI 응답 생성 실패:', error);
       alert(error instanceof Error ? error.message : 'AI 응답 생성에 실패했습니다.');
@@ -439,16 +425,16 @@ export default function CreateTestPage() {
                     <TabsTrigger value="quote">💌 한마디</TabsTrigger>
                   </TabsList>
                   <TabsContent value="movie" className="bg-gray-700/50 p-4 rounded-lg">
-                    {aiResponse.recommendations.split('\n').find(line => line.includes('🎬'))?.replace('🎬 추천 영화:', '')}
+                    {aiResponse?.recommendations?.movie || '추천 영화가 없습니다.'}
                   </TabsContent>
                   <TabsContent value="music" className="bg-gray-700/50 p-4 rounded-lg">
-                    {aiResponse.recommendations.split('\n').find(line => line.includes('🎵'))?.replace('🎵 추천 음악:', '')}
+                    {aiResponse?.recommendations?.music ? `${aiResponse.recommendations.music} - ${aiResponse.recommendations.musicArtist || ''}` : '추천 음악이 없습니다.'}
                   </TabsContent>
                   <TabsContent value="book" className="bg-gray-700/50 p-4 rounded-lg">
-                    {aiResponse.recommendations.split('\n').find(line => line.includes('📚'))?.replace('📚 추천 도서:', '')}
+                    {aiResponse?.recommendations?.book ? `${aiResponse.recommendations.book} - ${aiResponse.recommendations.bookAuthor || ''}` : '추천 도서가 없습니다.'}
                   </TabsContent>
                   <TabsContent value="quote" className="bg-gray-700/50 p-4 rounded-lg">
-                    {aiResponse.recommendations.split('\n').find(line => line.includes('💌'))?.replace('💌 위로의 한마디:', '')}
+                    {aiResponse?.recommendations?.message || '위로의 한마디가 없습니다.'}
                   </TabsContent>
                 </Tabs>
               </div>

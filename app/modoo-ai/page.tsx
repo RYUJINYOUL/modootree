@@ -5,6 +5,7 @@ import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import CollapsibleFooter from '@/components/ui/CollapsibleFooter';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
 import { collection, query, orderBy, getDocs, where, deleteDoc, doc } from 'firebase/firestore';
@@ -295,6 +296,7 @@ export default function ModooAIPage() {
   };
 
   return (
+    <>
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 relative overflow-hidden">
       <ParticlesComponent />
       <div className="container mx-auto px-4 py-10 md:w-[60%] relative z-10">
@@ -331,5 +333,7 @@ export default function ModooAIPage() {
         </div>
       </div>
     </main>
+    <CollapsibleFooter />
+    </>
   );
 }

@@ -1164,9 +1164,9 @@ export default function LikesPage() {
                             </div>
                           </div>
                           <div className="flex-1">
-                            <p className="text-violet-100 whitespace-pre-wrap">
-                              {selectedPost.aiResponse}
-                            </p>
+                        <p className="text-violet-100 whitespace-pre-wrap break-words min-h-[50px] overflow-y-auto max-h-[500px]">
+                          {selectedPost.aiResponse}
+                        </p>
                           </div>
                         </div>
                       </div>

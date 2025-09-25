@@ -23,6 +23,7 @@ interface Test {
     minScore: number;
     maxScore: number;
   }>;
+  createdBy?: string;
 }
 
 export default function QuestionPage({ 
@@ -323,6 +324,16 @@ export default function QuestionPage({
           {/* 제목 섹션 */}
           <div className="bg-gray-800/50 rounded-lg p-4 md:p-6">
             <h1 className="text-2xl md:text-2xl font-bold text-white text-center">{currentQuestion.text}</h1>
+            {currentUser?.uid === test.createdBy && (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  onClick={() => router.push(`/modoo-ai/tests/${testId}/edit`)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  테스트 수정하기
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* 선택지 */}
@@ -332,7 +343,7 @@ export default function QuestionPage({
                 <Button
                   key={index}
                   onClick={() => handleAnswer(index)}
-                  className={`w-full text-white text-base py-4 rounded-lg text-left px-4 ${
+                  className={`w-full text-white text-base p-4 md:p-5 rounded-lg text-left whitespace-pre-wrap break-words min-h-[60px] ${
                     selectedOption === index 
                       ? 'bg-blue-600 hover:bg-blue-500' 
                       : 'bg-gray-700/50 hover:bg-gray-700'
@@ -445,7 +456,7 @@ export default function QuestionPage({
               )
             ) : (
               <div className="text-center py-8 text-gray-400">
-                <p>투표를 하시면 참여자들의 답글을 볼 수 있습니다.</p>
+                <p>투표를 하시면 결과 페이지에서 답글을 볼 수 있습니다.</p>
               </div>
             )}
           </div>
@@ -458,6 +469,15 @@ export default function QuestionPage({
               className="w-full bg-gray-700/50 hover:bg-gray-700 text-white py-3 rounded-lg"
             >
               투표 페이지로 이동
+            </Button>
+          </div>
+          <div className="px-3 md:px-5">
+            <Button
+              onClick={() => router.push(`/modoo-ai/tests/${testId}`)}
+              variant="outline"
+              className="w-full bg-gray-700/50 hover:bg-gray-700 text-white py-3 rounded-lg"
+            >
+              결과 페이지로 이동
             </Button>
           </div>
         </div>
