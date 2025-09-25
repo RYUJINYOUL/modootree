@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import useEmblaCarousel from 'embla-carousel-react';
 
+interface Sample {
+  id: number;
+  username: string;
+  thumbnail: string;
+  description: string;
+  bgColor: string;
+}
+
 // 애니메이션 키프레임 스타일 추가
 const animationStyle = `
   @keyframes diagonal-float {
@@ -29,7 +37,7 @@ const animationStyle = `
   }
 `;
 
-const sampleUsers = [
+const sampleUsers: Sample[] = [
   {
     id: 1,
     username: '일기, 일정표 페이지를 동료, 가족, 친구, 지인을 초대 함께 작성할 수도 있습니다',
@@ -96,12 +104,14 @@ export default function UserSampleCarousel2() {
     containScroll: 'trimSnaps',
     dragFree: true,
     loop: true,
+    startIndex: 1,
     breakpoints: {
       '(min-width: 768px)': {
         align: 'start',
         containScroll: 'trimSnaps',
         dragFree: true,
-        loop: false
+        loop: true,
+        startIndex: 1
       }
     }
   };
@@ -120,9 +130,9 @@ export default function UserSampleCarousel2() {
   }, []);
 
   // 카드 컴포넌트
-  const Card = ({ sample }) => (
-    <div className="flex-[0_0_280px] min-w-0">
-      <div className="mx-4">
+  const Card = ({ sample }: { sample: Sample }) => (
+    <div className="flex-[0_0_280px] min-w-0 px-2">
+      <div className="mx-2">
         <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm`}>
           <div className="absolute inset-0 flex flex-col p-1">
             {/* 이미지 컨테이너 - 중앙 정렬 */}
@@ -154,7 +164,7 @@ export default function UserSampleCarousel2() {
     <div className="w-full max-w-[1100px] mx-auto">
       <style jsx global>{animationStyle}</style>
       <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex backface-hidden pl-4">
+        <div className="flex backface-hidden">
           {samples.map((sample, index) => (
             <Card key={`${sample.id}-${index}`} sample={sample} />
           ))}
@@ -162,4 +172,4 @@ export default function UserSampleCarousel2() {
       </div>
     </div>
   );
-} 
+}

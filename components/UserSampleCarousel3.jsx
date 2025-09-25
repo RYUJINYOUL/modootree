@@ -50,12 +50,14 @@ export default function UserSampleCarousel3() {
     containScroll: 'trimSnaps',
     dragFree: true,
     loop: true,
+    startIndex: 1,
     breakpoints: {
       '(min-width: 768px)': {
         align: 'start',
         containScroll: 'trimSnaps',
         dragFree: true,
-        loop: false
+        loop: true,
+        startIndex: 1
       }
     }
   };
@@ -75,8 +77,8 @@ export default function UserSampleCarousel3() {
 
   // 카드 컴포넌트
   const Card = ({ sample }) => (
-    <div className="flex-[0_0_280px] min-w-0">
-      <div className="mx-4">
+    <div className="flex-[0_0_280px] min-w-0 px-2">
+      <div className="mx-2">
         <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm`}>
           <div className="absolute inset-0 flex flex-col p-1">
             {/* 이미지 컨테이너 - 중앙 정렬 */}
@@ -105,15 +107,12 @@ export default function UserSampleCarousel3() {
   return (
     <div className="w-full max-w-[1100px] mx-auto">
       <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex backface-hidden pl-4">
+        <div className="flex backface-hidden">
           {samples.map((sample, index) => (
             <Card key={`${sample.id}-${index}`} sample={sample} />
           ))}
         </div>
       </div>
     </div>
-    
-    
   );
-  
-} 
+}

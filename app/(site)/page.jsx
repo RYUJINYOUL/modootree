@@ -11,6 +11,8 @@ import {
   collection,
   getDocs
 } from 'firebase/firestore';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AiContentCarousel from '@/components/AiContentCarousel';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -18,7 +20,7 @@ import { Dialog } from '@headlessui/react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser, clearUser } from '../../store/userSlice';
 import UserSampleCarousel from '@/components/UserSampleCarousel';
-import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
+import UserSampleCarousel2 from '@/components/UserSampleCarousel2.tsx';
 import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp, X, Plus, Download } from 'lucide-react';
@@ -209,10 +211,32 @@ export default function Page() {
       ? 'bg-blue-600 hover:bg-blue-700'
       : 'bg-sky-500 hover:bg-sky-600';
 
-    const label = type === 'main' ? '내 사이트 만들기' : '내 사이트 보기';
-    const href = type === 'main' ? `/editor/${userData?.username}` : `/${userData?.username}`;
+    const label = type === 'main' ? '내 사이트 만들기' : '모두트리 AI 공감';
+    const href = type === 'main' ? `/editor/${userData?.username}` : '/feed';
 
-    if (userData?.username) {
+    if (type === 'main') {
+      if (userData?.username) {
+        return (
+          <Link
+            href={href}
+            className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
+          >
+            {label}
+          </Link>
+        );
+      }
+
+      if (currentUser?.uid) {
+        return (
+          <button
+            onClick={() => setIsOpen(true)}
+            className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
+          >
+            {label}
+          </button>
+        );
+      }
+    } else {
       return (
         <Link
           href={href}
@@ -220,17 +244,6 @@ export default function Page() {
         >
           {label}
         </Link>
-      );
-    }
-
-    if (currentUser?.uid) {
-      return (
-        <button
-          onClick={() => setIsOpen(true)}
-          className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
-        >
-          {label}
-        </button>
       );
     }
 
@@ -257,7 +270,7 @@ export default function Page() {
       <MainHeader />
       {/* 첫 번째 섹션 - 소개 및 버튼 */}
       <div className="w-full zinc-900 rounded-3xl">
-        <div className="max-w-[1100px] mx-auto px-4">
+        <div className="max-w-[2000px] mx-auto px-4">
           <div className="flex flex-col items-center justify-center pt-6 pb-6 md:py-10 text-center mb-8">
             <Sheet>
               <SheetTrigger asChild>
@@ -323,100 +336,177 @@ export default function Page() {
               </SheetContent>
             </Sheet>
             <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
-            <p className="text-lg text-white/80 mb-10">나만의 특별한 한페이지를 만들어보세요</p>
+              <p className="text-lg text-white/80 mb-2">나만의 특별한 한페이지를 만들어 보세요</p>
+              <p className="text-lg text-white/80 mb-10">모두트리 AI와 함께 오늘을 공유 공감 하세요</p>
 
             <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
               {renderViewSiteButton('main')}
               {renderViewSiteButton('sub')}
-              {(currentUser?.uid) && allowedSites.length > 0 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowAllowedSites(!showAllowedSites)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center relative"
-                  >
-                    <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">초대 페이지 목록 {allowedSites.length}개</span>
-                    <span className="absolute right-4">
-                      {showAllowedSites ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
-                      )}
-                    </span>
-                  </button>
-                  {showAllowedSites && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-emerald-600/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg z-10">
-                      {allowedSites.map((site) => (
-                        <Link
-                          key={site.username}
-                          href={`/${site.username}`}
-                          className="block px-6 py-3 hover:bg-emerald-700/80 text-white text-[15px] text-left border-b border-white/10 last:border-none"
-                        >
-                          modootree.com/{site.username}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              <Link
+                href="/modoo-ai"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
+              >
+                AI 공감 투표
+              </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 두 번째 섹션 - 첫 번째 샘플 캐로셀 */}
-      <section className="relative bg-gradient-to-b rounded-2xl from-black to-blue-950 py-4 overflow-hidden mb-12">
-        <ParticlesComponent />
-        <div className="relative z-10 py-16">
-          <div className="flex flex-col items-center justify-center text-center mb-12">
-          <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              모두트리는 대한민국 5,500만명에게<br />
-              작지만 의미 있는 한페이지를 선물합니다.
-            </h2>
-
-            <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-              모두트리는 대한민국 5,500만명에게<br />
-              작지만 의미 있는 한페이지를 선물합니다.
-            </h2>
+      {/* 모두트리 소개 섹션 */}
+      <section className="w-full px-4 py-8 md:py-12 my-8">
+        <div className="w-full bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 rounded-3xl relative overflow-hidden">
+          <div className="absolute inset-0 z-0">
+            <ParticlesComponent />
           </div>
-          <UserSampleCarousel />
+          <div className="relative z-20 py-8 px-4">
+          <Tabs defaultValue="intro" className="w-full">
+            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2">
+              <TabsTrigger className="px-6 py-3 text-[15px]" value="intro">모두트리</TabsTrigger>
+              <TabsTrigger className="px-6 py-3 text-[15px]" value="features">주요 기능</TabsTrigger>
+              <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">활용 예시</TabsTrigger>
+            </TabsList>
+
+          <TabsContent value="intro">
+            <div className="relative rounded-2xl py-4 overflow-hidden">
+              <ParticlesComponent />
+              <div className="relative z-10 py-4">
+                <div className="flex flex-col items-center justify-center text-center mb-12">
+                  <h2 className="md:hidden text-xl font-medium text-white/90 mb-2 leading-relaxed">
+                    모두트리는 대한민국 5,500만명에게<br />
+                    작지만 의미 있는 한페이지를 선물합니다.
+                  </h2>
+                  <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-2 leading-relaxed">
+                    모두트리는 대한민국 5,500만명에게<br />
+                    작지만 의미 있는 한페이지를 선물합니다.
+                  </h2>
+                </div>
+                <UserSampleCarousel />
+              </div>
+            </div>
+          </TabsContent>
+
+                  <TabsContent value="features">
+                    <div className="relative rounded-2xl py-4 overflow-hidden">
+                      <div className="absolute inset-0 z-0">
+                        <ParticlesComponent />
+                      </div>
+                      <div className="relative z-10 py-4">
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                            세심하게 설계된 에디터 간편 기능<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
+                          </h2>
+                          <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
+                          </h2>
+                        </div>
+                        <UserSampleCarousel2 />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+          <TabsContent value="examples">
+            <div className="relative rounded-2xl py-4 overflow-hidden">
+              <div className="absolute inset-0 z-0">
+                <ParticlesComponent />
+              </div>
+              <div className="relative z-10 py-4">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                    모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
+                  </h2>
+                  <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                    모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
+                  </h2>
+                </div>
+                <UserSampleCarousel3 />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+        </div>
         </div>
       </section>
 
-      {/* 세 번째 섹션 - 두 번째 샘플 캐로셀 */}
-      <div className="w-full bg-[#0d1b2a] rounded-2xl mb-12">
-        <div className="max-w-[1100px] mx-auto px-4 py-16">
-          <div className="flex flex-col items-center justify-center text-center">
-            <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              세심하게 설계된 에디터 간편 기능<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
-            </h2>
-
-            <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
-            </h2>
+      {/* 커뮤니티 섹션 */}
+      <section className="w-full px-4 py-8 md:py-12 my-8">
+        <div className="w-full bg-gradient-to-b from-emerald-950/60 via-green-950/60 to-slate-900/60 rounded-3xl relative overflow-hidden">
+          <div className="absolute inset-0 z-0 opacity-20">
+            <ParticlesComponent />
           </div>
-          <UserSampleCarousel2 />
-        </div>
-      </div>
+          <div className="relative z-20 py-8 px-4">
+          <Tabs defaultValue="likes" className="w-full">
+            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2">
+              <TabsTrigger className="px-6 py-3 text-[15px]" value="likes">공감 AI</TabsTrigger>
+              <TabsTrigger className="px-6 py-3 text-[15px]" value="joy">사진 AI</TabsTrigger>
+              <TabsTrigger className="px-6 py-3 text-[15px]" value="modoo">사연 AI</TabsTrigger>
+            </TabsList>
 
-      {/* 새로 추가된 섹션 - 세 번째 섹션 복사 */}
-      <div className="w-full bg-[#1b263b] rounded-2xl mb-12">
-        <div className="max-w-[1100px] mx-auto px-4 py-16">
-          <div className="flex flex-col items-center justify-center text-center">
-            <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-              모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
-            </h2>
+            <TabsContent value="likes">
+              <div className="relative rounded-2xl py-4 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                  <ParticlesComponent />
+                </div>
+                <div className="relative z-20 py-4">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                      익명으로 일기 공유 AI 공감 및 공감 답글 받아 보세요
+                    </h2>
+                    <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                      익명으로 일기 공유 AI 공감 및 공감 답글 받아 보세요
+                    </h2>
+                  </div>
+                  <AiContentCarousel type="likes" />
+                </div>
+              </div>
+            </TabsContent>
 
-            <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-            모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
-            </h2>
+            <TabsContent value="joy">
+              <div className="relative rounded-2xl py-4 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                  <ParticlesComponent />
+                </div>
+                <div className="relative z-20 py-4">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                      오늘 일상 사진을 업로드 하여 AI 분석 및 공감 답글 받아보세요
+                    </h2>
+                    <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                      오늘 일상 사진을 업로드 하여 AI 분석 및 공감 답글 받아보세요
+                    </h2>
+                  </div>
+                  <AiContentCarousel type="joy" />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="modoo">
+              <div className="relative rounded-2xl py-4 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                  <ParticlesComponent />
+                </div>
+                <div className="relative z-20 py-4">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                      사연을 등록하면 AI가 자동으로 공감 투표를 만들어 주고 공감을 받아보세요
+                    </h2>
+                    <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                      사연을 등록하면 AI가 자동으로 공감 투표를 만들어 주고 공감을 받아보세요
+                    </h2>
+                  </div>
+                  <AiContentCarousel type="modoo-ai" />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
           </div>
-          <UserSampleCarousel3 />
         </div>
-      </div>
+      </section>
 
       {/* 문의하기 섹션 */}
-      <div className="w-full bg-[#415a77] backdrop-blur-sm rounded-2xl mb-12">
-        <div className="max-w-[1100px] mx-auto px-4 py-16">
+      <div className="w-full bg-[#415a77] backdrop-blur-sm rounded-3xl mb-12 mx-4 relative overflow-hidden">
+        <ParticlesComponent />
+        <div className="max-w-[2000px] mx-auto px-4 py-16 relative z-10">
           <div className="flex flex-col items-center justify-center text-center">
             <h2 className="text-2xl font-bold text-white mb-6">
               자주 묻는 질문
