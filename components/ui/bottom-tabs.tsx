@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 import { useSelector } from 'react-redux';
 import { useState, useEffect } from 'react';
 import { db } from '@/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, DocumentData } from 'firebase/firestore';
 import { Dialog } from '@headlessui/react';
 
 export function BottomTabs() {
   const pathname = usePathname();
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState<DocumentData | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
