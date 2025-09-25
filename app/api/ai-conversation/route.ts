@@ -1,6 +1,35 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+// 응답 타입 정의
+interface VoteOption {
+  text: string;
+}
+
+interface VoteQuestion {
+  text: string;
+  options: VoteOption[];
+}
+
+interface AIResponse {
+  summary: {
+    emotion: string;
+    concern: string;
+  } | null;
+  recommendations: {
+    movie?: string;
+    movieReason?: string;
+    music?: string;
+    musicArtist?: string;
+    musicReason?: string;
+    book?: string;
+    bookAuthor?: string;
+    bookReason?: string;
+    message?: string;
+  } | null;
+  vote: VoteQuestion[];
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -101,7 +130,7 @@ export async function POST(req: Request) {
     console.log('AI 응답 원본:', message);  // AI 응답 전체 로깅
 
     // 응답 파싱 및 구조화
-    const response = message.split('\n\n').reduce((acc: any, section) => {
+    const response = message.split('\n\n').reduce((acc: AIResponse, section) => {
       if (section.startsWith('0. 사연 핵심 요약')) {
         const lines = section.split('\n').slice(1); // 첫 줄(제목) 제외
         const summary: any = {};
@@ -150,8 +179,8 @@ export async function POST(req: Request) {
         const lines = section.split('\n').filter(line => line.trim());
         console.log('파싱된 라인들:', lines);  // 각 라인 로깅
         
-        const questions = [];
-        let currentQuestion = null;
+        const questions: VoteQuestion[] = [];
+        let currentQuestion: VoteQuestion | null = null;
 
         for (const line of lines) {
           console.log('처리 중인 라인:', line);  // 현재 처리 중인 라인 로깅
