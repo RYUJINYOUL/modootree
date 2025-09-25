@@ -5,6 +5,7 @@ import { Providers } from '@/components/providers';
 // import { Toaster } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import Footer from '@/components/ui/Footer';
+import { BottomTabs } from '@/components/ui/bottom-tabs';
 import Header from '@/components/Header';
 import { TranslateProvider } from '@/context/TranslateContext';
 
@@ -76,10 +77,11 @@ export default function RootLayout({
           <Providers>
             {/* Header는 메인 페이지가 아닐 때만 표시 */}
             <div className="flex flex-col min-h-screen">
-              <main className="flex-1">
+              <main className="flex-1 pb-16">
                 {children}
               </main>
               <Footer />
+              <BottomTabs />
             </div>
             {/* <Toaster /> */}
           </Providers>
