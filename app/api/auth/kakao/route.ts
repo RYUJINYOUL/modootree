@@ -3,9 +3,7 @@ import admin from '../../../../firebase-admin';
 
 // 환경에 따른 리다이렉트 URI 설정
 const getRedirectUri = () => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (isDevelopment ? 'http://localhost:3000' : 'https://modootree.vercel.app');
-  return `${baseUrl}/auth/kakao/callback`;
+  return process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI || 'http://localhost:3000/auth/kakao/callback';
 };
 
 export async function POST(request: Request) {

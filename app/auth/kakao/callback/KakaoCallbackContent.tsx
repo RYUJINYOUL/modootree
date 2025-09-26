@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getAuth, signInWithCustomToken, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '@/store/userSlice';
 
 export default function KakaoCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
+  const { currentUser } = useSelector((state: any) => state.user);
   const auth = getAuth();
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +31,9 @@ export default function KakaoCallbackContent() {
 
       console.log('카카오 인증 처리 시작...');
 
-      const response = await fetch('/api/auth/kakao', {
+      const baseUrl = window.location.origin;
+      console.log('API 호출 baseUrl:', baseUrl);
+      const response = await fetch(`${baseUrl}/api/auth/kakao`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -111,7 +114,15 @@ export default function KakaoCallbackContent() {
       setIsLoading(false);
       // state 파라미터에서 원래 페이지 URL 가져오기
       const returnUrl = searchParams.get('state') || '/';
-      window.location.href = decodeURIComponent(returnUrl);
+      const decodedUrl = decodeURIComponent(returnUrl);
+      console.log('리다이렉트 URL:', decodedUrl);
+      
+      // 로그인 상태 및 리다이렉션 처리 추가 로깅
+      console.log('현재 Firebase 유저:', auth.currentUser);
+      console.log('현재 Redux 유저:', currentUser);
+      
+      // 강제로 홈페이지로 리다이렉션
+      window.location.href = window.location.origin;
     } catch (error) {
       console.error('인증 처리 중 오류:', error);
       setErrorMessage(
