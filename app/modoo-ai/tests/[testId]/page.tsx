@@ -7,35 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { getAuth, GoogleAuthProvider, signInWithPopup, browserLocalPersistence } from "firebase/auth";
 import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
 
-declare global {
-  interface Window {
-    Kakao?: {
-      init: (key: string) => Promise<void>;
-      isInitialized: () => boolean;
-      Share: {
-        sendDefault: (options: {
-          objectType: string;
-          content: {
-            title: string;
-            description: string;
-            imageUrl?: string;
-            link: {
-              mobileWebUrl: string;
-              webUrl: string;
-            };
-          };
-          buttons: Array<{
-            title: string;
-            link: {
-              mobileWebUrl: string;
-              webUrl: string;
-            };
-          }>;
-        }) => Promise<void>;
-      };
-    };
-  }
-}
+/// <reference path="../../../lib/types/kakao.d.ts" />
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
 import { useRouter } from 'next/navigation';

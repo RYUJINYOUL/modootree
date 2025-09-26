@@ -1,7 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { AuthProvider } from '@/components/providers';
+import { Providers } from '@/components/providers';
 
 export default function RootLayout({
   children,
@@ -29,9 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthProvider>
+        <Providers>
           {children}
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );
