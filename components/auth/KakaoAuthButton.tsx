@@ -7,6 +7,11 @@ const KakaoAuthButton = () => {
     const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
     const redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
     
+    console.log('카카오 로그인 설정 확인:', { 
+      clientId: clientId ? '설정됨' : '설정안됨',
+      redirectUri
+    });
+    
     if (!clientId || !redirectUri) {
       console.error('카카오 로그인 설정이 없습니다.', { clientId, redirectUri });
       alert('카카오 로그인 설정에 문제가 있습니다.');
