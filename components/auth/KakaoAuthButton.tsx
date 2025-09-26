@@ -5,7 +5,11 @@ const KakaoAuthButton = () => {
 
   const handleLogin = () => {
     const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-    const redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+    // Vercel 도메인을 실제 도메인으로 변경
+    let redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+    if (redirectUri?.includes('modootree.vercel.app')) {
+      redirectUri = redirectUri.replace('modootree.vercel.app', 'www.modootree.com');
+    }
     
     if (!clientId || !redirectUri) {
       console.error('카카오 로그인 설정이 없습니다.', { clientId, redirectUri });
