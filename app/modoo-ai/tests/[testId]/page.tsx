@@ -168,6 +168,15 @@ export default function TestPage({ params }: { params: Promise<{ testId: string 
   };
 
   useEffect(() => {
+    const initKakao = async () => {
+      if (!window.Kakao?.isInitialized()) {
+        const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
+        if (kakaoKey) {
+          await window.Kakao?.init(kakaoKey);
+        }
+      }
+    };
+
     const fetchTest = async () => {
       await fetchTotalComments();
       try {
@@ -182,6 +191,7 @@ export default function TestPage({ params }: { params: Promise<{ testId: string 
       }
     };
 
+    initKakao();
     fetchTest();
   }, [testId]);
 
@@ -454,16 +464,7 @@ export default function TestPage({ params }: { params: Promise<{ testId: string 
                 variant="outline" 
                 className="bg-gray-700/50 hover:bg-gray-700 text-white text-sm py-2.5 rounded-lg flex items-center justify-center gap-2"
                 onClick={async () => {
-                  if (!window.Kakao?.isInitialized()) {
-                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
-                    if (!kakaoKey) {
-                      alert('카카오 API 키가 설정되지 않았습니다.');
-                      return;
-                    }
-                    await window.Kakao?.init(kakaoKey);
-                  }
-
-                  if (!window.Kakao?.Share) {
+                  if (!window.Kakao?.isInitialized() || !window.Kakao?.Share) {
                     alert('카카오톡 공유 기능을 사용할 수 없습니다.');
                     return;
                   }

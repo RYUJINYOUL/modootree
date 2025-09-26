@@ -126,58 +126,58 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
           className="block"
         >
           <div className="relative w-[280px] h-[320px] bg-[#2a6f97] rounded-3xl overflow-hidden shadow-lg backdrop-blur-sm hover:bg-[#357cab] transition-colors">
-          <div className="absolute inset-0 flex flex-col p-4">
-            {/* 썸네일 영역 */}
-            <div className="w-full h-[200px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
-              {type === 'modoo-ai' ? (
-                <div className="w-24 h-24">
-                  <img
-                    src={EMOTION_ICONS[item.emotion as keyof typeof EMOTION_ICONS || 'default']}
-                    alt="감정 이모티콘"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : item.images?.[0] ? (
-                <div className="relative w-full h-full">
-                  <Image
-                    src={item.images[0]}
-                    alt="썸네일"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ) : null}
-            </div>
+            <div className="absolute inset-0 flex flex-col p-4">
+              {/* 썸네일 영역 */}
+              <div className="w-full h-[200px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
+                {type === 'modoo-ai' ? (
+                  <div className="w-24 h-24">
+                    <img
+                      src={EMOTION_ICONS[item.emotion as keyof typeof EMOTION_ICONS || 'default']}
+                      alt="감정 이모티콘"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : item.images?.[0] ? (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={item.images[0]}
+                      alt="썸네일"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : null}
+              </div>
 
-            {/* 콘텐츠 영역 */}
-            <div className="flex-1 pt-4">
-              <h3 className="text-lg font-semibold mb-2 text-white line-clamp-2">
-                {type === 'modoo-ai' ? item.title :
-                 type === 'joy' ? item.description :
-                 item.content}
-              </h3>
-              
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <Heart className="w-4 h-4" />
-                    {item.likes || 0}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageCircle className="w-4 h-4" />
-                    {item.comments || 0}
-                  </span>
-                </div>
+              {/* 콘텐츠 영역 */}
+              <div className="flex-1 pt-4">
+                <h3 className="text-lg font-semibold mb-2 text-white line-clamp-2">
+                  {type === 'modoo-ai' ? item.title :
+                   type === 'joy' ? item.description :
+                   item.content}
+                </h3>
                 
-                {type === 'modoo-ai' && (
-                  <span className="text-blue-400">
-                    {item.stats?.participantCount || 0}명
-                  </span>
-                )}
+                <div className="flex items-center justify-between text-sm text-gray-400">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Heart className="w-4 h-4" />
+                      {item.likes || 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="w-4 h-4" />
+                      {item.comments || 0}
+                    </span>
+                  </div>
+                  
+                  {type === 'modoo-ai' && (
+                    <span className="text-blue-400">
+                      {item.stats?.participantCount || 0}명
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </Link>
       </div>
     </div>
