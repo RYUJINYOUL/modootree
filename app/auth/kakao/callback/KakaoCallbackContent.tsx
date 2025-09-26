@@ -121,8 +121,8 @@ export default function KakaoCallbackContent() {
       console.log('현재 Firebase 유저:', auth.currentUser);
       console.log('현재 Redux 유저:', currentUser);
       
-      // 강제로 홈페이지로 리다이렉션
-      window.location.href = window.location.origin;
+      // 실제 도메인으로 리다이렉션
+      window.location.href = 'https://www.modootree.com';
     } catch (error) {
       console.error('인증 처리 중 오류:', error);
       setErrorMessage(
