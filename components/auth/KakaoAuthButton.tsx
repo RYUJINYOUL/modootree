@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 
-const KakaoAuthButton = () => {
+interface KakaoAuthButtonProps {
+  returnToMain?: boolean;  // true면 메인 페이지로 이동, false면 현재 페이지에 머무름
+}
+
+const KakaoAuthButton = ({ returnToMain = true }: KakaoAuthButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = () => {
@@ -20,7 +24,7 @@ const KakaoAuthButton = () => {
     const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
     // 현재 URL을 state로 저장
     // 현재 호스트 기반으로 리다이렉트 URL 설정
-    const returnUrl = window.location.origin + '/login';
+    const returnUrl = returnToMain ? (window.location.origin + '/login') : window.location.href;
     const kakaoAuthUrlWithState = `${KAKAO_AUTH_URL}&state=${encodeURIComponent(returnUrl)}`;
     window.location.href = kakaoAuthUrlWithState;
   };

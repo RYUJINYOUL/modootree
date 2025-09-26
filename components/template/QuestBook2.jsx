@@ -1545,7 +1545,7 @@ const Board = ({ username, uid }) => {
               </svg>
               <span>Google로 로그인</span>
             </button>
-            <KakaoAuthButton />
+            <KakaoAuthButton returnToMain={false} />
             <div className="w-full flex justify-end mt-2">
               <button
                 onClick={() => {
