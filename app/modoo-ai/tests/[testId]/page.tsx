@@ -486,42 +486,56 @@ export default function TestPage({ params }: { params: Promise<{ testId: string 
                 variant="outline" 
                 className="bg-gray-700/50 hover:bg-gray-700 text-white text-sm py-2.5 rounded-lg flex items-center justify-center gap-2"
                 onClick={async () => {
-                  if (!window.Kakao?.isInitialized()) {
-                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+                  try {
+                    // 이미 초기화되어 있더라도 다시 초기화
+                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_APP_KEY;
                     if (!kakaoKey) {
-                      alert('카카오 API 키가 설정되지 않았습니다.');
-                      return;
+                      throw new Error('카카오 API 키가 설정되지 않았습니다.');
                     }
-                    await window.Kakao?.init(kakaoKey);
-                  }
+                    
+                    if (!window.Kakao) {
+                      throw new Error('카카오 SDK가 로드되지 않았습니다.');
+                    }
 
-                  if (!window.Kakao?.Share) {
-                    alert('카카오톡 공유 기능을 사용할 수 없습니다.');
+                    if (!window.Kakao.isInitialized()) {
+                      await window.Kakao.init(kakaoKey);
+                    }
+
+                    if (!window.Kakao.Share) {
+                      throw new Error('카카오 공유 모듈을 찾을 수 없습니다.');
+                    }
+                  } catch (error) {
+                    console.error('카카오 초기화 오류:', error);
+                    alert(error instanceof Error ? error.message : '카카오톡 초기화에 실패했습니다.');
                     return;
                   }
 
                   try {
-                    await window.Kakao.Share.sendDefault({
+                    const currentUrl = window.location.href;
+                    const shareData = {
                       objectType: 'feed',
                       content: {
-                        title: test.title,
-                        description: test.description,
-                        imageUrl: test.thumbnail,
+                        title: test.title || '모두트리 AI 공감 테스트',
+                        description: test.description || '나와 잘 맞는 공감 테스트를 해보세요!',
+                        imageUrl: test.thumbnail || 'https://www.modootree.com/Image/logo.png',
                         link: {
-                          mobileWebUrl: window.location.href,
-                          webUrl: window.location.href
+                          mobileWebUrl: currentUrl,
+                          webUrl: currentUrl
                         }
                       },
                       buttons: [
                         {
                           title: '공감 시작하기',
                           link: {
-                            mobileWebUrl: window.location.href,
-                            webUrl: window.location.href
+                            mobileWebUrl: currentUrl,
+                            webUrl: currentUrl
                           }
                         }
                       ]
-                    });
+                    };
+                    
+                    console.log('카카오 공유 데이터:', shareData);
+                    await window.Kakao.Share.sendDefault(shareData);
                   } catch (error) {
                     console.error('카카오톡 공유 실패:', error);
                     alert('카카오톡 공유에 실패했습니다.');

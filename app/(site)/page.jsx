@@ -453,10 +453,10 @@ export default function Page() {
                 <div className="relative z-20 py-4">
                   <div className="flex flex-col items-center justify-center text-center">
                     <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                      익명으로 일기 공유 AI 공감 및 공감 답글 받아 보세요
+                      익명으로 일기 공유<br /> AI 공감 및 공감 답글 받아 보세요
                     </h2>
                     <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                      익명으로 일기 공유 AI 공감 및 공감 답글 받아 보세요
+                      익명으로 일기 공유<br /> AI 공감 및 공감 답글 받아 보세요
                     </h2>
                   </div>
                   <AiContentCarousel type="likes" />
@@ -472,10 +472,10 @@ export default function Page() {
                 <div className="relative z-20 py-4">
                   <div className="flex flex-col items-center justify-center text-center">
                     <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                      오늘 일상 사진을 업로드 하여 AI 분석 및 공감 답글 받아보세요
+                      오늘 일상 사진을 업로드 하여<br /> AI 분석 및 공감 답글 받아보세요
                     </h2>
                     <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                      오늘 일상 사진을 업로드 하여 AI 분석 및 공감 답글 받아보세요
+                      오늘 일상 사진을 업로드 하여<br /> AI 분석 및 공감 답글 받아보세요
                     </h2>
                   </div>
                   <AiContentCarousel type="joy" />
@@ -491,10 +491,10 @@ export default function Page() {
                 <div className="relative z-20 py-4">
                   <div className="flex flex-col items-center justify-center text-center">
                     <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                      사연을 등록하면 AI가 자동으로 공감 투표를 만들어 주고 공감을 받아보세요
+                      사연을 등록하면 AI가 자동으로<br /> 공감 투표를 만들어 주고 공감을 받아보세요
                     </h2>
                     <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                      사연을 등록하면 AI가 자동으로 공감 투표를 만들어 주고 공감을 받아보세요
+                      사연을 등록하면 AI가 자동으로<br /> 공감 투표를 만들어 주고 공감을 받아보세요
                     </h2>
                   </div>
                   <AiContentCarousel type="modoo-ai" />
