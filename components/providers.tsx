@@ -1,53 +1,32 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ThemeProvider } from 'next-themes';
-import { Provider } from 'react-redux';
-import { store } from '@/store';
-import { storage } from '@/firebase';
-import { ref, getDownloadURL } from 'firebase/storage';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { setUser, clearUser } from '@/store/userSlice';
 
-interface BackgroundState {
-  type: string;
-  value: string;
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const dispatch = useDispatch();
+  const auth = getAuth();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Firebase 인증 상태 변경:', user ? '로그인됨' : '로그아웃됨');
+      
+      if (user) {
+        dispatch(setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }));
+      } else {
+        dispatch(clearUser());
+      }
+    });
+
+    return () => unsubscribe();
+  }, [dispatch, auth]);
+
+  return <>{children}</>;
 }
-
-interface BackgroundContextType {
-  background: BackgroundState;
-  setBackground: (type: string, value: string) => void;
-}
-
-const DEFAULT_BACKGROUND = {
-  type: 'video',
-  value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
-};
-
-const BackgroundContext = createContext<BackgroundContextType>({
-  background: DEFAULT_BACKGROUND,
-  setBackground: () => {},
-});
-
-export const useBackground = () => useContext(BackgroundContext);
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  const [background, setBackgroundState] = useState<BackgroundState>(DEFAULT_BACKGROUND);
-
-  const setBackground = (type: string, value: string) => {
-    setBackgroundState({ type, value });
-  };
-
-  return (
-    <Provider store={store}>
-      <BackgroundContext.Provider value={{ background, setBackground }}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
-      </BackgroundContext.Provider>
-    </Provider>
-  );
-} 
