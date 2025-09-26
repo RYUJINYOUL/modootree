@@ -86,7 +86,7 @@ export function BottomTabs() {
             >
               <div className="relative w-6 h-6">
                 <Image
-                  src="/logos/m1.png"
+                  src="/logos/feed.png"
                   alt="피드"
                   fill
                   className="object-contain"
@@ -106,7 +106,7 @@ export function BottomTabs() {
             >
               <div className="relative w-6 h-6">
                 <Image
-                  src="/logos/m3.png"
+                  src="/logos/ai1.png"
                   alt="공감"
                   fill
                   className="object-contain"
@@ -126,7 +126,7 @@ export function BottomTabs() {
             >
               <div className="relative w-6 h-6">
                 <Image
-                  src="/logos/m3.png"
+                  src="/logos/ai2.png"
                   alt="사진"
                   fill
                   className="object-contain"
@@ -146,7 +146,7 @@ export function BottomTabs() {
             >
               <div className="relative w-6 h-6">
                 <Image
-                  src="/logos/m3.png"
+                  src="/logos/ai3.png"
                   alt="사연"
                   fill
                   className="object-contain"

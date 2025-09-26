@@ -746,7 +746,7 @@ export default function MyInfoDrawer({ isOpen, onClose, ownerUid, ownerUsername 
                  </div>
                </DialogContent>
              </Dialog>
-           </div>
+          </div>
         </div>
       </DrawerContent>
     </Drawer>

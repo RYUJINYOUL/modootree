@@ -337,9 +337,9 @@ export default function Page() {
             </Sheet>
             <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
               <p className="text-lg text-white/80 mb-2">나만의 특별한 한페이지를 만들어 보세요</p>
-              <p className="text-lg text-white/80 mb-10">모두트리 AI와 함께 오늘을 공유 공감 하세요</p>
+              <p className="text-lg text-white/80 mb-10">모두트리 AI와 함께 공유 공감 하세요</p>
 
-            <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-16">
+            <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-8">
               {renderViewSiteButton('main')}
               {renderViewSiteButton('sub')}
               <Link
@@ -354,14 +354,15 @@ export default function Page() {
       </div>
 
       {/* 모두트리 소개 섹션 */}
-      <section className="w-full px-4 py-8 md:py-12 my-8">
+      <section className="w-full py-8 md:py-12 my-8">
         <div className="w-full bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 rounded-3xl relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <ParticlesComponent />
           </div>
           <div className="relative z-20 py-8 px-4">
-          <Tabs defaultValue="intro" className="w-full">
-            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2">
+          <div className="max-w-[1500px] mx-auto">
+            <Tabs defaultValue="intro" className="w-full custom-home-tabs">
+            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
               <TabsTrigger className="px-6 py-3 text-[15px]" value="intro">모두트리</TabsTrigger>
               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">주요 기능</TabsTrigger>
               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">활용 예시</TabsTrigger>
@@ -424,19 +425,21 @@ export default function Page() {
             </div>
           </TabsContent>
         </Tabs>
+          </div>
         </div>
         </div>
       </section>
 
       {/* 커뮤니티 섹션 */}
-      <section className="w-full px-4 py-8 md:py-12 my-8">
-        <div className="w-full bg-gradient-to-b from-emerald-950/60 via-green-950/60 to-slate-900/60 rounded-3xl relative overflow-hidden">
+      <section className="w-full py-8 md:py-12 my-8">
+        <div className="w-full bg-gradient-to-b from-slate-950/50 via-blue-950/50 to-slate-900/50 rounded-3xl relative overflow-hidden">
           <div className="absolute inset-0 z-0 opacity-20">
             <ParticlesComponent />
           </div>
           <div className="relative z-20 py-8 px-4">
-          <Tabs defaultValue="likes" className="w-full">
-            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2">
+          <div className="max-w-[1500px] mx-auto">
+            <Tabs defaultValue="likes" className="w-full custom-home-tabs">
+            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
               <TabsTrigger className="px-6 py-3 text-[15px]" value="likes">공감 AI</TabsTrigger>
               <TabsTrigger className="px-6 py-3 text-[15px]" value="joy">사진 AI</TabsTrigger>
               <TabsTrigger className="px-6 py-3 text-[15px]" value="modoo">사연 AI</TabsTrigger>
@@ -499,12 +502,13 @@ export default function Page() {
               </div>
             </TabsContent>
           </Tabs>
+            </div>
           </div>
         </div>
       </section>
 
       {/* 문의하기 섹션 */}
-      <div className="w-full bg-[#415a77] backdrop-blur-sm rounded-3xl mb-12 mx-4 relative overflow-hidden">
+      <div className="w-full bg-[#415a77] backdrop-blur-sm rounded-3xl mb-12 relative overflow-hidden">
         <ParticlesComponent />
         <div className="max-w-[2000px] mx-auto px-4 py-16 relative z-10">
           <div className="flex flex-col items-center justify-center text-center">

@@ -32,19 +32,13 @@ const sampleUsers = [
     previewImage: '/samples/di.png',
     description: '다이어리 - 커플·가족·개인'
   },
+ 
   {
     id: 5,
-    username: 'portfolio',
-    siteUrl: 'https://www.modootree.com/portfolio',
-    previewImage: '/samples/po.png',
-    description: '포트폴리오 - 간편공유·디자인'
-  },
-  {
-    id: 6,
     username: '1day',
     siteUrl: 'https://www.modootree.com/1day',
     previewImage: '/samples/cu.png',
-    description: '작은커뮤니티 - 아파트·동네·모임'
+    description: '커뮤니티 - 아파트·동네·모임'
   }
 ];
 
@@ -104,7 +98,7 @@ export default function UserSampleCarousel() {
   const samples = isMobile ? [...sampleUsers, ...sampleUsers] : [...sampleUsers, ...sampleUsers];
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto">
+    <div className="w-full max-w-[1500px] mx-auto">
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex backface-hidden">
           {samples.map((sample, index) => (

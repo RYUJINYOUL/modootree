@@ -21,9 +21,9 @@ const sampleUsers = [
   },
   {
     id: 3,
-    username: '고유 주소가 있어 문자 메신저로 언제든 공유 가능하며 생생한 영상과 신선한 디자인으로 내 이력을 담아보세요',
+    username: '작지만 강력한 커뮤니티를 만들어 보세요, 교회·학원·아파트·소모임 등의 작은 게시판을 선물합니다',
     thumbnail: '/samples/33.png',
-    description: '온라인 포트폴리오',
+    description: '작은 커뮤니티',
     bgColor: 'bg-[#2a6f97]'
   },
   {
@@ -105,7 +105,7 @@ export default function UserSampleCarousel3() {
   const samples = isMobile ? [...sampleUsers, ...sampleUsers, ...sampleUsers] : sampleUsers;
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto">
+    <div className="w-full max-w-[1500px] mx-auto">
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex backface-hidden">
           {samples.map((sample, index) => (

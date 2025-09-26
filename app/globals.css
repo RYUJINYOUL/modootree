@@ -238,4 +238,25 @@ body{
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* 홈페이지 커스텀 탭 스타일 */
+.custom-home-tabs [role="tab"] {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: rgba(147, 197, 253, 0.8);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  transition: all 0.2s;
+}
+
+.custom-home-tabs [role="tab"][data-state="active"] {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: rgb(147, 197, 253);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.custom-home-tabs [role="tab"]:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: rgb(191, 219, 254);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
 

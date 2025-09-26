@@ -118,9 +118,9 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
 
   // 카드 컴포넌트
   const Card = ({ item }: { item: FeedItem }) => (
-    <div className="flex-[0_0_280px] min-w-0 px-2">
-      <div className="mx-2">
-        <div className="relative w-[260px] h-[320px] bg-white/10 rounded-3xl overflow-hidden shadow-lg backdrop-blur-sm">
+    <div className="flex-[0_0_300px] min-w-0 px-1">
+      <div className="mx-1">
+        <div className="relative w-[280px] h-[320px] bg-[#2a6f97] rounded-3xl overflow-hidden shadow-lg backdrop-blur-sm">
           <div className="absolute inset-0 flex flex-col p-4">
             {/* 썸네일 영역 */}
             <div className="w-full h-[200px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
@@ -186,7 +186,7 @@ export default function AiContentCarousel({ type }: AiContentCarouselProps) {
   }
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto">
+    <div className="w-full max-w-[1500px] mx-auto">
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex backface-hidden">
           {items.map((item) => (

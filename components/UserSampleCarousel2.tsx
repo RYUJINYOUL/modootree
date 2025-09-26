@@ -161,7 +161,7 @@ export default function UserSampleCarousel2() {
   const samples = isMobile ? [...sampleUsers, ...sampleUsers, ...sampleUsers] : sampleUsers;
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto">
+    <div className="w-full max-w-[1500px] mx-auto">
       <style jsx global>{animationStyle}</style>
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex backface-hidden">
