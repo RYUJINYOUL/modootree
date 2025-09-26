@@ -7,7 +7,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { getAuth, GoogleAuthProvider, signInWithPopup, browserLocalPersistence } from "firebase/auth";
 import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
 
-/// <reference path="../../../lib/types/kakao.d.ts" />
+declare global {
+  interface Window {
+    Kakao?: {
+      init: (key: string) => Promise<void>;
+      isInitialized: () => boolean;
+      Share: {
+        sendDefault: (options: {
+          objectType: string;
+          content: {
+            title: string;
+            description: string;
+            imageUrl?: string;
+            link: {
+              mobileWebUrl: string;
+              webUrl: string;
+            };
+          };
+          buttons: Array<{
+            title: string;
+            link: {
+              mobileWebUrl: string;
+              webUrl: string;
+            };
+          }>;
+        }) => Promise<void>;
+      };
+    };
+  }
+}
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
 import { useRouter } from 'next/navigation';
@@ -458,56 +486,42 @@ export default function TestPage({ params }: { params: Promise<{ testId: string 
                 variant="outline" 
                 className="bg-gray-700/50 hover:bg-gray-700 text-white text-sm py-2.5 rounded-lg flex items-center justify-center gap-2"
                 onClick={async () => {
-                  try {
-                    // 이미 초기화되어 있더라도 다시 초기화
-                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
+                  if (!window.Kakao?.isInitialized()) {
+                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
                     if (!kakaoKey) {
-                      throw new Error('카카오 API 키가 설정되지 않았습니다.');
+                      alert('카카오 API 키가 설정되지 않았습니다.');
+                      return;
                     }
-                    
-                    if (!window.Kakao) {
-                      throw new Error('카카오 SDK가 로드되지 않았습니다.');
-                    }
+                    await window.Kakao?.init(kakaoKey);
+                  }
 
-                    if (!window.Kakao.isInitialized()) {
-                      await window.Kakao.init(kakaoKey);
-                    }
-
-                    if (!window.Kakao.Share) {
-                      throw new Error('카카오 공유 모듈을 찾을 수 없습니다.');
-                    }
-                  } catch (error) {
-                    console.error('카카오 초기화 오류:', error);
-                    alert(error instanceof Error ? error.message : '카카오톡 초기화에 실패했습니다.');
+                  if (!window.Kakao?.Share) {
+                    alert('카카오톡 공유 기능을 사용할 수 없습니다.');
                     return;
                   }
 
                   try {
-                    const currentUrl = window.location.href;
-                    const shareData = {
+                    await window.Kakao.Share.sendDefault({
                       objectType: 'feed',
                       content: {
-                        title: test.title || '모두트리 AI 공감 테스트',
-                        description: test.description || '나와 잘 맞는 공감 테스트를 해보세요!',
-                        imageUrl: test.thumbnail || 'https://www.modootree.com/Image/logo.png',
+                        title: test.title,
+                        description: test.description,
+                        imageUrl: test.thumbnail,
                         link: {
-                          mobileWebUrl: currentUrl,
-                          webUrl: currentUrl
+                          mobileWebUrl: window.location.href,
+                          webUrl: window.location.href
                         }
                       },
                       buttons: [
                         {
                           title: '공감 시작하기',
                           link: {
-                            mobileWebUrl: currentUrl,
-                            webUrl: currentUrl
+                            mobileWebUrl: window.location.href,
+                            webUrl: window.location.href
                           }
                         }
                       ]
-                    };
-                    
-                    console.log('카카오 공유 데이터:', shareData);
-                    await window.Kakao.Share.sendDefault(shareData);
+                    });
                   } catch (error) {
                     console.error('카카오톡 공유 실패:', error);
                     alert('카카오톡 공유에 실패했습니다.');

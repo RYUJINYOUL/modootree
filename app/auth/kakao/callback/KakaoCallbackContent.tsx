@@ -30,8 +30,6 @@ export default function KakaoCallbackContent() {
 
       console.log('카카오 인증 처리 시작...');
 
-      console.log('카카오 인증 코드:', code);
-      
       const response = await fetch('/api/auth/kakao', {
         method: 'POST',
         headers: {
@@ -52,11 +50,8 @@ export default function KakaoCallbackContent() {
       }
 
       if (!response.ok) {
-        console.error('서버 응답 오류:', responseData);
         throw new Error(responseData.details || responseData.error || '인증 처리 중 오류가 발생했습니다.');
       }
-      
-      console.log('서버 응답 성공:', responseData);
 
       if (!responseData.customToken) {
         throw new Error('인증 토큰이 없습니다.');
@@ -116,13 +111,7 @@ export default function KakaoCallbackContent() {
       setIsLoading(false);
       // state 파라미터에서 원래 페이지 URL 가져오기
       const returnUrl = searchParams.get('state') || '/';
-      const decodedUrl = decodeURIComponent(returnUrl);
-      console.log('이동할 URL:', decodedUrl);
-      
-      // 약간의 지연을 주어 상태 업데이트가 완료되도록 함
-      setTimeout(() => {
-        window.location.href = decodedUrl;
-      }, 1000);
+      window.location.href = decodeURIComponent(returnUrl);
     } catch (error) {
       console.error('인증 처리 중 오류:', error);
       setErrorMessage(

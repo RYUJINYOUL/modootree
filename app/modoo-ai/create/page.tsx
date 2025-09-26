@@ -167,25 +167,9 @@ export default function CreateTestPage() {
       }
 
       const data = await response.json();
-      console.log('AI 응답 데이터:', data); // 디버깅용 로그
-
-      if (!data.vote || !Array.isArray(data.vote)) {
-        throw new Error('AI가 올바른 형식의 투표를 생성하지 못했습니다. 다시 시도해주세요.');
-      }
-
-      // 데이터 유효성 검사
-      const validVote = data.vote.every((question: VoteQuestion) => 
-        question.text && 
-        Array.isArray(question.options) && 
-        question.options.length >= 2 &&
-        question.options.every(option => option.text)
-      );
-
-      if (!validVote) {
-        throw new Error('AI가 생성한 투표 데이터가 올바르지 않습니다. 다시 시도해주세요.');
-      }
-
       setAiResponse(data);
+
+      // API에서 이미 파싱된 vote 데이터를 사용
       setFormattedVote({ questions: data.vote });
     } catch (error) {
       console.error('AI 응답 생성 실패:', error);
@@ -332,14 +316,7 @@ export default function CreateTestPage() {
               disabled={!story.trim() || isGenerating}
               className="w-full bg-blue-500 hover:bg-blue-600 h-12 text-lg"
             >
-              {isGenerating ? (
-                <>
-                  <span className="animate-pulse">AI가 내용을 생성하고 있습니다...</span>
-                  <span className="text-sm block mt-1">(약 10-15초 소요)</span>
-                </>
-              ) : (
-                'AI로 공감 투표 만들기'
-              )}
+              {isGenerating ? 'AI가 내용을 생성하고 있습니다...' : 'AI로 공감 투표 만들기'}
             </Button>
           </div>
 

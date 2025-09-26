@@ -1,71 +1,53 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { setUser, clearUser } from '@/store/userSlice';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ThemeProvider } from 'next-themes';
+import { Provider } from 'react-redux';
+import { store } from '@/store';
+import { storage } from '@/firebase';
+import { ref, getDownloadURL } from 'firebase/storage';
 
-// Background Context
+interface BackgroundState {
+  type: string;
+  value: string;
+}
+
 interface BackgroundContextType {
-  background: {
-    type: string;
-    value: string;
-  };
+  background: BackgroundState;
   setBackground: (type: string, value: string) => void;
 }
 
+const DEFAULT_BACKGROUND = {
+  type: 'video',
+  value: 'https://cdn.pixabay.com/video/2024/03/18/204565-924698132_large.mp4'
+};
+
 const BackgroundContext = createContext<BackgroundContextType>({
-  background: { type: 'none', value: '' },
+  background: DEFAULT_BACKGROUND,
   setBackground: () => {},
 });
 
-export function useBackground() {
-  return useContext(BackgroundContext);
-}
+export const useBackground = () => useContext(BackgroundContext);
 
-// Auth Provider Component
-function AuthProviderComponent({ children }: { children: React.ReactNode }) {
-  const dispatch = useDispatch();
-  const auth = getAuth();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('Firebase 인증 상태 변경:', user ? '로그인됨' : '로그아웃됨');
-      
-      if (user) {
-        dispatch(setUser({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL
-        }));
-      } else {
-        dispatch(clearUser());
-      }
-    });
-
-    return () => unsubscribe();
-  }, [dispatch, auth]);
-
-  return <>{children}</>;
-}
-
-// Combined Provider Component
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [background, setBackgroundState] = useState({ type: 'none', value: '' });
+  const [background, setBackgroundState] = useState<BackgroundState>(DEFAULT_BACKGROUND);
 
   const setBackground = (type: string, value: string) => {
     setBackgroundState({ type, value });
   };
 
   return (
-    <BackgroundContext.Provider value={{ background, setBackground }}>
-      <AuthProviderComponent>
-        {children}
-      </AuthProviderComponent>
-    </BackgroundContext.Provider>
+    <Provider store={store}>
+      <BackgroundContext.Provider value={{ background, setBackground }}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </BackgroundContext.Provider>
+    </Provider>
   );
-}
-
-// Export AuthProvider separately if needed
-export const AuthProvider = AuthProviderComponent;
+} 

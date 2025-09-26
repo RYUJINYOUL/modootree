@@ -1,20 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { initializeKakao } from '@/app/kakao-init';
+import React, { useState } from 'react';
 
 const KakaoAuthButton = () => {
-  useEffect(() => {
-    initializeKakao();
-  }, []);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = () => {
     const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
     const redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
-    
-    console.log('카카오 로그인 설정 확인:', { 
-      clientId: clientId ? '설정됨' : '설정안됨',
-      redirectUri
-    });
     
     if (!clientId || !redirectUri) {
       console.error('카카오 로그인 설정이 없습니다.', { clientId, redirectUri });
@@ -24,9 +15,7 @@ const KakaoAuthButton = () => {
 
     const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
     // 현재 URL을 state로 저장
-    // 현재 호스트 기반으로 리다이렉트 URL 설정
-    const currentHost = window.location.origin;
-    const currentUrl = `${currentHost}/login`;
+    const currentUrl = window.location.href;
     const kakaoAuthUrlWithState = `${KAKAO_AUTH_URL}&state=${encodeURIComponent(currentUrl)}`;
     window.location.href = kakaoAuthUrlWithState;
   };
