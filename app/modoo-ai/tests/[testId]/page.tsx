@@ -488,7 +488,7 @@ export default function TestPage({ params }: { params: Promise<{ testId: string 
                 onClick={async () => {
                   try {
                     // 이미 초기화되어 있더라도 다시 초기화
-                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_ID || process.env.NEXT_PUBLIC_KAKAO_APP_KEY;
+                    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
                     if (!kakaoKey) {
                       throw new Error('카카오 API 키가 설정되지 않았습니다.');
                     }

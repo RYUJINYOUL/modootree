@@ -4,7 +4,7 @@ const KakaoAuthButton = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_APP_KEY;
+    const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
     const redirectUri = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
     
     if (!clientId || !redirectUri) {
