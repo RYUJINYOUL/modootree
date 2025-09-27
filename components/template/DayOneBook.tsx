@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Image as ImageIcon, X, Trash2, Calendar as CalendarIcon, List, Settings } from 'lucide-react';
+import { Image as ImageIcon, X, Trash2, PenSquare, List, Settings, Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -75,7 +75,6 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
   // 모든 useState를 최상단에 배치
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('today');
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [memos, setMemos] = useState<MemoItem[]>([]);
   const [isWriting, setIsWriting] = useState(false);
@@ -571,16 +570,18 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex-1">
           <TabsList 
             className={cn(
-              "grid w-full grid-cols-3 bg-transparent h-10",
+              "grid w-full grid-cols-3 bg-transparent h-10 p-0 overflow-hidden",
               styleSettings.borderRadius === 'none' && 'rounded-none',
               styleSettings.borderRadius === 'sm' && 'rounded',
               styleSettings.borderRadius === 'md' && 'rounded-lg',
               styleSettings.borderRadius === 'lg' && 'rounded-xl',
-              styleSettings.borderRadius === 'full' && 'rounded-full'
+              styleSettings.borderRadius === 'full' && 'rounded-2xl'
             )}
             style={{
               backgroundColor: `${styleSettings.color}${Math.round(styleSettings.opacity * 255).toString(16).padStart(2, '0')}`,
-              color: styleSettings.textColor
+              color: styleSettings.textColor,
+              border: `1px solid ${styleSettings.borderColor}`,
+              boxShadow: styleSettings.shadow === 'none' ? 'none' : `0 0 10px ${styleSettings.borderColor}30`
             }}
           >
             <TabsTrigger 
@@ -589,9 +590,11 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                 "data-[state=active]:bg-white/5 h-10",
                 styleSettings.hoverEffect && "hover:bg-white/10"
               )}
-              style={{ color: styleSettings.textColor }}
+              style={{ 
+                color: styleSettings.textColor
+              }}
             >
-              해야할 일
+              목록
             </TabsTrigger>
             <TabsTrigger 
               value="today" 
@@ -599,9 +602,11 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                 "data-[state=active]:bg-white/5 h-10",
                 styleSettings.hoverEffect && "hover:bg-white/10"
               )}
-              style={{ color: styleSettings.textColor }}
+              style={{ 
+                color: styleSettings.textColor
+              }}
             >
-              오늘의 메모
+              오늘 메모
             </TabsTrigger>
             <TabsTrigger 
               value="completed" 
@@ -609,16 +614,18 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                 "data-[state=active]:bg-white/5 h-10",
                 styleSettings.hoverEffect && "hover:bg-white/10"
               )}
-              style={{ color: styleSettings.textColor }}
+              style={{ 
+                color: styleSettings.textColor
+              }}
             >
-              완료된 일
+              완료
             </TabsTrigger>
           </TabsList>
         </Tabs>
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setViewMode(prev => prev === 'list' ? 'calendar' : 'list')}
+          onClick={() => setIsWriting(true)}
           className={cn(
             "w-10 h-10",
             styleSettings.hoverEffect && "hover:bg-white/10",
@@ -635,270 +642,13 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
             boxShadow: styleSettings.shadow === 'none' ? 'none' : `0 4px 6px ${styleSettings.color}40`
           }}
         >
-          {viewMode === 'list' ? <CalendarIcon className="w-4 h-4" /> : <List className="w-4 h-4" />}
+          <PenSquare className="w-4 h-4" />
         </Button>
       </div>
 
-      {viewMode === 'calendar' ? (
-        <div className="mt-4 p-4 bg-white/5 rounded-lg backdrop-blur-sm">
-          <Calendar
-            mode="single"
-            selected={selectedDate || undefined}
-            onSelect={(date) => setSelectedDate(date || null)}
-            required={false}
-            className="w-full"
-            locale={ko}
-            modifiers={{
-              booked: (date) => {
-                return memos.some(memo => {
-                  const memoDate = new Date(memo.date);
-                  return (
-                    memoDate.getFullYear() === date.getFullYear() &&
-                    memoDate.getMonth() === date.getMonth() &&
-                    memoDate.getDate() === date.getDate()
-                  );
-                });
-              }
-            }}
-            modifiersStyles={{
-              booked: {
-                fontWeight: 'bold',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                color: '#fff'
-              }
-            }}
-          />
-          {selectedDate && (
-            <div className="mt-4 space-y-4">
-              <h3 className="font-medium text-lg">
-                {format(selectedDate, 'PPP', { locale: ko })}의 메모
-              </h3>
-              {memos
-                .filter(memo => {
-                  const memoDate = new Date(memo.date);
-                  return (
-                    memoDate.getFullYear() === selectedDate.getFullYear() &&
-                    memoDate.getMonth() === selectedDate.getMonth() &&
-                    memoDate.getDate() === selectedDate.getDate()
-                  );
-                })
-                .map(memo => (
-                <div 
-                  key={memo.id} 
-                  className={cn(
-                    "p-4 backdrop-blur-sm transition-all duration-300 ease-in-out",
-                    styleSettings.borderRadius === 'none' && 'rounded-none',
-                    styleSettings.borderRadius === 'sm' && 'rounded',
-                    styleSettings.borderRadius === 'md' && 'rounded-lg',
-                    styleSettings.borderRadius === 'lg' && 'rounded-xl',
-                    styleSettings.borderRadius === 'full' && 'rounded-full',
-                    styleSettings.hoverEffect && "hover:bg-white/20 hover:scale-[1.01]",
-                    styleSettings.animation && "floating-animation"
-                  )}
-                  style={getStyleObject()}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                      <span className="text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                        {format(new Date(memo.date), 'p', { locale: ko })}
-                      </span>
-                        {memo.emotion && (
-                          <div 
-                            className="flex items-center gap-1 px-2 py-1 rounded-full text-sm"
-                            style={{ backgroundColor: `${memo.emotion.color}30` }}
-                          >
-                            <span>{memo.emotion.icon}</span>
-                            <span style={{ color: styleSettings.textColor }}>{memo.emotion.emotion}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {memo.status !== 'completed' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusChange(memo.id, 'completed')}
-                          >
-                            완료
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(memo.id)}
-                        >
-                          삭제
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1">
-                        <p className="whitespace-pre-wrap" style={{ color: styleSettings.textColor }}>{memo.content}</p>
-                        {memo.emotion && (
-                          <div className="mt-2 text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                            <p>{memo.emotion.summary}</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {memo.emotion.keywords.map((keyword, index) => (
-                                <span 
-                                  key={index}
-                                  className="px-2 py-0.5 rounded-full text-xs"
-                                  style={{ backgroundColor: `${memo.emotion?.color}20` }}
-                                >
-                                  #{keyword}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      {memo.images && memo.images.length > 0 && (
-                        <div className="relative flex-shrink-0 w-16 h-16">
-                          <img
-                            src={memo.images[0]}
-                            alt={`메모 이미지 1`}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                          {memo.images.length > 1 && (
-                            <div 
-                              className="absolute top-0 right-0 -mt-2 -mr-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-                              style={{ backgroundColor: styleSettings.color }}
-                            >
-                              +{memo.images.length - 1}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <p className="whitespace-pre-wrap" style={{ color: styleSettings.textColor }}>{memo.content}</p>
-                    {memo.emotion && (
-                      <div className="mt-2 text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                        <p>{memo.emotion.summary}</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {memo.emotion.keywords.map((keyword, index) => (
-                            <span 
-                              key={index}
-                              className="px-2 py-0.5 rounded-full text-xs"
-                              style={{ backgroundColor: `${memo.emotion?.color}20` }}
-                            >
-                              #{keyword}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      ) : (
+      {(
         <div className="mt-4">
-          {editable && (
-            <Button 
-              onClick={() => setIsWriting(true)}
-              className={cn(
-                "w-full mb-4",
-                styleSettings.hoverEffect && "hover:bg-white/10",
-                styleSettings.animation && "floating-animation",
-                styleSettings.borderRadius === 'none' && 'rounded-none',
-                styleSettings.borderRadius === 'sm' && 'rounded',
-                styleSettings.borderRadius === 'md' && 'rounded-lg',
-                styleSettings.borderRadius === 'lg' && 'rounded-xl',
-                styleSettings.borderRadius === 'full' && 'rounded-full'
-              )}
-              style={{
-                backgroundColor: `${styleSettings.color}${Math.round(styleSettings.opacity * 255).toString(16).padStart(2, '0')}`,
-                color: styleSettings.textColor,
-                boxShadow: styleSettings.shadow === 'none' ? 'none' : `0 4px 6px ${styleSettings.color}40`
-              }}
-            >
-              새 메모 작성
-            </Button>
-          )}
 
-          {/* 주간 감정 흐름 */}
-          <div 
-            className={cn(
-              "mb-6 p-3 backdrop-blur-sm transition-all duration-300 ease-in-out",
-              styleSettings.borderRadius === 'none' && 'rounded-none',
-              styleSettings.borderRadius === 'sm' && 'rounded-sm',
-              styleSettings.borderRadius === 'md' && 'rounded-md',
-              styleSettings.borderRadius === 'lg' && 'rounded-lg',
-              styleSettings.borderRadius === 'xl' && 'rounded-xl',
-              styleSettings.borderRadius === 'full' && 'rounded-3xl',
-              styleSettings.hoverEffect && "hover:bg-white/20 hover:scale-[1.01]",
-              styleSettings.animation && "floating-animation"
-            )}
-            style={getStyleObject()}
-          >
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: 7 }).map((_, index) => {
-                const date = new Date();
-                date.setDate(date.getDate() - (6 - index));
-                const dayMemos = memos.filter(memo => {
-                  const memoDate = new Date(memo.date);
-                  return (
-                    memoDate.getFullYear() === date.getFullYear() &&
-                    memoDate.getMonth() === date.getMonth() &&
-                    memoDate.getDate() === date.getDate()
-                  );
-                });
-                
-                // 해당 날짜의 대표 감정 찾기 (가장 강한 intensity를 가진 감정)
-                const mainEmotion = dayMemos
-                  .filter(memo => memo.emotion)
-                  .sort((a, b) => (b.emotion?.intensity || 0) - (a.emotion?.intensity || 0))[0]?.emotion;
-
-                const isToday = index === 6;
-
-                return (
-                <div 
-                  key={index}
-                  className={cn(
-                    "flex flex-col items-center py-1 transition-all",
-                    isToday && "bg-white/5 backdrop-blur-sm",
-                    styleSettings.borderRadius === 'none' && 'rounded-none',
-                    styleSettings.borderRadius === 'sm' && 'rounded-sm',
-                    styleSettings.borderRadius === 'md' && 'rounded-md',
-                    styleSettings.borderRadius === 'lg' && 'rounded-lg',
-                    styleSettings.borderRadius === 'xl' && 'rounded-xl',
-                    styleSettings.borderRadius === 'full' && 'rounded-xl'
-                  )}
-                >
-                    <div 
-                      className={cn(
-                        "text-xs mb-1",
-                        isToday && "font-medium"
-                      )}
-                      style={{ color: styleSettings.textColor }}
-                    >
-                      {format(date, 'd', { locale: ko })}
-                    </div>
-                    {mainEmotion ? (
-                      <div 
-                        className="text-xl transition-transform hover:scale-110" 
-                        title={`${format(date, 'PPP', { locale: ko })} - ${mainEmotion.emotion}`}
-                        style={{ 
-                          color: mainEmotion.color,
-                          textShadow: styleSettings.shadow === 'glow' ? `0 0 10px ${mainEmotion.color}` : 'none'
-                        }}
-                      >
-                        {mainEmotion.icon}
-                      </div>
-                    ) : (
-                      <div 
-                        className="w-4 h-4 rounded-full border flex items-center justify-center"
-                        style={{ 
-                          borderColor: `${styleSettings.color}40`,
-                          opacity: isToday ? 0.5 : 0.2
-                        }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="space-y-4">
             {memos
@@ -971,34 +721,44 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                           className="cursor-pointer"
                           onClick={() => setSelectedMemo(memo)}
                         >
-                          <p className="whitespace-pre-wrap" style={{ color: styleSettings.textColor }}>{memo.content}</p>
-                          {memo.emotion && (
-                            <div className="mt-2 text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                              <p>{memo.emotion.summary}</p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {memo.emotion.keywords.map((keyword, index) => (
-                                  <span 
-                                    key={index}
-                                    className="px-2 py-0.5 rounded-full text-xs"
-                                    style={{ backgroundColor: `${memo.emotion?.color}20` }}
-                                  >
-                                    #{keyword}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
+                          <p 
+                            className="whitespace-pre-wrap line-clamp-3 sm:line-clamp-none" 
+                            style={{ color: styleSettings.textColor }}
+                          >
+                            {memo.content}
+                          </p>
+                          {memo.content.split('\n').length > 3 && (
+                            <button
+                              onClick={() => setSelectedMemo(memo)}
+                              className="text-sm mt-1 hover:underline"
+                              style={{ color: `${styleSettings.textColor}80` }}
+                            >
+                              더보기...
+                            </button>
                           )}
                         </div>
                         <div className="flex flex-col gap-2 mt-3">
                           {memo.emotion ? (
-                            <div className="flex flex-col gap-1 p-2 rounded-lg" style={{ backgroundColor: `${memo.emotion.color}15` }}>
+                            <div 
+                              className="flex flex-col gap-1 p-2 rounded-lg" 
+                              style={{ 
+                                backgroundColor: `${styleSettings.color}30`,
+                                border: `1px solid ${styleSettings.color}40`
+                              }}
+                            >
                               <div className="flex items-center gap-2">
                                 <span className="text-2xl">{memo.emotion.icon}</span>
                                 <div>
-                                  <div className="font-medium" style={{ color: memo.emotion.color }}>
+                                  <div 
+                                    className="font-medium" 
+                                    style={{ color: styleSettings.textColor }}
+                                  >
                                     {memo.emotion.emotion}
                                   </div>
-                                  <div className="text-sm" style={{ color: `${styleSettings.textColor}80` }}>
+                                  <div 
+                                    className="text-sm" 
+                                    style={{ color: `${styleSettings.textColor}90` }}
+                                  >
                                     {memo.emotion.summary}
                                   </div>
                                 </div>
@@ -1009,8 +769,9 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                                     key={index}
                                     className="px-2 py-0.5 rounded-full text-xs"
                                     style={{ 
-                                      backgroundColor: `${memo.emotion?.color}20`,
-                                      color: memo.emotion?.color
+                                      backgroundColor: `${styleSettings.color}40`,
+                                      color: styleSettings.textColor,
+                                      border: `1px solid ${styleSettings.color}50`
                                     }}
                                   >
                                     #{keyword}
@@ -1018,9 +779,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                                 ))}
                               </div>
                             </div>
-                          ) : (
-                            <div className="flex gap-1 items-center text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                          
+                          ) : currentUser?.uid === userId && (
                             <button
                               onClick={() => {
                                 setConfirmDialog({
@@ -1045,8 +804,15 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                                   }
                                 });
                               }}
-                              className="p-1.5 rounded transition-colors hover:bg-white/10 relative"
-                              title="감정 분석"
+                              className={cn(
+                                "px-3 py-1.5 rounded-lg text-sm transition-all",
+                                styleSettings.hoverEffect && "hover:bg-white/10"
+                              )}
+                              style={{ 
+                                backgroundColor: `${styleSettings.color}30`,
+                                border: `1px solid ${styleSettings.color}50`,
+                                color: styleSettings.textColor
+                              }}
                               disabled={analyzingMemos.includes(memo.id)}
                             >
                               {analyzingMemos.includes(memo.id) ? (
@@ -1056,77 +822,9 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                                   </svg>
                                 </div>
                               ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="10"/>
-                                  <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                                  <line x1="9" y1="9" x2="9.01" y2="9"/>
-                                  <line x1="15" y1="9" x2="15.01" y2="9"/>
-                                </svg>
+                                "AI 감정 분석"
                               )}
                             </button>
-                          )
-                          {activeTab !== 'completed' && (
-                            <button
-                              onClick={() => {
-                                setConfirmDialog({
-                                  isOpen: true,
-                                  title: '메모 완료',
-                                  message: '이 메모를 완료 처리하시겠습니까?',
-                                  action: async () => {
-                                    await handleStatusChange(memo.id, 'completed');
-                                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                                  }
-                                });
-                              }}
-                              className="p-1.5 rounded transition-colors hover:bg-white/10"
-                              title="완료"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 6L9 17l-5-5"/>
-                              </svg>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingMemo(memo);
-                              setWriteForm({
-                                content: memo.content,
-                                images: memo.images || [],
-                                pendingImages: [],
-                                date: new Date(memo.date)
-                              });
-                              setIsWriting(true);
-                            }}
-                            className="p-1.5 rounded transition-colors hover:bg-white/10"
-                            title="수정"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setConfirmDialog({
-                                isOpen: true,
-                                title: '메모 삭제',
-                                message: '정말 이 메모를 삭제하시겠습니까?',
-                                action: async () => {
-                                  await handleDelete(memo.id);
-                                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                                }
-                              });
-                            }}
-                            className="p-1.5 rounded transition-colors hover:bg-white/10"
-                            title="삭제"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 6h18"/>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            </svg>
-                          </button>
-                            </div>
                           )}
                         </div>
                       </div>
@@ -1370,119 +1068,123 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                   </div>
                 )}
               </div>
-              <div className="flex gap-1">
-                {selectedMemo && !selectedMemo.emotion && (
-                  <button
-                    onClick={() => {
-                      setConfirmDialog({
-                        isOpen: true,
-                        title: '감정 분석',
-                        message: '이 메모의 감정을 분석하시겠습니까? AI가 메모의 내용을 분석하여 감정 상태를 파악합니다.',
-                        action: async () => {
-                          setAnalyzingMemos(prev => [...prev, selectedMemo.id]);
-                          try {
-                            const emotionAnalysis = await analyzeEmotion(selectedMemo.content);
-                            if (emotionAnalysis) {
-                              await updateDoc(doc(db, `users/${userId}/memos`, selectedMemo.id), {
-                                emotion: emotionAnalysis
-                              });
+              <div className="flex justify-end">
+                {currentUser?.uid === userId && (
+                  <div className="flex gap-1">
+                    {selectedMemo && !selectedMemo.emotion && (
+                      <button
+                        onClick={() => {
+                          setConfirmDialog({
+                            isOpen: true,
+                            title: '감정 분석',
+                            message: '이 메모의 감정을 분석하시겠습니까? AI가 메모의 내용을 분석하여 감정 상태를 파악합니다.',
+                            action: async () => {
+                              setAnalyzingMemos(prev => [...prev, selectedMemo.id]);
+                              try {
+                                const emotionAnalysis = await analyzeEmotion(selectedMemo.content);
+                                if (emotionAnalysis) {
+                                  await updateDoc(doc(db, `users/${userId}/memos`, selectedMemo.id), {
+                                    emotion: emotionAnalysis
+                                  });
+                                }
+                              } catch (error) {
+                                console.error('감정 분석 실패:', error);
+                              } finally {
+                                setAnalyzingMemos(prev => prev.filter(id => id !== selectedMemo.id));
+                                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                              }
                             }
-                          } catch (error) {
-                            console.error('감정 분석 실패:', error);
-                          } finally {
-                            setAnalyzingMemos(prev => prev.filter(id => id !== selectedMemo.id));
-                            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                          }
-                        }
-                      });
-                    }}
-                    className="p-1.5 rounded transition-colors hover:bg-white/10 relative"
-                    title="감정 분석"
-                    disabled={analyzingMemos.includes(selectedMemo.id)}
-                  >
-                    {analyzingMemos.includes(selectedMemo.id) ? (
-                      <div className="animate-spin">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                        </svg>
-                      </div>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                        <line x1="9" y1="9" x2="9.01" y2="9"/>
-                        <line x1="15" y1="9" x2="15.01" y2="9"/>
-                      </svg>
+                          });
+                        }}
+                        className="p-1.5 rounded transition-colors hover:bg-white/10 relative"
+                        title="감정 분석"
+                        disabled={analyzingMemos.includes(selectedMemo.id)}
+                      >
+                        {analyzingMemos.includes(selectedMemo.id) ? (
+                          <div className="animate-spin">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                            </svg>
+                          </div>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                          </svg>
+                        )}
+                      </button>
                     )}
-                  </button>
-                )}
-                {selectedMemo && selectedMemo.status !== 'completed' && (
-                  <button
-                    onClick={() => {
-                      setConfirmDialog({
-                        isOpen: true,
-                        title: '메모 완료',
-                        message: '이 메모를 완료 처리하시겠습니까?',
-                        action: async () => {
-                          await handleStatusChange(selectedMemo.id, 'completed');
-                          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                          setSelectedMemo(null);
-                        }
-                      });
-                    }}
-                    className="p-1.5 rounded transition-colors hover:bg-white/10"
-                    title="완료"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6L9 17l-5-5"/>
-                    </svg>
-                  </button>
-                )}
-                {selectedMemo && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setEditingMemo(selectedMemo);
-                        setWriteForm({
-                          content: selectedMemo.content,
-                          images: selectedMemo.images || [],
-                          pendingImages: [],
-                          date: new Date(selectedMemo.date)
-                        });
-                        setIsWriting(true);
-                        setSelectedMemo(null);
-                      }}
-                      className="p-1.5 rounded transition-colors hover:bg-white/10"
-                      title="수정"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setConfirmDialog({
-                          isOpen: true,
-                          title: '메모 삭제',
-                          message: '정말 이 메모를 삭제하시겠습니까?',
-                          action: async () => {
-                            await handleDelete(selectedMemo.id);
-                            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    {selectedMemo && selectedMemo.status !== 'completed' && (
+                      <button
+                        onClick={() => {
+                          setConfirmDialog({
+                            isOpen: true,
+                            title: '메모 완료',
+                            message: '이 메모를 완료 처리하시겠습니까?',
+                            action: async () => {
+                              await handleStatusChange(selectedMemo.id, 'completed');
+                              setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                              setSelectedMemo(null);
+                            }
+                          });
+                        }}
+                        className="p-1.5 rounded transition-colors hover:bg-white/10"
+                        title="완료"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                      </button>
+                    )}
+                    {selectedMemo && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingMemo(selectedMemo);
+                            setWriteForm({
+                              content: selectedMemo.content,
+                              images: selectedMemo.images || [],
+                              pendingImages: [],
+                              date: new Date(selectedMemo.date)
+                            });
+                            setIsWriting(true);
                             setSelectedMemo(null);
-                          }
-                        });
-                      }}
-                      className="p-1.5 rounded transition-colors hover:bg-white/10"
-                      title="삭제"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      </svg>
-                    </button>
-                  </>
+                          }}
+                          className="p-1.5 rounded transition-colors hover:bg-white/10"
+                          title="수정"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: '메모 삭제',
+                              message: '정말 이 메모를 삭제하시겠습니까?',
+                              action: async () => {
+                                await handleDelete(selectedMemo.id);
+                                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                setSelectedMemo(null);
+                              }
+                            });
+                          }}
+                          className="p-1.5 rounded transition-colors hover:bg-white/10"
+                          title="삭제"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -1494,14 +1196,32 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                   {selectedMemo.content}
                 </p>
                 {selectedMemo.emotion && (
-                  <div className="mb-6 text-sm text-gray-600">
-                    <p>{selectedMemo.emotion.summary}</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                  <div 
+                    className="mb-6 p-4 rounded-lg" 
+                    style={{ 
+                      backgroundColor: `${styleSettings.color}20`,
+                      border: `1px solid ${styleSettings.color}40`
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-3xl">{selectedMemo.emotion.icon}</span>
+                      <div>
+                        <div className="font-medium text-lg text-gray-900">
+                          {selectedMemo.emotion.emotion}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 mb-3">{selectedMemo.emotion.summary}</p>
+                    <div className="flex flex-wrap gap-1">
                       {selectedMemo.emotion.keywords.map((keyword, index) => (
                         <span 
                           key={index}
-                          className="px-2 py-0.5 rounded-full text-xs text-gray-900"
-                          style={{ backgroundColor: `${selectedMemo.emotion?.color}20` }}
+                          className="px-2 py-0.5 rounded-full text-xs"
+                          style={{ 
+                            backgroundColor: `${styleSettings.color}30`,
+                            color: 'rgb(17 24 39)',
+                            border: `1px solid ${styleSettings.color}40`
+                          }}
                         >
                           #{keyword}
                         </span>

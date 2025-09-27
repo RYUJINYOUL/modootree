@@ -12,6 +12,7 @@ import Divider from '../template/Divider';
 import QuestBook2 from '../template/QuestBook2';
 import SkillProgress from '../template/SkillProgress';
 import DayOneBook from '../template/DayOneBook';
+import DayOneCalendarTemplate from '../template/DayOneCalendarTemplate';
 
 export type ComponentKey = 
   | '제목'
@@ -26,7 +27,8 @@ export type ComponentKey =
   | '달력'
   | '오늘일기'
   | '포트폴리오'
-  | '데이원메모';
+  | '데이원메모'
+  | '데이원캘린더';
 
 export const ComponentLibrary: Record<ComponentKey, React.FC<any>> = {
   제목: Title,
@@ -42,4 +44,5 @@ export const ComponentLibrary: Record<ComponentKey, React.FC<any>> = {
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
   데이원메모: DayOneBook,
+  데이원캘린더: DayOneCalendarTemplate,
 }; 
