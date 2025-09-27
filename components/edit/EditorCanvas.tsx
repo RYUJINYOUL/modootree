@@ -7,9 +7,10 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 interface EditorCanvasProps {
   components: ComponentKey[];
   onComponentsUpdate: (components: ComponentKey[]) => void;
+  userId: string;
 }
 
-export default function EditorCanvas({ components, onComponentsUpdate }: EditorCanvasProps) {
+export default function EditorCanvas({ components, onComponentsUpdate, userId }: EditorCanvasProps) {
   // 🔹 컴포넌트 추가
   const handleAdd = (type: ComponentKey) => {
     onComponentsUpdate([...components, type]);
@@ -55,7 +56,7 @@ export default function EditorCanvas({ components, onComponentsUpdate }: EditorC
         <h2 className="font-bold text-center mb-6 text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-wide">미리보기</h2>
         {components.map((type, idx) => {
           const Comp = ComponentLibrary[type];
-          return Comp ? <Comp key={idx} /> : null;
+          return Comp ? <Comp key={idx} userId={userId} editable={true} /> : null;
         })}
       </div>
 

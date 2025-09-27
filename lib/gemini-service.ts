@@ -9,6 +9,15 @@ interface TestPrompt {
   additionalInfo?: string;
 }
 
+export interface EmotionAnalysis {
+  emotion: string;  // 주요 감정 (기쁨, 슬픔, 분노, 불안, 중립 등)
+  intensity: number;  // 감정 강도 (0-1)
+  keywords: string[];  // 감정과 관련된 주요 키워드
+  summary: string;  // 간단한 감정 분석 요약
+  color: string;  // 감정을 나타내는 색상 코드
+  icon: string;  // 감정을 나타내는 이모티콘
+}
+
 export class GeminiService {
   private model = genAI.getGenerativeModel({ model: "gemini-pro" });
 

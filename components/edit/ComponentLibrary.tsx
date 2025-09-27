@@ -10,6 +10,7 @@ import Description from '../template/Description';
 import Divider from '../template/Divider';
 import QuestBook2 from '../template/QuestBook2';
 import SkillProgress from '../template/SkillProgress';
+import DayOneBook from '../template/DayOneBook';
 
 
 export const ComponentLibrary: Record<string, React.FC<any>> = {
@@ -25,4 +26,5 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   달력: CalendarComponent,
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
+  데이원메모: DayOneBook,
 }; 

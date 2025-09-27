@@ -417,6 +417,7 @@ export default function EditPage({ username }: { username: string }) {
             <EditorCanvas
               components={components}
               onComponentsUpdate={handleComponentsUpdate}
+              userId={ownerUid}
             />
             <div className='h-[50px]'></div>
             <div className="flex justify-center">
@@ -435,6 +436,7 @@ export default function EditPage({ username }: { username: string }) {
               <EditorCanvas2
                 components={components}
                 onComponentsUpdate={handleComponentsUpdate}
+                userId={ownerUid}
               />
             </div>
             <div className='h-[50px]'></div>

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 
-export default function EditorCanvas2({ components, onComponentsUpdate }) {
+export default function EditorCanvas2({ components, onComponentsUpdate, userId }) {
   const [dragInfo, setDragInfo] = useState(null); // 모바일 드래그 정보
 
   // 데스크탑: 새 컴포넌트 드롭
@@ -115,7 +115,7 @@ export default function EditorCanvas2({ components, onComponentsUpdate }) {
         <h2 className="font-bold text-center mb-6 text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-wide">미리보기</h2>
         {components.map((type, idx) => {
           const Comp = ComponentLibrary[type];
-          return Comp ? <Comp key={idx} /> : null;
+          return Comp ? <Comp key={idx} userId={userId} editable={true} /> : null;
         })}
       </div>
     </div>

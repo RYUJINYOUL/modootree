@@ -23,6 +23,7 @@ export default function ComponentRenderer({
     <Component
       username={username}
       uid={uid}
+      userId={uid}  // DayOneBook을 위한 userId prop 추가
       isEditable={isEditable}
       isAllowed={isAllowed}
     />
