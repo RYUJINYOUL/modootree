@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Image as ImageIcon, X, Trash2, PenSquare, List, Settings, Calendar as CalendarIcon } from 'lucide-react';
+import Image from 'next/image';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -41,7 +42,7 @@ interface EmotionAnalysis {
   keywords: string[];
   summary: string;
   color: string;
-  icon: string;
+  image: string;
 }
 
 interface MemoItem {
@@ -75,6 +76,15 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
   // 모든 useState를 최상단에 배치
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('today');
+  
+  // 탭 변경 시 보이는 개수 초기화
+  const handleTabChange = (value: TabType) => {
+    setActiveTab(value);
+    setVisibleCount(prev => ({
+      ...prev,
+      [value]: 5
+    }));
+  };
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [memos, setMemos] = useState<MemoItem[]>([]);
   const [isWriting, setIsWriting] = useState(false);
@@ -103,6 +113,11 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [analyzingMemos, setAnalyzingMemos] = useState<string[]>([]);
+  const [visibleCount, setVisibleCount] = useState<{ [key in 'todo' | 'today' | 'completed']: number }>({
+    todo: 5,
+    today: 5,
+    completed: 5
+  });
   const [styleSettings, setStyleSettings] = useState({
     style: 'default',
     color: '#60A5FA',
@@ -143,7 +158,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
     return {
       backgroundColor: styleSettings.color === 'transparent' 
         ? 'rgba(255, 255, 255, 0.1)' 
-        : `${styleSettings.color}${Math.round(styleSettings.opacity * 255).toString(16).padStart(2, '0')}`,
+        : `${styleSettings.color}${Math.round((1 - styleSettings.opacity) * 255).toString(16).padStart(2, '0')}`,
       boxShadow,
       borderColor: styleSettings.borderColor,
       borderWidth: '2px',
@@ -230,37 +245,36 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
   }, [userId]);
   const currentUser = useSelector((state: any) => state.user.currentUser);
 
-  // 메모 불러오기
+  // 메모 실시간 구독
   useEffect(() => {
-    const loadMemos = async () => {
-      if (!userId) return;
-      
-      try {
-        const q = query(
-          collection(db, `users/${userId}/memos`),
-          orderBy('date', 'desc')
-        );
-        const snapshot = await getDocs(q);
-        const loadedMemos = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            content: data.content || '',
-            status: data.status as 'todo' | 'today' | 'completed',
-            date: data.date?.toDate() || new Date(),
-            emotion: data.emotion,
-            images: data.images || []
-          };
-        });
-        setMemos(loadedMemos);
-      } catch (error) {
-        console.error('메모 로드 실패:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!userId) return;
+    
+    const q = query(
+      collection(db, `users/${userId}/memos`),
+      orderBy('date', 'desc')
+    );
 
-    loadMemos();
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMemos = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          content: data.content || '',
+          status: data.status as 'todo' | 'today' | 'completed',
+          date: data.date?.toDate() || new Date(),
+          emotion: data.emotion,
+          images: data.images || []
+        };
+      });
+      setMemos(loadedMemos);
+      setLoading(false);
+    }, (error) => {
+      console.error('메모 구독 에러:', error);
+      setLoading(false);
+    });
+
+    // 컴포넌트 언마운트 시 구독 해제
+    return () => unsubscribe();
   }, [userId]);
 
   // 감정 분석 수행
@@ -469,8 +483,8 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
             <input
               type="range"
               min={0}
-              max={0.5}
-              step={0.05}
+              max={1}
+              step={0.1}
               value={styleSettings.opacity}
               onChange={(e) => saveStyleSettings({ ...styleSettings, opacity: parseFloat(e.target.value) })}
               className="w-full"
@@ -542,7 +556,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
   const isEditorPage = pathname?.includes('/editor/') || pathname?.startsWith('/editor');
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto p-4 bg-gray-900/10 backdrop-blur-sm border border-white/5 rounded-lg space-y-6">
+    <div className="w-full max-w-[1200px] mx-auto space-y-6 p-2 pt-4 md:flex md:flex-col md:items-center md:w-full">
       <style jsx global>{animationStyle}</style>
       {isEditorPage && (
         <div className="w-full mb-4">
@@ -566,11 +580,11 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
           {showSettings && renderStyleSettings()}
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex-1">
+      <div className="flex items-center gap-2 w-full max-w-[1100px]">
+        <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as TabType)} className="flex-1">
           <TabsList 
             className={cn(
-              "grid w-full grid-cols-3 bg-transparent h-10 p-0 overflow-hidden",
+              "grid w-full grid-cols-3 bg-transparent h-12 p-0 overflow-hidden",
               styleSettings.borderRadius === 'none' && 'rounded-none',
               styleSettings.borderRadius === 'sm' && 'rounded',
               styleSettings.borderRadius === 'md' && 'rounded-lg',
@@ -578,7 +592,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
               styleSettings.borderRadius === 'full' && 'rounded-2xl'
             )}
             style={{
-              backgroundColor: `${styleSettings.color}${Math.round(styleSettings.opacity * 255).toString(16).padStart(2, '0')}`,
+                            backgroundColor: `${styleSettings.color}${Math.round((1 - styleSettings.opacity) * 255).toString(16).padStart(2, '0')}`,
               color: styleSettings.textColor,
               border: `1px solid ${styleSettings.borderColor}`,
               boxShadow: styleSettings.shadow === 'none' ? 'none' : `0 0 10px ${styleSettings.borderColor}30`
@@ -587,7 +601,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
             <TabsTrigger 
               value="todo" 
               className={cn(
-                "data-[state=active]:bg-white/5 h-10",
+                "data-[state=active]:bg-white/5 h-12 text-base",
                 styleSettings.hoverEffect && "hover:bg-white/10"
               )}
               style={{ 
@@ -599,19 +613,19 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
             <TabsTrigger 
               value="today" 
               className={cn(
-                "data-[state=active]:bg-white/5 h-10",
+                "data-[state=active]:bg-white/5 h-12 text-base",
                 styleSettings.hoverEffect && "hover:bg-white/10"
               )}
               style={{ 
                 color: styleSettings.textColor
               }}
             >
-              오늘 메모
+              오늘
             </TabsTrigger>
             <TabsTrigger 
               value="completed" 
               className={cn(
-                "data-[state=active]:bg-white/5 h-10",
+                "data-[state=active]:bg-white/5 h-12 text-base",
                 styleSettings.hoverEffect && "hover:bg-white/10"
               )}
               style={{ 
@@ -637,7 +651,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
             styleSettings.borderRadius === 'full' && 'rounded-full'
           )}
           style={{
-            backgroundColor: `${styleSettings.color}${Math.round(styleSettings.opacity * 255).toString(16).padStart(2, '0')}`,
+                            backgroundColor: `${styleSettings.color}${Math.round((1 - styleSettings.opacity) * 255).toString(16).padStart(2, '0')}`,
             color: styleSettings.textColor,
             boxShadow: styleSettings.shadow === 'none' ? 'none' : `0 4px 6px ${styleSettings.color}40`
           }}
@@ -647,12 +661,11 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
       </div>
 
       {(
-        <div className="mt-4">
-
-
+        <div className="mt-4 w-full max-w-[1100px]">
           <div className="space-y-4">
-            {memos
-              .filter(memo => {
+            {/* 필터링된 메모 목록 */}
+            {(() => {
+              const filteredMemos = memos.filter(memo => {
                 const today = new Date();
                 const memoDate = new Date(memo.date);
                 const isToday = (
@@ -663,30 +676,38 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
 
                 switch (activeTab) {
                   case 'today':
-                    // '오늘의 메모' 탭에서는 오늘 날짜의 모든 메모 표시
+                    // '오늘 메모' 탭에서는 오늘 날짜의 모든 메모 표시
                     return isToday;
                   case 'todo':
-                    // '해야할 일' 탭에서는 완료되지 않은 할 일만 표시
+                    // '목록' 탭에서는 완료되지 않은 할 일만 표시
                     return memo.status === 'todo';
                   case 'completed':
-                    // '완료된 일' 탭에서는 완료된 메모만 표시
+                    // '완료' 탭에서는 완료된 메모만 표시
                     return memo.status === 'completed';
                   default:
                     return false;
                 }
-              })
+              });
+
               // '해야할 일'은 작성 순서대로, 나머지는 날짜 순으로 정렬
-              .sort((a, b) => {
+              const sortedMemos = filteredMemos.sort((a, b) => {
                 if (activeTab === 'todo') {
                   return 0; // 작성 순서 유지 (이미 Firestore에서 가져온 순서대로)
                 }
                 return new Date(b.date).getTime() - new Date(a.date).getTime();
-              })
-              .map(memo => (
+              });
+
+              // 현재 탭에 해당하는 표시 개수만큼 잘라내기
+              const visibleMemos = sortedMemos.slice(0, visibleCount[activeTab]);
+              const hasMore = sortedMemos.length > visibleCount[activeTab];
+
+              return (
+                <>
+                  {visibleMemos.map(memo => (
                 <div 
                   key={memo.id} 
                   className={cn(
-                    "p-4 backdrop-blur-sm transition-all duration-300 ease-in-out",
+                    "p-6 backdrop-blur-sm transition-all duration-300 ease-in-out",
                     styleSettings.borderRadius === 'none' && 'rounded-none',
                     styleSettings.borderRadius === 'sm' && 'rounded-sm',
                     styleSettings.borderRadius === 'md' && 'rounded-md',
@@ -694,26 +715,92 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                     styleSettings.borderRadius === 'xl' && 'rounded-xl',
                     styleSettings.borderRadius === 'full' && 'rounded-3xl',
                     styleSettings.hoverEffect && "hover:bg-white/20 hover:scale-[1.01]",
-                    styleSettings.animation && "floating-animation"
+                    styleSettings.animation && "floating-animation",
+                    activeTab === 'completed' && "opacity-80"
                   )}
                   style={{
                     ...getStyleObject(),
-                    overflow: 'hidden' // 이미지가 모서리를 벗어나지 않도록
+                    overflow: 'hidden',
+                    ...(activeTab === 'completed' && { filter: 'grayscale(30%)' })
                   }}
                 >
                     <div className="flex items-start gap-4">
+                      {activeTab === 'todo' && (
+                        <button
+                          onClick={() => {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: '메모 완료',
+                              message: '이 메모를 완료 처리하시겠습니까?',
+                              action: async () => {
+                                await handleStatusChange(memo.id, 'completed');
+                                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                              }
+                            });
+                          }}
+                          className={cn(
+                            "w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                            "hover:bg-white/10"
+                          )}
+                          style={{ borderColor: styleSettings.borderColor }}
+                        >
+                          <svg
+                            className="w-4 h-4 opacity-0 hover:opacity-50 transition-opacity"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke={styleSettings.textColor}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </button>
+                      )}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                            {format(new Date(memo.date), 'PPP', { locale: ko })}
+                            {activeTab === 'today' ? (
+                              // 오늘 메모: 시간 표시
+                              format(new Date(memo.date), 'a h:mm', { locale: ko })
+                            ) : activeTab === 'completed' ? (
+                              // 완료: 완료 시간 표시
+                              `완료: ${format(new Date(memo.date), 'PPP a h:mm', { locale: ko })}`
+                            ) : (
+                              // 목록: D-day 또는 경과일 표시
+                              (() => {
+                                const today = new Date();
+                                const memoDate = new Date(memo.date);
+                                const diffDays = Math.floor((memoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                if (diffDays > 0) return `D-${diffDays}`;
+                                if (diffDays < 0) return `${Math.abs(diffDays)}일 지남`;
+                                return '오늘';
+                              })()
+                            )}
                           </span>
-                          {memo.emotion && (
+                          {memo.emotion && activeTab === 'today' ? (
                             <div 
-                              className="flex items-center gap-1 px-2 py-1 rounded-full text-sm"
-                              style={{ backgroundColor: `${memo.emotion.color}30` }}
+                              className="flex items-center justify-center px-2.5 py-1 rounded-full text-sm font-medium whitespace-nowrap"
+                              style={{ 
+                                color: styleSettings.textColor,
+                                backgroundColor: `${styleSettings.color}30`,
+                                border: `1px solid ${styleSettings.color}40`
+                              }}
                             >
-                              <span>{memo.emotion.icon}</span>
-                              <span style={{ color: styleSettings.textColor }}>{memo.emotion.emotion}</span>
+                              {memo.emotion.emotion}
+                            </div>
+                          ) : memo.emotion && (
+                            <div 
+                              className="flex items-center justify-center px-2 py-0.5 rounded-full text-sm font-medium whitespace-nowrap"
+                              style={{ 
+                                color: styleSettings.textColor,
+                                backgroundColor: `${styleSettings.color}30`,
+                                border: `1px solid ${styleSettings.color}40`
+                              }}
+                            >
+                              {memo.emotion.emotion}
                             </div>
                           )}
                         </div>
@@ -722,7 +809,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                           onClick={() => setSelectedMemo(memo)}
                         >
                           <p 
-                            className="whitespace-pre-wrap line-clamp-3 sm:line-clamp-none" 
+                            className="whitespace-pre-wrap text-base line-clamp-3 sm:line-clamp-none" 
                             style={{ color: styleSettings.textColor }}
                           >
                             {memo.content}
@@ -747,7 +834,13 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                               }}
                             >
                               <div className="flex items-center gap-2">
-                                <span className="text-2xl">{memo.emotion.icon}</span>
+                                <Image
+                        src={memo.emotion.image || '/emotions/neutral.png'}
+                        alt={memo.emotion.emotion}
+                        width={36}
+                        height={36}
+                        className="opacity-90"
+                      />
                                 <div>
                                   <div 
                                     className="font-medium" 
@@ -875,6 +968,28 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                     </div>
                 </div>
               ))}
+                  {hasMore && (
+                    <button
+                      onClick={() => setVisibleCount(prev => ({
+                        ...prev,
+                        [activeTab]: prev[activeTab] + 5
+                      }))}
+                      className={cn(
+                        "w-full p-3 mt-4 rounded-lg transition-all",
+                        styleSettings.hoverEffect && "hover:bg-white/10"
+                      )}
+                      style={{
+                        backgroundColor: `${styleSettings.color}20`,
+                        border: `1px solid ${styleSettings.color}40`,
+                        color: styleSettings.textColor
+                      }}
+                    >
+                      더보기 ({sortedMemos.length - visibleCount[activeTab]}개)
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1060,11 +1175,14 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                 </DialogTitle>
                 {selectedMemo?.emotion && (
                   <div 
-                    className="flex items-center gap-1 px-2 py-1 rounded-full text-sm"
-                    style={{ backgroundColor: `${selectedMemo.emotion.color}30` }}
+                    className="flex items-center justify-center px-2.5 py-1 rounded-full text-sm font-medium whitespace-nowrap"
+                    style={{ 
+                      color: 'rgb(17 24 39)',
+                      backgroundColor: '#60A5FA30',
+                      border: '1px solid #60A5FA40'
+                    }}
                   >
-                    <span>{selectedMemo.emotion.icon}</span>
-                    <span className="text-gray-900">{selectedMemo.emotion.emotion}</span>
+                    {selectedMemo.emotion.emotion}
                   </div>
                 )}
               </div>
@@ -1199,33 +1317,43 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                   <div 
                     className="mb-6 p-4 rounded-lg" 
                     style={{ 
-                      backgroundColor: `${styleSettings.color}20`,
-                      border: `1px solid ${styleSettings.color}40`
+                      backgroundColor: '#60A5FA20',
+                      border: '1px solid #60A5FA40'
                     }}
                   >
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-3xl">{selectedMemo.emotion.icon}</span>
-                      <div>
-                        <div className="font-medium text-lg text-gray-900">
-                          {selectedMemo.emotion.emotion}
-                        </div>
-                      </div>
+                    <div 
+                      className="flex items-center justify-center px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap mb-3 w-fit"
+                      style={{ 
+                        color: 'rgb(17 24 39)',
+                        backgroundColor: `${styleSettings.color}30`,
+                        border: `1px solid ${styleSettings.color}40`
+                      }}
+                    >
+                      {selectedMemo.emotion.emotion}
                     </div>
-                    <p className="text-gray-700 mb-3">{selectedMemo.emotion.summary}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedMemo.emotion.keywords.map((keyword, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-0.5 rounded-full text-xs"
-                          style={{ 
-                            backgroundColor: `${styleSettings.color}30`,
-                            color: 'rgb(17 24 39)',
-                            border: `1px solid ${styleSettings.color}40`
-                          }}
-                        >
-                          #{keyword}
-                        </span>
-                      ))}
+                    <div 
+                      className="p-4 rounded-xl mb-3"
+                      style={{ 
+                        backgroundColor: '#60A5FA20',
+                        border: '1px solid #60A5FA40'
+                      }}
+                    >
+                      <p className="text-gray-700 mb-3 whitespace-pre-wrap">{selectedMemo.emotion.summary}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedMemo.emotion.keywords.map((keyword, index) => (
+                          <span 
+                            key={index}
+                            className="px-2.5 py-1 rounded-full text-sm font-medium"
+                            style={{ 
+                              backgroundColor: '#60A5FA30',
+                              color: 'rgb(17 24 39)',
+                              border: '1px solid #60A5FA40'
+                            }}
+                          >
+                            #{keyword}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}

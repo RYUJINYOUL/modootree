@@ -515,7 +515,7 @@ const COLOR_PALETTE = [
 export default function GuestbookTemplate({ username, uid }) {
   const [previewEntries, setPreviewEntries] = useState([]);
   const [showColorSettings, setShowColorSettings] = useState(false);
-  const [visibleEntries, setVisibleEntries] = useState(5);
+  const [visibleEntries, setVisibleEntries] = useState(3);
   const [totalEntries, setTotalEntries] = useState(0);
   // 모달 관련 상태 제거 (주석 처리)
   // const [selectedEntry, setSelectedEntry] = useState(null);
@@ -1039,7 +1039,7 @@ export default function GuestbookTemplate({ username, uid }) {
           <div className="h-[20px]" />
           {totalEntries > visibleEntries && (
             <button
-              onClick={() => setVisibleEntries(prev => prev + 5)}
+              onClick={() => setVisibleEntries(prev => prev + 3)}
               className={cn(
                 "w-full max-w-[1100px] p-4 backdrop-blur-sm transition-all duration-300 ease-in-out text-center",
                 styleSettings.rounded === 'none' && 'rounded-none',

@@ -17,7 +17,7 @@ interface EmotionAnalysis {
   keywords: string[];  // 감정과 관련된 주요 키워드
   summary: string;  // 간단한 감정 분석 요약
   color: string;  // 감정을 나타내는 색상 코드
-  icon: string;  // 감정을 나타내는 이모티콘
+  image: string;  // 감정을 나타내는 이미지 경로
 }
 
 const systemPrompt = `당신은 심리학자이자 감정 분석 전문가입니다. 
@@ -45,14 +45,20 @@ const systemPrompt = `당신은 심리학자이자 감정 분석 전문가입니
    - 감정의 원인과 맥락 포함
 
 5. 시각적 표현
-   감정별 색상과 이모지:
-   - 기쁨/설렘: #FFD700 ✨
-   - 만족/평온: #98FB98 😊
-   - 기대/희망: #87CEEB 🌟
-   - 슬픔/그리움: #4682B4 💙
-   - 분노/짜증: #FF4500 😤
-   - 불안/걱정: #9370DB 😰
-   - 중립/평온: #808080 😌
+   감정별 색상과 이미지:
+   - 기쁨: #FFD700, /emotions/joy.png
+   - 설렘: #FFD700, /emotions/excitement.png
+   - 만족: #98FB98, /emotions/satisfaction.png
+   - 평온: #98FB98, /emotions/peace.png
+   - 기대: #87CEEB, /emotions/anticipation.png
+   - 희망: #87CEEB, /emotions/hope.png
+   - 슬픔: #4682B4, /emotions/sadness.png
+   - 그리움: #4682B4, /emotions/longing.png
+   - 분노: #FF4500, /emotions/anger.png
+   - 짜증: #FF4500, /emotions/irritation.png
+   - 불안: #9370DB, /emotions/anxiety.png
+   - 걱정: #9370DB, /emotions/worry.png
+   - 중립: #808080, /emotions/neutral.png
 
 응답 형식 (JSON):
 {
@@ -61,7 +67,7 @@ const systemPrompt = `당신은 심리학자이자 감정 분석 전문가입니
   "keywords": ["키워드1", "키워드2", "키워드3"],
   "summary": "공감적인 감정 상태 설명",
   "color": "감정 색상 코드",
-  "icon": "감정 이모지"
+  "image": "감정 이미지 경로"
 }
 
 주의사항:
@@ -128,7 +134,7 @@ export async function POST(req: Request) {
       
       // 필수 필드 검증
       if (!analysis.emotion || !analysis.intensity || !analysis.keywords || 
-          !analysis.summary || !analysis.color || !analysis.icon) {
+          !analysis.summary || !analysis.color || !analysis.image) {
         console.error('AI 응답에 필수 필드가 누락되었습니다:', analysis);
         return NextResponse.json(
           { error: 'AI 응답 형식이 올바르지 않습니다.' },
