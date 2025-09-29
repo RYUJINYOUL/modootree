@@ -745,23 +745,23 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                 );
 
                 // 2. 일기 저장 또는 수정
-                const diaryData = {
-                  content: writeForm.content,
-                  date: writeForm.date,
-                  images: [...writeForm.images.filter(url => !url.startsWith('blob:')), ...uploadedUrls],
-                  updatedAt: new Date()
-                };
-
-      // 기존 일기 수정인 경우
+      // 기존 일기 찾기
       const existingDiary = diaries.find(d => 
         d.id === writeForm.id
       );
 
+      const diaryData = {
+        content: writeForm.content,
+        date: writeForm.date,
+        images: [...writeForm.images.filter(url => !url.startsWith('blob:')), ...uploadedUrls],
+        updatedAt: new Date(),
+        createdAt: existingDiary?.date || new Date()
+      };
+
       if (existingDiary) {
         console.log('Updating diary:', existingDiary.id, diaryData);
         const updateData: typeof diaryData & { emotion?: EmotionAnalysis } = {
-          ...diaryData,
-          createdAt: existingDiary.date // 원래 생성일 유지
+          ...diaryData
         };
         
         // emotion 필드가 있는 경우에만 포함
