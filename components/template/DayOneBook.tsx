@@ -788,14 +788,10 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                                   e.stopPropagation();
                                   requestSuggestion(memo.id, memo.content);
                                 }}
-                                className={cn(
-                                  "flex items-center gap-1 px-2 py-0.5 text-xs rounded transition-all",
-                                  styleSettings.hoverEffect && "hover:bg-white/10"
-                                )}
+                                className="px-2 py-1 text-xs font-medium rounded-full transition-all"
                                 style={{ 
-                                  backgroundColor: `${styleSettings.color}20`,
-                                  color: styleSettings.textColor,
-                                  border: `1px solid ${styleSettings.color}40`
+                                  backgroundColor: '#3B82F6',
+                                  color: '#FFFFFF',
                                 }}
                                 disabled={suggestingMemos.includes(memo.id)}
                               >
@@ -810,13 +806,13 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                             )}
                             {memo.suggestion && (
                               <div 
-                                className="flex items-center gap-1 px-2 py-0.5 text-xs rounded"
+                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full"
                                 style={{ 
-                                  backgroundColor: `${styleSettings.color}15`,
-                                  border: `1px solid ${styleSettings.color}30`
+                                  backgroundColor: '#2563EB',
+                                  color: '#FFFFFF'
                                 }}
                               >
-                                <span style={{ color: styleSettings.color }}>
+                                <span>
                                   {memo.suggestion.category}
                                 </span>
                               </div>
@@ -1115,17 +1111,14 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                             }
                           });
                         }}
-                        className={cn(
-                          "px-2 py-1 text-sm rounded transition-all",
-                          styleSettings.hoverEffect && "hover:bg-white/10"
-                        )}
+                        className="px-3 py-1.5 text-sm font-medium rounded-full transition-all flex items-center gap-1.5"
                         style={{ 
-                          backgroundColor: `${styleSettings.color}20`,
-                          color: styleSettings.textColor,
-                          border: `1px solid ${styleSettings.color}40`
+                          backgroundColor: '#3B82F6',
+                          color: '#FFFFFF',
                         }}
                         disabled={!!selectedMemo && suggestingMemos.includes(selectedMemo.id)}
                       >
+                        <Lightbulb className="w-4 h-4" />
                         {selectedMemo && suggestingMemos.includes(selectedMemo.id) ? (
                           <div className="animate-spin">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1215,18 +1208,22 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                   {selectedMemo.content}
                 </p>
                 {selectedMemo.suggestion && (
-                  <div 
+                    <div 
                     className="mb-6 p-4 rounded-lg"
                     style={{ 
-                      backgroundColor: `${styleSettings.color}15`,
-                      border: `1px solid ${styleSettings.color}30`
+                      backgroundColor: '#3B82F620',
+                      border: '1px solid #3B82F640'
                     }}
                   >
                     <div className="flex items-center gap-2 mb-3">
-                      <Lightbulb className="w-5 h-5" style={{ color: styleSettings.color }} />
-                      <span className="text-base font-medium" style={{ color: styleSettings.color }}>
+                      <div className="px-3 py-1.5 text-sm font-medium rounded-full flex items-center gap-1.5"
+                        style={{ 
+                          backgroundColor: '#3B82F6',
+                          color: '#FFFFFF',
+                        }}>
+                        <Lightbulb className="w-4 h-4" />
                         {selectedMemo.suggestion.category}
-                      </span>
+                      </div>
                     </div>
                     <p className="text-gray-700">
                       {selectedMemo.suggestion.suggestion}
