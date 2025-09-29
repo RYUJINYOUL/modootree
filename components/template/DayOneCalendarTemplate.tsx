@@ -752,18 +752,24 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                   updatedAt: new Date()
                 };
 
-                // 기존 일기 수정인 경우
-                const existingDiary = diaries.find(d => 
-                  d.id === writeForm.id
-                );
+      // 기존 일기 수정인 경우
+      const existingDiary = diaries.find(d => 
+        d.id === writeForm.id
+      );
 
-                if (existingDiary) {
-                  console.log('Updating diary:', existingDiary.id, diaryData);
-                  await updateDoc(doc(db, `users/${userId}/diaries`, existingDiary.id), {
-                    ...diaryData,
-                    emotion: existingDiary.emotion, // 기존 감정 분석 유지
-                    createdAt: existingDiary.date // 원래 생성일 유지
-                  });
+      if (existingDiary) {
+        console.log('Updating diary:', existingDiary.id, diaryData);
+        const updateData = {
+          ...diaryData,
+          createdAt: existingDiary.date // 원래 생성일 유지
+        };
+        
+        // emotion 필드가 있는 경우에만 포함
+        if (existingDiary.emotion) {
+          updateData.emotion = existingDiary.emotion;
+        }
+        
+        await updateDoc(doc(db, `users/${userId}/diaries`, existingDiary.id), updateData);
                 } else {
                   // 새 일기 작성
                   console.log('Creating new diary:', diaryData);
