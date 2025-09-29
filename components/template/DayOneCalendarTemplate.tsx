@@ -12,9 +12,12 @@ import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ImageIcon, X, PenSquare, Trash2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Heart } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const EMOTION_IMAGES: { [key: string]: string } = {
   '기쁨': '/emotions/joy.png',
@@ -68,10 +71,24 @@ interface MemoItem {
   status: 'todo' | 'today' | 'completed';
 }
 
+const CATEGORIES = [
+  '일상',
+  '감정',
+  '관계',
+  '목표/취미',
+  '특별한 날',
+  '기타/자유'
+];
+
 export default function DayOneCalendarTemplate({ userId, editable = true }: DayOneCalendarTemplateProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const currentUser = useSelector((state: any) => state.user.currentUser);
   console.log('Current User:', currentUser?.uid, 'Page User ID:', userId);
+  const [likeModalOpen, setLikeModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [isLiking, setIsLiking] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [memos, setMemos] = useState<MemoItem[]>([]);
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -885,6 +902,17 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => {
+                      setSelectedCategory('');
+                      setLikeModalOpen(true);
+                    }}
+                    className="h-8 w-8 text-violet-500 hover:text-violet-600 hover:bg-violet-50"
+                  >
+                    <Heart className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={async () => {
                       if (!confirm('이 일기를 삭제하시겠습니까?')) return;
                       
@@ -1000,6 +1028,121 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                 )}
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공감하기 모달 */}
+      <Dialog open={likeModalOpen} onOpenChange={setLikeModalOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>공감하기</DialogTitle>
+            <DialogDescription>
+              이 일기에 공감하고 싶은 카테고리를 선택해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-gray-700 whitespace-pre-wrap mb-6">
+              {selectedDiary?.content}
+            </p>
+            {selectedDiary?.images && selectedDiary.images.length > 0 && (
+              <div className="mb-6 grid grid-cols-2 gap-2">
+                {selectedDiary.images.map((imageUrl, index) => (
+                  <img
+                    key={index}
+                    src={imageUrl}
+                    alt={`일기 이미지 ${index + 1}`}
+                    className="w-full rounded-lg"
+                  />
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="카테고리 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={async () => {
+                  if (!currentUser || !selectedDiary || !selectedCategory) return;
+                  
+                  try {
+                    setIsLiking(true);
+                    
+                    // 공감 데이터 저장
+                    await addDoc(collection(db, 'likes'), {
+                      content: selectedDiary.content,
+                      category: selectedCategory,
+                      createdAt: new Date(),
+                      diaryId: selectedDiary.id,
+                      images: selectedDiary.images || [],
+                      userId: currentUser.uid,
+                      authorId: userId,
+                      authorName: currentUser.displayName || currentUser.email?.split('@')[0] || '사용자',
+                      authorEmail: currentUser.email || '',
+                      emotion: selectedDiary.emotion
+                    });
+
+                    setLikeModalOpen(false);
+                    setShowSuccessModal(true);
+                  } catch (error) {
+                    console.error('공감 저장 실패:', error);
+                    alert('공감 저장 중 오류가 발생했습니다.');
+                  } finally {
+                    setIsLiking(false);
+                  }
+                }}
+                disabled={isLiking || !selectedCategory}
+                className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
+              >
+                {isLiking ? '저장 중...' : '공감하기'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 공감 완료 모달 */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>공감이 저장되었습니다</DialogTitle>
+            <DialogDescription>
+              공감한 일기는 공감 한 조각 페이지에서 확인하실 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <p className="text-gray-600">
+              공감 한 조각 페이지에서 확인하시겠습니까?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowSuccessModal(false)}
+              >
+                닫기
+              </Button>
+              <Button
+                className="bg-violet-500 hover:bg-violet-600 text-white"
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push('/likes/all');
+                }}
+              >
+                공감 한 조각으로 이동
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -69,12 +69,17 @@ export function BottomTabs() {
     }
   };
 
+  // 에디터 페이지에서는 bottom tabs를 숨김
+  if (pathname?.startsWith('/editor/')) {
+    return null;
+  }
+
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <div className="bg-gray-900/95 backdrop-blur-lg border-t border-blue-500/20">
           <div className="max-w-[1100px] mx-auto">
-            <div className="grid grid-cols-5 h-16">
+            <div className="grid grid-cols-4 h-16">
             <button
               onClick={() => router.push('/feed')}
               className={cn(
@@ -96,30 +101,10 @@ export function BottomTabs() {
             </button>
 
             <button
-              onClick={() => router.push('/likes/all')}
+              onClick={() => router.push('/photo-story')}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 transition-colors",
-                pathname === '/likes/all'
-                  ? "text-blue-500"
-                  : "text-white/70 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <div className="relative w-6 h-6">
-                <Image
-                  src="/logos/ai1.png"
-                  alt="공감"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-xs font-medium">공감 AI</span>
-            </button>
-
-            <button
-              onClick={() => router.push('/joy')}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors",
-                pathname === '/joy'
+                pathname === '/photo-story'
                   ? "text-blue-500"
                   : "text-white/70 hover:text-white hover:bg-white/5"
               )}

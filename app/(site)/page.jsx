@@ -566,7 +566,7 @@ export default function Page() {
             &times;
           </button>
 
-          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">새 페이지 만들기</h2>
+          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">페이지 만들기</h2>
           
           <div className="flex flex-col items-center space-y-4">
             <div className="flex items-center bg-blue-950/50 rounded-xl shadow-inner p-4 border border-blue-400/20 focus-within:border-blue-400 transition-all w-full">

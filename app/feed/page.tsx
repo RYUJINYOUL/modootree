@@ -61,21 +61,21 @@ export default function FeedPage() {
   const loadInitialFeed = async () => {
     setLoading(true);
     try {
-      const [likesData, joyData, modooData] = await Promise.all([
+      const [likesData, photoStoryData, modooData] = await Promise.all([
         fetchFromCollection('likes', 10),
-        fetchFromCollection('joy', 10),
+        fetchFromCollection('photo-stories', 10),
         fetchFromCollection('modoo-ai-tests', 10)
       ]);
 
-      const [formattedLikes, formattedJoy, formattedModoo] = await Promise.all([
+      const [formattedLikes, formattedPhotoStory, formattedModoo] = await Promise.all([
         formatData(likesData, 'likes'),
-        formatData(joyData, 'joy'),
+        formatData(photoStoryData, 'photo-story'),
         formatData(modooData, 'modoo-ai')
       ]);
 
       const combinedData = [
         ...formattedLikes,
-        ...formattedJoy,
+        ...formattedPhotoStory,
         ...formattedModoo
       ].sort((a: any, b: any) => b.createdAt - a.createdAt);
 
@@ -105,24 +105,35 @@ export default function FeedPage() {
   const formatData = async (data: any[], type: string): Promise<FeedItem[]> => {
     const formattedData = await Promise.all(data.map(async (item) => {
       // 댓글 수 가져오기
-      const commentsQuery = query(
-        collection(db, type === 'likes' ? 'comments' : 
-                     type === 'joy' ? 'joyComments' : 'modoo-ai-comments'),
-        where(type === 'likes' ? 'likeId' : 
-              type === 'joy' ? 'postId' : 'testId', '==', item.id)
-      );
-      const commentsSnapshot = await getDocs(commentsQuery);
-      const commentCount = commentsSnapshot.size;
+      let commentCount = 0;
+      if (type === 'photo-story') {
+        const commentsQuery = query(
+          collection(db, 'photo-story-comments'),
+          where('storyId', '==', item.id)
+        );
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentCount = commentsSnapshot.size;
+      } else {
+        const commentsQuery = query(
+          collection(db, type === 'likes' ? 'comments' : 'modoo-ai-comments'),
+          where(type === 'likes' ? 'likeId' : 'testId', '==', item.id)
+        );
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentCount = commentsSnapshot.size;
+      }
 
       // 좋아요 수 가져오기
       let likeCount = 0;
       if (type === 'modoo-ai') {
         // modoo-ai는 stats.likeCount를 직접 사용
         likeCount = item.stats?.likeCount || 0;
+      } else if (type === 'photo-story') {
+        // photo-story는 likeCount를 직접 사용
+        likeCount = item.likeCount || 0;
       } else {
         const likesQuery = query(
-          collection(db, type === 'likes' ? 'likesReactions' : 'joyLikes'),
-          where(type === 'likes' ? 'likeId' : 'postId', '==', item.id)
+          collection(db, 'likesReactions'),
+          where('likeId', '==', item.id)
         );
         const likesSnapshot = await getDocs(likesQuery);
         likeCount = likesSnapshot.size;
@@ -133,7 +144,7 @@ export default function FeedPage() {
         type,
         displayType: 
           type === 'likes' ? '공감 한조각' :
-          type === 'joy' ? '사진 한조각' :
+          type === 'photo-story' ? 'AI 사진 스토리' :
           '사연 한조각',
         previewContent: item.content || item.description || '',
         emotionIcon: type === 'modoo-ai' ? EMOTION_ICONS[(item.emotion as keyof typeof EMOTION_ICONS) || 'default'] : null,
@@ -148,7 +159,7 @@ export default function FeedPage() {
   const FILTERS = [
     { id: 'all', label: '전체' },
     { id: 'likes', label: '공감', path: '/likes/all', fullLabel: '공감 한조각' },
-    { id: 'joy', label: '사진', path: '/joy', fullLabel: '사진 한조각' },
+    { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
     { id: 'modoo-ai', label: '사연', path: '/modoo-ai', fullLabel: '사연 한조각' }
   ];
 
@@ -178,7 +189,7 @@ export default function FeedPage() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-white/70 hover:text-white focus:text-white hover:bg-blue-500/50 cursor-pointer transition-colors"
-                    onClick={() => router.push('/joy')}
+                    onClick={() => router.push('/photo-story')}
                   >
                     사진
                   </DropdownMenuItem>
@@ -239,8 +250,8 @@ export default function FeedPage() {
                   onClick={() => {
                     if (item.type === 'modoo-ai') {
                       router.push(`/modoo-ai/tests/${item.id}`);
-                    } else if (item.type === 'joy') {
-                      router.push(`/joy`);
+                    } else if (item.type === 'photo-story') {
+                      router.push(`/photo-story/${item.id}`);
                     } else {
                       router.push(`/likes/all`);
                     }
@@ -258,6 +269,14 @@ export default function FeedPage() {
                           className="w-24 h-24 object-contain"
                         />
                       </div>
+                    ) : item.type === 'photo-story' ? (
+                      // 포토 스토리인 경우
+                      <Image
+                        src={item.photo}
+                        alt="포토 스토리"
+                        fill
+                        className="object-cover"
+                      />
                     ) : item.images?.[0] ? (
                       // 이미지가 있는 경우
                       <Image
@@ -281,7 +300,10 @@ export default function FeedPage() {
                     {/* 제목 영역 - 두 줄 고정 */}
                     <h3 className="text-lg font-semibold text-white mb-2 h-[3.5rem] line-clamp-2">
                       {item.type === 'modoo-ai' ? item.title :
-                       item.type === 'joy' ? (item.description || '').slice(0, 50) :
+                       item.type === 'photo-story' ? 
+                         (Array.isArray(item.aiStories) 
+                           ? item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content 
+                           : '') :
                        (item.content || '').slice(0, 50)}
                     </h3>
                     

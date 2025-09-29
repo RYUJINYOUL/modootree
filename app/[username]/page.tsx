@@ -552,12 +552,15 @@ export default function UserPublicPage() {
                 }`}>
                   <nav className="flex flex-col gap-6">
                     <Link 
-                      href="/"
+                      href="/feed"
                       className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">모두트리 홈</span>
-                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      <div className="flex items-center gap-3">
+                        <img src="/logos/feed.png" alt="피드" className="w-6 h-6" />
+                        <div className="flex flex-col">
+                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">피드</span>
+                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        </div>
                       </div>
                       <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
                     </Link>
@@ -565,19 +568,25 @@ export default function UserPublicPage() {
                       href="/likes/all"
                       className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">공감 한조각</span>
-                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      <div className="flex items-center gap-3">
+                        <img src="/logos/ai1.png" alt="공감" className="w-6 h-6" />
+                        <div className="flex flex-col">
+                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">공감 한조각</span>
+                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        </div>
                       </div>
                       <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
                     </Link>
                     <Link 
-                      href="/joy"
+                      href="/photo-story"
                       className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사진 한조각</span>
-                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      <div className="flex items-center gap-3">
+                        <img src="/logos/ai2.png" alt="사진" className="w-6 h-6" />
+                        <div className="flex flex-col">
+                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사진 스토리</span>
+                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        </div>
                       </div>
                       <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
                     </Link>
@@ -585,9 +594,12 @@ export default function UserPublicPage() {
                       href="/modoo-ai"
                       className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사연 한조각</span>
-                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      <div className="flex items-center gap-3">
+                        <img src="/logos/ai3.png" alt="사연" className="w-6 h-6" />
+                        <div className="flex flex-col">
+                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사연 한조각</span>
+                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        </div>
                       </div>
                       <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
                     </Link>
@@ -595,9 +607,12 @@ export default function UserPublicPage() {
                       href="/inquiry"
                       className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">문의 게시판</span>
-                        <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                      <div className="flex items-center gap-3">
+                        <img src="/logos/ai4.png" alt="문의" className="w-6 h-6" />
+                        <div className="flex flex-col">
+                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">문의 게시판</span>
+                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        </div>
                       </div>
                       <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
                     </Link>

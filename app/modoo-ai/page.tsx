@@ -10,6 +10,11 @@ import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
 import { collection, query, orderBy, getDocs, where, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import CategoryCarousel from '@/components/CategoryCarousel';
 
 interface Test {
   id: string;
@@ -125,11 +130,23 @@ const ParticlesComponent = () => {
   );
 };
 
+const EMOTION_CATEGORIES = [
+  { id: 'happy', label: '행복' },
+  { id: 'sad', label: '슬픔' },
+  { id: 'angry', label: '화남' },
+  { id: 'anxious', label: '불안' },
+  { id: 'peaceful', label: '편안' },
+  { id: 'worried', label: '고민' },
+];
+
 export default function ModooAIPage() {
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEmotion, setSelectedEmotion] = useState('all');
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const fetchTests = useCallback(async () => {
     try {
@@ -171,6 +188,56 @@ export default function ModooAIPage() {
     fetchTests();
   }, [fetchTests]);
 
+  const renderEmotionTabs = () => {
+    if (isMobile) {
+      return (
+        <div className="mb-8">
+          <CategoryCarousel
+            categories={[
+              { id: 'all', label: '전체' },
+              ...EMOTION_CATEGORIES.map(cat => ({
+                id: cat.id,
+                label: cat.label
+              }))
+            ]}
+            selectedCategory={selectedEmotion}
+            onSelect={setSelectedEmotion}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2 mb-8 justify-center">
+        <button
+          onClick={() => setSelectedEmotion('all')}
+          className={cn(
+            "px-4 py-2 rounded-lg transition-colors",
+            selectedEmotion === 'all'
+              ? "bg-white/20 text-white"
+              : "bg-black/50 text-white/70 hover:bg-white/10"
+          )}
+        >
+          전체
+        </button>
+        {EMOTION_CATEGORIES.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedEmotion(category.id)}
+            className={cn(
+              "px-4 py-2 rounded-lg transition-colors",
+              selectedEmotion === category.id
+                ? "bg-white/20 text-white"
+                : "bg-black/50 text-white/70 hover:bg-white/10"
+            )}
+          >
+            {category.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   const renderTestList = () => {
     if (loading) {
       return (
@@ -198,11 +265,34 @@ export default function ModooAIPage() {
       );
     }
 
+    const filteredTests = selectedEmotion === 'all'
+      ? tests
+      : tests.filter(test => {
+          // 감정 ID와 테스트의 emotion 매핑
+          const emotionMapping = {
+            'happy': 'happy',
+            'sad': 'sad',
+            'angry': 'angry',
+            'anxious': 'anxious',
+            'peaceful': 'peaceful',
+            'worried': 'worried'
+          };
+          return test.emotion === emotionMapping[selectedEmotion];
+        });
+
+    if (filteredTests.length === 0) {
+      return (
+        <div className="text-center py-10 text-gray-400">
+          해당 감정의 공감투표가 없습니다.
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4 mt-8">
         <h2 className="text-lg font-medium text-white/80 mb-4">인기 공감투표</h2>
         <div className="space-y-3">
-          {tests.slice(0, 5).map((test) => (
+          {filteredTests.slice(0, 5).map((test) => (
             <div
               key={test.id}
               onClick={() => router.push(`/modoo-ai/tests/${test.id}`)}
@@ -329,6 +419,7 @@ export default function ModooAIPage() {
             </p>
           )}
 
+          {renderEmotionTabs()}
           {renderTestList()}
         </div>
       </div>
