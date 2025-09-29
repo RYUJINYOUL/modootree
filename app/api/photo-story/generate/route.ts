@@ -21,25 +21,22 @@ export async function POST(req: Request) {
     const base64Image = imageUrl.split(',')[1];
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o", // ✅ Vision 지원 최신 모델
       messages: [
         {
           role: "user",
-          content:[
+          content: [
             { type: "text", text: "이 사진에 대해 재미있는 스토리 3개를 만들어주세요. 각 스토리는 2-3문장으로 작성해주세요. 사진의 내용과 관련이 있으면서도 상상력이 풍부한 이야기를 만들어주세요. 반드시 한국어로 작성해주세요." },
-            {
-              type: "image_url",
-              image_url: { url: `data:image/jpeg;base64,${base64Image}` } // ✅ 필드명도 수정 필요
-            }
-          ]
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+          ] as any // 타입 에러 우회
         }
-      ] as any,
+      ],
       max_tokens: 1000,
       temperature: 0.7
     });
 
     // OpenAI 응답 파싱
-    const stories = response.choices[0].message.content
+    const stories = response.choices[0].message?.content
       ?.split('\n')
       .filter(line => line.trim())
       .map(line => line.replace(/^\d+\.\s*/, ''))
