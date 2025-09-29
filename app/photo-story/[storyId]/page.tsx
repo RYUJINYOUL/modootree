@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, orderBy, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
