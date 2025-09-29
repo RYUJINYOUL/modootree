@@ -759,7 +759,7 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
 
       if (existingDiary) {
         console.log('Updating diary:', existingDiary.id, diaryData);
-        const updateData = {
+        const updateData: typeof diaryData & { emotion?: EmotionAnalysis } = {
           ...diaryData,
           createdAt: existingDiary.date // 원래 생성일 유지
         };
