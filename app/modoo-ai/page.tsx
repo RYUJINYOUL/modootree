@@ -269,7 +269,7 @@ export default function ModooAIPage() {
       ? tests
       : tests.filter(test => {
           // 감정 ID와 테스트의 emotion 매핑
-          const emotionMapping = {
+          const emotionMapping: Record<string, string> = {
             'happy': 'happy',
             'sad': 'sad',
             'angry': 'angry',
@@ -277,7 +277,7 @@ export default function ModooAIPage() {
             'peaceful': 'peaceful',
             'worried': 'worried'
           };
-          return test.emotion === emotionMapping[selectedEmotion];
+          return test.emotion === emotionMapping[selectedEmotion as keyof typeof emotionMapping];
         });
 
     if (filteredTests.length === 0) {
