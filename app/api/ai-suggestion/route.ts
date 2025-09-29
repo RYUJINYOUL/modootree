@@ -40,8 +40,11 @@ export async function POST(req: Request) {
       max_tokens: 200
     });
 
-    const suggestion = response.choices[0].message.content;
-    return NextResponse.json(JSON.parse(suggestion));
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('AI 응답이 비어있습니다.');
+    }
+    return NextResponse.json(JSON.parse(content));
 
   } catch (error) {
     console.error('AI 조언 생성 실패:', error);
