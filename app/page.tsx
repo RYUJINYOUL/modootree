@@ -6,54 +6,38 @@ import Particles from "react-tsparticles";
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import LoginOutButton from '@/components/ui/LoginOutButton';
+import { db } from '@/firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import { BottomTabs } from '@/components/ui/bottom-tabs';
 import { cn } from "@/lib/utils";
 import { Plus } from 'lucide-react';
-
-const menuItems = [
-  {
-    title: "AI 사진 투표",
-    description: `AI가 만들어 주는 사진 투표
-당신의 선택은?`,
-    icon: "/logos/ai2.png",
-    path: "/photo-story",
-    color: "from-blue-500 to-purple-500"
-  },
-  {
-    title: "AI 사연 투표",
-    description: "AI가 만들어 주는 사연 투표\n당신의 선택은?",
-    icon: "/logos/ai3.png",
-    path: "/modoo-ai",
-    color: "from-purple-500 to-pink-500"
-  },
-  {
-    title: "공감 한 조각",
-    description: "기쁨 슬픔 등의 내 감정 기록\n 은근 공감 받는 공유 익명 일기",
-    icon: "/logos/ai1.png",
-    path: "/login",
-    color: "from-pink-500 to-red-500"
-  },
-    {
-      title: "내 사이트 무료",
-      description: "나만의 특별한 한 페이지\nAI조언 부터 감정 분석 위로",
-      icon: "/logos/m12.png",
-      path: "/farmtoolceo",
-      color: "from-green-500 to-blue-500"
-    },
-    {
-      title: "열린 게시판",
-      description: "의견 말씀 감사합니다\n열린 게시판 및 카카오톡 채팅",
-      icon: "/logos/ai4.png",
-      path: "/inquiry",
-      color: "from-blue-400 to-cyan-500"
-    }
-];
+import { Dialog } from '@headlessui/react';
 
 export default function HomePage() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
+  const [userData, setUserData] = useState<any>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!currentUser?.uid) return;
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserData(userSnap.data());
+        }
+      } catch (e) {
+        console.error('사용자 데이터 로드 중 오류:', e);
+      }
+    };
+    loadUserData();
+  }, [currentUser]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -67,6 +51,44 @@ export default function HomePage() {
   const particlesInit = useCallback(async (engine: any) => {
     await loadSlim(engine);
   }, []);
+
+  const menuItems = [
+    {
+      title: "AI 사진 투표",
+      description: `AI가 만들어 주는 사진 투표\n당신의 선택은?`,
+      icon: "/logos/ai2.png",
+      path: "/photo-story",
+      color: "from-blue-500 to-purple-500"
+    },
+    {
+      title: "AI 사연 투표",
+      description: "AI가 만들어 주는 사연 투표\n당신의 선택은?",
+      icon: "/logos/ai3.png",
+      path: "/modoo-ai",
+      color: "from-purple-500 to-pink-500"
+    },
+    {
+      title: "공감 한 조각",
+      description: "기쁨 슬픔 등의 내 감정 기록\n 은근 공감 받는 공유 익명 일기",
+      icon: "/logos/ai1.png",
+      path: "/likes/all",
+      color: "from-pink-500 to-red-500"
+    },
+    {
+      title: "내 사이트 무료",
+      description: "나만의 특별한 한 페이지\nAI조언 부터 감정 분석 위로",
+      icon: "/logos/m12.png",
+      path: !currentUser?.uid ? '/login' : (userData?.username ? `/${userData.username}` : ''),
+      color: "from-green-500 to-blue-500"
+    },
+    {
+      title: "열린 게시판",
+      description: "의견 말씀 감사합니다\n열린 게시판 및 카카오톡 채팅",
+      icon: "/logos/ai4.png",
+      path: "/inquiry",
+      color: "from-blue-400 to-cyan-500"
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-black text-white/90 relative">
@@ -164,7 +186,13 @@ export default function HomePage() {
                   {menuItems.map((item, index) => (
                     <div key={index} className="flex justify-start">
                       <button
-                        onClick={() => router.push(item.path)}
+                        onClick={() => {
+                          if (index === 3 && currentUser?.uid && !userData?.username) {
+                            setIsOpen(true);
+                          } else {
+                            router.push(item.path);
+                          }
+                        }}
                         className={`w-[330px] md:w-[316px] aspect-[3/1] group relative overflow-hidden rounded-[20px] bg-gradient-to-r from-blue-500/10 to-blue-600/20 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] shadow-lg border ${
                           index === 0 ? 'border-yellow-300/50' :
                           index === 1 ? 'border-orange-300/50' :
@@ -209,6 +237,89 @@ export default function HomePage() {
       <div className="relative z-10">
         <BottomTabs />
       </div>
+
+      {/* 모달 */}
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
+
+        <Dialog.Panel className="bg-blue-900/90 p-8 rounded-2xl shadow-lg z-50 max-w-sm w-full relative border border-blue-500/30 backdrop-blur-lg">
+          <button
+            onClick={() => setIsOpen(false)}
+            className="absolute top-4 right-4 text-blue-200 hover:text-white text-xl transition-colors"
+            aria-label="닫기"
+          >
+            &times;
+          </button>
+
+          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">새 페이지 만들기</h2>
+          
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex items-center bg-blue-950/50 rounded-xl shadow-inner p-4 border border-blue-400/20 focus-within:border-blue-400 transition-all w-full">
+              <span className="text-blue-200 text-lg mr-1">modootree.com/</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.trim());
+                  setError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveUsername();
+                  }
+                }}
+                placeholder="ID"
+                className="flex-grow text-blue-200 text-lg outline-none bg-transparent placeholder-blue-300/30"
+              />
+            </div>
+
+            <p className="text-blue-200/80 text-sm">
+              ID 입력 후 Enter를 눌러주세요
+            </p>
+          </div>
+
+          {error && (
+            <p className="text-red-300 text-sm mt-4 text-center animate-pulse">
+              {error}
+            </p>
+          )}
+        </Dialog.Panel>
+      </Dialog>
     </div>
   );
+
+  async function handleSaveUsername() {
+    if (!username) {
+      setError('닉네임을 입력해주세요.');
+      return;
+    }
+
+    const usernameRef = doc(db, 'usernames', username);
+    const existing = await getDoc(usernameRef);
+    if (existing.exists()) {
+      setError('이미 사용 중인 닉네임입니다.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        username,
+      });
+
+      await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
+        components: [],
+        type: null
+      });
+      
+      await setDoc(usernameRef, {
+        uid: currentUser.uid,
+      });
+
+      setIsOpen(false);
+      router.push(`/editor/${username}`);
+    } catch (err) {
+      setError('저장 중 오류가 발생했습니다.');
+    }
+  }
 }
