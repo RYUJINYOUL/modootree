@@ -11,13 +11,67 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import { BottomTabs } from '@/components/ui/bottom-tabs';
 import { cn } from "@/lib/utils";
-import { Plus } from 'lucide-react';
+import { Plus, Volume2, VolumeX } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 
 export default function HomePage() {
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [isMuted, setIsMuted] = useState(true);
+  const [isAudioLoaded, setIsAudioLoaded] = useState(false);
+
+  useEffect(() => {
+    console.log('Component mounted, isAudioLoaded:', isAudioLoaded);
+  }, [isAudioLoaded]);
+
+  // 음악 자동 재생을 위한 처리
+  useEffect(() => {
+    const audio = document.getElementById('bgMusic') as HTMLAudioElement;
+    if (audio) {
+      console.log('Audio element found');
+      
+      // 음악 로드 시작 시
+      audio.addEventListener('loadstart', () => {
+        console.log('Audio loading started');
+      });
+
+      // 음악 로드 완료 시
+      audio.addEventListener('loadeddata', () => {
+        console.log('Audio loaded successfully');
+        setIsAudioLoaded(true);
+        audio.volume = 0.05; // 볼륨을 5%로 설정
+      });
+
+      // 음악 재생 오류 시
+      audio.addEventListener('error', (e) => {
+        console.error('Audio loading error:', e);
+        console.error('Audio error code:', audio.error?.code);
+        console.error('Audio error message:', audio.error?.message);
+        setIsAudioLoaded(false);
+      });
+
+      // 자동 재생 시도
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setIsMuted(false);
+        }).catch((error) => {
+          // 자동 재생이 차단된 경우
+          console.log('Autoplay prevented:', error);
+          setIsMuted(true);
+        });
+      }
+    }
+
+    // 컴포넌트 언마운트 시 이벤트 리스너 제거
+    return () => {
+      if (audio) {
+        audio.removeEventListener('loadeddata', () => {});
+        audio.removeEventListener('error', () => {});
+      }
+    };
+  }, []);
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
   const [userData, setUserData] = useState<any>(null);
@@ -99,40 +153,80 @@ export default function HomePage() {
             fpsLimit: 120,
             particles: {
               color: {
-                value: "#ffffff",
+                value: ["#ffffff", "#87CEEB", "#FFD700"]
               },
               links: {
                 color: "#ffffff",
                 distance: 150,
                 enable: true,
-                opacity: 0.2,
+                opacity: 0.05,
                 width: 1,
               },
+              collisions: {
+                enable: false,
+              },
               move: {
+                direction: "none",
                 enable: true,
                 outModes: {
-                  default: "bounce",
+                  default: "out"
                 },
-                random: false,
-                speed: 1,
+                random: true,
+                speed: { min: 0.1, max: 0.3 },
                 straight: false,
+                attract: {
+                  enable: true,
+                  rotate: {
+                    x: 600,
+                    y: 1200
+                  }
+                }
               },
               number: {
                 density: {
                   enable: true,
-                  area: 800,
+                  area: 800
                 },
-                value: 100,
+                value: 120
               },
               opacity: {
-                value: 0.2,
+                animation: {
+                  enable: true,
+                  minimumValue: 0.1,
+                  speed: 1,
+                  sync: false
+                },
+                random: true,
+                value: { min: 0.1, max: 0.8 }
               },
               shape: {
-                type: "circle",
+                type: "circle"
               },
               size: {
-                value: { min: 1, max: 3 },
+                animation: {
+                  enable: true,
+                  minimumValue: 0.1,
+                  speed: 2,
+                  sync: false
+                },
+                random: true,
+                value: { min: 1, max: 3 }
               },
+              twinkle: {
+                lines: {
+                  enable: true,
+                  frequency: 0.005,
+                  opacity: 0.5,
+                  color: {
+                    value: ["#ffffff", "#87CEEB"]
+                  }
+                },
+                particles: {
+                  enable: true,
+                  frequency: 0.05,
+                  opacity: 0.5
+                }
+              }
             },
             detectRetina: true
         }}
@@ -140,6 +234,40 @@ export default function HomePage() {
 
       <div className="relative z-10 min-h-screen flex flex-col">
         <LoginOutButton />
+        
+        {/* 음악 컨트롤 */}
+        {isAudioLoaded && (
+          <button
+            onClick={() => {
+              const audio = document.getElementById('bgMusic') as HTMLAudioElement;
+              if (audio) {
+                if (isMuted) {
+                  const playPromise = audio.play();
+                  if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                      audio.volume = 0.05;
+                      setIsMuted(false);
+                    }).catch((error) => {
+                      console.log('Play prevented:', error);
+                    });
+                  }
+                } else {
+                  audio.pause();
+                  setIsMuted(true);
+                }
+              }
+            }}
+            className="fixed top-4 right-16 z-50 w-9 h-9 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/20 transition-all"
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
+          </button>
+        )}
+
+        {/* 배경 음악 */}
+        <audio id="bgMusic" loop preload="auto">
+          <source src="/music/background.mp3" type="audio/mpeg" />
+          음악 파일을 재생할 수 없습니다.
+        </audio>
         
         <div className="container mx-auto px-4 flex-1 flex items-center">
            <div className="w-full mt-15 md:-mt-20">
