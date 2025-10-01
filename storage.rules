@@ -100,6 +100,20 @@ service firebase.storage {
       allow delete: if isAuthenticated();  // 로그인한 사용자만 삭제 가능
     }
 
+    // 배경 이미지에 대한 규칙
+    match /backgrounds/{userId}/{fileName} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isAuthenticated() && request.auth.uid == userId && isImageFile() && isValidFileSize();
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 공유 배경 이미지에 대한 규칙
+    match /backgrounds/{fileName} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isAuthenticated() && isImageFile() && isValidFileSize();
+      allow delete: if isAuthenticated();
+    }
+
     // 나머지 모든 파일에 대한 기본 규칙
     match /{allPaths=**} {
       allow read: if true;  // 모든 파일 읽기 허용

@@ -220,6 +220,11 @@ export default function UserPublicPage() {
     let isSubscribed = true;
 
     async function loadBackgroundFromStorage(path: string) {
+      // 이미 완전한 URL인 경우 그대로 반환
+      if (path.startsWith('http')) {
+        return path;
+      }
+      
       try {
         const storageRef = ref(storage, path);
         const url = await getDownloadURL(storageRef);
@@ -269,13 +274,18 @@ export default function UserPublicPage() {
         if (settingsSnap.exists()) {
           const backgroundData = settingsSnap.data();
           setIsAnimationEnabled(backgroundData.animation ?? true);
-          if (backgroundData.type === 'image' && backgroundData.value.startsWith('/')) {
-            setContextBackground(backgroundData.type, backgroundData.value);
-          } else if (backgroundData.type === 'image') {
-            const url = await loadBackgroundFromStorage(backgroundData.value);
-            if (!isSubscribed) return;
-            setContextBackground(backgroundData.type, url);
-          } else {
+          
+          if (backgroundData.type === 'image') {
+            if (backgroundData.value.startsWith('/')) {
+              setContextBackground(backgroundData.type, backgroundData.value);
+            } else {
+              const url = await loadBackgroundFromStorage(backgroundData.value);
+              if (!isSubscribed) return;
+              if (url) {
+                setContextBackground(backgroundData.type, url);
+              }
+            }
+          } else if (backgroundData.type && backgroundData.value) {
             setContextBackground(backgroundData.type, backgroundData.value);
           }
         } else {
@@ -286,6 +296,7 @@ export default function UserPublicPage() {
             value: '',
             animation: true
           });
+          setContextBackground('none', '');
         }
 
         // 링크 데이터 설정

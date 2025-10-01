@@ -890,7 +890,7 @@ export default function BackgroundGallery() {
                           const file = e.target.files?.[0];
                           if (file) {
                             try {
-                              const storageRef = ref(storage, `backgrounds/${currentUser.uid}/bg_${Date.now()}`);
+                              const storageRef = ref(storage, `backgrounds/bg_${Date.now()}`);
                               const snapshot = await uploadBytes(storageRef, file);
                               const url = await getDownloadURL(snapshot.ref);
                               setCustomUrl(url);
