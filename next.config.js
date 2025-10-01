@@ -6,6 +6,7 @@ const nextConfig = {
       'api.microlink.io',                // Microlink API
       'img.youtube.com',                 // YouTube thumbnails
       'i.ytimg.com',                     // YouTube thumbnails (alternative domain)
+      'oaidalleapiprodscus.blob.core.windows.net',  // DALL-E API
     ],
   },
 }

@@ -107,6 +107,12 @@ export default function HomePage() {
   }, []);
 
   const menuItems = [
+  {
+    title: "나를 닮은 예술 작품",
+    description: "AI가 당신의 감정을 예술 작품으로 표현합니다",
+    icon: "/logos/ai2.png",
+    path: "/art-generation"
+  },
     {
       title: "AI 사진 투표",
       description: `AI가 만들어 주는 사진 투표\n당신의 선택은?`,
@@ -129,8 +135,8 @@ export default function HomePage() {
       color: "from-pink-500 to-red-500"
     },
     {
-      title: "내 사이트 무료",
-      description: "나만의 특별한 한 페이지\nAI조언 부터 감정 분석 위로",
+      title: "내 사이트",
+      description: "AI 분석과 조언으로\n 나만의 감정 지도를 완성하세요",
       icon: "/logos/m12.png",
       path: !currentUser?.uid ? '/login' : (userData?.username ? `/${userData.username}` : ''),
       color: "from-green-500 to-blue-500"

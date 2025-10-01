@@ -7,8 +7,8 @@ import { clearUser, setUser } from "../store/userSlice";
 
 export default function useAuth() {
     const auth = getAuth();
-    const [user, setUserss] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [user, setUserss] = useState(null);
+    const [loading, setLoading] = useState(true);  // 초기값을 true로 설정
     const { push } = useRouter();
     const dispatch = useDispatch();
     
@@ -30,7 +30,6 @@ export default function useAuth() {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
           if(user) {
             setUserss(user)
-            push("/");
             setLoading(false);
             dispatch(setUser({
               uid: user.uid,
@@ -38,7 +37,12 @@ export default function useAuth() {
               photoURL: user.photoURL
             }))
           } else {
-            push("/login");
+            // 로그인 페이지나 공개 페이지가 아닐 경우에만 로그인 페이지로 이동
+            const publicPages = ['/login', '/register', '/', '/site'];
+            const isPublicPage = publicPages.some(page => window.location.pathname.startsWith(page));
+            if (!isPublicPage) {
+              push("/login");
+            }
             setLoading(false)
             dispatch(clearUser());
           }

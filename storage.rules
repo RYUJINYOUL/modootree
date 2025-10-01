@@ -93,6 +93,13 @@ service firebase.storage {
       );
     }
 
+    // AI 아트웍 이미지에 대한 규칙
+    match /artworks/{fileName} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isImageFile() && isValidFileSize();  // 이미지 파일 검증만 수행
+      allow delete: if isAuthenticated();  // 로그인한 사용자만 삭제 가능
+    }
+
     // 나머지 모든 파일에 대한 기본 규칙
     match /{allPaths=**} {
       allow read: if true;  // 모든 파일 읽기 허용

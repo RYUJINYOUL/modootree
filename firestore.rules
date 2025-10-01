@@ -139,6 +139,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;  // 작성자만 삭제 가능
     }
 
+    // AI 아트워크 컬렉션에 대한 규칙
+    match /artifacts/{appId}/users/{userId}/artworks/{artworkId} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isAuthenticated() && request.auth.uid == userId;  // 본인의 작품만 생성 가능
+      allow update: if isAuthenticated() && request.auth.uid == userId;  // 본인의 작품만 수정 가능
+      allow delete: if isAuthenticated() && request.auth.uid == userId;  // 본인의 작품만 삭제 가능
+    }
+
     // 나머지 모든 컬렉션에 대한 기본 규칙
     match /{document=**} {
       allow read: if true;  // 모든 문서 읽기 허용
