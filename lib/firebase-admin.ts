@@ -3,15 +3,20 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
 // Firebase Admin SDK 초기화
+if (!process.env.FIREBASE_PROJECT_ID) throw new Error('FIREBASE_PROJECT_ID is not set');
+if (!process.env.FIREBASE_CLIENT_EMAIL) throw new Error('FIREBASE_CLIENT_EMAIL is not set');
+if (!process.env.FIREBASE_PRIVATE_KEY_BASE64) throw new Error('FIREBASE_PRIVATE_KEY_BASE64 is not set');
+
 const firebaseAdminConfig = {
   credential: cert({
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     // Base64로 인코딩된 private key를 디코딩
-    privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64 || '', 'base64')
+    privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64, 'base64')
       .toString('utf8')
       .replace(/\\n/g, '\n'),
   }),
+  projectId: process.env.FIREBASE_PROJECT_ID,
 };
 
 // 앱이 이미 초기화되어 있지 않은 경우에만 초기화
