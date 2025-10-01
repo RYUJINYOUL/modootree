@@ -8,7 +8,7 @@
   "scripts": {
     "optimize-emoticons": "node scripts/optimize-emoticons.js",
     "dev": "next dev",
-    "build": "cross-env FIREBASE_PROJECT_ID=mtree-e0249 next build",
+    "build": "cross-env NEXT_PUBLIC_FIREBASE_PROJECT_ID=mtree-e0249 next build",
     "start": "next start",
     "lint": "next lint"
   },
