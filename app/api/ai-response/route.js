@@ -1,6 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-export async function POST(req: NextRequest) {
+export async function POST(req) {
   try {
     console.log('AI 응답 API 호출됨');
     const { content } = await req.json();
@@ -67,11 +65,11 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    return NextResponse.json({ response: data.choices[0].message.content });
+    return Response.json({ response: data.choices[0].message.content });
   } catch (error) {
-    console.error('AI 응답 생성 중 오류:', error instanceof Error ? error.message : '알 수 없는 오류');
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : '죄송합니다. AI 답변을 생성하는 중에 오류가 발생했습니다.' },
+    console.error('AI 응답 생성 중 오류:', error.message);
+    return Response.json(
+      { error: error.message || '죄송합니다. AI 답변을 생성하는 중에 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
