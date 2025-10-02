@@ -101,9 +101,18 @@ export default function ArtGenerationPage() {
     
     try {
       const token = await user.getIdToken(true);
+      if (!result?.imageUrl || !style || !colorMood) {
+        alert('이미지 정보가 없습니다.');
+        return;
+      }
+
       const requestData = {
         token,
-        category: selectedCategory
+        category: selectedCategory,
+        description: description || '',
+        imageUrl: result.imageUrl,
+        style,
+        colorMood
       };
       console.log('보내는 데이터:', requestData);
       
@@ -117,14 +126,14 @@ export default function ArtGenerationPage() {
         body: JSON.stringify(requestData),
       });
 
-      const data = await response.json();
-      console.log('서버 응답 데이터:', data);
-
       if (!response.ok) {
         const errorData = await response.text();
         console.error('서버 응답:', errorData);
         throw new Error(`공유 실패: ${errorData}`);
       }
+
+      const data = await response.json();
+      console.log('서버 응답 데이터:', data);
 
       setShowShareDialog(false);
       setShowSuccessModal(true);
