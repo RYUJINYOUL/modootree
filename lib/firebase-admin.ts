@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { getStorage } from 'firebase-admin/storage';
 
 // Firebase Admin SDK 초기화
 const firebaseAdminConfig = {
@@ -19,3 +20,4 @@ const app = !apps.length ? initializeApp(firebaseAdminConfig) : apps[0];
 
 export const adminDb = getFirestore(app);
 export const adminAuth = getAuth(app);
+export const adminStorage = getStorage(app);
