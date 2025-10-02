@@ -230,7 +230,7 @@ export default function Gallery3({ username, uid }: LogoProps) {
         ? (file: File) => uploadLogoImage(file, { folder: finalUid }) 
         : (file: File) => uploadLinkImage(file, { folder: finalUid });
 
-      const url = await uploadFn(compressedFile, finalUid);
+      const url = await uploadFn(compressedFile);
 
       // 이전 이미지 삭제 시도
       const docRef = doc(db, 'users', finalUid, 'info', 'details');
