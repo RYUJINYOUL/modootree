@@ -226,7 +226,9 @@ export default function Gallery3({ username, uid }: LogoProps) {
 
       const croppedFile = new File([croppedBlob], `cropped_image.${cropType === 'logo' ? 'png' : 'jpeg'}`, { type: cropType === 'logo' ? 'image/png' : croppedBlob.type });
       const compressedFile = await imageCompression(croppedFile, options);
-      const uploadFn = cropType === "logo" ? uploadLogoImage : uploadLinkImage;
+      const uploadFn = cropType === "logo" 
+        ? (file: File) => uploadLogoImage(file, { folder: finalUid }) 
+        : (file: File) => uploadLinkImage(file, { folder: finalUid });
 
       const url = await uploadFn(compressedFile, finalUid);
 

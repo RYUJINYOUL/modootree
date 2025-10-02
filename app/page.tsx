@@ -108,8 +108,8 @@ export default function HomePage() {
 
   const menuItems = [
   {
-    title: "나를 닮은 예술 작품",
-    description: "AI가 당신의 감정을 예술 작품으로 표현합니다",
+    title: "모두트리 예술 작품",
+    description: "사진을 예술 작품으로 변화되는\n 즐거움을 선물합니다",
     icon: "/logos/ai2.png",
     path: "/art-generation"
   },

@@ -142,7 +142,10 @@ export default function LinkCards({ username, uid }: LogoProps) {
   const handleImageChange = async (index: number, file: File) => {
     try {
       const linkToDelete = links[index];
-      if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
+      // 정적 이미지(/Image/ 또는 /image/)는 삭제 시도하지 않음
+      if (linkToDelete.image && 
+          !linkToDelete.image.startsWith('/Image/') && 
+          !linkToDelete.image.startsWith('/image/')) {
         await deleteImageFromStorage(linkToDelete.image);
       }
       const url = await uploadLinkImage(file, finalUid);
@@ -295,8 +298,11 @@ export default function LinkCards({ username, uid }: LogoProps) {
       const linkToDelete = links[index];
 
       try {
-        if (linkToDelete.image && !linkToDelete.image.startsWith('/new/defaultLogo.png')) {
-          await deleteImageFromStorage(linkToDelete.image);
+      // 정적 이미지(/Image/ 또는 /image/)는 삭제 시도하지 않음
+      if (linkToDelete.image && 
+          !linkToDelete.image.startsWith('/Image/') && 
+          !linkToDelete.image.startsWith('/image/')) {
+        await deleteImageFromStorage(linkToDelete.image);
         }
 
         const updatedLinks = [...links];
