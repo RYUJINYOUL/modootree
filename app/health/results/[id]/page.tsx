@@ -1,12 +1,11 @@
 import { Suspense } from 'react';
 import HealthResultContent from './HealthResultContent';
 
-interface PageProps {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+type Props = {
+  params: { id: string }
 }
 
-export default function HealthResultPage({ params }: PageProps) {
+export default async function HealthResultPage({ params }: Props) {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 p-4">
