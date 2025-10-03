@@ -5,12 +5,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { cn } from "@/lib/utils";
 import { useSelector } from 'react-redux';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '@/firebase';
 import { doc, getDoc, setDoc, updateDoc, DocumentData } from 'firebase/firestore';
 import { Dialog } from '@headlessui/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function BottomTabs() {
+  const [currentPage, setCurrentPage] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
@@ -74,101 +79,133 @@ export function BottomTabs() {
     return null;
   }
 
+  const menuItems = [
+    {
+      title: "피드",
+      icon: "/logos/feed.png",
+      path: "/feed"
+    },
+    {
+      title: "AI 예술",
+      icon: "/logos/ai2.png",
+      path: "/art-generation"
+    },
+    {
+      title: "AI 건강",
+      icon: "/logos/ai1.png",
+      path: "/health"
+    },
+    {
+      title: "사진 AI",
+      icon: "/logos/ai2.png",
+      path: "/photo-story"
+    },
+    {
+      title: "사연 AI",
+      icon: "/logos/ai3.png",
+      path: "/modoo-ai"
+    },
+    {
+      title: "내 사이트",
+      icon: "/logos/m12.png",
+      path: userData?.username ? `/${userData.username}` : undefined,
+      onClick: () => {
+        if (!currentUser?.uid) {
+          router.push('/login');
+          return;
+        }
+        if (userData?.username) {
+          router.push(`/${userData.username}`);
+        } else {
+          setIsOpen(true);
+        }
+      }
+    }
+  ];
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setShowLeftArrow(container.scrollLeft > 0);
+      setShowRightArrow(
+        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
+      );
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    handleScroll(); // 초기 상태 체크
+
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollTo = (direction: 'left' | 'right') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const scrollAmount = container.clientWidth;
+    const targetScroll = container.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+    
+    container.scrollTo({
+      left: targetScroll,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <div className="bg-gray-900/95 backdrop-blur-lg border-t border-blue-500/20">
-          <div className="max-w-[1100px] mx-auto">
-            <div className="grid grid-cols-4 h-16">
-            <button
-              onClick={() => router.push('/feed')}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors",
-                pathname === '/feed'
-                  ? "text-blue-500"
-                  : "text-white/70 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <div className="relative w-6 h-6">
-                <Image
-                  src="/logos/feed.png"
-                  alt="피드"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-xs font-medium">피드</span>
-            </button>
+          <div className="max-w-[1100px] mx-auto relative">
+            {/* 모바일용 스크롤 버튼 */}
+            {showLeftArrow && (
+              <button
+                onClick={() => scrollTo('left')}
+                className="md:hidden absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-gray-900/95 to-transparent z-10 flex items-center justify-center text-white/70 hover:text-white"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            {showRightArrow && (
+              <button
+                onClick={() => scrollTo('right')}
+                className="md:hidden absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-900/95 to-transparent z-10 flex items-center justify-center text-white/70 hover:text-white"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
 
-            <button
-              onClick={() => router.push('/photo-story')}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors",
-                pathname === '/photo-story'
-                  ? "text-blue-500"
-                  : "text-white/70 hover:text-white hover:bg-white/5"
-              )}
+            {/* 메뉴 아이템 컨테이너 */}
+            <div
+              ref={scrollContainerRef}
+              className="overflow-x-auto md:overflow-x-visible scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              <div className="relative w-6 h-6">
-                <Image
-                  src="/logos/ai2.png"
-                  alt="사진"
-                  fill
-                  className="object-contain"
-                />
+              <div className="flex h-16 min-w-max md:min-w-0 md:justify-center">
+                {menuItems.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={item.onClick || (() => router.push(item.path!))}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 transition-colors px-4 md:px-[80px]",
+                      pathname === item.path
+                        ? "text-blue-500"
+                        : "text-white/70 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    <div className="relative w-6 h-6">
+                      <Image
+                        src={item.icon}
+                        alt={item.title}
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <span className="text-xs font-medium whitespace-nowrap">{item.title}</span>
+                  </button>
+                ))}
               </div>
-              <span className="text-xs font-medium">사진 AI</span>
-            </button>
-
-            <button
-              onClick={() => router.push('/modoo-ai')}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors",
-                pathname === '/modoo-ai'
-                  ? "text-blue-500"
-                  : "text-white/70 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <div className="relative w-6 h-6">
-                <Image
-                  src="/logos/ai3.png"
-                  alt="사연"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-xs font-medium">사연 AI</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (!currentUser?.uid) {
-                  router.push('/login');
-                  return;
-                }
-                if (userData?.username) {
-                  router.push(`/${userData.username}`);
-                } else {
-                  setIsOpen(true);
-                }
-              }}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors",
-                pathname === `/${userData?.username}`
-                  ? "text-blue-500"
-                  : "text-white/70 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <div className="relative w-6 h-6">
-                <Image
-                  src="/logos/m12.png"
-                  alt="내 사이트"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-xs font-medium">내 사이트</span>
-            </button>
             </div>
           </div>
         </div>

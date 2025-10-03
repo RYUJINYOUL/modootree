@@ -108,10 +108,17 @@ export default function HomePage() {
 
   const menuItems = [
   {
-    title: "모두트리 예술 작품",
+    title: "AI 예술 작품",
     description: "사진을 예술 작품으로 변화되는\n 즐거움을 선물합니다",
     icon: "/logos/ai2.png",
     path: "/art-generation"
+  },
+  {
+    title: "AI 건강 기록",
+    description: "당신의 건강한 하루를\nAI가 분석해 드립니다",
+    icon: "/logos/ai1.png",
+    path: "/health",
+    color: "from-emerald-500 to-teal-500"
   },
     {
       title: "AI 사진 투표",
