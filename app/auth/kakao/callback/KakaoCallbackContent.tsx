@@ -2,7 +2,8 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getAuth, signInWithCustomToken, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { signInWithCustomToken, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { auth } from '@/firebase';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,7 +14,6 @@ export default function KakaoCallbackContent() {
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state: any) => state.user);
-  const auth = getAuth();
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,11 +69,24 @@ export default function KakaoCallbackContent() {
       // 로컬 지속성으로 변경 (브라우저를 닫아도 로그인 유지)
       await setPersistence(auth, browserLocalPersistence);
 
-      // Firebase Custom Token으로 로그인
-      const userCredential = await signInWithCustomToken(auth, responseData.customToken);
-      const user = userCredential.user;
+      console.log('Firebase Custom Token:', responseData.customToken);
 
-      console.log('Firebase 사용자 정보 확인...');
+      // Firebase Custom Token으로 로그인 시도
+      let user;
+      try {
+        const userCredential = await signInWithCustomToken(auth, responseData.customToken);
+        console.log('Firebase 로그인 성공:', userCredential);
+        user = userCredential.user;
+      } catch (error) {
+        console.error('Firebase 로그인 실패:', error);
+        throw error;
+      }
+
+      if (!user) {
+        throw new Error('Firebase 로그인은 성공했지만 사용자 정보를 받지 못했습니다.');
+      }
+
+      console.log('Firebase 사용자 정보 확인...', user.uid);
 
       // Firestore에서 사용자 정보 확인
       const userRef = doc(db, 'users', user.uid);
@@ -121,8 +134,25 @@ export default function KakaoCallbackContent() {
       console.log('현재 Firebase 유저:', auth.currentUser);
       console.log('현재 Redux 유저:', currentUser);
       
+      // Firebase 인증 상태 확인
+      console.log('최종 Firebase 인증 상태:', auth.currentUser);
+      console.log('최종 Redux 상태:', currentUser);
+
+      // 인증 상태가 설정될 때까지 대기 (최대 3초)
+      let attempts = 0;
+      while (!auth.currentUser && attempts < 6) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log(`인증 상태 확인 시도 ${attempts + 1}:`, auth.currentUser);
+        attempts++;
+      }
+
+      if (!auth.currentUser) {
+        throw new Error('Firebase 인증 상태가 설정되지 않았습니다.');
+      }
+
       // state 파라미터의 URL로 리다이렉션
-      window.location.href = decodedUrl;
+      console.log('리다이렉트 시작:', decodedUrl);
+      router.push(decodedUrl);
     } catch (error) {
       console.error('인증 처리 중 오류:', error);
       setErrorMessage(
