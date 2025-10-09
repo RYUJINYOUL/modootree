@@ -2,10 +2,12 @@ import { Suspense } from 'react';
 import HealthResultContent from './HealthResultContent';
 
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function HealthResultPage({ params }: Props) {
+  const { id } = await params;
+  
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 p-4">
@@ -14,7 +16,7 @@ export default async function HealthResultPage({ params }: Props) {
         </div>
       </div>
     }>
-      <HealthResultContent id={params.id} />
+      <HealthResultContent id={id} />
     </Suspense>
   );
 }

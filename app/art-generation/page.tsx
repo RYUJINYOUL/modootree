@@ -143,12 +143,6 @@ export default function ArtGenerationPage() {
     }
   };
 
-  useEffect(() => {
-    if (!loading && user === null) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
   if (loading) {
     return (
       <>
@@ -160,10 +154,6 @@ export default function ArtGenerationPage() {
         <CollapsibleFooter />
       </>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   const handleGenerate = async () => {
@@ -442,20 +432,29 @@ export default function ArtGenerationPage() {
 
             <div className="bg-blue-900/20 backdrop-blur-sm rounded-xl p-8 border border-blue-500/20 shadow-lg">
               <div className="flex justify-center">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={generating || !result?.base64Data || !style || !colorMood}
-                  className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      변환 중...
-                    </>
-                  ) : (
-                    '예술 작품으로 변환하기'
-                  )}
-                </Button>
+                {user ? (
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={generating || !result?.base64Data || !style || !colorMood}
+                    className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600"
+                  >
+                    {generating ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        변환 중...
+                      </>
+                    ) : (
+                      '예술 작품으로 변환하기'
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => router.push('/login')}
+                    className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700"
+                  >
+                    로그인하고 예술 작품 만들기
+                  </Button>
+                )}
               </div>
             </div>
 

@@ -129,6 +129,7 @@ export default function HealthAnalyzePage() {
       ]);
 
       // 전체 건강 기록 AI 분석
+      const token = await auth.currentUser.getIdToken(true);
       const analysis = await analyzeHealthRecord({
         meals: {
           breakfast: { description: meals.breakfast.description, imageUrl: breakfastUrl || null },
@@ -137,7 +138,7 @@ export default function HealthAnalyzePage() {
           snack: { description: meals.snack.description, imageUrl: snackUrl || null }
         },
         exercise: { description: exercise.description, imageUrl: exerciseUrl || null }
-      });
+      }, token);
 
       // 건강 기록 저장
       const healthRecord = {
@@ -492,6 +493,11 @@ export default function HealthAnalyzePage() {
               onClick={async () => {
                 try {
                   setIsPreAnalyzing(true);
+                  const token = await auth.currentUser?.getIdToken(true);
+                  if (!token) {
+                    setError('인증이 필요합니다.');
+                    return;
+                  }
                   const result = await analyzeAllInputs({
                     meals: {
                       breakfast: { description: meals.breakfast.description },
@@ -500,19 +506,26 @@ export default function HealthAnalyzePage() {
                       snack: { description: meals.snack.description }
                     },
                     exercise: { description: exercise.description }
-                  });
+                  }, token);
+
+                  console.log('API 응답 결과:', result);
 
                   // 분석 결과 저장
-                  setMeals(prev => ({
-                    breakfast: { ...prev.breakfast, parsed: result.meals.breakfast },
-                    lunch: { ...prev.lunch, parsed: result.meals.lunch },
-                    dinner: { ...prev.dinner, parsed: result.meals.dinner },
-                    snack: { ...prev.snack, parsed: result.meals.snack }
-                  }));
-                  setExercise(prev => ({
-                    ...prev,
-                    parsed: result.exercise
-                  }));
+                  if (result && result.meals) {
+                    console.log('meals 데이터 저장 중:', result.meals);
+                    setMeals(prev => ({
+                      breakfast: { ...prev.breakfast, parsed: result.meals.breakfast },
+                      lunch: { ...prev.lunch, parsed: result.meals.lunch },
+                      dinner: { ...prev.dinner, parsed: result.meals.dinner },
+                      snack: { ...prev.snack, parsed: result.meals.snack }
+                    }));
+                    setExercise(prev => ({
+                      ...prev,
+                      parsed: result.exercise
+                    }));
+                  } else {
+                    console.log('result 또는 result.meals가 없음:', result);
+                  }
                 } catch (e) {
                   console.error('분석 중 오류:', e);
                   setError('분석에 실패했습니다. 다시 시도해주세요.');

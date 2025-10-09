@@ -119,7 +119,69 @@ export default function LinkCards({ username, uid }: LogoProps) {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data();
-          setLinks(data.links || []);
+          if (!data.links || data.links.length === 0) {
+            // 기본 링크 2개 설정
+            const defaultLinks: LinkItem[] = [
+              {
+                image: '/Image/sns/modoo.png',
+                title: '모두트리',
+                url: 'https://modootree.com',
+                bgColor: '#60A5FA',
+                textColor: '#FFFFFF',
+                opacity: 1,
+                rounded: 'md',
+                shadow: 'none',
+                shadowColor: '#000000',
+                shadowOpacity: 0.2,
+              },
+              {
+                image: '/Image/sns/instagram.png',
+                title: '인스타그램',
+                url: 'https://instagram.com',
+                bgColor: '#60A5FA',
+                textColor: '#FFFFFF',
+                opacity: 1,
+                rounded: 'md',
+                shadow: 'none',
+                shadowColor: '#000000',
+                shadowOpacity: 0.2,
+              }
+            ];
+            await setDoc(docRef, { links: defaultLinks }, { merge: true });
+            setLinks(defaultLinks);
+          } else {
+            setLinks(data.links);
+          }
+        } else {
+          // 문서가 없는 경우에도 기본 링크 2개 설정
+          const defaultLinks: LinkItem[] = [
+            {
+              image: '/Image/sns/modoo.png',
+              title: '모두트리',
+              url: 'https://modootree.com',
+              bgColor: '#ffffff',
+              textColor: '#000000',
+              opacity: 1,
+              rounded: 'md',
+              shadow: 'none',
+              shadowColor: '#000000',
+              shadowOpacity: 0.2,
+            },
+            {
+              image: '/Image/sns/instagram.png',
+              title: '인스타그램',
+              url: 'https://instagram.com',
+              bgColor: '#ffffff',
+              textColor: '#000000',
+              opacity: 1,
+              rounded: 'md',
+              shadow: 'none',
+              shadowColor: '#000000',
+              shadowOpacity: 0.2,
+            }
+          ];
+          await setDoc(docRef, { links: defaultLinks }, { merge: true });
+          setLinks(defaultLinks);
         }
       } catch (err) {
         console.error('링크 불러오기 실패:', err);

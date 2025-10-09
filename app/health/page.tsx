@@ -88,21 +88,32 @@ export default function HealthListPage() {
         }
 
         const querySnapshot = await getDocs(q);
-        let fetchedRecords = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data() as HealthRecord
-        }));
+        let fetchedRecords = querySnapshot.docs.map(doc => {
+          const data = doc.data() as HealthRecord;
+          // 평균 점수 계산
+          const averageScore = data.analysis?.dailySummary ? 
+            Math.round((
+              (data.analysis.dailySummary.balanceScore || 0) +
+              (data.analysis.dailySummary.varietyScore || 0) +
+              (data.analysis.dailySummary.effortScore || 0)
+            ) / 3) : 0;
+
+          return {
+            id: doc.id,
+            ...data,
+            averageScore // 평균 점수 추가
+          };
+        });
 
         // 정렬 적용
         if (selectedFilter === 'highest') {
+          fetchedRecords.sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0));
+        } else {
+          // 최신순 정렬
           fetchedRecords.sort((a, b) => {
-            const aScore = (a.analysis.dailySummary.balanceScore +
-                          a.analysis.dailySummary.varietyScore +
-                          a.analysis.dailySummary.effortScore) / 3;
-            const bScore = (b.analysis.dailySummary.balanceScore +
-                          b.analysis.dailySummary.varietyScore +
-                          b.analysis.dailySummary.effortScore) / 3;
-            return bScore - aScore;
+            const dateA = new Date(a.createdAt?.seconds * 1000 || 0);
+            const dateB = new Date(b.createdAt?.seconds * 1000 || 0);
+            return dateB.getTime() - dateA.getTime();
           });
         }
 
@@ -180,15 +191,22 @@ export default function HealthListPage() {
         </div>
 
         <div className="mb-8 space-y-4">
-          <button
-            onClick={handleNewAnalysis}
-            className="w-full flex justify-center items-center gap-2 px-6 py-4 text-lg font-bold rounded-xl transition-all duration-300 shadow-xl 
-              active:scale-[0.98] bg-gradient-to-r from-blue-600 to-indigo-600
-              hover:from-blue-700 hover:to-indigo-700 text-white"
-          >
-            <Plus className="w-5 h-5" />
-            새로운 건강 분석하기
-          </button>
+          {!auth.currentUser && (
+            <div className="text-center py-4 px-6 rounded-xl bg-blue-950/20 border border-blue-500/20">
+              <p className="text-gray-300">로그인하시면 나만의 건강 분석을 시작할 수 있습니다.</p>
+            </div>
+          )}
+          {auth.currentUser && (
+            <button
+              onClick={handleNewAnalysis}
+              className="w-full flex justify-center items-center gap-2 px-6 py-4 text-lg font-bold rounded-xl transition-all duration-300 shadow-xl 
+                active:scale-[0.98] bg-gradient-to-r from-blue-600 to-indigo-600
+                hover:from-blue-700 hover:to-indigo-700 text-white"
+            >
+              <Plus className="w-5 h-5" />
+              새로운 건강 분석하기
+            </button>
+          )}
 
           <div className="flex gap-4 justify-between items-center">
             <div className="flex gap-2">

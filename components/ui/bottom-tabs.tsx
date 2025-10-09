@@ -75,9 +75,8 @@ export function BottomTabs() {
   };
 
   // 에디터 페이지에서는 bottom tabs를 숨김
-  if (pathname?.startsWith('/editor/')) {
-    return null;
-  }
+  const hiddenPaths = ['/editor/', '/ai-comfort'];
+  const shouldHide = hiddenPaths.some(path => pathname?.startsWith(path));
 
   const menuItems = [
     {
@@ -87,7 +86,7 @@ export function BottomTabs() {
     },
     {
       title: "AI 예술",
-      icon: "/logos/ai2.png",
+      icon: "/logos/ai5.png",
       path: "/art-generation"
     },
     {
@@ -152,6 +151,11 @@ export function BottomTabs() {
       behavior: 'smooth'
     });
   };
+
+  // 에디터 페이지에서는 bottom tabs를 숨김
+  if (shouldHide) {
+    return null;
+  }
 
   return (
     <>

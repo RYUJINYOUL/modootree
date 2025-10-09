@@ -56,7 +56,7 @@ const RegisterPage = () => {
             // 이메일 회원가입
             await setDoc(doc(db, "users", user.uid, "settings", "background"), {
                 type: 'image',
-                value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1755605333707_strawberries-7249448_1920.jpg?alt=media&token=c7331dd0-48ff-430a-86bb-039ba16fe23f',
                 animation: true
             });
 
@@ -119,7 +119,7 @@ const RegisterPage = () => {
                 // 기본 배경 설정
                 await setDoc(doc(db, "users", user.uid, "settings", "background"), {
                     type: 'image',
-                    value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+                    value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1755605333707_strawberries-7249448_1920.jpg?alt=media&token=c7331dd0-48ff-430a-86bb-039ba16fe23f',
                     animation: true
                 });
             }

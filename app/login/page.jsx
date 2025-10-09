@@ -18,6 +18,10 @@ import {
   getDocs,
 } from "firebase/firestore";
 import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
+import Gallery3 from '@/components/template/Gallery3';
+import DayOneCalendarTemplate from '@/components/template/DayOneCalendarTemplate';
+import DayOneBook from '@/components/template/DayOneBook';
+import QuestBook from '@/components/template/QuestBook';
 
 
 
@@ -50,11 +54,41 @@ const LoginPage = () => {
       // 로컬 지속성으로 변경 (브라우저를 닫아도 로그인 유지)
       await auth.setPersistence(browserLocalPersistence);
 
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+      
+      // Redux store에 사용자 정보 저장
+      dispatch(setUser({
+        uid: user.uid,
+        email: user.email,
+        photoURL: user.photoURL
+      }));
 
-      setLoading(false)
+      // 메인 페이지로 이동
+      push("/");
+      
+      setLoading(false);
     } catch (error) {
-      setErrorFromSubmit("가입하지 않은 이메일입니다.")
+      console.error("로그인 실패:", error.code, error.message);
+      switch (error.code) {
+        case 'auth/user-not-found':
+          setErrorFromSubmit("가입하지 않은 이메일입니다.");
+          break;
+        case 'auth/wrong-password':
+          setErrorFromSubmit("비밀번호가 올바르지 않습니다.");
+          break;
+        case 'auth/invalid-email':
+          setErrorFromSubmit("유효하지 않은 이메일 형식입니다.");
+          break;
+        case 'auth/user-disabled':
+          setErrorFromSubmit("비활성화된 계정입니다.");
+          break;
+        case 'auth/too-many-requests':
+          setErrorFromSubmit("너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.");
+          break;
+        default:
+          setErrorFromSubmit("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
       setLoading(false)
       setTimeout(() => {
         setErrorFromSubmit("")
@@ -87,14 +121,14 @@ const LoginPage = () => {
         // 기본 설정 저장
         await setDoc(doc(db, "users", user.uid, "settings", "background"), {
             type: 'image',
-            value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1752324410072_leaves-8931849_1920.jpg?alt=media&token=bda5d723-d54d-43d5-8925-16aebeec8cfa',
+            value: 'https://firebasestorage.googleapis.com/v0/b/mtree-e0249.firebasestorage.app/o/backgrounds%2F1755605333707_strawberries-7249448_1920.jpg?alt=media&token=c7331dd0-48ff-430a-86bb-039ba16fe23f',
             animation: true
         });
 
-        // 빈 컴포넌트로 시작
+        // 기본 템플릿으로 시작
         await setDoc(doc(db, "users", user.uid, "links", "page"), {
-          components: [],
-          type: null
+          components: ["Gallery3", "DayOneCalendarTemplate", "DayOneBook", "QuestBook"],
+          type: "community"
         });
       }
 

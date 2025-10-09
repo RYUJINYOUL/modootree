@@ -523,7 +523,7 @@ export default function GuestbookTemplate({ username, uid }) {
   const [styleSettings, setStyleSettings] = useState({
     bgColor: '#60A5FA',
     textColor: '#FFFFFF',
-    bgOpacity: 0.2,
+    bgOpacity: 1,
     shadow: 'none',
     shadowColor: '#000000',
     shadowOpacity: 0.2,
@@ -820,7 +820,7 @@ export default function GuestbookTemplate({ username, uid }) {
     return () => unsub()
   }, [finalUid, visibleEntries])
 
-  const [guestBookTitle, setGuestBookTitle] = useState('게스트북');
+  const [guestBookTitle, setGuestBookTitle] = useState('응원한마디');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   useEffect(() => {

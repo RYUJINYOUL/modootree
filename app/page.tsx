@@ -1,25 +1,63 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import LoginOutButton from '@/components/ui/LoginOutButton';
-import { db } from '@/firebase';
+import { db, auth } from '@/firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { saveChat, loadChat } from '@/lib/comfort-chat-service';
 import Image from 'next/image';
 import { BottomTabs } from '@/components/ui/bottom-tabs';
 import { cn } from "@/lib/utils";
-import { Plus, Volume2, VolumeX } from 'lucide-react';
+import { Plus, Volume2, VolumeX, MessageCircle, Bot, Send } from 'lucide-react';
+import AiChatBox from '@/components/ui/AiChatBox';
 import { Dialog } from '@headlessui/react';
 
 export default function HomePage() {
+  const currentUser = useSelector((state: any) => state.user.currentUser);
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [isMuted, setIsMuted] = useState(true);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
+  const [showAiComfort, setShowAiComfort] = useState(false);
+  const [comfortMessage, setComfortMessage] = useState('');
+  const [isComfortLoading, setIsComfortLoading] = useState(false);
+  const [remainingChats, setRemainingChats] = useState<number | null>(null);
+  const [comfortConversation, setComfortConversation] = useState([{
+    role: 'ai',
+    content: '안녕하세요! 모두트리 AI 상담사입니다. 😊\n\n저는 여러분의 이야기를 듣고 공감하며, 함께 고민하고 해결책을 찾아가는 것을 돕고 있어요.\n\n편하게 이야기를 시작해주세요.',
+    timestamp: new Date()
+  }]);
+  
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // 새 메시지가 추가될 때마다 스크롤 자동 이동
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [comfortConversation]);
+
+  // 이전 대화 내용 불러오기
+  useEffect(() => {
+    const loadPreviousChat = async () => {
+      if (!currentUser?.uid) return;
+      try {
+        const messages = await loadChat(currentUser.uid);
+        if (messages.length > 0) {
+          setComfortConversation(messages);
+        }
+      } catch (error) {
+        console.error('이전 대화 불러오기 실패:', error);
+      }
+    };
+    loadPreviousChat();
+  }, [currentUser]);
 
   useEffect(() => {
     console.log('Component mounted, isAudioLoaded:', isAudioLoaded);
@@ -73,7 +111,6 @@ export default function HomePage() {
     };
   }, []);
   const router = useRouter();
-  const currentUser = useSelector((state: any) => state.user.currentUser);
   const [userData, setUserData] = useState<any>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
 
@@ -110,7 +147,7 @@ export default function HomePage() {
   {
     title: "AI 예술 작품",
     description: "사진을 예술 작품으로 변화되는\n 즐거움을 선물합니다",
-    icon: "/logos/ai2.png",
+    icon: "/logos/ai5.png",
     path: "/art-generation"
   },
   {
@@ -137,7 +174,7 @@ export default function HomePage() {
     {
       title: "공감 한 조각",
       description: "기쁨 슬픔 등의 내 감정 기록\n 은근 공감 받는 공유 익명 일기",
-      icon: "/logos/ai1.png",
+      icon: "/logos/ai6.png",
       path: "/likes/all",
       color: "from-pink-500 to-red-500"
     },
@@ -145,7 +182,7 @@ export default function HomePage() {
       title: "내 사이트",
       description: "AI 분석과 조언으로\n 나만의 감정 지도를 완성하세요",
       icon: "/logos/m12.png",
-      path: !currentUser?.uid ? '/login' : (userData?.username ? `/${userData.username}` : ''),
+      path: !currentUser?.uid ? '/login' : (userData?.username ? `/${userData.username}` : '#'),
       color: "from-green-500 to-blue-500"
     },
     {
@@ -248,6 +285,196 @@ export default function HomePage() {
       <div className="relative z-10 min-h-screen flex flex-col">
         <LoginOutButton />
         
+        {/* 서비스 설명 대화창 */}
+        {showMobileChat && (
+          <AiChatBox isMobile onClose={() => setShowMobileChat(false)} />
+        )}
+
+        {/* AI 상담 대화창 */}
+        {showAiComfort && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAiComfort(false)} />
+            <div className="relative w-full max-w-4xl bg-gray-900/90 rounded-2xl border border-blue-500/20 shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="absolute top-4 right-4 z-10">
+                <button
+                  onClick={() => setShowAiComfort(false)}
+                  className="text-white/80 hover:text-white"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* 대화 내용 영역 */}
+              <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto p-6 scroll-smooth scrollbar-thin scrollbar-thumb-blue-500/20 scrollbar-track-transparent"
+              >
+                <div className="space-y-4 pb-2">
+                  {comfortConversation.map((msg, idx) => (
+                    <div key={idx} className={cn("flex items-start gap-3", msg.role === 'user' && "flex-row-reverse")}>
+                      {msg.role === 'ai' && (
+                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                          <Bot className="w-5 h-5 text-blue-500" />
+                        </div>
+                      )}
+                      <div className={cn(
+                        "flex-1 rounded-2xl p-4 text-white/90",
+                        msg.role === 'ai' ? "bg-gray-800/50" : "bg-blue-600/50"
+                      )}>
+                        {msg.content.split('\n').map((line, i) => (
+                          <p key={i} className={i < msg.content.split('\n').length - 1 ? "mb-3" : ""}>
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 남은 대화 횟수 표시 */}
+              {remainingChats !== null && (
+                <div className="p-2 bg-gray-900/90 border-t border-blue-500/20 flex justify-center">
+                  <span className="text-sm text-white/70">
+                    오늘 남은 대화 횟수: {remainingChats}회
+                  </span>
+                </div>
+              )}
+
+              {/* 입력 영역 */}
+              <div className="p-4 bg-gray-900/90 border-t border-blue-500/20">
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!comfortMessage.trim() || isComfortLoading) return;
+
+                  // 로그인 상태 확인
+                  if (!auth.currentUser) {
+                    setComfortConversation(prev => [...prev, {
+                      role: 'ai' as const,
+                      content: '로그인이 필요한 서비스입니다. 로그인 후 다시 시도해주세요.',
+                      timestamp: new Date()
+                    }]);
+                    router.push('/login');
+                    return;
+                  }
+
+                  const userMessage = comfortMessage;
+                  setComfortMessage('');
+                  setIsComfortLoading(true);
+
+                  try {
+                    // 토큰 갱신 시도
+                    await auth.currentUser.reload();
+                    let token;
+                    try {
+                      // 토큰 강제 갱신
+                      await auth.currentUser.getIdTokenResult(true);
+                      token = await auth.currentUser.getIdToken();
+                      console.log('토큰 갱신 성공');
+                    } catch (tokenError) {
+                      console.error('토큰 갱신 실패:', tokenError);
+                      throw new Error('인증 토큰을 갱신할 수 없습니다. 다시 로그인해주세요.');
+                    }
+                    
+                    // 사용자 메시지 추가 및 저장
+                    const userMsg = {
+                      role: 'user' as const,
+                      content: userMessage,
+                      timestamp: new Date()
+                    };
+                    setComfortConversation(prev => [...prev, userMsg]);
+                    await saveChat(auth.currentUser.uid, userMsg);
+                    const response = await fetch('/api/ai-comfort', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        message: userMessage,
+                        token,
+                        conversationHistory: comfortConversation
+                      })
+                    });
+
+                    const data = await response.json();
+                    if (!data.success) throw new Error(data.error);
+
+                    // 남은 대화 횟수 업데이트
+                    setRemainingChats(data.remainingChats);
+
+                    // AI 응답 추가 및 저장
+                    const aiMsg = {
+                      role: 'ai' as const,
+                      content: data.response,
+                      timestamp: new Date()
+                    };
+                    setComfortConversation(prev => [...prev, aiMsg]);
+                    await saveChat(auth.currentUser.uid, aiMsg);
+
+                  } catch (error: any) {
+                    console.error('AI 상담 오류:', error);
+                    
+                    // 인증 관련 오류 처리
+                    if (error.message.includes('인증') || error.message.includes('로그인')) {
+                      setComfortConversation(prev => [...prev, {
+                        role: 'ai' as const,
+                        content: '로그인이 만료되었습니다. 다시 로그인해주세요.',
+                        timestamp: new Date()
+                      }]);
+                      router.push('/login');
+                    } else {
+                      setComfortConversation(prev => [...prev, {
+                        role: 'ai' as const,
+                        content: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요. 🙏',
+                        timestamp: new Date()
+                      }]);
+                    }
+                  } finally {
+                    setIsComfortLoading(false);
+                  }
+                }}>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={comfortMessage}
+                      onChange={(e) => setComfortMessage(e.target.value)}
+                      placeholder="메시지를 입력하세요..."
+                      className="flex-1 bg-gray-800/50 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={isComfortLoading || !currentUser?.uid}
+                      className={cn(
+                        "bg-blue-600 text-white rounded-xl px-4 transition-colors flex items-center justify-center min-w-[44px] h-[44px]",
+                        isComfortLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+                      )}
+                    >
+                      {isComfortLoading ? (
+                        <div className="w-5 h-5 border-2 border-white/20 border-t-white/90 rounded-full animate-spin" />
+                      ) : (
+                        <Send className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 플로팅 채팅 버튼 - 채팅창이 열려있지 않을 때만 표시 */}
+        {!showMobileChat && (
+          <button
+            onClick={() => setShowMobileChat(true)}
+            className="fixed bottom-20 right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+          >
+            <span className="text-white font-medium text-base">AI</span>
+            <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              모두트리 AI와 대화하기
+            </span>
+          </button>
+        )}
+
         {/* 음악 컨트롤 */}
         {isAudioLoaded && (
           <button
@@ -270,15 +497,32 @@ export default function HomePage() {
                 }
               }
             }}
-            className="fixed top-4 right-16 z-50 w-9 h-9 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/20 transition-all"
+            className="fixed bottom-20 left-4 z-[40] w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/20 transition-all"
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
           </button>
         )}
 
         {/* 배경 음악 */}
-        <audio id="bgMusic" loop preload="auto">
-          <source src="/music/background.mp3" type="audio/mpeg" />
+        <audio 
+          id="bgMusic" 
+          loop 
+          preload="metadata"
+          style={{ display: 'none' }}
+          onLoadStart={() => console.log('Audio loading started')}
+          onCanPlayThrough={() => {
+            const audio = document.getElementById('bgMusic') as HTMLAudioElement;
+            if (audio) {
+              audio.volume = 0.05;
+              console.log('Audio ready to play through');
+            }
+          }}
+        >
+          <source 
+            src="/music/background.mp3" 
+            type="audio/mpeg"
+            onError={(e) => console.error('Audio loading error:', e)} 
+          />
           음악 파일을 재생할 수 없습니다.
         </audio>
         
@@ -288,7 +532,7 @@ export default function HomePage() {
               <div className="flex justify-center">
                 <button 
                   onClick={() => router.push('/site')} 
-                  className="animate-swing mb-2 relative cursor-pointer group inline-flex"
+                  className="mb-2 relative cursor-pointer group inline-flex"
                 >
                   <Image
                     src="/Image/logo.png"
@@ -296,7 +540,7 @@ export default function HomePage() {
                     width={250}
                     height={250}
                     priority
-                    className="w-24 h-24 md:w-32 md:h-32"
+                    className="w-24 h-24 md:w-32 md:h-32 transition-transform duration-300 hover:scale-105"
                   />
                   <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1.5 shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
                     <Plus className="w-4 h-4 text-white" />
@@ -304,18 +548,29 @@ export default function HomePage() {
                 </button>
               </div>
               <h1 className="text-3xl font-bold text-white/90 mb-2">모두트리</h1>
-              <p className="text-1xl md:text-1xl font-medium text-white mb-4">우주 안의 나, 모두트리의 너</p>
+              <p className="text-1xl md:text-1xl font-medium text-white mb-2">우주 안의 나, 모두트리의 너</p>
+
+              {/* 공지사항 */}
+              <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl px-4 py-3 mb-4 max-w-md mx-auto">
+                <p className="text-white/90 font-medium">🎉 10월 15일 정식 오픈 예정</p>
+                <p className="text-white/70 text-sm mt-1">웹사이트에 일부 오류가 있을 수 있습니다.</p>
+              </div>
 
               {/* 로고 섹션 */}
               <div className="w-full overflow-x-auto overflow-y-hidden py-2 mb-4">
                 <div className="flex flex-nowrap items-center justify-start md:justify-center gap-4 md:gap-6 px-4 min-w-max md:min-w-0">
                   {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map((num) => (
-                    <img
+                    <button
                       key={num}
-                      src={`/logos/m${num}.png`}
-                      alt={`Logo ${num}`}
-                      className="w-12 h-12 object-contain transition-all hover:scale-110 flex-shrink-0"
-                    />
+                      onClick={() => router.push('/ai-comfort')}
+                      className="group relative"
+                    >
+                      <img
+                        src={`/logos/m${num}.png`}
+                        alt={`Logo ${num}`}
+                        className="w-12 h-12 object-contain transition-all group-hover:scale-110 flex-shrink-0"
+                      />
+                    </button>
                   ))}
                 </div>
               </div>
@@ -328,9 +583,9 @@ export default function HomePage() {
                     <div key={index} className="flex justify-start">
                       <button
                         onClick={() => {
-                          if (index === 3 && currentUser?.uid && !userData?.username) {
+                          if (currentUser?.uid && !userData?.username && item.title === "내 사이트") {
                             setIsOpen(true);
-                          } else {
+                          } else if (item.path !== '#') {
                             router.push(item.path);
                           }
                         }}

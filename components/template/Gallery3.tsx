@@ -72,7 +72,7 @@ export default function Gallery3({ username, uid }: LogoProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
-  const [logoUrl, setLogoUrl] = useState<string>("/new/defaultLogo.png");
+  const [logoUrl, setLogoUrl] = useState<string>("/logos/m12.png");
   const [bgUrl, setBgUrl] = useState<string>("/Image/bg.jpeg");
   const [name, setName] = useState("제목을 입력하세요");
   const [desc, setDesc] = useState("간단한 설명을 입력하세요");

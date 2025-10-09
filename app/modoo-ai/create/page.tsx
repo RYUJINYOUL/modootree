@@ -163,7 +163,8 @@ export default function CreateTestPage() {
       });
 
       if (!response.ok) {
-        throw new Error('AI 응답 생성에 실패했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI 응답 생성에 실패했습니다.');
       }
 
       const data = await response.json();

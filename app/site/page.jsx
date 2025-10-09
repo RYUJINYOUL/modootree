@@ -191,8 +191,8 @@ export default function Page() {
       });
 
       await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
-        components: [], // 빈 배열로 시작
-        type: null // 타입도 초기에는 null
+        components: ["Gallery3", "DayOneCalendarTemplate", "DayOneBook", "QuestBook"],
+        type: "community"
       });
       
       await setDoc(usernameRef, {

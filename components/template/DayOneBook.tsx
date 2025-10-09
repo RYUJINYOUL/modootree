@@ -704,7 +704,23 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
 
               return (
                 <>
-                  {visibleMemos.map(memo => (
+                  {visibleMemos.length === 0 ? (
+                    <div 
+                      className={cn(
+                        "p-6 backdrop-blur-sm transition-all duration-300 ease-in-out text-center",
+                        styleSettings.borderRadius === 'none' && 'rounded-none',
+                        styleSettings.borderRadius === 'sm' && 'rounded-sm',
+                        styleSettings.borderRadius === 'md' && 'rounded-md',
+                        styleSettings.borderRadius === 'lg' && 'rounded-lg',
+                        styleSettings.borderRadius === 'xl' && 'rounded-xl',
+                        styleSettings.borderRadius === 'full' && 'rounded-3xl',
+                      )}
+                      style={getStyleObject()}
+                    >
+                      <p style={{ color: styleSettings.textColor }}>메모가 없습니다</p>
+                    </div>
+                  ) : (
+                    visibleMemos.map(memo => (
                 <div 
                   key={memo.id} 
                   className={cn(
@@ -886,7 +902,7 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                       )}
                     </div>
                 </div>
-              ))}
+              )                  ))}
                   {hasMore && (
                     <button
                       onClick={() => setVisibleCount(prev => ({

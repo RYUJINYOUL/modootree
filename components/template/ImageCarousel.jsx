@@ -77,7 +77,7 @@ const ImageCarousel = ({ username, uid }) => {
   const [styleSettings, setStyleSettings] = useState({
     bgColor: '#60A5FA',
     textColor: '#FFFFFF',
-    bgOpacity: 0.2,
+    bgOpacity: 1,
     shadow: 'none',
     shadowColor: '#000000',
     shadowOpacity: 0.2,
