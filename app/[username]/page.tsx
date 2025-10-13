@@ -629,8 +629,8 @@ export default function UserPublicPage() {
                   {/* 상단 카테고리 메뉴 */}
                   <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8">
                     <div className="grid grid-cols-5 gap-4">
-                      <Link 
-                        href="/feed"
+                    <Link 
+                      href="/feed"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -638,9 +638,9 @@ export default function UserPublicPage() {
                           <img src="/logos/feed.png" alt="피드" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <span className="text-xs text-white/70 group-hover:text-white/90">피드</span>
-                      </Link>
-                      <Link 
-                        href="/likes/all"
+                    </Link>
+                    <Link 
+                      href="/likes/all"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -648,9 +648,9 @@ export default function UserPublicPage() {
                           <img src="/logos/ai1.png" alt="공감" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <span className="text-xs text-white/70 group-hover:text-white/90">공감</span>
-                      </Link>
-                      <Link 
-                        href="/photo-story"
+                    </Link>
+                    <Link 
+                      href="/photo-story"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -658,9 +658,9 @@ export default function UserPublicPage() {
                           <img src="/logos/ai2.png" alt="사진" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <span className="text-xs text-white/70 group-hover:text-white/90">사진</span>
-                      </Link>
-                      <Link 
-                        href="/modoo-ai"
+                    </Link>
+                    <Link 
+                      href="/modoo-ai"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -668,9 +668,9 @@ export default function UserPublicPage() {
                           <img src="/logos/ai3.png" alt="사연" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <span className="text-xs text-white/70 group-hover:text-white/90">사연</span>
-                      </Link>
-                      <Link 
-                        href="/inquiry"
+                    </Link>
+                    <Link 
+                      href="/inquiry"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
