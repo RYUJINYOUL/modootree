@@ -78,6 +78,7 @@ export default function ArtGenerationPage() {
   const [colorMood, setColorMood] = useState('');
   const [generating, setGenerating] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState('design'); // 디자인/아트를 기본값으로 설정
+  const [remainingGenerations, setRemainingGenerations] = useState<number | null>(null);
 
   interface GenerationResult {
     imageUrl?: string;
@@ -86,62 +87,6 @@ export default function ArtGenerationPage() {
   }
 
   const [result, setResult] = useState<GenerationResult | null>(null);
-  const [showShareDialog, setShowShareDialog] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [description, setDescription] = useState('');
-
-  const CATEGORIES = ['일상', '감정', '관계', '취미', '목표', '기타'];
-
-  const handleShare = async () => {
-    if (!selectedCategory || !user) {
-      alert('카테고리를 선택해주세요.');
-      return;
-    }
-    
-    try {
-      const token = await user.getIdToken(true);
-      if (!result?.imageUrl || !style || !colorMood) {
-        alert('이미지 정보가 없습니다.');
-        return;
-      }
-
-      const requestData = {
-        token,
-        category: selectedCategory,
-        description: description || '',
-        imageUrl: result.imageUrl,
-        style,
-        colorMood
-      };
-      console.log('보내는 데이터:', requestData);
-      
-      console.log('전송 데이터:', requestData);
-      
-      const response = await fetch('/api/likes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('서버 응답:', errorData);
-        throw new Error(`공유 실패: ${errorData}`);
-      }
-
-      const data = await response.json();
-      console.log('서버 응답 데이터:', data);
-
-      setShowShareDialog(false);
-      setShowSuccessModal(true);
-    } catch (error) {
-      console.error('공유 중 오류 발생:', error);
-      alert('공유 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
-  };
 
   if (loading) {
     return (
@@ -166,7 +111,10 @@ export default function ArtGenerationPage() {
     setResult((prev) => ({ ...prev, imageUrl: undefined, error: undefined }));
 
     try {
-      const token = user ? await user.getIdToken(true) : null;
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
+      const token = await user.getIdToken(true);
       const response = await fetch('/api/art-generation', {
         method: 'POST',
         headers: {
@@ -183,7 +131,17 @@ export default function ArtGenerationPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429) {
+          setRemainingGenerations(0);
+        } else if (response.status === 500) {
+          console.error('서버 오류:', data.error);
+        }
         throw new Error(data.error || '이미지 생성에 실패했습니다.');
+      }
+      
+      // 성공적으로 생성된 경우 남은 생성 횟수 업데이트
+      if (data.remainingGenerations !== undefined) {
+        setRemainingGenerations(data.remainingGenerations);
       }
 
       setResult((prev) => ({ 
@@ -365,6 +323,13 @@ export default function ArtGenerationPage() {
             <p className="text-sm text-gray-400">
               당신의 사진을 선택한 스타일의 예술 작품으로 변환합니다
             </p>
+            {user && (
+              <p className="text-sm text-blue-400 mt-2">
+                {remainingGenerations === null ? '' :
+                 remainingGenerations === 0 ? '오늘의 작품 생성 횟수를 모두 사용했습니다. 내일 다시 시도해주세요.' :
+                 `오늘 남은 작품 생성 횟수: ${remainingGenerations}회`}
+              </p>
+            )}
           </div>
         
           <div className="space-y-12">
@@ -395,11 +360,15 @@ export default function ArtGenerationPage() {
                   className="absolute inset-0 opacity-0 cursor-pointer z-10"
                 />
                 {!result?.imageUrl ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 p-4">
                     <ImageIcon className="w-16 h-16 mb-4" />
-                    <p className="text-lg">클릭하여 사진 업로드</p>
-                    <p className="text-sm mt-2">PNG, JPEG 형식 (10MB 이하)</p>
-                    <p className="text-sm mt-1">또는 드래그 앤 드롭</p>
+                    <div className="text-sm space-y-2 text-center max-w-md">
+                      <p className="text-blue-400 text-base font-medium">📱 휴대폰 사진은 캡쳐하여 이용해 주세요</p>
+                      <div className="mt-3 space-y-1.5">
+                        <p>• 파일 크기: 10MB 이하</p>
+                        <p>• 권장 해상도: 1024x1024 픽셀 이하</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <Image
@@ -435,7 +404,7 @@ export default function ArtGenerationPage() {
                 {user ? (
                   <Button
                     onClick={handleGenerate}
-                    disabled={generating || !result?.base64Data || !style || !colorMood}
+                    disabled={generating || !result?.base64Data || !style || !colorMood || remainingGenerations === 0}
                     className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600"
                   >
                     {generating ? (
@@ -576,18 +545,10 @@ export default function ArtGenerationPage() {
                       </div>
                     </div>
                     {user && (
-                      <div className="flex flex-col sm:flex-row justify-center gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowShareDialog(true)}
-                          className="bg-black/30 hover:bg-black/50 w-full sm:w-auto"
-                        >
-                          공감 한 조각 (선택)
-                        </Button>
+                      <div className="flex justify-center gap-3">
                         <Button
                           variant="outline"
                           onClick={() => {
-                            // TODO: 이미지 저장 로직 구현
                             if (!result?.imageUrl) return;
                             const link = document.createElement('a');
                             link.href = result.imageUrl;
@@ -600,6 +561,19 @@ export default function ArtGenerationPage() {
                         >
                           저장하기
                         </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            // 이미지와 결과 초기화
+                            setResult(null);
+                            // 스타일과 색상 선택도 초기화
+                            setStyle('');
+                            setColorMood('');
+                          }}
+                          className="bg-black/30 hover:bg-black/50 w-full sm:w-auto"
+                        >
+                          새 사진 업로드
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -607,105 +581,6 @@ export default function ArtGenerationPage() {
               </div>
             )}
 
-            <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-              <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>공감 한 조각에 공유하기</DialogTitle>
-                  <DialogDescription>
-                    이 작품을 공유하고 싶은 카테고리를 선택해주세요.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="mt-4">
-                  {result?.imageUrl && (
-                    <div className="mb-6">
-                      <div className="relative aspect-square w-full rounded-lg overflow-hidden">
-                        <Image
-                          src={result.imageUrl}
-                          alt="공유할 작품"
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      작품 설명 (선택사항)
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="작품에 대한 설명이나 느낌을 자유롭게 작성해주세요."
-                      className="w-full min-h-[100px] p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-                    />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Select
-                      value={selectedCategory}
-                      onValueChange={setSelectedCategory}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="카테고리 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      onClick={handleShare}
-                      disabled={!selectedCategory}
-                      className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
-                    >
-                      공유하기
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* 공유 완료 모달 */}
-            <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-              <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>작품이 공유되었습니다</DialogTitle>
-                  <DialogDescription>
-                    공유한 작품은 공감 한 조각 페이지에서 확인하실 수 있습니다.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="mt-4 space-y-4">
-                  <p className="text-gray-600">
-                    공감 한 조각 페이지에서 확인하시겠습니까?
-                  </p>
-                  <div className="flex justify-end gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowSuccessModal(false)}
-                    >
-                      닫기
-                    </Button>
-                    <Button
-                      className="bg-violet-500 hover:bg-violet-600 text-white"
-                      onClick={() => {
-                        console.log('Moving to likes page:', user?.uid);
-                        setShowSuccessModal(false);
-                        if (user?.uid) {
-                          router.push(`/${user.uid}/likes`);
-                        } else {
-                          console.error('User ID not found');
-                          alert('사용자 정보를 찾을 수 없습니다.');
-                        }
-                      }}
-                    >
-                      공감 한 조각으로 이동
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
       </main>

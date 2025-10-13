@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { collection, query, orderBy, getDocs, doc, getDoc, onSnapshot, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, storage } from '@/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -32,7 +34,8 @@ const EMOTION_IMAGES: { [key: string]: string } = {
   '짜증': '/emotions/irritation.png',
   '불안': '/emotions/anxiety.png',
   '걱정': '/emotions/worry.png',
-  '중립': '/emotions/neutral.png'
+  '중립': '/emotions/neutral.png',
+  '책임감': '/emotions/satisfaction.png'  // 책임감은 만족 이미지 사용
 };
 
 
@@ -165,6 +168,28 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
       diariesUnsubscribe();
       memosUnsubscribe();
     };
+  }, [userId]);
+
+  // 메모 불러오기
+  useEffect(() => {
+    if (!userId) return;
+    
+    const q = query(
+      collection(db, `users/${userId}/memos`),
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMemos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        content: doc.data().content || '',
+        status: doc.data().status as 'todo' | 'today' | 'completed',
+        date: doc.data().date?.toDate() || new Date()
+      }));
+      setMemos(loadedMemos);
+    });
+
+    return () => unsubscribe();
   }, [userId]);
 
   // 스타일 설정 불러오기
@@ -402,10 +427,17 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                 );
               });
               
-              // 일기의 감정이 있으면 우선 사용, 없으면 메모의 감정 사용
-              const mainEmotion = diary?.emotion || dayMemos
+              // 일기의 감정이 있으면 우선 사용, 없으면 기본 감정 사용
+              const mainEmotion = diary?.emotion || (diary ? {
+                emotion: '중립',
+                intensity: 0.5,
+                keywords: ['분석 대기'],
+                summary: 'AI 분석을 기다리고 있습니다.',
+                color: '#808080',
+                image: '/emotions/neutral.png'
+              } : dayMemos
                 .filter(memo => memo.emotion)
-                .sort((a, b) => (b.emotion?.intensity || 0) - (a.emotion?.intensity || 0))[0]?.emotion;
+                .sort((a, b) => (b.emotion?.intensity || 0) - (a.emotion?.intensity || 0))[0]?.emotion);
               
               if (mainEmotion) {
                 console.log('감정 데이터:', {
@@ -438,11 +470,21 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                   )}
                 >
                   <button 
-                    onClick={() => diary && setSelectedDiary(diary)}
+                    onClick={() => {
+                      if (diary) {
+                        setSelectedDiary(diary);
+                      } else if (dayMemos.length > 0) {
+                        setSelectedDiary({
+                          id: '',
+                          date: date,
+                          content: ''
+                        });
+                      }
+                    }}
                     className={cn(
                       "flex flex-col items-center p-6 w-full transition-all",
                       styleSettings.hoverEffect && "hover:bg-white/10",
-                      diary && "cursor-pointer"
+                      (diary || dayMemos.length > 0) && "cursor-pointer"
                     )}
                     style={{ 
                       color: styleSettings.textColor,
@@ -528,10 +570,17 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                 );
               });
               
-              // 일기의 감정이 있으면 우선 사용, 없으면 메모의 감정 사용
-              const mainEmotion = diary?.emotion || dayMemos
+              // 일기의 감정이 있으면 우선 사용, 없으면 기본 감정 사용
+              const mainEmotion = diary?.emotion || (diary ? {
+                emotion: '중립',
+                intensity: 0.5,
+                keywords: ['분석 대기'],
+                summary: 'AI 분석을 기다리고 있습니다.',
+                color: '#808080',
+                image: '/emotions/neutral.png'
+              } : dayMemos
                 .filter(memo => memo.emotion)
-                .sort((a, b) => (b.emotion?.intensity || 0) - (a.emotion?.intensity || 0))[0]?.emotion;
+                .sort((a, b) => (b.emotion?.intensity || 0) - (a.emotion?.intensity || 0))[0]?.emotion);
               
               if (mainEmotion) {
                 console.log('감정 데이터:', {
@@ -565,11 +614,21 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                   )}
                 >
                   <button 
-                    onClick={() => diary && setSelectedDiary(diary)}
+                    onClick={() => {
+                      if (diary) {
+                        setSelectedDiary(diary);
+                      } else if (dayMemos.length > 0) {
+                        setSelectedDiary({
+                          id: '',
+                          date: date,
+                          content: ''
+                        });
+                      }
+                    }}
                     className={cn(
                       "flex flex-col items-center p-6 w-full transition-all",
                       styleSettings.hoverEffect && "hover:bg-white/10",
-                      diary && "cursor-pointer"
+                      (diary || dayMemos.length > 0) && "cursor-pointer"
                     )}
                     style={{ 
                       color: styleSettings.textColor,
@@ -656,8 +715,49 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
           </DialogHeader>
           <div className="space-y-4">
             {/* 날짜 표시 */}
-            <div className="text-sm font-medium">
-              {format(writeForm.date, 'PPP', { locale: ko })}
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">날짜</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(writeForm.date, 'PPP', { locale: ko })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 relative z-50" align="start">
+                  <div className="relative">
+                    <Calendar
+                      mode="single"
+                      selected={writeForm.date}
+                      onSelect={(date) => {
+                        console.log('선택된 날짜:', date);
+                        console.log('현재 writeForm:', writeForm);
+                        if (date) {
+                          const newDate = new Date(date);
+                          console.log('변환된 날짜:', newDate);
+                          setWriteForm(prev => {
+                            const updated = {
+                              ...prev,
+                              date: newDate
+                            };
+                            console.log('업데이트될 writeForm:', updated);
+                            return updated;
+                          });
+                        }
+                      }}
+                      initialFocus
+                      locale={ko}
+                      disabled={(date) => false}
+                      fromDate={new Date(2020, 0)}
+                      toDate={new Date(2025, 11)}
+                      className="rounded-md border border-input bg-background pointer-events-auto"
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* 일기 내용 */}
@@ -792,7 +892,15 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                   console.log('Creating new diary:', diaryData);
                   await addDoc(collection(db, `users/${userId}/diaries`), {
                     ...diaryData,
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    emotion: {
+                      emotion: '중립',
+                      intensity: 0.5,
+                      keywords: ['분석 대기'],
+                      summary: 'AI 분석을 기다리고 있습니다.',
+                      color: '#808080',
+                      image: '/emotions/neutral.png'
+                    }
                   });
                 }
 
@@ -964,13 +1072,53 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
               )}
             </div>
           </DialogHeader>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
             {selectedDiary && (
               <>
-                {/* 일기 내용 */}
-                <p className="whitespace-pre-wrap text-gray-900">
-                  {selectedDiary.content}
-                </p>
+                {/* 일기 내용 - 본인만 볼 수 있음 */}
+                {currentUser?.uid === userId ? (
+                  <>
+                    <div className="bg-gray-800/80 rounded-xl p-6">
+                      <p className="whitespace-pre-wrap text-white/90">
+                        {selectedDiary.content}
+                      </p>
+                    </div>
+                    
+                    {/* 안내 문구 */}
+                    <div className="flex items-center gap-2 px-1 text-sm text-white/60">
+                      <span>👋</span>
+                      <span>위 공감/공유 버튼은 일기만 익명으로 공유됩니다.</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-gray-800/80 rounded-xl p-6 flex items-center justify-center">
+                    <p className="text-white/60 text-sm">
+                      작성자만 볼 수 있는 내용입니다
+                    </p>
+                  </div>
+                )}
+
+                {/* 같은 날짜의 메모 */}
+                {memos?.filter(memo => 
+                  new Date(memo.date).toDateString() === new Date(selectedDiary.date).toDateString()
+                ).length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-white/90 font-medium">이 날의 메모</h3>
+                    {memos?.filter(memo => 
+                      new Date(memo.date).toDateString() === new Date(selectedDiary.date).toDateString()
+                    ).map((memo, index) => (
+                      <div key={index} className="p-4 rounded-lg bg-gray-800/60 border border-gray-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white/60 text-sm">메모</span>
+                          <span className="text-white/60 text-sm">
+                            {format(new Date(memo.date), 'a h:mm', { locale: ko })}
+                          </span>
+                        </div>
+                        <p className="text-white/90 whitespace-pre-wrap">{memo.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* 감정 분석 결과 */}
                 {selectedDiary.emotion && (
@@ -993,7 +1141,7 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                         {selectedDiary.emotion.emotion}
                       </div>
                     </div>
-                    <p className="text-gray-700 mb-3">{selectedDiary.emotion.summary}</p>
+                    <p className="text-white/80 mb-3">{selectedDiary.emotion.summary}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedDiary.emotion.keywords.map((keyword, index) => (
                         <span
@@ -1001,7 +1149,7 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                           className="px-2 py-0.5 rounded-full text-sm"
                           style={{ 
                             backgroundColor: `${styleSettings.color}30`,
-                            color: 'rgb(17 24 39)',
+                            color: styleSettings.textColor,
                             border: `1px solid ${styleSettings.color}40`
                           }}
                         >
@@ -1091,7 +1239,14 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                       authorId: userId,
                       authorName: currentUser.displayName || currentUser.email?.split('@')[0] || '사용자',
                       authorEmail: currentUser.email || '',
-                      emotion: selectedDiary.emotion
+                      emotion: selectedDiary.emotion || {
+                        emotion: '중립',
+                        intensity: 0.5,
+                        keywords: ['분석 대기'],
+                        summary: 'AI 분석을 기다리고 있습니다.',
+                        color: '#808080',
+                        image: '/emotions/neutral.png'
+                      }
                     });
 
                     setLikeModalOpen(false);

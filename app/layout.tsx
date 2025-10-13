@@ -2,12 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from 'next/font/google';
 import "./globals.css";
 import { Providers } from '@/components/providers';
-// import { Toaster } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
-import Footer from '@/components/ui/Footer';
-import { BottomTabs } from '@/components/ui/bottom-tabs';
-import Header from '@/components/Header';
 import { TranslateProvider } from '@/context/TranslateContext';
+import ClientLayout from '@/components/ClientLayout';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -75,15 +72,9 @@ export default function RootLayout({
       >
         <TranslateProvider>
           <Providers>
-            {/* Header는 메인 페이지가 아닐 때만 표시 */}
-            <div className="flex flex-col min-h-screen">
-              <main className="flex-1 pb-16">
-                {children}
-              </main>
-              <Footer />
-              <BottomTabs />
-            </div>
-            {/* <Toaster /> */}
+            <ClientLayout>
+              {children}
+            </ClientLayout>
           </Providers>
         </TranslateProvider>
       </body>

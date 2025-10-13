@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/firebase';
-import { Bot, Send, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { Bot, Send, ArrowLeft } from 'lucide-react';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
 import { cn } from "@/lib/utils";
@@ -11,8 +11,6 @@ import { saveChat, loadChat } from '@/lib/comfort-chat-service';
 
 export default function AiComfortPage() {
   const router = useRouter();
-  const [isMuted, setIsMuted] = useState(true);
-  const [isAudioLoaded, setIsAudioLoaded] = useState(false);
   const [comfortMessage, setComfortMessage] = useState('');
   const [isComfortLoading, setIsComfortLoading] = useState(false);
   const [remainingChats, setRemainingChats] = useState<number | null>(null);
@@ -34,54 +32,6 @@ export default function AiComfortPage() {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [comfortConversation]);
-
-  // 음악 자동 재생을 위한 처리
-  useEffect(() => {
-    const audio = document.getElementById('bgMusic') as HTMLAudioElement;
-    if (audio) {
-      console.log('Audio element found');
-      
-      // 음악 로드 시작 시
-      audio.addEventListener('loadstart', () => {
-        console.log('Audio loading started');
-      });
-
-      // 음악 로드 완료 시
-      audio.addEventListener('loadeddata', () => {
-        console.log('Audio loaded successfully');
-        setIsAudioLoaded(true);
-        audio.volume = 0.05; // 볼륨을 5%로 설정
-      });
-
-      // 음악 재생 오류 시
-      audio.addEventListener('error', (e) => {
-        console.error('Audio loading error:', e);
-        console.error('Audio error code:', audio.error?.code);
-        console.error('Audio error message:', audio.error?.message);
-        setIsAudioLoaded(false);
-      });
-
-      // 자동 재생 시도
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          setIsMuted(false);
-        }).catch((error) => {
-          // 자동 재생이 차단된 경우
-          console.log('Autoplay prevented:', error);
-          setIsMuted(true);
-        });
-      }
-    }
-
-    // 컴포넌트 언마운트 시 이벤트 리스너 제거
-    return () => {
-      if (audio) {
-        audio.removeEventListener('loadeddata', () => {});
-        audio.removeEventListener('error', () => {});
-      }
-    };
-  }, []);
 
   // 인증 상태 및 이전 대화 내용 불러오기
   useEffect(() => {
@@ -197,35 +147,6 @@ export default function AiComfortPage() {
             </button>
             <h1 className="text-xl font-semibold">모두트리 AI</h1>
           </div>
-          {isAudioLoaded && (
-            <button
-              onClick={() => {
-                const audio = document.getElementById('bgMusic') as HTMLAudioElement;
-                if (audio) {
-                  if (isMuted) {
-                    const playPromise = audio.play();
-                    if (playPromise !== undefined) {
-                      playPromise.then(() => {
-                        audio.volume = 0.05;
-                        setIsMuted(false);
-                      }).catch((error) => {
-                        console.log('Play prevented:', error);
-                      });
-                    }
-                  } else {
-                    audio.pause();
-                    setIsMuted(true);
-                  }
-                }
-              }}
-              className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/20 transition-all group"
-            >
-              {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
-              <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                배경 음악 {isMuted ? '재생' : '일시정지'}
-              </span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -237,7 +158,27 @@ export default function AiComfortPage() {
         <div className="container mx-auto px-4">
           <div className="mb-8"></div>
           <div>
-            {comfortConversation.map((msg, idx) => (
+            {comfortConversation.map((msg, idx) => {
+              const currentDate = new Date(msg.timestamp);
+              const prevDate = idx > 0 ? new Date(comfortConversation[idx - 1].timestamp) : null;
+              
+              return (
+                <React.Fragment key={`message-${idx}`}>
+                  {/* 날짜가 변경되었거나 첫 메시지인 경우 날짜 구분선 추가 */}
+                  {(!prevDate || currentDate.toDateString() !== prevDate.toDateString()) && (
+                    <div className="flex items-center justify-center my-6">
+                      <div className="bg-gray-800/50 px-4 py-1 rounded-full text-sm text-gray-400">
+                        {currentDate.toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          weekday: 'long'
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 메시지 */}
             <div key={idx} className={cn("flex items-start gap-3 mb-6", 
               msg.role === 'user' ? "flex-row-reverse" : ""
             )}>
@@ -255,7 +196,7 @@ export default function AiComfortPage() {
                 </div>
               )}
                       <div className={cn(
-                        "inline-block rounded-2xl p-4 text-gray-300/90 max-w-[80%]",
+                        "inline-block rounded-2xl p-4 text-gray-300/90 max-w-[80%] whitespace-pre-wrap break-words",
                         msg.role === 'ai' ? "bg-gray-800/50" : "bg-blue-600/50"
                       )}>
                         {'isLoading' in msg && msg.isLoading ? (
@@ -265,26 +206,23 @@ export default function AiComfortPage() {
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                           </div>
                         ) : (
-                          msg.content.split('\n').map((line, i) => (
-                            <p key={i} className={i < msg.content.split('\n').length - 1 ? "mb-3" : ""}>
-                              {line}
-                            </p>
-                          ))
+                          <div className="space-y-2">
+                            {msg.content.split('\n').map((line, i) => (
+                              <p key={i} className={line.trim() === '' ? 'h-4' : ''}>
+                                {line}
+                              </p>
+                            ))}
+                          </div>
                         )}
                       </div>
             </div>
-          ))}
+                </React.Fragment>
+              );
+            })}
           </div>
           <div className="mb-8"></div>
         </div>
       </div>
-
-
-      {/* 배경 음악 */}
-      <audio id="bgMusic" loop preload="auto">
-        <source src="/music/background.mp3" type="audio/mpeg" />
-        음악 파일을 재생할 수 없습니다.
-      </audio>
 
       {/* 하단 입력 영역 */}
        <div className="fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-lg border-t border-blue-500/20 pb-safe z-10">
@@ -377,12 +315,24 @@ export default function AiComfortPage() {
             }
           }}>
             <div className="flex gap-2">
-              <input
-                type="text"
+              <textarea
                 value={comfortMessage}
                 onChange={(e) => setComfortMessage(e.target.value)}
-                placeholder="메시지를 입력하세요..."
-                 className="flex-1 bg-gray-800/50 text-gray-300/90 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400/50"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (comfortMessage.trim() && !isComfortLoading) {
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }
+                }}
+                placeholder="메시지를 입력하세요... (Shift + Enter로 줄바꿈)"
+                rows={1}
+                className="flex-1 bg-gray-800/50 text-gray-300/90 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400/50 resize-none overflow-y-auto min-h-[44px] max-h-[120px]"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
+                }}
               />
               <button 
                 type="submit" 

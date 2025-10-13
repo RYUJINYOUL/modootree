@@ -234,13 +234,14 @@ export default function PhotoStoryPage() {
 
       const result = await response.json();
       
-      if (!response.ok) {
+      if (!response.ok || !result.success) {
+        console.error('API 응답:', result);
         throw new Error(result.error || 'AI 스토리 생성에 실패했습니다.');
       }
 
-      if (!result.stories || !Array.isArray(result.stories)) {
-        console.error('Unexpected API response:', result);
-        throw new Error('AI 응답 형식이 올바르지 않습니다.');
+      if (!result.stories || !Array.isArray(result.stories) || result.stories.length === 0) {
+        console.error('API 응답:', result);
+        throw new Error('AI가 스토리를 생성하지 못했습니다.');
       }
 
       // AI 스토리 생성 후 이미지 저장
@@ -252,10 +253,10 @@ export default function PhotoStoryPage() {
         ...prev,
         photo: imageUrl,
         pendingPhoto: null,
-        aiStories: result.stories.map((content: string, i: number) => ({
-          id: i.toString(),
-          content: content.trim(),
-          votes: 0
+        aiStories: result.stories.map((story: { id: string; content: string; votes: number }) => ({
+          id: story.id,
+          content: typeof story.content === 'string' ? story.content.trim() : story.content,
+          votes: story.votes
         })),
         selectedStoryId: '0'
       }));
@@ -347,7 +348,12 @@ export default function PhotoStoryPage() {
             className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors cursor-pointer"
             onClick={() => router.push(`/photo-story/${story.id}`)}
           >
-            <div className="aspect-square">
+            <div className="aspect-square relative">
+              <div className="absolute top-4 left-4 z-10">
+                <div className="bg-blue-500/50 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-white">
+                  투표
+                </div>
+              </div>
               <img 
                 src={story.photo} 
                 alt="Story" 
@@ -496,12 +502,11 @@ export default function PhotoStoryPage() {
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <DialogTitle>사진 스토리 만들기</DialogTitle>
-              <DialogDescription>
-                사진을 업로드하면 AI가 재미있는 스토리를 만들어드립니다
-              </DialogDescription>
-            </div>
+              <div>
+                <DialogDescription className="text-white text-lg border border-black/20 rounded-lg py-1 bg-black/10">
+                  사진 업로드, AI가 재미있는 투표를 만듭니다
+                </DialogDescription>
+              </div>
             {writeForm.selectedStoryId && (
               <Button
                 onClick={handleSave}
@@ -515,7 +520,6 @@ export default function PhotoStoryPage() {
         <div className="space-y-4 overflow-y-auto flex-1 pr-2">
           {/* 사진 업로드 */}
           <div className="grid gap-2">
-            <label className="text-sm font-medium">사진</label>
             <div className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
               {writeForm.photo ? (
                 <img
@@ -524,8 +528,9 @@ export default function PhotoStoryPage() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                   <ImageIcon className="w-12 h-12 text-gray-400" />
+                  <p className="text-sm text-gray-400">모바일 사용시 원본 NO 캡쳐 사진 OK</p>
                 </div>
               )}
               <input
@@ -599,6 +604,11 @@ export default function PhotoStoryPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="aspect-video relative">
+                <div className="absolute top-4 left-4 z-10">
+                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-white/90">
+                    투표
+                  </div>
+                </div>
                 <img 
                   src={selectedStory.photo} 
                   alt="Story" 

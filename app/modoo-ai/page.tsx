@@ -146,6 +146,7 @@ export default function ModooAIPage() {
   const [loading, setLoading] = useState(true);
   const [selectedEmotion, setSelectedEmotion] = useState('all');
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [displayCount, setDisplayCount] = useState(10);  // 초기에 10개 표시
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   const fetchTests = useCallback(async () => {
@@ -292,7 +293,7 @@ export default function ModooAIPage() {
       <div className="space-y-4 mt-8">
         <h2 className="text-lg font-medium text-white/80 mb-4">인기 공감투표</h2>
         <div className="space-y-3">
-          {filteredTests.slice(0, 5).map((test) => (
+          {filteredTests.slice(0, displayCount).map((test) => (
             <div
               key={test.id}
               onClick={() => router.push(`/modoo-ai/tests/${test.id}`)}
@@ -380,6 +381,16 @@ export default function ModooAIPage() {
               </div>
             </div>
           ))}
+
+          {/* 더보기 버튼 */}
+          {filteredTests.length > displayCount && (
+            <Button
+              onClick={() => setDisplayCount(prev => prev + 10)}
+              className="w-full mt-4 bg-gray-800/50 hover:bg-gray-800/70"
+            >
+              더보기 ({filteredTests.length - displayCount}개 더 있음)
+            </Button>
+          )}
         </div>
       </div>
     );

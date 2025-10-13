@@ -12,7 +12,6 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AiContentCarousel from '@/components/AiContentCarousel';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -206,44 +205,29 @@ export default function Page() {
     }
   };
 
-  const renderViewSiteButton = (type) => {
-    const className = type === 'main'
-      ? 'bg-blue-600 hover:bg-blue-700'
-      : 'bg-sky-500 hover:bg-sky-600';
+  const renderViewSiteButton = () => {
+    const className = 'bg-blue-600 hover:bg-blue-700';
+    const label = '내 사이트 만들기';
 
-    const label = type === 'main' ? '내 사이트 만들기' : '모두트리 AI 공감';
-    const href = type === 'main' ? `/editor/${userData?.username}` : '/feed';
-
-    if (type === 'main') {
-      if (userData?.username) {
-        return (
-          <Link
-            href={href}
-            className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
-          >
-            {label}
-          </Link>
-        );
-      }
-
-      if (currentUser?.uid) {
-        return (
-          <button
-            onClick={() => setIsOpen(true)}
-            className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
-          >
-            {label}
-          </button>
-        );
-      }
-    } else {
+    if (userData?.username) {
       return (
         <Link
-          href={href}
+          href={`/editor/${userData.username}`}
           className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
         >
           {label}
         </Link>
+      );
+    }
+
+    if (currentUser?.uid) {
+      return (
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`${className} text-white px-6 py-3.5 rounded-2xl text-[15px] transition-colors`}
+        >
+          {label}
+        </button>
       );
     }
 
@@ -341,12 +325,11 @@ export default function Page() {
 
             <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-8">
               {renderViewSiteButton('main')}
-              {renderViewSiteButton('sub')}
               <Link
-                href="/modoo-ai"
+                href="/inquiry"
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
               >
-                AI 공감 투표
+                열린 모두 게시판
               </Link>
             </div>
           </div>
@@ -361,12 +344,12 @@ export default function Page() {
           </div>
           <div className="relative z-20 py-8 px-4">
           <div className="max-w-[1500px] mx-auto">
-            <Tabs defaultValue="intro" className="w-full custom-home-tabs">
-            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
-              <TabsTrigger className="px-6 py-3 text-[15px]" value="intro">모두트리</TabsTrigger>
-              <TabsTrigger className="px-6 py-3 text-[15px]" value="features">주요 기능</TabsTrigger>
-              <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">활용 예시</TabsTrigger>
-            </TabsList>
+             <Tabs defaultValue="features" className="w-full custom-home-tabs">
+             <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">주요 기능</TabsTrigger>
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">활용 예시</TabsTrigger>
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="intro">모두 샘플</TabsTrigger>
+             </TabsList>
 
           <TabsContent value="intro">
             <div className="relative rounded-2xl py-4 overflow-hidden">
@@ -430,82 +413,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* 커뮤니티 섹션 */}
-      <section className="w-full py-8 md:py-12 my-8">
-        <div className="w-full bg-gradient-to-b from-slate-950/50 via-blue-950/50 to-slate-900/50 rounded-3xl relative overflow-hidden">
-          <div className="absolute inset-0 z-0 opacity-20">
-            <ParticlesComponent />
-          </div>
-          <div className="relative z-20 py-8 px-4">
-          <div className="max-w-[1500px] mx-auto">
-            <Tabs defaultValue="likes" className="w-full custom-home-tabs">
-            <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
-              <TabsTrigger className="px-6 py-3 text-[15px]" value="likes">공감 AI</TabsTrigger>
-              <TabsTrigger className="px-6 py-3 text-[15px]" value="joy">사진 AI</TabsTrigger>
-              <TabsTrigger className="px-6 py-3 text-[15px]" value="modoo">사연 AI</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="likes">
-              <div className="relative rounded-2xl py-4 overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                  <ParticlesComponent />
-                </div>
-                <div className="relative z-20 py-4">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                      익명으로 일기 공유<br /> AI 공감 및 공감 답글 받아 보세요
-                    </h2>
-                    <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                      익명으로 일기 공유<br /> AI 공감 및 공감 답글 받아 보세요
-                    </h2>
-                  </div>
-                  <AiContentCarousel type="likes" />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="joy">
-              <div className="relative rounded-2xl py-4 overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                  <ParticlesComponent />
-                </div>
-                <div className="relative z-20 py-4">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                      오늘 일상 사진을 업로드 하여<br /> AI 분석 및 공감 답글 받아보세요
-                    </h2>
-                    <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                      오늘 일상 사진을 업로드 하여<br /> AI 분석 및 공감 답글 받아보세요
-                    </h2>
-                  </div>
-                  <AiContentCarousel type="joy" />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="modoo">
-              <div className="relative rounded-2xl py-4 overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                  <ParticlesComponent />
-                </div>
-                <div className="relative z-20 py-4">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                      사연을 등록하면 AI가 자동으로<br /> 공감 투표를 만들어 주고 공감을 받아보세요
-                    </h2>
-                    <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                      사연을 등록하면 AI가 자동으로<br /> 공감 투표를 만들어 주고 공감을 받아보세요
-                    </h2>
-                  </div>
-                  <AiContentCarousel type="modoo-ai" />
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* 문의하기 섹션 */}
       <div className="w-full bg-[#415a77] backdrop-blur-sm rounded-3xl mb-12 relative overflow-hidden">

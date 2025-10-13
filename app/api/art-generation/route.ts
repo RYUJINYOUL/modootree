@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateArtwork } from '@/lib/art-generation-service';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { checkAndUpdateArtGenerationLimit } from '@/src/lib/art-generation-limit-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,10 +29,32 @@ export async function POST(req: NextRequest) {
     try {
       const decodedToken = await adminAuth.verifyIdToken(token);
       userId = decodedToken.uid;
+
+      // 작품 생성 횟수 제한 체크
+      try {
+        const { canGenerate, remainingGenerations } = await checkAndUpdateArtGenerationLimit(userId);
+        if (!canGenerate) {
+          return NextResponse.json(
+            { 
+              error: '일일 작품 생성 한도(2회)를 초과했습니다. 내일 다시 시도해주세요.',
+              remainingGenerations: 0 
+            },
+            { status: 429 }
+          );
+        }
+        // 남은 생성 횟수를 전역 변수로 저장
+        (global as any).remainingGenerations = remainingGenerations;
+      } catch (limitError) {
+        console.error('작품 생성 횟수 확인 중 오류:', limitError);
+        return NextResponse.json(
+          { error: '작품 생성 횟수를 확인하는 중 오류가 발생했습니다.' },
+          { status: 500 }
+        );
+      }
     } catch (error) {
       console.error('Token verification failed:', error);
       return NextResponse.json(
-        { error: '인증에 실패했습니다.' },
+        { error: `인증에 실패했습니다. 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}` },
         { status: 401 }
       );
     }
@@ -67,7 +90,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      imageUrl: result.imageUrl
+      imageUrl: result.imageUrl,
+      remainingGenerations: (global as any).remainingGenerations
     });
 
   } catch (error) {

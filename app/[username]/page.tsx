@@ -2,7 +2,7 @@
 
 import { db } from '../../firebase';
 import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ComponentLibrary } from '@/components/edit/ComponentLibrary';
 import UserEditButton from '@/components/ui/UserEditButton';
@@ -18,6 +18,7 @@ import { storage } from '../../firebase';
 import TranslateBanner from '@/app/components/ui/TranslateBanner';
 import Image from 'next/image';
 import { X, Bell, Menu, ArrowRight } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import MyInfoDrawer from '@/components/ui/MyInfoDrawer';
 import { useCallback } from 'react';
 import Particles from "react-tsparticles";
@@ -189,6 +190,8 @@ export default function UserPublicPage() {
   const [isMyInfoOpen, setIsMyInfoOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [trendReport, setTrendReport] = useState<string | null>(null);
+  const [isLoadingTrend, setIsLoadingTrend] = useState(false);
 
   // 알림 개수 초기화 함수
   const resetUnreadCount = useCallback(() => {
@@ -215,6 +218,68 @@ export default function UserPublicPage() {
       console.error('배경 설정 저장 중 오류 발생:', error);
     }
   };
+
+  // 메뉴가 열릴 때 트렌드 데이터 가져오기
+  useEffect(() => {
+    async function fetchTrendData() {
+      console.log('메뉴 상태 체크:', {
+        isMenuOpen,
+        currentUser,
+        hasToken: !!currentUser?.token
+      });
+
+      if (!isMenuOpen) {
+        console.log('메뉴가 닫혀있어 요청 중단');
+        return;
+      }
+
+      // 임시 토큰 사용 (테스트용)
+      const testToken = 'valid_token';
+      console.log('테스트 토큰 사용:', testToken);
+
+      console.log('트렌드 데이터 요청 시작');
+
+      setIsLoadingTrend(true);
+      try {
+        const response = await fetch('/api/ai-trend', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: testToken,
+          }),
+        });
+
+        console.log('API 응답 상태:', response.status);
+        const data = await response.json();
+        console.log('API 응답 데이터:', data);
+
+        console.log('받은 데이터:', data);
+        if (data.success && data.reportText) {
+          console.log('트렌드 데이터 성공:', data.reportText.substring(0, 100) + '...');
+          setTrendReport(data.reportText);
+        } else if (data.success) {
+          console.error('응답은 성공이지만 reportText가 없음:', data);
+          setTrendReport('트렌드 데이터를 분석하는 중입니다...');
+        } else {
+          console.error('트렌드 데이터 가져오기 실패:', {
+            success: data.success,
+            error: data.error,
+            hasReportText: !!data.reportText
+          });
+          setTrendReport(null);
+        }
+      } catch (error) {
+        console.error('트렌드 요청 중 오류:', error);
+        setTrendReport(null);
+      } finally {
+        setIsLoadingTrend(false);
+      }
+    }
+
+    fetchTrendData();
+  }, [isMenuOpen, currentUser?.token]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -544,7 +609,7 @@ export default function UserPublicPage() {
 
             {/* 전체 화면 메뉴 오버레이 */}
             <div 
-              className={`fixed inset-0 bg-black/90 backdrop-blur-md z-[100] transition-all duration-500 ${
+              className={`fixed inset-0 bg-black/90 backdrop-blur-md z-[100] transition-all duration-500 overflow-hidden ${
                 isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}
             >
@@ -557,77 +622,132 @@ export default function UserPublicPage() {
               </button>
 
               {/* 메뉴 컨텐츠 */}
-              <div className="w-full max-w-[1000px] mx-auto h-full px-[18px] pt-20">
+              <div className="w-full max-w-[1000px] mx-auto h-full px-[18px] pt-20 pb-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent hover:scrollbar-thumb-white/10 scrollbar-rounded">
                 <div className={`transform transition-all duration-500 ${
                   isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
                 }`}>
-                  <nav className="flex flex-col gap-6">
-                    <Link 
-                      href="/feed"
-                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img src="/logos/feed.png" alt="피드" className="w-6 h-6" />
-                        <div className="flex flex-col">
-                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">피드</span>
-                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                  {/* 상단 카테고리 메뉴 */}
+                  <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8">
+                    <div className="grid grid-cols-5 gap-4">
+                      <Link 
+                        href="/feed"
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <img src="/logos/feed.png" alt="피드" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </div>
-                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
-                    </Link>
-                    <Link 
-                      href="/likes/all"
-                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img src="/logos/ai1.png" alt="공감" className="w-6 h-6" />
-                        <div className="flex flex-col">
-                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">공감 한조각</span>
-                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">피드</span>
+                      </Link>
+                      <Link 
+                        href="/likes/all"
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <img src="/logos/ai1.png" alt="공감" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </div>
-                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
-                    </Link>
-                    <Link 
-                      href="/photo-story"
-                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img src="/logos/ai2.png" alt="사진" className="w-6 h-6" />
-                        <div className="flex flex-col">
-                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사진 스토리</span>
-                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">공감</span>
+                      </Link>
+                      <Link 
+                        href="/photo-story"
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <img src="/logos/ai2.png" alt="사진" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </div>
-                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
-                    </Link>
-                    <Link 
-                      href="/modoo-ai"
-                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img src="/logos/ai3.png" alt="사연" className="w-6 h-6" />
-                        <div className="flex flex-col">
-                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">사연 한조각</span>
-                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">사진</span>
+                      </Link>
+                      <Link 
+                        href="/modoo-ai"
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <img src="/logos/ai3.png" alt="사연" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </div>
-                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
-                    </Link>
-                    <Link 
-                      href="/inquiry"
-                      className="group relative flex items-center justify-between px-5 py-2.5 bg-white/[0.02] hover:bg-white/10 rounded-xl transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img src="/logos/ai4.png" alt="문의" className="w-6 h-6" />
-                        <div className="flex flex-col">
-                          <span className="text-lg md:text-xl font-light text-white/90 group-hover:text-white">문의 게시판</span>
-                          <span className="h-px w-0 group-hover:w-full bg-white/70 transition-all duration-500 mt-0.5"></span>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">사연</span>
+                      </Link>
+                      <Link 
+                        href="/inquiry"
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <img src="/logos/ai4.png" alt="문의" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">문의</span>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* AI 트렌드 리포트 섹션 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-white/70 text-lg font-medium">AI 트렌드 리포트</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.03] text-white/60">#실시간</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.03] text-white/60">#AI분석</span>
                       </div>
-                      <span className="text-xl text-white/50 group-hover:text-white transform translate-x-0 group-hover:translate-x-2 transition-all duration-300">›</span>
-                    </Link>
-                  </nav>
+                    </div>
+                    <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-6 border border-white/10">
+                      {isLoadingTrend ? (
+                        <div className="animate-pulse space-y-4">
+                          <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                          <div className="h-4 bg-white/10 rounded w-1/2"></div>
+                          <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                          <div className="h-4 bg-white/10 rounded w-2/3"></div>
+                        </div>
+                      ) : trendReport ? (
+                        <div className="space-y-6">
+                          <ReactMarkdown
+                            components={{
+                              a: ({ node, ...props }) => (
+                                <a
+                                  {...props}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMenuOpen(false);
+                                  }}
+                                  className="text-white/60 hover:text-white/80 hover:underline"
+                                />
+                              ),
+                              h3: ({ node, ...props }) => {
+                                return (
+                                  <div className="bg-white/[0.03] rounded-lg p-6 space-y-4">
+                                    <h3 {...props} className="text-base font-medium text-white/70" />
+                                  </div>
+                                );
+                              },
+                              ul: ({ node, ...props }) => (
+                                <div className="-mt-6 px-6 pb-2">
+                                  <ul {...props} className="space-y-3" />
+                                </div>
+                              ),
+                              li: ({ node, ...props }) => {
+                                const content = props.children?.toString() || '';
+                                if (content.startsWith('**내용:**')) {
+                                  return <li {...props} className="text-sm text-white/60" />;
+                                } else if (content.startsWith('**키워드:**')) {
+                                  return <li {...props} className="text-sm text-white/60" />;
+                                } else if (content.startsWith('**링크:**')) {
+                                  return <li {...props} className="text-sm text-white/60" />;
+                                }
+                                return <li {...props} />;
+                              }
+                            }}
+                          >
+                            {trendReport}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="text-white/50 text-sm">트렌드 데이터를 불러오는 중 오류가 발생했습니다.</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -670,6 +790,17 @@ export default function UserPublicPage() {
           />
           
           {/* 하단 버튼 */}
+          {/* AI 플로팅 버튼 (사용자 페이지 전용) */}
+          <Link
+            href="/ai-comfort"
+            className="fixed bottom-[15px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+          >
+            <span className="text-white font-medium text-base">AI</span>
+            <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              모두트리 AI와 대화하기
+            </span>
+          </Link>
+
           {showBottomButton && (
             <div className="fixed bottom-[25px] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
               <Link

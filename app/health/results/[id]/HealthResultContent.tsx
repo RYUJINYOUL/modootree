@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { ArrowLeft, Copy, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Copy, CheckCheck, Camera } from 'lucide-react';
+import Image from 'next/image';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 
 interface Analysis {
@@ -241,12 +242,27 @@ export default function HealthResultContent({ id }: { id: string }) {
                      meal === 'lunch' ? '점심' :
                      meal === 'dinner' ? '저녁' : '기타'}
                   </h3>
-                  {record.meals[meal].description && (
+                  {(record.meals[meal].description || record.meals[meal].imageUrl) && (
                     <>
-                      <div className="mb-4">
-                        <div className="text-sm text-gray-400 mb-1">기록</div>
-                        <div className="text-gray-200">{record.meals[meal].description}</div>
-                      </div>
+                      {record.meals[meal].imageUrl && (
+                        <div className="mb-4">
+                          <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-blue-950/30">
+                            <Image
+                              src={record.meals[meal].imageUrl}
+                              alt={`${meal === 'breakfast' ? '아침' : meal === 'lunch' ? '점심' : meal === 'dinner' ? '저녁' : '간식'} 식사`}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {record.meals[meal].description && (
+                        <div className="mb-4">
+                          <div className="text-sm text-gray-400 mb-1">기록</div>
+                          <div className="text-gray-200">{record.meals[meal].description}</div>
+                        </div>
+                      )}
                       <div className="space-y-4">
                         {analysis.mealFeedback[meal].positives.length > 0 && (
                           <div>
@@ -279,12 +295,27 @@ export default function HealthResultContent({ id }: { id: string }) {
           {/* 운동 분석 */}
           <div className="p-6 bg-blue-950/20 backdrop-blur-sm rounded-2xl border border-blue-500/20">
             <h2 className="text-2xl font-bold text-white mb-6">운동 분석</h2>
-            {record.exercise.description && (
+            {(record.exercise.description || record.exercise.imageUrl) && (
               <>
-                <div className="mb-4">
-                  <div className="text-sm text-gray-400 mb-1">기록</div>
-                  <div className="text-gray-200">{record.exercise.description}</div>
-                </div>
+                {record.exercise.imageUrl && (
+                  <div className="mb-4">
+                    <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-blue-950/30">
+                      <Image
+                        src={record.exercise.imageUrl}
+                        alt="운동 기록"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                )}
+                {record.exercise.description && (
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-400 mb-1">기록</div>
+                    <div className="text-gray-200">{record.exercise.description}</div>
+                  </div>
+                )}
                 <div className="space-y-4">
                   {analysis.activityFeedback.positives.length > 0 && (
                     <div>

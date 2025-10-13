@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Image as ImageIcon, X, Trash2, PenSquare, List, Settings, Calendar as CalendarIcon, Lightbulb } from 'lucide-react';
+import { Image as ImageIcon, X, Trash2, PenSquare, List, Settings, Calendar as CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -37,17 +37,11 @@ const MEMO_STYLES: { [key: string]: string } = {
 };
 
 
-interface AiSuggestion {
-  suggestion: string;
-  category: '할일' | '계획' | '아이디어' | '목표' | '일상' | '기타';
-}
-
 interface MemoItem {
   id: string;
   content: string;
   date: Date;
   status: 'todo' | 'today' | 'completed';
-  suggestion?: AiSuggestion;
   images?: string[];
 }
 
@@ -99,7 +93,12 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
     message: '',
     action: async () => {}
   });
-  const [writeForm, setWriteForm] = useState({
+  const [writeForm, setWriteForm] = useState<{
+    content: string;
+    images: string[];
+    pendingImages: File[];
+    date: Date;
+  }>({
     content: '',
     images: [] as string[],
     pendingImages: [] as File[],
@@ -114,37 +113,6 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
     today: 5,
     completed: 5
   });
-  const [suggestingMemos, setSuggestingMemos] = useState<string[]>([]);
-
-  // AI 조언 요청
-  const requestSuggestion = async (memoId: string, content: string) => {
-    try {
-      setSuggestingMemos(prev => [...prev, memoId]);
-      
-      const response = await fetch('/api/ai-suggestion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content })
-      });
-
-      if (!response.ok) {
-        throw new Error('AI 조언 생성 실패');
-      }
-
-      const suggestion = await response.json();
-      
-      // 메모 업데이트
-      await updateDoc(doc(db, `users/${userId}/memos`, memoId), {
-        suggestion
-      });
-
-    } catch (error) {
-      console.error('AI 조언 생성 실패:', error);
-      alert('AI 조언 생성 중 오류가 발생했습니다.');
-    } finally {
-      setSuggestingMemos(prev => prev.filter(id => id !== memoId));
-    }
-  };
   const [styleSettings, setStyleSettings] = useState({
     style: 'default',
     color: '#60A5FA',
@@ -778,62 +746,25 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                       )}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm" style={{ color: `${styleSettings.textColor}80` }}>
-                              {activeTab === 'today' ? (
-                                // 오늘 메모: 시간 표시
-                                format(new Date(memo.date), 'a h:mm', { locale: ko })
-                              ) : activeTab === 'completed' ? (
-                                // 완료: 완료 시간 표시
-                                `완료: ${format(new Date(memo.date), 'PPP a h:mm', { locale: ko })}`
-                              ) : (
-                                // 목록: D-day 또는 경과일 표시
-                                (() => {
-                                  const today = new Date();
-                                  const memoDate = new Date(memo.date);
-                                  const diffDays = Math.floor((memoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                                  if (diffDays > 0) return `D-${diffDays}`;
-                                  if (diffDays < 0) return `${Math.abs(diffDays)}일 지남`;
-                                  return '오늘';
-                                })()
-                              )}
-                            </span>
-                            {currentUser?.uid === userId && !memo.suggestion && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  requestSuggestion(memo.id, memo.content);
-                                }}
-                                className="px-2 py-1 text-xs font-medium rounded-full transition-all"
-                                style={{ 
-                                  backgroundColor: '#3B82F6',
-                                  color: '#FFFFFF',
-                                }}
-                                disabled={suggestingMemos.includes(memo.id)}
-                              >
-                                {suggestingMemos.includes(memo.id) ? (
-                                  <div className="animate-spin">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                                    </svg>
-                                  </div>
-                                ) : "AI 조언"}
-                              </button>
+                          <span className="text-sm" style={{ color: `${styleSettings.textColor}80` }}>
+                            {activeTab === 'today' ? (
+                              format(new Date(memo.date), 'a h:mm', { locale: ko })
+                            ) : activeTab === 'completed' ? (
+                              format(new Date(memo.date), 'M월 d일', { locale: ko }) + 
+                              ' ' + new Date(memo.date).getFullYear().toString().slice(-2) + '년'
+                            ) : (
+                              (() => {
+                                const today = new Date();
+                                const memoDate = new Date(memo.date);
+                                const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                const memoStart = new Date(memoDate.getFullYear(), memoDate.getMonth(), memoDate.getDate());
+                                const diffDays = Math.floor((memoStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+                                if (diffDays > 0) return `D-${diffDays}`;
+                                if (diffDays < 0) return `${Math.abs(diffDays)}일 지남`;
+                                return '오늘';
+                              })()
                             )}
-                            {memo.suggestion && (
-                              <div 
-                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full"
-                                style={{ 
-                                  backgroundColor: '#2563EB',
-                                  color: '#FFFFFF'
-                                }}
-                              >
-                                <span>
-                                  {memo.suggestion.category}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                          </span>
                         </div>
                         <div 
                           className="cursor-pointer"
@@ -962,15 +893,36 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                     {format(writeForm.date, 'PPP', { locale: ko })}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={writeForm.date}
-                    onSelect={(date) => date && setWriteForm(prev => ({ ...prev, date }))}
-                    initialFocus
-                    locale={ko}
-                  />
-                </PopoverContent>
+                <PopoverContent className="w-auto p-0 relative z-50" align="start">
+  <div className="relative">
+    <Calendar
+      mode="single"
+      selected={writeForm.date}
+      onSelect={(date) => {
+        console.log('선택된 날짜:', date);
+        console.log('현재 writeForm:', writeForm);
+        if (date) {
+          const newDate = new Date(date);
+          console.log('변환된 날짜:', newDate);
+          setWriteForm(prev => {
+            const updated = {
+              ...prev,
+              date: newDate
+            };
+            console.log('업데이트될 writeForm:', updated);
+            return updated;
+          });
+        }
+      }}
+      initialFocus
+      locale={ko}
+      disabled={(date) => false}
+      fromDate={new Date(2020, 0)}
+      toDate={new Date(2025, 11)}
+      className="rounded-md border border-input bg-background pointer-events-auto"
+    />
+  </div>
+</PopoverContent>
               </Popover>
             </div>
 
@@ -1105,45 +1057,13 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <DialogTitle className="text-lg text-gray-900">
+                <DialogTitle className="text-lg text-white/90">
                   {format(selectedMemo ? new Date(selectedMemo.date) : new Date(), 'PPP', { locale: ko })}
                 </DialogTitle>
               </div>
               <div className="flex justify-end">
                 {currentUser?.uid === userId && (
                   <div className="flex gap-1">
-                    {currentUser?.uid === userId && !selectedMemo?.suggestion && (
-                      <button
-                        onClick={() => {
-                          setConfirmDialog({
-                            isOpen: true,
-                            title: 'AI 조언',
-                            message: '이 메모에 대한 AI 조언을 받으시겠습니까?',
-                            action: async () => {
-                              if (selectedMemo) {
-                                await requestSuggestion(selectedMemo.id, selectedMemo.content);
-                              }
-                              setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                            }
-                          });
-                        }}
-                        className="px-3 py-1.5 text-sm font-medium rounded-full transition-all flex items-center gap-1.5"
-                        style={{ 
-                          backgroundColor: '#3B82F6',
-                          color: '#FFFFFF',
-                        }}
-                        disabled={!!selectedMemo && suggestingMemos.includes(selectedMemo.id)}
-                      >
-                        <Lightbulb className="w-4 h-4" />
-                        {selectedMemo && suggestingMemos.includes(selectedMemo.id) ? (
-                          <div className="animate-spin">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                            </svg>
-                          </div>
-                        ) : "AI 조언"}
-                      </button>
-                    )}
                     {selectedMemo && selectedMemo.status !== 'completed' && (
                       <button
                         onClick={() => {
@@ -1180,13 +1100,10 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                             setIsWriting(true);
                             setSelectedMemo(null);
                           }}
-                          className="p-1.5 rounded transition-colors hover:bg-white/10"
-                          title="수정"
+                          className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-all flex items-center gap-1.5"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                          </svg>
+                          <PenSquare className="w-4 h-4" />
+                          <span>수정</span>
                         </button>
                         <button
                           onClick={() => {
@@ -1201,14 +1118,10 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
                               }
                             });
                           }}
-                          className="p-1.5 rounded transition-colors hover:bg-white/10"
-                          title="삭제"
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all flex items-center gap-1.5"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18"/>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                          </svg>
+                          <Trash2 className="w-4 h-4" />
+                          <span>삭제</span>
                         </button>
                       </>
                     )}
@@ -1220,32 +1133,9 @@ export default function DayOneBook({ userId, editable = true }: DayOneBookProps)
           <div className="flex-1 overflow-y-auto py-4">
             {selectedMemo && (
               <>
-                <p className="whitespace-pre-wrap mb-6 text-gray-900">
+                <p className="whitespace-pre-wrap mb-6 text-white/90">
                   {selectedMemo.content}
                 </p>
-                {selectedMemo.suggestion && (
-                    <div 
-                    className="mb-6 p-4 rounded-lg"
-                    style={{ 
-                      backgroundColor: '#3B82F620',
-                      border: '1px solid #3B82F640'
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="px-3 py-1.5 text-sm font-medium rounded-full flex items-center gap-1.5"
-                        style={{ 
-                          backgroundColor: '#3B82F6',
-                          color: '#FFFFFF',
-                        }}>
-                        <Lightbulb className="w-4 h-4" />
-                        {selectedMemo.suggestion.category}
-                      </div>
-                    </div>
-                    <p className="text-gray-700">
-                      {selectedMemo.suggestion.suggestion}
-                    </p>
-                  </div>
-                )}
                 {selectedMemo.images && selectedMemo.images.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {selectedMemo.images.map((imageUrl, index) => (

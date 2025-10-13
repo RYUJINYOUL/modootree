@@ -74,9 +74,30 @@ export function BottomTabs() {
     }
   };
 
-  // 에디터 페이지에서는 bottom tabs를 숨김
+  // 에디터 페이지와 AI 채팅에서는 bottom tabs를 숨김
   const hiddenPaths = ['/editor/', '/ai-comfort'];
-  const shouldHide = hiddenPaths.some(path => pathname?.startsWith(path));
+  
+  // 유저 사이트 체크를 위한 상태
+  const [isUserSite, setIsUserSite] = useState(false);
+
+  // 현재 경로가 유저 사이트인지 확인
+  useEffect(() => {
+    const checkIfUserSite = async () => {
+      if (!pathname) return;
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length === 1) {
+        const username = segments[0];
+        const usernameRef = doc(db, 'usernames', username);
+        const usernameDoc = await getDoc(usernameRef);
+        setIsUserSite(usernameDoc.exists());
+      } else {
+        setIsUserSite(false);
+      }
+    };
+    checkIfUserSite();
+  }, [pathname]);
+
+  const shouldHide = hiddenPaths.some(path => pathname?.startsWith(path)) || isUserSite;
 
   const menuItems = [
     {

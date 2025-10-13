@@ -20,15 +20,15 @@ export default function Header() {
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);  // 푸터 표시 상태
-  
-  // 메인페이지, 로그인, 회원가입, 문의하기 페이지에서는 헤더를 숨김
+
+  // 메인페이지, 로그인, 회원가입, 문의하기, 피드, 모두AI, 공감한조각 페이지에서는 헤더를 숨김
   const isMainPage = pathname === '/';
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isInquiryPage = pathname === '/inquiry';
-
-  if (isMainPage || isAuthPage || isInquiryPage) {
-    return null;
-  }
+  const isFeedPage = pathname === '/feed';
+  const isModooAiPage = pathname === '/modoo-ai';
+  const isLikesPage = pathname === '/likes/all';
+  const shouldHideHeader = isMainPage || isAuthPage || isInquiryPage || isFeedPage || isModooAiPage || isLikesPage;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -158,9 +158,7 @@ export default function Header() {
     }
   };
 
-  if (!mounted) return null;
-
-  if (!isVisible) return null;
+  if (!mounted || !isVisible || shouldHideHeader) return null;
 
   return (
     <header className="fixed top-1/2 left-5 -translate-y-1/2 z-50">
@@ -290,4 +288,4 @@ export default function Header() {
       </div>
     </header>
   );
-} 
+}

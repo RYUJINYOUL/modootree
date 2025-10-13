@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
+import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, orderBy, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -27,6 +28,8 @@ interface PhotoStory {
   createdAt: Date;
   votes?: { [key: string]: number };
 }
+
+import { Toaster } from 'react-hot-toast';
 
 export default function StoryPage({ params }: { params: Promise<{ storyId: string }> }) {
   const resolvedParams = use(params);
@@ -293,6 +296,7 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
 
   return (
     <>
+      <Toaster position="top-center" />
       <LoginOutButton />
       <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90">
         <div className="container mx-auto px-4 py-10 max-w-3xl">
@@ -310,8 +314,13 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
           <div className="space-y-6">
             {/* 이미지 */}
             <div className="bg-white/10 rounded-lg overflow-hidden backdrop-blur-sm">
-              <div className="aspect-video relative">
-                <img 
+                <div className="relative h-[450px]">
+                  <div className="absolute top-4 left-4 z-10">
+                    <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-white/90">
+                      투표
+                    </div>
+                  </div>
+                  <img 
                   src={story.photo} 
                   alt="Story" 
                   className="w-full h-full object-cover"
@@ -322,21 +331,7 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
             {/* 스토리 목록 */}
             <div className="bg-white/10 rounded-lg overflow-hidden backdrop-blur-sm">
               <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <div className="flex items-center gap-2">
-                  {story.author.photoURL ? (
-                    <img 
-                      src={story.author.photoURL} 
-                      alt={story.author.displayName} 
-                      className="w-6 h-6 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs">
-                      {story.author.displayName?.[0] || '?'}
-                    </div>
-                  )}
-                  <span>{story.author.displayName || story.author.email?.split('@')[0]}</span>
-                </div>
+                <div className="flex items-center justify-end text-sm text-gray-400">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={toggleLike}
@@ -351,6 +346,23 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
                   </button>
                   <span>조회 {story.stats.viewCount}</span>
                   <span>참여 {story.stats.participantCount}</span>
+                  <button
+                    onClick={() => {
+                      const url = window.location.href;
+                      if (typeof window !== 'undefined') {
+                        navigator.clipboard.writeText(url)
+                          .then(() => toast.success('링크가 복사되었습니다'))
+                          .catch(() => toast.error('링크 복사에 실패했습니다'));
+                      }
+                    }}
+                    className="flex items-center gap-1 text-gray-400 hover:text-blue-400 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                    <span>공유</span>
+                  </button>
                 </div>
               </div>
 

@@ -26,6 +26,6 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   달력: CalendarComponent,
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
-  데이원메모: DayOneBook,
-  데이원캘린더: DayOneCalendarTemplate,
+  AI메모: DayOneBook,
+  AI캘린더: DayOneCalendarTemplate,
 }; 

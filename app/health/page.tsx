@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, orderBy, getDocs, where, doc, getDoc, updateDoc, setDoc, increment, arrayUnion } from 'firebase/firestore';
@@ -322,10 +323,12 @@ export default function HealthListPage() {
                     <div className="grid grid-cols-4 gap-1">
                       {record.meals.breakfast.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <img
+                          <Image
                             src={record.meals.breakfast.imageUrl}
                             alt="아침 식사"
-                            className="object-cover w-full h-full"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             아침
@@ -334,10 +337,12 @@ export default function HealthListPage() {
                       )}
                       {record.meals.lunch.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <img
+                          <Image
                             src={record.meals.lunch.imageUrl}
                             alt="점심 식사"
-                            className="object-cover w-full h-full"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             점심
@@ -346,10 +351,12 @@ export default function HealthListPage() {
                       )}
                       {record.meals.dinner.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <img
+                          <Image
                             src={record.meals.dinner.imageUrl}
                             alt="저녁 식사"
-                            className="object-cover w-full h-full"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             저녁
@@ -358,10 +365,12 @@ export default function HealthListPage() {
                       )}
                       {record.exercise.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <img
+                          <Image
                             src={record.exercise.imageUrl}
                             alt="운동"
-                            className="object-cover w-full h-full"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             운동

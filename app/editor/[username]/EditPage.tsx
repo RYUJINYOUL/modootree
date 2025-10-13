@@ -36,13 +36,13 @@ type SiteType = "diary" | "links";
 
 // 사이트 타입별 기본 컴포넌트 설정
 const DEFAULT_COMPONENTS: Record<SiteType, ComponentKey[]> = {
-  diary: ["프로필카드", "데이원캘린더", "데이원메모", "게스트북"],
+  diary: ["프로필카드", "AI캘린더", "AI메모", "게스트북"],
   links: ["프로필카드", "링크카드", "사진첩", "게스트북"]
 } as const;
 
 // 사이트 타입 한글명
 const TYPE_LABELS: Record<SiteType, string> = {
-  diary: "다이어리",
+  diary: "다이어리 (AI 지원)",
   links: "링크모음"
 };
 

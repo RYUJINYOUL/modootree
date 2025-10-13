@@ -1,12 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { db } from '@/firebase';
+import Image from 'next/image';
+import { Heart, MessageCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import CategoryCarousel from '../../components/CategoryCarousel';
+import { loadSlim } from "tsparticles-slim";
+import Particles from "react-tsparticles";
+
+// 감정별 이모티콘 매핑
+const EMOTION_ICONS = {
+  happy: '/logos/m1.png',    // 행복
+  sad: '/logos/m6.png',      // 슬픔
+  angry: '/logos/m9.png',    // 분노
+  anxious: '/logos/m5.png',  // 불안
+  peaceful: '/logos/m4.png', // 평온
+  worried: '/logos/m14.png', // 걱정
+  default: '/logos/m1.png'   // 기본
+};
 
 interface FeedItem {
   id: string;
-  type: 'likes' | 'joy' | 'modoo-ai';
+  type: 'likes' | 'joy' | 'modoo-ai' | 'health';  // health 타입 추가
   displayType: string;
   title?: string;
   content?: string;
@@ -22,30 +41,7 @@ interface FeedItem {
   likes?: number;
   comments?: number;
   username?: string;
-};
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
-import { db } from '@/firebase';
-import Image from 'next/image';
-import { Heart, MessageCircle, ChevronDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import CategoryCarousel from '../../components/CategoryCarousel';
-
-// 감정별 이모티콘 매핑
-const EMOTION_ICONS = {
-  happy: '/logos/m1.png',    // 행복
-  sad: '/logos/m6.png',      // 슬픔
-  angry: '/logos/m9.png',    // 분노
-  anxious: '/logos/m5.png',  // 불안
-  peaceful: '/logos/m4.png', // 평온
-  worried: '/logos/m14.png', // 걱정
-  default: '/logos/m1.png'   // 기본
-};
+}
 
 export default function FeedPage() {
   const router = useRouter();
@@ -53,6 +49,11 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [displayCount, setDisplayCount] = useState(28); // PC에서 초기에 보여줄 아이템 수
+
+  const particlesInit = useCallback(async (engine: any) => {
+    await loadSlim(engine);
+  }, []);
 
   useEffect(() => {
     loadInitialFeed();
@@ -61,33 +62,74 @@ export default function FeedPage() {
   const loadInitialFeed = async () => {
     setLoading(true);
     try {
-      const [likesData, photoStoryData, modooData] = await Promise.all([
-        fetchFromCollection('likes', 10),
-        fetchFromCollection('photo-stories', 10),
-        fetchFromCollection('modoo-ai-tests', 10)
+      console.log('피드 데이터 로딩 시작...');
+      const [likesData, photoStoryData, modooData, healthData] = await Promise.all([
+        fetchFromCollection('likes', 10).then(data => {
+          console.log('공감 데이터:', data.length);
+          return data;
+        }),
+        fetchFromCollection('photo-stories', 10).then(data => {
+          console.log('사진 스토리 데이터:', data.length);
+          return data;
+        }),
+        fetchFromCollection('modoo-ai-tests', 10).then(data => {
+          console.log('사연 데이터:', data.length);
+          return data;
+        }),
+        fetchFromCollection('health_records', 10).then(data => {
+          console.log('건강 기록 데이터:', data.length);
+          return data;
+        })
       ]);
 
-      const [formattedLikes, formattedPhotoStory, formattedModoo] = await Promise.all([
-        formatData(likesData, 'likes'),
-        formatData(photoStoryData, 'photo-story'),
-        formatData(modooData, 'modoo-ai')
+      console.log('데이터 포맷팅 시작...');
+      const [formattedLikes, formattedPhotoStory, formattedModoo, formattedHealth] = await Promise.all([
+        formatData(likesData, 'likes').then(data => {
+          console.log('공감 데이터 포맷팅 완료:', data.length);
+          return data;
+        }),
+        formatData(photoStoryData, 'photo-story').then(data => {
+          console.log('사진 스토리 데이터 포맷팅 완료:', data.length);
+          return data;
+        }),
+        formatData(modooData, 'modoo-ai').then(data => {
+          console.log('사연 데이터 포맷팅 완료:', data.length);
+          return data;
+        }),
+        formatData(healthData, 'health').then(data => {
+          console.log('건강 기록 데이터 포맷팅 완료:', data.length);
+          return data;
+        })
       ]);
 
+      console.log('데이터 병합 시작...');
       const combinedData = [
         ...formattedLikes,
         ...formattedPhotoStory,
-        ...formattedModoo
+        ...formattedModoo,
+        ...formattedHealth
       ].sort((a: any, b: any) => b.createdAt - a.createdAt);
 
+      console.log('최종 데이터 개수:', combinedData.length);
+      console.log('데이터 샘플:', combinedData[0]);
+
       setFeedItems(combinedData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('피드 로딩 실패:', error);
+      console.error('에러 상세:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      // 에러 발생해도 빈 배열로 설정
+      setFeedItems([]);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchFromCollection = async (collectionName: string, itemLimit: number = 10): Promise<any[]> => {
+    console.log(`${collectionName} 컬렉션에서 데이터 가져오기 시작...`);
     const q = query(
       collection(db, collectionName),
       orderBy('createdAt', 'desc'),
@@ -95,11 +137,19 @@ export default function FeedPage() {
     );
     
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
+    console.log(`${collectionName} 컬렉션 데이터 개수:`, snapshot.size);
+    
+    const data = snapshot.docs.map(doc => {
+      const docData = doc.data();
+      console.log(`${collectionName} 문서 데이터:`, { id: doc.id, ...docData });
+      return {
       id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate()
-    }));
+        ...docData,
+        createdAt: docData.createdAt?.toDate()
+      };
+    });
+    
+    return data;
   };
 
   const formatData = async (data: any[], type: string): Promise<FeedItem[]> => {
@@ -113,6 +163,9 @@ export default function FeedPage() {
         );
         const commentsSnapshot = await getDocs(commentsQuery);
         commentCount = commentsSnapshot.size;
+      } else if (type === 'health') {
+        // 건강 기록은 댓글 기능이 없으므로 0으로 설정
+        commentCount = 0;
       } else {
         const commentsQuery = query(
           collection(db, type === 'likes' ? 'comments' : 'modoo-ai-comments'),
@@ -130,6 +183,9 @@ export default function FeedPage() {
       } else if (type === 'photo-story') {
         // photo-story는 likeCount를 직접 사용
         likeCount = item.likeCount || 0;
+      } else if (type === 'health') {
+        // 건강 기록은 좋아요 기능이 없으므로 0으로 설정
+        likeCount = 0;
       } else {
         const likesQuery = query(
           collection(db, 'likesReactions'),
@@ -139,18 +195,36 @@ export default function FeedPage() {
         likeCount = likesSnapshot.size;
       }
 
-      return {
+      let formattedItem = {
         ...item,
         type,
         displayType: 
           type === 'likes' ? '공감 한조각' :
           type === 'photo-story' ? 'AI 사진 스토리' :
+          type === 'health' ? 'AI 건강기록' :
           '사연 한조각',
         previewContent: item.content || item.description || '',
         emotionIcon: type === 'modoo-ai' ? EMOTION_ICONS[(item.emotion as keyof typeof EMOTION_ICONS) || 'default'] : null,
         comments: commentCount,
         likes: likeCount
       };
+
+      // 건강 기록인 경우 추가 데이터 포맷팅
+      if (type === 'health') {
+        formattedItem = {
+          ...formattedItem,
+          date: item.date || new Date(item.createdAt).toLocaleDateString(),
+          mealPhotos: [
+            item.meals?.breakfast?.imageUrl,
+            item.meals?.lunch?.imageUrl,
+            item.meals?.dinner?.imageUrl
+          ].filter(Boolean),
+          exercisePhotos: item.exercise?.imageUrl ? [item.exercise.imageUrl] : [],
+          content: item.analysis?.dailySummary?.overallComment || '건강 기록'
+        };
+      }
+
+      return formattedItem;
     }));
 
     return formattedData;
@@ -160,68 +234,101 @@ export default function FeedPage() {
     { id: 'all', label: '전체' },
     { id: 'likes', label: '공감', path: '/likes/all', fullLabel: '공감 한조각' },
     { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
-    { id: 'modoo-ai', label: '사연', path: '/modoo-ai', fullLabel: '사연 한조각' }
+    { id: 'modoo-ai', label: '사연', path: '/modoo-ai', fullLabel: '사연 한조각' },
+    { id: 'health', label: '건강', path: '/health', fullLabel: 'AI 건강기록' }
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-gray-900">
-      <div className="w-full max-w-[2000px] mx-auto px-4 py-6">
-        {/* 헤더 영역 */}
-        <div className="sticky top-0 z-40 bg-gradient-to-b from-slate-950 to-slate-950/80 backdrop-blur-sm py-4">
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <h1 className="text-3xl font-bold text-white">모두트리 피드</h1>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost"
-                    className="bg-blue-500/10 hover:bg-blue-500/30 text-white/90 hover:text-white px-3 border border-blue-500/30"
-                  >
-                    참여 <ChevronDown className="h-4 w-4 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48 bg-gray-900/90 border border-blue-500/20">
-                  <DropdownMenuItem
-                    className="text-white/70 hover:text-white focus:text-white hover:bg-blue-500/50 cursor-pointer transition-colors"
-                    onClick={() => router.push('/likes/all')}
-                  >
-                    공감
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-white/70 hover:text-white focus:text-white hover:bg-blue-500/50 cursor-pointer transition-colors"
-                    onClick={() => router.push('/photo-story')}
-                  >
-                    사진
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-white/70 hover:text-white focus:text-white hover:bg-blue-500/50 cursor-pointer transition-colors"
-                    onClick={() => router.push('/modoo-ai')}
-                  >
-                    사연
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* 모바일에서는 캐러셀, 데스크톱에서는 일반 버튼 */}
-            <div className="w-full md:w-auto mb-4">
-              <div className="hidden md:flex items-center justify-center gap-2">
-                {FILTERS.map(filter => (
-                  <Button
-                    key={filter.id}
-                    variant={activeFilter === filter.id ? "default" : "outline"}
-                    onClick={() => setActiveFilter(filter.id)}
-                    className={`whitespace-nowrap px-6 transition-all border ${
-                      activeFilter === filter.id 
-                        ? 'bg-blue-500 hover:bg-blue-600 text-white border-transparent' 
-                        : 'bg-blue-500/10 hover:bg-blue-500/30 text-white/90 hover:text-white border-blue-500/30'
-                    }`}
-                  >
-                    {filter.label}
-                  </Button>
-                ))}
-              </div>
-              <div className="md:hidden w-full">
+    <main className="min-h-screen bg-black text-white/90 relative">
+      <Particles
+        className="absolute inset-0"
+        init={particlesInit}
+        options={{
+          fpsLimit: 120,
+          particles: {
+            color: {
+              value: ["#ffffff", "#87CEEB", "#FFD700"]
+            },
+            links: {
+              color: "#ffffff",
+              distance: 150,
+              enable: true,
+              opacity: 0.05,
+              width: 1,
+            },
+            collisions: {
+              enable: false,
+            },
+            move: {
+              direction: "none",
+              enable: true,
+              outModes: {
+                default: "out"
+              },
+              random: true,
+              speed: { min: 0.1, max: 0.3 },
+              straight: false,
+              attract: {
+                enable: true,
+                rotate: {
+                  x: 600,
+                  y: 1200
+                }
+              }
+            },
+            number: {
+              density: {
+                enable: true,
+                area: 800
+              },
+              value: 120
+            },
+            opacity: {
+              animation: {
+                enable: true,
+                minimumValue: 0.1,
+                speed: 1,
+                sync: false
+              },
+              random: true,
+              value: { min: 0.1, max: 0.8 }
+            },
+            shape: {
+              type: "circle"
+            },
+            size: {
+              animation: {
+                enable: true,
+                minimumValue: 0.1,
+                speed: 2,
+                sync: false
+              },
+              random: true,
+              value: { min: 1, max: 3 }
+            },
+            twinkle: {
+              lines: {
+                enable: true,
+                frequency: 0.005,
+                opacity: 0.5,
+                color: {
+                  value: ["#ffffff", "#87CEEB"]
+                }
+              },
+              particles: {
+                enable: true,
+                frequency: 0.05,
+                opacity: 0.5
+              }
+            }
+          },
+          detectRetina: true
+        }}
+      />
+      <div className="relative z-10 w-full max-w-[2000px] mx-auto px-4 pt-6 pb-20">
+        {/* 필터 캐러셀만 유지 */}
+        <div className="flex justify-center mb-4">
+          <div className="max-w-md w-full">
                 <CategoryCarousel
                   categories={FILTERS}
                   selectedCategory={activeFilter}
@@ -229,8 +336,7 @@ export default function FeedPage() {
                 />
               </div>
             </div>
-          </div>
-        </div>
+
 
         {/* 로딩 상태 */}
         {loading && (
@@ -241,10 +347,12 @@ export default function FeedPage() {
 
         {/* 피드 그리드 */}
         {!loading && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
-            {feedItems
-              .filter(item => activeFilter === 'all' || item.type === activeFilter)
-              .map((item: any) => (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
+              {feedItems
+                .filter(item => activeFilter === 'all' || item.type === activeFilter)
+                .slice(0, displayCount)
+                .map((item: any) => (
                 <div 
                   key={item.id}
                   onClick={() => {
@@ -252,9 +360,13 @@ export default function FeedPage() {
                       router.push(`/modoo-ai/tests/${item.id}`);
                     } else if (item.type === 'photo-story') {
                       router.push(`/photo-story/${item.id}`);
+                    } else if (item.type === 'health') {
+                      router.push(`/health/results/${item.id}`);
                     } else {
                       router.push(`/likes/all`);
                     }
+                    // 페이지 이동 후 스크롤 위치 초기화
+                    window.scrollTo(0, 0);
                   }}
                   className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors cursor-pointer"
                 >
@@ -262,6 +374,7 @@ export default function FeedPage() {
                   <div className="aspect-square relative bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
                     {item.type === 'modoo-ai' ? (
                       // 사연 한조각인 경우 이모티콘 표시
+                      <div className="relative w-full h-full flex items-center justify-center">
                       <div className="w-24 h-24 relative">
                         <img
                           src={item.emotionIcon}
@@ -269,14 +382,31 @@ export default function FeedPage() {
                           className="w-24 h-24 object-contain"
                         />
                       </div>
+                        <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-blue-500/50 backdrop-blur-sm text-white text-sm font-medium">
+                          투표
+                        </div>
+                      </div>
+                    ) : item.type === 'health' ? (
+                      // 건강 기록인 경우 식사/운동 이미지 표시
+                      <Image
+                        src={item.mealPhotos?.[0] || item.exercisePhotos?.[0] || '/music/hb.png'}
+                        alt="건강 기록"
+                        fill
+                        className="object-cover"
+                      />
                     ) : item.type === 'photo-story' ? (
                       // 포토 스토리인 경우
+                      <div className="relative w-full h-full">
                       <Image
                         src={item.photo}
                         alt="포토 스토리"
                         fill
                         className="object-cover"
                       />
+                        <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-blue-500/50 backdrop-blur-sm text-white text-sm font-medium">
+                          투표
+                        </div>
+                      </div>
                     ) : item.images?.[0] ? (
                       // 이미지가 있는 경우
                       <Image
@@ -292,9 +422,6 @@ export default function FeedPage() {
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-blue-400">{item.displayType}</span>
-                      <span className="text-xs text-gray-400">
-                        {item.createdAt?.toLocaleDateString()}
-                      </span>
                     </div>
                     
                     {/* 제목 영역 - 두 줄 고정 */}
@@ -304,10 +431,10 @@ export default function FeedPage() {
                          (Array.isArray(item.aiStories) 
                            ? item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content 
                            : '') :
+                       item.type === 'health' ?
+                         item.analysis?.dailySummary?.overallComment || '건강 기록' :
                        (item.content || '').slice(0, 50)}
                     </h3>
-                    
-                    {/* 내용 제외 */}
 
                     <div className="flex items-center justify-between text-gray-400">
                       <div className="flex items-center gap-3">
@@ -329,8 +456,21 @@ export default function FeedPage() {
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+              </div>
+            ))}
+            </div>
+            
+            {/* 더보기 버튼 */}
+            {feedItems.filter(item => activeFilter === 'all' || item.type === activeFilter).length > displayCount && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setDisplayCount(prev => prev + 28)}
+                  className="px-6 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-white rounded-lg transition-colors backdrop-blur-sm"
+                >
+                  더보기
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -150,7 +150,7 @@ export default function CreateTestPage() {
   const handleGenerate = async () => {
     try {
       setIsGenerating(true);
-      const response = await fetch('/api/ai-conversation', {
+      const response = await fetch('/api/modoo-vote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
