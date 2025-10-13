@@ -70,19 +70,18 @@ export async function POST(req: NextRequest) {
         console.log(`[Quick Trend API] 빠른 요약 시작: ${userQuery}`);
 
         const model = genAI.getGenerativeModel({ 
-            model: 'gemini-2.5-flash', 
-            systemInstruction: SYSTEM_INSTRUCTION, 
-            config: {
+            model: 'gemini-2.5-flash',
+            generationConfig: {
                 temperature: 0.7, // 더 안정적인 응답을 위해 낮춤
                 maxOutputTokens: 600, // 토큰 제한을 더 낮춰 속도 향상
                 topK: 10, // 더 집중된 응답을 위해 낮춤
                 topP: 0.7, // 더 일관된 응답을 위해 낮춤
                 candidateCount: 1, // 단일 응답만 생성
-                stopSequences: ["```"], // 불필요한 코드 블록 생성 방지
+                stopSequences: ["```"] // 불필요한 코드 블록 생성 방지
             },
             safetySettings: [
                 { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE }
             ]
         });
 
