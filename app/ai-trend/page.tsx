@@ -11,9 +11,14 @@ export default function AiTrendPage() {
   const { currentUser } = useSelector((state: any) => state.user);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [report, setReport] = useState<{
-    reportText: string;
-    sources: Array<{ uri: string; title: string; }>;
+  const [trends, setTrends] = useState<{
+    trends: Array<{
+      title: string;
+      summary: string;
+      source: string;
+      url: string;
+      category: string;
+    }>;
   } | null>(null);
 
   // 페이지 로드 시 기본 트렌드 리포트 가져오기
@@ -38,8 +43,8 @@ export default function AiTrendPage() {
       });
 
       const data = await response.json();
-      if (data.success) {
-        setReport(data);
+      if (data.success && data.data) {
+        setTrends(data.data);
       } else {
         console.error('트렌드 리포트 가져오기 실패:', data.error);
       }
@@ -106,34 +111,39 @@ export default function AiTrendPage() {
           </div>
         )}
 
-        {/* 리포트 표시 */}
-        {!isLoading && report && (
+        {/* 트렌드 표시 */}
+        {!isLoading && trends && (
           <div className="space-y-8">
-            {/* 마크다운 렌더링 */}
-            <article className="prose prose-invert max-w-none prose-h2:text-2xl prose-h3:text-xl prose-p:text-white/80 prose-a:text-blue-400">
-              <ReactMarkdown>{report.reportText}</ReactMarkdown>
-            </article>
+            {/* 카테고리별 트렌드 */}
+            {['테크', '뉴스', '유튜브', 'SNS'].map(category => {
+              const categoryTrends = trends.trends.filter(trend => trend.category === category);
+              if (categoryTrends.length === 0) return null;
 
-            {/* 출처 목록 */}
-            {report.sources.length > 0 && (
-              <div className="border-t border-white/10 pt-8">
-                <h3 className="text-lg font-medium mb-4">참고 출처</h3>
-                <ul className="space-y-2">
-                  {report.sources.map((source, index) => (
-                    <li key={index}>
-                      <a
-                        href={source.uri}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline text-sm"
-                      >
-                        {source.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              return (
+                <div key={category} className="border-t border-white/10 pt-8 first:border-t-0 first:pt-0">
+                  <h2 className="text-2xl font-medium mb-6">{category}</h2>
+                  <div className="space-y-6">
+                    {categoryTrends.map((trend, index) => (
+                      <article key={index} className="space-y-3">
+                        <h3 className="text-xl font-medium text-white/90">{trend.title}</h3>
+                        <p className="text-white/70">{trend.summary}</p>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-white/50">{trend.source}</span>
+                          <a
+                            href={trend.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:underline"
+                          >
+                            자세히 보기
+                          </a>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       generationConfig: {
         temperature: 0.9,
         topK: 40,
@@ -188,7 +188,11 @@ export async function POST(req: Request) {
 
       if (stories.length === 0) {
         console.error('모든 스토리 생성 실패');
-        throw new Error('AI가 스토리를 생성하지 못했습니다.');
+        return NextResponse.json({ 
+          success: false,
+          error: '죄송합니다. 지금은 이미지 분석이 어려운 것 같습니다. 잠시 후 다시 시도해주세요.',
+          stories: [] 
+        }, { status: 500 });
       }
 
       console.log('생성된 스토리:', stories);

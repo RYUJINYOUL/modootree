@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import CategoryCarousel from '@/components/CategoryCarousel';
 
 interface Test {
@@ -436,6 +437,17 @@ export default function ModooAIPage() {
       </div>
     </main>
     <CollapsibleFooter />
+
+      {/* AI 플로팅 버튼 */}
+      <Link
+        href="/ai-comfort"
+        className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+      >
+        <span className="text-white font-medium text-base">AI</span>
+        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          모두트리 AI와 대화하기
+        </span>
+      </Link>
     </>
   );
 }

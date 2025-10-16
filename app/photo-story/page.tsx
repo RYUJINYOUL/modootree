@@ -14,8 +14,10 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { ChevronLeft, ChevronRight, ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImageIcon, Loader2, MessageSquareDashed } from 'lucide-react';
+import Link from 'next/link';
 import LoginOutButton from '@/components/ui/LoginOutButton';
+import { AIGenerationProgress } from '@/components/AIGenerationProgress';
 
 interface PhotoStory {
   id: string;
@@ -144,6 +146,7 @@ export default function PhotoStoryPage() {
     selectedStoryId: '',
   });
   const [generatingStories, setGeneratingStories] = useState(false);
+  const [generationComplete, setGenerationComplete] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isAdmin = currentUser?.uid === 'vW1OuC6qMweyOqu73N0558pv4b03';
@@ -201,22 +204,89 @@ export default function PhotoStoryPage() {
     fetchStories();
   }, [fetchStories]);
 
-  const handlePhotoUpload = async (file: File) => {
-    // 이미지 미리보기 URL 생성
-    const previewUrl = URL.createObjectURL(file);
-    setWriteForm(prev => ({
-      ...prev,
-      photo: previewUrl,
-      pendingPhoto: file
-    }));
+  const resizeImage = async (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // 최대 크기 제한 (1200px)
+          const maxSize = 1200;
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // JPEG 형식으로 변환하고 품질을 80%로 설정
+          canvas.toBlob(
+            (blob) => resolve(blob!),
+            'image/jpeg',
+            0.8
+          );
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const generateStories = async () => {
-    if (!writeForm.photo || !writeForm.pendingPhoto) return;
+  const handlePhotoUpload = async (file: File) => {
+    try {
+      // 이미지 크기 제한 (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        const resizedBlob = await resizeImage(file);
+        file = new File([resizedBlob], file.name, { type: 'image/jpeg' });
+      }
+
+      // 이미지 미리보기 URL 생성
+      const previewUrl = URL.createObjectURL(file);
+      await setWriteForm(prev => ({
+        ...prev,
+        photo: previewUrl,
+        pendingPhoto: file
+      }));
+    } catch (error) {
+      console.error('이미지 처리 중 오류:', error);
+      alert('이미지 처리 중 오류가 발생했습니다. 다른 이미지를 시도해주세요.');
+    }
+  };
+
+  const generateAndSaveStory = async () => {
+    if (!currentUser) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    
+    // writeForm 상태가 아직 업데이트되지 않았을 수 있으므로 약간의 지연을 줍니다
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    if (!writeForm.photo || !writeForm.pendingPhoto) {
+      console.error('이미지가 준비되지 않았습니다');
+      return;
+    }
 
     setGeneratingStories(true);
+    setGenerationComplete(false);
+
     try {
-      // 이미지를 base64로 변환
+      // 1. 먼저 이미지 업로드
+      const fileRef = ref(storage, `photo-stories/${currentUser.uid}/${Date.now()}_${writeForm.pendingPhoto.name}`);
+      await uploadBytes(fileRef, writeForm.pendingPhoto);
+      const imageUrl = await getDownloadURL(fileRef);
+
+      // 2. base64 이미지 변환
       const reader = new FileReader();
       const base64Promise = new Promise((resolve, reject) => {
         reader.onload = () => resolve(reader.result);
@@ -225,7 +295,7 @@ export default function PhotoStoryPage() {
       reader.readAsDataURL(writeForm.pendingPhoto);
       const base64Image = await base64Promise;
 
-      // AI 스토리 생성
+      // 3. AI 스토리 생성
       const response = await fetch('/api/photo-story/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,56 +305,18 @@ export default function PhotoStoryPage() {
       const result = await response.json();
       
       if (!response.ok || !result.success) {
-        console.error('API 응답:', result);
         throw new Error(result.error || 'AI 스토리 생성에 실패했습니다.');
       }
 
-      if (!result.stories || !Array.isArray(result.stories) || result.stories.length === 0) {
-        console.error('API 응답:', result);
-        throw new Error('AI가 스토리를 생성하지 못했습니다.');
-      }
-
-      // AI 스토리 생성 후 이미지 저장
-      const fileRef = ref(storage, `photo-stories/${currentUser.uid}/${Date.now()}_${writeForm.pendingPhoto.name}`);
-      await uploadBytes(fileRef, writeForm.pendingPhoto);
-      const imageUrl = await getDownloadURL(fileRef);
-
-      setWriteForm(prev => ({
-        ...prev,
-        photo: imageUrl,
-        pendingPhoto: null,
-        aiStories: result.stories.map((story: { id: string; content: string; votes: number }) => ({
-          id: story.id,
-          content: typeof story.content === 'string' ? story.content.trim() : story.content,
-          votes: story.votes
-        })),
-        selectedStoryId: '0'
-      }));
-    } catch (error) {
-      console.error('AI 스토리 생성 실패:', error);
-      alert('AI 스토리 생성에 실패했습니다.');
-    } finally {
-      setGeneratingStories(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!currentUser || !writeForm.photo || !writeForm.selectedStoryId) {
-      alert('모든 필수 항목을 입력해주세요.');
-      return;
-    }
-
-    try {
-      console.log('Saving story data:', writeForm); // 저장 데이터 확인
-
+      // 4. 자동으로 Firebase에 저장
       const storyData = {
-        photo: writeForm.photo,
-        aiStories: writeForm.aiStories.map(story => ({
+        photo: imageUrl,
+        aiStories: result.stories.map((story: any) => ({
           id: story.id,
           content: story.content,
           votes: 0
         })),
-        selectedStoryId: writeForm.selectedStoryId,
+        selectedStoryId: '0', // 첫 번째 스토리를 기본값으로
         author: {
           uid: currentUser.uid,
           displayName: currentUser.displayName || currentUser.email?.split('@')[0],
@@ -298,18 +330,25 @@ export default function PhotoStoryPage() {
         createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'photo-stories'), storyData);
-      setShowWriteForm(false);
+      const docRef = await addDoc(collection(db, 'photo-stories'), storyData);
+      
+      setGenerationComplete(true);
+      setShowWriteForm(false); // 모달 닫기
+      
+      // 생성 완료 후 해당 스토리 페이지로 이동
+      router.push(`/photo-story/${docRef.id}`);
+
+    } catch (error) {
+      console.error('스토리 생성 실패:', error);
+      alert('스토리 생성에 실패했습니다.');
+    } finally {
+      setGeneratingStories(false);
       setWriteForm({
         photo: '',
         pendingPhoto: null,
         aiStories: [],
         selectedStoryId: ''
       });
-      fetchStories();
-    } catch (error) {
-      console.error('스토리 저장 실패:', error);
-      alert('스토리 저장에 실패했습니다.');
     }
   };
 
@@ -348,12 +387,7 @@ export default function PhotoStoryPage() {
             className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors cursor-pointer"
             onClick={() => router.push(`/photo-story/${story.id}`)}
           >
-            <div className="aspect-square relative">
-              <div className="absolute top-4 left-4 z-10">
-                <div className="bg-blue-500/50 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-white">
-                  투표
-                </div>
-              </div>
+            <div className="aspect-square">
               <img 
                 src={story.photo} 
                 alt="Story" 
@@ -460,6 +494,19 @@ export default function PhotoStoryPage() {
   return (
     <>
     <LoginOutButton />
+    {/* 카카오톡 문의 플로팅 버튼 */}
+    <a
+      href="http://pf.kakao.com/_pGNPn/chat"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed bottom-[125px] right-4 z-[40] w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg hover:bg-yellow-500 transition-all group"
+    >
+      <MessageSquareDashed className="w-5 h-5 fill-black stroke-[3]" />
+      <span className="absolute right-full mr-3 px-2 py-1 bg-black/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        카카오톡 문의하기
+      </span>
+    </a>
+
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 relative overflow-hidden">
       <ParticlesComponent />
       <div className="container mx-auto px-4 py-10 relative z-10">
@@ -500,96 +547,57 @@ export default function PhotoStoryPage() {
     {/* 작성 모달 */}
     <Dialog open={showWriteForm} onOpenChange={setShowWriteForm}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between mb-4">
-              <div>
-                <DialogDescription className="text-white text-lg border border-black/20 rounded-lg py-1 bg-black/10">
-                  사진 업로드, AI가 재미있는 투표를 만듭니다
-                </DialogDescription>
-              </div>
-            {writeForm.selectedStoryId && (
-              <Button
-                onClick={handleSave}
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                저장하기
-              </Button>
-            )}
-          </div>
+        <DialogHeader>
+          <DialogTitle>AI 포토 스토리 만들기</DialogTitle>
+          <DialogDescription>
+            사진을 업로드하면 AI가 자동으로 재미있는 투표를 만들어드립니다
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 overflow-y-auto flex-1 pr-2">
-          {/* 사진 업로드 */}
-          <div className="grid gap-2">
-            <div className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
-              {writeForm.photo ? (
-                <img
-                  src={writeForm.photo}
-                  alt="업로드된 사진"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <ImageIcon className="w-12 h-12 text-gray-400" />
-                  <p className="text-sm text-gray-400">모바일 사용시 원본 NO 캡쳐 사진 OK</p>
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handlePhotoUpload(file);
-                }}
-                className="absolute inset-0 opacity-0 cursor-pointer"
+        
+        <div className="space-y-4 flex-1 overflow-y-auto">
+          {/* 사진 업로드 영역 */}
+          <div className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
+            {writeForm.photo ? (
+              <img
+                src={writeForm.photo}
+                alt="업로드된 사진"
+                className="w-full h-full object-cover"
               />
-            </div>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <ImageIcon className="w-12 h-12 text-gray-400" />
+                <p className="text-sm text-gray-400">모바일에서 캡쳐 사진 이용</p>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handlePhotoUpload(file);
+                }
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              disabled={generatingStories}
+            />
           </div>
 
-          {/* AI 스토리 생성 버튼 */}
-          {writeForm.photo && !writeForm.aiStories.length && (
-            <Button
-              onClick={generateStories}
-              disabled={generatingStories}
-              className="w-full"
-            >
-              {generatingStories ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  AI 스토리 생성 중...
-                </>
-              ) : (
-                'AI 스토리 생성하기'
-              )}
-            </Button>
+          {/* AI 스토리 생성 버튼 또는 진행 상황 */}
+          {writeForm.photo && (
+            generatingStories ? (
+              <AIGenerationProgress />
+            ) : (
+              <Button
+                onClick={generateAndSaveStory}
+                disabled={generatingStories}
+                className="w-full bg-blue-500 hover:bg-blue-600"
+              >
+                <ImageIcon className="w-4 h-4 mr-2" />
+                AI로 스토리 만들기
+              </Button>
+            )
           )}
-
-          {/* AI 스토리 선택 */}
-          {writeForm.aiStories.length > 0 && (
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">스토리 선택</label>
-              <div className="space-y-2">
-                {writeForm.aiStories.map((story) => (
-                  <button
-                    key={story.id}
-                    onClick={() => setWriteForm(prev => ({
-                      ...prev,
-                      selectedStoryId: story.id
-                    }))}
-                    className={cn(
-                      "w-full p-4 text-left rounded-lg transition-colors",
-                      writeForm.selectedStoryId === story.id
-                        ? "bg-blue-500/20 border-blue-500"
-                        : "bg-gray-800/50 hover:bg-gray-800/70"
-                    )}
-                  >
-                    {story.content}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 저장 버튼은 상단으로 이동 */}
         </div>
       </DialogContent>
     </Dialog>
@@ -604,11 +612,6 @@ export default function PhotoStoryPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="aspect-video relative">
-                <div className="absolute top-4 left-4 z-10">
-                  <div className="bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-white/90">
-                    투표
-                  </div>
-                </div>
                 <img 
                   src={selectedStory.photo} 
                   alt="Story" 
@@ -644,6 +647,17 @@ export default function PhotoStoryPage() {
     </Dialog>
 
     <CollapsibleFooter />
+
+      {/* AI 플로팅 버튼 */}
+      <Link
+        href="/ai-comfort"
+        className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+      >
+        <span className="text-white font-medium text-base">AI</span>
+        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          모두트리 AI와 대화하기
+        </span>
+      </Link>
     </>
   );
 }

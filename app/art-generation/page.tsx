@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { RadioGroup } from '@/components/ui/radio-group';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Loader2, ImageIcon } from 'lucide-react';
 const LOGO_URL = '/logos/m1.png';
 
@@ -65,6 +66,44 @@ const COLOR_MOODS = [
   { id: 'intense', label: '강렬한 색조', description: '빨간색/주황색 계열' },
   { id: 'bw', label: '흑백', description: '모노톤의 깊이' }
 ];
+
+const resizeImage = async (file: File): Promise<Blob> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // 최대 크기 제한 (1024px)
+        const maxSize = 1024;
+        if (width > height && width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // JPEG 형식으로 변환하고 품질을 80%로 설정
+        canvas.toBlob(
+          (blob) => resolve(blob!),
+          'image/jpeg',
+          0.8
+        );
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function ArtGenerationPage() {
   const { user, loading } = useAuth() as { user: User | null, loading: boolean };
@@ -339,22 +378,31 @@ export default function ArtGenerationPage() {
                 <input
                   type="file"
                   accept="image/png, image/jpeg, image/jpg"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      if (file.size > 10 * 1024 * 1024) {
-                        alert('파일 크기는 10MB 이하여야 합니다.');
-                        return;
+                      try {
+                        let processedFile = file;
+                        
+                        // 이미지 크기가 10MB를 초과하면 리사이징
+                        if (file.size > 10 * 1024 * 1024) {
+                          const resizedBlob = await resizeImage(file);
+                          processedFile = new File([resizedBlob], file.name, { type: 'image/jpeg' });
+                        }
+
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64String = reader.result as string;
+                          setResult({ 
+                            imageUrl: URL.createObjectURL(processedFile),
+                            base64Data: base64String
+                          });
+                        };
+                        reader.readAsDataURL(processedFile);
+                      } catch (error) {
+                        console.error('이미지 처리 중 오류:', error);
+                        alert('이미지 처리 중 오류가 발생했습니다. 다른 이미지를 시도해주세요.');
                       }
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        const base64String = reader.result as string;
-                        setResult({ 
-                          imageUrl: URL.createObjectURL(file),
-                          base64Data: base64String
-                        });
-                      };
-                      reader.readAsDataURL(file);
                     }
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer z-10"
@@ -585,6 +633,17 @@ export default function ArtGenerationPage() {
         </div>
       </main>
       <CollapsibleFooter />
+      
+      {/* AI 플로팅 버튼 */}
+      <Link
+        href="/ai-comfort"
+        className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+      >
+        <span className="text-white font-medium text-base">AI</span>
+        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          모두트리 AI와 대화하기
+        </span>
+      </Link>
     </>
   );
 }

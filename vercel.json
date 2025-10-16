@@ -1,15 +1,6 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "nodeVersion": "20.x"
-      }
-    }
-  ],
-  "env": {
-    "NODE_OPTIONS": "--openssl-legacy-provider"
-  }
-} 
+  "crons": [{
+    "path": "/api/ai-trend/cron",
+    "schedule": "0 15 * * *"
+  }]
+}

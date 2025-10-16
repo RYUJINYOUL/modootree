@@ -6,98 +6,70 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // 이미지 파일 검증
-    function isImageFile() {
-      return request.resource.contentType.matches('image/.*');
-    }
-
-    // 파일 크기 검증 (10MB)
-    function isValidFileSize() {
-      return request.resource.size <= 10 * 1024 * 1024;
-    }
-
-    // 사용자 권한 확인
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // 허용된 사용자 확인 함수
-    function isAllowedUser(userId) {
+    function isImageFile() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function hasPermission(userId) {
       return isAuthenticated() && (
-        request.auth.uid == userId ||  // 페이지 소유자
-        // 허용된 사용자 확인
+        isOwner(userId) ||
         exists(/databases/$(database)/documents/users/$(userId)/settings/permissions) &&
         get(/databases/$(database)/documents/users/$(userId)/settings/permissions).data.allowedUsers.hasAny([{'email': request.auth.token.email}])
       );
     }
 
-    // 업로드 기본 폴더 (Gallery3, 링크 이미지 등)
-    match /uploads/{type}/{fileName} {
-      allow read: if true;
-      allow write: if isAuthenticated() && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated();
+    // 정적 리소스 규칙 수정 (대소문자 모두 허용, 삭제 권한 추가)
+    match /Image/{allPaths=**} {
+      allow read, delete: if true;
+    }
+    match /image/{allPaths=**} {
+      allow read, delete: if true;
     }
 
-    // 메모 이미지
-    match /memos/{userId}/{fileName} {
+    // 사용자별 데이터
+    match /{userId}/{category}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && isOwner(userId) && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated() && isOwner(userId);
+      allow write: if hasPermission(userId) && isImageFile();
     }
 
-    // 좋아요/공감 이미지
+    // 공유 데이터 (예: 공감 한 조각)
     match /likes/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && isOwner(userId) && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId) && isImageFile();
     }
 
     // 다이어리 이미지
     match /diary/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isAllowedUser(userId) && isImageFile() && isValidFileSize();
-      allow delete: if isAllowedUser(userId);
+      allow write: if hasPermission(userId) && isImageFile();
     }
 
-    // 캘린더 이미지
-    match /calendar/{userId}/{fileName} {
+    // 게시판 이미지
+    match /board/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isAllowedUser(userId) && isImageFile() && isValidFileSize();
-      allow delete: if isAllowedUser(userId);
+      allow write: if hasPermission(userId) && isImageFile();
     }
 
-    // 투표 이미지
-    match /votes/{userId}/{fileName} {
+    // AI 아트워크
+    match /artifacts/{appId}/users/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && isOwner(userId) && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId) && isImageFile();
     }
 
-    // 배경 이미지 (개인)
-    match /backgrounds/{userId}/{fileName} {
+    // 포토 스토리 이미지
+    match /photo-stories/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isAuthenticated() && isOwner(userId) && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated() && isOwner(userId);
+      allow write, delete: if isAuthenticated() && isOwner(userId);
     }
 
-    // 배경 이미지 (공유)
-    match /backgrounds/{fileName} {
-      allow read: if true;
-      allow write: if isAuthenticated() && isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated();
-    }
-
-    // AI 아트워크 이미지
-    match /artworks/{fileName} {
-      allow read: if true;
-      allow write: if isImageFile() && isValidFileSize();
-      allow delete: if isAuthenticated();
-    }
-
-    // 나머지 모든 파일에 대한 기본 규칙
+    // 기본 규칙 (Firestore와 동일)
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isImageFile() && isValidFileSize();
+      allow write: if isAuthenticated() && isImageFile();
     }
   }
 }

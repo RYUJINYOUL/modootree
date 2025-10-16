@@ -20,10 +20,22 @@ import Image from 'next/image';
 import { X, Bell, Menu, ArrowRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import MyInfoDrawer from '@/components/ui/MyInfoDrawer';
+import TrendSection, { TrendDay } from '@/components/trend/TrendSection';
 import { useCallback } from 'react';
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { incrementVisitCount } from '@/lib/utils/visit-counter';
+
+interface TrendData {
+  date: string;
+  trends: Array<{
+    title: string;
+    summary: string;
+    source: string;
+    url: string;
+    category: string;
+  }>;
+}
 
 const ParticlesComponent = () => {
   const particlesInit = useCallback(async (engine: any) => {
@@ -190,7 +202,7 @@ export default function UserPublicPage() {
   const [isMyInfoOpen, setIsMyInfoOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [trendReport, setTrendReport] = useState<string | null>(null);
+  const [trendReport, setTrendReport] = useState<TrendDay[] | null>(null);
   const [isLoadingTrend, setIsLoadingTrend] = useState(false);
 
   // 알림 개수 초기화 함수
@@ -241,32 +253,30 @@ export default function UserPublicPage() {
 
       setIsLoadingTrend(true);
       try {
-        const response = await fetch('/api/ai-trend', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            token: testToken,
-          }),
-        });
+        const response = await fetch('/api/ai-trend');
 
         console.log('API 응답 상태:', response.status);
         const data = await response.json();
         console.log('API 응답 데이터:', data);
 
         console.log('받은 데이터:', data);
-        if (data.success && data.reportText) {
-          console.log('트렌드 데이터 성공:', data.reportText.substring(0, 100) + '...');
-          setTrendReport(data.reportText);
+        if (data.success && data.data) {
+          // 각 날짜별 데이터를 카테고리별로 구조화
+          const structuredData = data.data.map((dayData: TrendData) => ({
+            date: dayData.date,
+            trends: dayData.trends
+          }));
+
+          console.log('구조화된 트렌드 데이터:', structuredData);
+          setTrendReport(structuredData);
         } else if (data.success) {
-          console.error('응답은 성공이지만 reportText가 없음:', data);
-          setTrendReport('트렌드 데이터를 분석하는 중입니다...');
+          console.error('응답은 성공이지만 trends가 없음:', data);
+          setTrendReport(null);
         } else {
           console.error('트렌드 데이터 가져오기 실패:', {
             success: data.success,
             error: data.error,
-            hasReportText: !!data.reportText
+            hasTrends: !!data.data?.trends
           });
           setTrendReport(null);
         }
@@ -683,71 +693,7 @@ export default function UserPublicPage() {
                   </div>
 
                   {/* AI 트렌드 리포트 섹션 */}
-                  <div>
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-white/70 text-lg font-medium">AI 트렌드 리포트</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.03] text-white/60">#실시간</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.03] text-white/60">#AI분석</span>
-                      </div>
-                    </div>
-                    <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-6 border border-white/10">
-                      {isLoadingTrend ? (
-                        <div className="animate-pulse space-y-4">
-                          <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                          <div className="h-4 bg-white/10 rounded w-1/2"></div>
-                          <div className="h-4 bg-white/10 rounded w-5/6"></div>
-                          <div className="h-4 bg-white/10 rounded w-2/3"></div>
-                        </div>
-                      ) : trendReport ? (
-                        <div className="space-y-6">
-                          <ReactMarkdown
-                            components={{
-                              a: ({ node, ...props }) => (
-                                <a
-                                  {...props}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsMenuOpen(false);
-                                  }}
-                                  className="text-white/60 hover:text-white/80 hover:underline"
-                                />
-                              ),
-                              h3: ({ node, ...props }) => {
-                                return (
-                                  <div className="bg-white/[0.03] rounded-lg p-6 space-y-4">
-                                    <h3 {...props} className="text-base font-medium text-white/70" />
-                                  </div>
-                                );
-                              },
-                              ul: ({ node, ...props }) => (
-                                <div className="-mt-6 px-6 pb-2">
-                                  <ul {...props} className="space-y-3" />
-                                </div>
-                              ),
-                              li: ({ node, ...props }) => {
-                                const content = props.children?.toString() || '';
-                                if (content.startsWith('**내용:**')) {
-                                  return <li {...props} className="text-sm text-white/60" />;
-                                } else if (content.startsWith('**키워드:**')) {
-                                  return <li {...props} className="text-sm text-white/60" />;
-                                } else if (content.startsWith('**링크:**')) {
-                                  return <li {...props} className="text-sm text-white/60" />;
-                                }
-                                return <li {...props} />;
-                              }
-                            }}
-                          >
-                            {trendReport}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
-                        <div className="text-white/50 text-sm">트렌드 데이터를 불러오는 중 오류가 발생했습니다.</div>
-                      )}
-                    </div>
-                  </div>
+                  <TrendSection data={trendReport} isLoading={isLoadingTrend} />
                 </div>
               </div>
             </div>

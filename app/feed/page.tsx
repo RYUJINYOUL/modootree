@@ -407,15 +407,15 @@ export default function FeedPage() {
                           투표
                         </div>
                       </div>
-                    ) : item.images?.[0] ? (
-                      // 이미지가 있는 경우
+                    ) : (
+                      // 이미지가 있는 경우 또는 기본 이미지
                       <Image
-                        src={item.images[0]}
+                        src={item.images?.[0] || '/music/jb.png'}
                         alt="썸네일"
                         fill
                         className="object-cover"
                       />
-                    ) : null}
+                    )}
                   </div>
                   
                   {/* 콘텐츠 영역 */}

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, orderBy, getDocs, where, doc, getDoc, updateDoc, setDoc, increment, arrayUnion } from 'firebase/firestore';
 import { Loader2, Plus, Calendar, Activity, Heart } from 'lucide-react';
+import Link from 'next/link';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -323,12 +323,10 @@ export default function HealthListPage() {
                     <div className="grid grid-cols-4 gap-1">
                       {record.meals.breakfast.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <Image
+                          <img
                             src={record.meals.breakfast.imageUrl}
                             alt="아침 식사"
-                            fill
-                            className="object-cover"
-                            unoptimized
+                            className="object-cover w-full h-full"
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             아침
@@ -337,12 +335,10 @@ export default function HealthListPage() {
                       )}
                       {record.meals.lunch.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <Image
+                          <img
                             src={record.meals.lunch.imageUrl}
                             alt="점심 식사"
-                            fill
-                            className="object-cover"
-                            unoptimized
+                            className="object-cover w-full h-full"
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             점심
@@ -351,12 +347,10 @@ export default function HealthListPage() {
                       )}
                       {record.meals.dinner.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <Image
+                          <img
                             src={record.meals.dinner.imageUrl}
                             alt="저녁 식사"
-                            fill
-                            className="object-cover"
-                            unoptimized
+                            className="object-cover w-full h-full"
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             저녁
@@ -365,12 +359,10 @@ export default function HealthListPage() {
                       )}
                       {record.exercise.imageUrl && (
                         <div className="relative aspect-square rounded-lg overflow-hidden bg-blue-950/30">
-                          <Image
+                          <img
                             src={record.exercise.imageUrl}
                             alt="운동"
-                            fill
-                            className="object-cover"
-                            unoptimized
+                            className="object-cover w-full h-full"
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-xs text-white py-1 px-2">
                             운동
@@ -408,6 +400,16 @@ export default function HealthListPage() {
           )}
         </div>
       </main>
+      {/* AI 플로팅 버튼 */}
+      <Link
+        href="/ai-comfort"
+        className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+      >
+        <span className="text-white font-medium text-base">AI</span>
+        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          모두트리 AI와 대화하기
+        </span>
+      </Link>
     </div>
   );
 }

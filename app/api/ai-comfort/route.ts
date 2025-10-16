@@ -55,6 +55,41 @@ const AgentSchema: Schema = {
 
 const systemInstruction = `당신은 모두트리의 AI 상담사입니다. 당신의 주요 역할은 사용자와 친근하고 공감적인 대화를 나누는 것입니다.
 
+[중요] 모두트리 서비스 소개:
+
+모두트리는 다양한 AI 기반 서비스를 제공하는 플랫폼입니다:
+
+1. 사진예술작품:
+- 사진을 업로드하고 스타일과 색채를 선택하면 사진을 예술 작품으로 변환하는 서비스입니다.
+- 당신만의 독특한 예술 작품을 손쉽게 만들 수 있습니다.
+
+2. AI건강기록:
+- 하루의 식사와 운동을 기록하면 AI가 당신의 건강 습관을 분석하고 통찰해 주는 서비스입니다.
+- 개인 맞춤형 건강 조언과 장기적인 건강 패턴을 확인할 수 있습니다.
+
+3. AI사진투표:
+- 사진을 업로드하면 AI가 사진을 분석하여 재미있는 투표 주제를 만들어 주는 서비스입니다.
+- 사진 속 이야기를 다양한 관점에서 재미있게 해석하고 공유할 수 있습니다.
+
+4. AI사연투표:
+- 익명으로 사연을 작성하면 AI가 내용을 분석하여 흥미로운 투표 주제를 만들어 주는 서비스입니다.
+- 여러 사람들과 함께 재미있는 투표에 참여할 수 있습니다.
+
+5. 공감한조각:
+- 익명으로 일기를 작성하면 AI가 감정을 분석하여 맞춤형 조언을 제공합니다.
+- 많은 사람들의 공감과 응원을 받을 수 있는 따뜻한 공간입니다.
+
+[중요] 자주 묻는 질문:
+
+Q: "사이트(페이지)는 어떻게 만들어야 돼?"
+A: "하단 메뉴 내 사이트 버튼을 누르고 순서대로 진행하면 됩니다. 버튼 두번만 누르면 자동 생성 되요."
+
+[중요] JSON 응답 규칙:
+1. 이모지나 특수 문자를 사용하지 마세요
+2. 줄바꿈을 사용하지 마세요
+3. 응답은 반드시 단일 JSON 객체여야 합니다
+4. 마크다운이나 코드 블록을 사용하지 마세요
+
 [중요] 메모/일기 작성 및 저장 규칙:
 
 1. 메모 작성 요청 키워드: "메모 작성", "메모 써줘"
@@ -75,11 +110,12 @@ const systemInstruction = `당신은 모두트리의 AI 상담사입니다. 당�
 - 일기는 "action": "SAVE_DIARY" 사용
 - 절대로 "action": "create" 사용 금지
 - 절대로 "type" 필드 사용 금지
+- userResponse에는 이모지나 특수 문자를 사용하지 마세요
 
 일반 대화 요청인 경우:
 - 친근하고 공감적인 일반 텍스트로 응답`;
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { message, token, conversationHistory } = await req.json();
 
@@ -135,10 +171,10 @@ export async function POST(req: NextRequest) {
                           'NONE';
       
       let finalGenerationConfig: GenerationConfig = {
-        maxOutputTokens: 2048,
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
+          maxOutputTokens: 2048,
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
         candidateCount: 1,
       };
       
@@ -211,8 +247,14 @@ export async function POST(req: NextRequest) {
       
       // 모델 설정 (업데이트된 GenerationConfig 사용)
       const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash',
-        generationConfig: finalGenerationConfig,
+        model: 'gemini-2.5-pro',
+        generationConfig: {
+          ...finalGenerationConfig,
+          temperature: 0.1,  // 더 결정적인 응답을 위해 온도 낮춤
+          maxOutputTokens: 4096,  // 토큰 수 증가
+          topP: 0.1,  // 더 집중된 응답을 위해 낮춤
+          topK: 1,  // 가장 가능성 높은 토큰만 선택
+        },
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -249,17 +291,49 @@ export async function POST(req: NextRequest) {
               // 응답이 JSON이므로 파싱
               const responseTextRaw = response.text();
               console.log('AI 응답 텍스트 (Raw):', responseTextRaw);
-              // 혹시 모를 JSON 외부의 텍스트를 제거하고 순수 JSON만 파싱
-              const jsonMatch = responseTextRaw.match(/\{[\s\S]*\}/);
-              if (!jsonMatch) {
-                throw new Error("AI 응답에서 유효한 JSON 객체를 찾을 수 없습니다.");
+              
+              if (!responseTextRaw.trim()) {
+                throw new Error("AI 응답이 비어있습니다.");
               }
-              responseData = JSON.parse(jsonMatch[0]);
+
+              // 응답 텍스트 전처리
+              let jsonText = responseTextRaw
+                .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}]/gu, '') // 이모지 제거
+                .replace(/[^\x20-\x7E\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/g, '') // 한글과 기본 ASCII만 유지
+                .replace(/```(?:json)?\n?([\s\S]*?)\n?```/g, '$1') // 코드 블록 제거
+                .trim();
+
+              // JSON 객체 찾기
+              const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) {
+                console.log('JSON 형식이 아닌 응답 받음. 일반 대화로 전환');
+                return NextResponse.json({
+                  success: true,
+                  response: '죄송해요, 말씀하신 내용을 정확히 이해하지 못했어요. 조금 더 자세히 설명해주시겠어요?',
+                  remainingChats
+                });
+              }
+
+              try {
+                responseData = JSON.parse(jsonMatch[0]);
+              } catch (parseError) {
+                console.log('JSON 파싱 실패. 일반 대화로 전환');
+                return NextResponse.json({
+                  success: true,
+                  response: '죄송해요, 요청하신 내용이 조금 복잡한 것 같아요. 다른 방식으로 설명해주시겠어요?',
+                  remainingChats
+                });
+              }
               console.log('파싱된 JSON:', responseData);
 
-              // 필요한 필드가 없거나 배열이 아니면 오류
+              // 메모 저장 요청인데 유효한 메모 항목이 없는 경우
               if (responseData.action === 'SAVE_MEMO' && (!Array.isArray(responseData.memoItems) || responseData.memoItems.length === 0)) {
-                  throw new Error("SAVE_MEMO 요청에 유효한 'memoItems' 배열이 없습니다.");
+                console.log('메모 항목이 없음. 일반 대화로 전환');
+                return NextResponse.json({
+                  success: true,
+                  response: '메모로 저장하고 싶으신 내용을 말씀해 주시겠어요? 예를 들어 "오후 3시 회의" 처럼 구체적으로 말씀해 주시면 도움이 될 것 같아요.',
+                  remainingChats
+                });
               }
             } catch (jsonError) {
               console.error('JSON 파싱/검증 실패. 원본 응답:', response.text());
@@ -331,8 +405,9 @@ export async function POST(req: NextRequest) {
           retryCount++;
           
           if (retryCount === maxRetries) {
-            console.error('최대 재시도 횟수 도달');
-            throw new Error('죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            console.log('최대 재시도 횟수 도달. 일반 대화로 전환');
+            responseText = '죄송해요, 지금은 제가 말씀하신 내용을 제대로 처리하기 어려운 것 같아요. 잠시 후에 다시 말씀해 주시거나, 다른 방식으로 설명해 주시면 감사하겠습니다.';
+            break;
           }
           
           const waitTime = Math.min(2000 * Math.pow(2, retryCount), 8000);

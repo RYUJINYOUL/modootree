@@ -72,7 +72,7 @@ export default function LoginOutButton() {
                 </div>
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] bg-zinc-900 border-r border-zinc-800 overflow-y-auto flex flex-col h-full">
+            <SheetContent side="left" className="w-[300px] bg-zinc-900 border-r border-zinc-800 overflow-y-auto flex flex-col h-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-zinc-950">
               <SheetHeader className="pb-4 border-b border-white/10 flex-shrink-0">
                 <div className="flex flex-col items-center text-center">
                   <Image
@@ -89,7 +89,7 @@ export default function LoginOutButton() {
               <nav className="flex-1 mt-2 space-y-3 overflow-y-auto py-2">
                 {/* 공지사항 */}
                 <div className="mx-4 py-3 px-4 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-lg text-center">
-                  <p className="text-white/90 text-sm">10월 15일 정식 오픈 예정</p>
+                  <p className="text-white/90 text-sm">10월 30일 정식 오픈 예정</p>
                   <p className="text-white/70 text-xs mt-0.5">일부 오류가 있을 수 있습니다.</p>
                 </div>
 
@@ -126,9 +126,21 @@ export default function LoginOutButton() {
                   },
                   {
                     title: "공감 한 조각",
-                    description: "기쁨 슬픔 등의 내 감정 기록 은근 공감 받는 공유 익명 일기",
+                    description: "내 감정 기록 은근 공감 받는 공유 익명 일기",
                     icon: "/logos/ai6.png",
                     path: "/likes/all"
+                  },
+                  {
+                    title: "내 사이트 만들기",
+                    description: "모두트리의 작지만 의미 있는 한페이지 선물",
+                    icon: "/logos/m12.png",
+                    path: "/site"
+                  },
+                  {
+                    title: "열린 게시판",
+                    description: "모두트리의 열린 게시판과 1:1 채팅 문의",
+                    icon: "/logos/ai4.png",
+                    path: "/inquiry"
                   }
                 ].map((item) => (
                   <Link 
