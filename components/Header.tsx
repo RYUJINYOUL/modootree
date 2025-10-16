@@ -201,88 +201,19 @@ export default function Header() {
 
         {showDropdown && (
           <div className={`absolute ${isMobile ? 'left-0 right-0 mx-4' : 'left-0'} mt-2 w-48 bg-white/30 backdrop-blur-sm rounded-lg shadow-md py-1 text-sm text-white`}>
-            {/* 기본 메뉴 - 로그인 상태와 관계없이 항상 표시 */}
+            {/* 기본 메뉴 - 피드와 문의하기만 표시 */}
             <button
-              onClick={() => handleNavigation('/')}
+              onClick={() => handleNavigation('/feed')}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
             >
-              메인 페이지
+              피드
             </button>
             <button
-              onClick={() => handleNavigation('/likes/all')}
+              onClick={handleInquiry}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
             >
-              공감한조각
+              열린게시판
             </button>
-            <button
-              onClick={() => handleNavigation('/joy')}
-              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-            >
-              사진한조각
-            </button>
-            <button
-              onClick={() => handleNavigation('/modoo-ai')}
-              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-            >
-              사연한조각
-            </button>
-            <button
-              onClick={() => handleNavigation('/inquiry')}
-              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-            >
-              문의하기
-            </button>
-
-            {/* 로그인한 경우에만 표시되는 메뉴 */}
-            {user?.currentUser?.uid ? (
-              <>
-                {myUsername && (
-                  <>
-                    <div className="px-4 py-2 text-white/50 border-t border-white/10">내 사이트</div>
-                    <button
-                      onClick={() => handleNavigation(`/${myUsername}`)}
-                      className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-                    >
-                      {myUsername}
-                    </button>
-                  </>
-                )}
-                
-                {allowedSites.length > 0 && (
-                  <>
-                    <div className="px-4 py-2 text-white/50 border-t border-white/10">초대된 사이트</div>
-                    {allowedSites.map((site, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleNavigation(`/${site.username}`)}
-                        className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-                      >
-                        {site.username}
-                      </button>
-                    ))}
-                  </>
-                )}
-                
-                <div className="border-t border-white/10">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 text-red-400"
-                  >
-                    로그아웃
-                  </button>
-                </div>
-              </>
-            ) : (
-              // 로그아웃 상태일 때 보여줄 로그인 버튼
-              <div className="border-t border-white/10">
-                <button
-                  onClick={() => handleNavigation('/login')}
-                  className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200 text-blue-400"
-                >
-                  로그인
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
