@@ -617,6 +617,9 @@ export default function ArtGenerationPage() {
                             // 스타일과 색상 선택도 초기화
                             setStyle('');
                             setColorMood('');
+                            // input value 초기화
+                            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
                           }}
                           className="bg-black/30 hover:bg-black/50 w-full sm:w-auto"
                         >

@@ -12,6 +12,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   
   // AI 플로팅 버튼을 숨길 페이지 목록
   const hideAiButton = ['/ai-comfort'];
+
+  // 하단 탭을 숨길 페이지 목록 추가
+  const hideBottomTabs = ['/ai-chat-simple', '/ai-comfort']; // ai-comfort도 추가
   
   // 동적 경로 체크 (예: /[username])
   const pathParts = pathname.split('/').filter(Boolean);
@@ -19,13 +22,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     !hideAiButton.includes(pathname) && 
     !['feed', 'login', 'register', 'settings', 'admin'].includes(pathParts[0]);
 
+  const shouldHideBottomTabs = hideBottomTabs.includes(pathname);
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-1 pb-16">
         {children}
       </main>
-      <Footer />
-      <BottomTabs />
+      {!shouldHideBottomTabs && <Footer />}
+      {!shouldHideBottomTabs && <BottomTabs />}
 
       {/* 플로팅 채팅 버튼 */}
       {!hideAiButton.includes(pathname) && !isDynamicUserPage && (

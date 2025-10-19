@@ -11,7 +11,7 @@ import Particles from "react-tsparticles"; // Particles 임포트
 import { loadSlim } from "tsparticles-slim"; // loadSlim 임포트
 import LoginOutButton from '@/components/ui/LoginOutButton'; // LoginOutButton 임포트
 
-export default function Home() {
+export default function AIChatSimplePage() {
   const [inputMessage, setInputMessage] = useState('');
   const router = useRouter();
 
@@ -155,7 +155,7 @@ export default function Home() {
               { icon: "/logos/ai1.png", path: "/health" },
               { icon: "/logos/ai2.png", path: "/photo-story" },
               { icon: "/logos/ai3.png", path: "/modoo-ai" },
-              { icon: "/logos/m12.png", path: "/your-site-path" }, // '내 사이트'는 동적 경로이므로 임시 경로 설정
+              { icon: "/logos/m12.png", path: "/site" }, // '내 사이트'는 동적 경로이므로 임시 경로 설정
             ].map((item, index) => (
               <Link key={index} href={item.path || '#'}>
                 <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 transition-colors w-[50px] h-[50px] flex-shrink-0">

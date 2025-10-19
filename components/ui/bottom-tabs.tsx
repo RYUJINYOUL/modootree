@@ -76,6 +76,7 @@ export function BottomTabs() {
 
   // 에디터 페이지와 AI 채팅에서는 bottom tabs를 숨김
   const hiddenPaths = ['/editor/', '/ai-comfort'];
+  const exactHiddenPaths = ['/'];
   
   // 유저 사이트 체크를 위한 상태
   const [isUserSite, setIsUserSite] = useState(false);

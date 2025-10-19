@@ -1,7 +1,7 @@
 import { db } from './firebase-admin';
 import { Timestamp, Transaction, DocumentSnapshot, DocumentData, DocumentReference } from 'firebase-admin/firestore';
 
-const DAILY_CHAT_LIMIT = 100;
+const DAILY_CHAT_LIMIT = 70;
 
 export async function checkAndUpdateChatLimit(uid: string) {
   const userRef = db.collection('users').doc(uid);

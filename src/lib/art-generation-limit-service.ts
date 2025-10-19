@@ -7,7 +7,7 @@ interface ArtGenerationStats {
 }
 
 export async function checkAndUpdateArtGenerationLimit(uid: string): Promise<{ canGenerate: boolean; remainingGenerations: number }> {
-  const MAX_DAILY_GENERATIONS = 2;
+  const MAX_DAILY_GENERATIONS = 30;
   const docRef = db.collection('userArtGenerationStats').doc(uid);
   
   try {

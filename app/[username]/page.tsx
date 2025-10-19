@@ -743,7 +743,7 @@ export default function UserPublicPage() {
           >
             <span className="text-white font-medium text-base">AI</span>
             <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              모두트리 AI와 대화하기
+              AI 대화로 나의 오늘을 기록하세요
             </span>
           </Link>
 

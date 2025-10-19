@@ -142,7 +142,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     try {
       const { canChat, remainingChats } = await checkAndUpdateChatLimit(uid);
       if (!canChat) {
-        return NextResponse.json({ success: false, error: '일일 대화 한도(100회)를 초과했습니다. 내일 다시 시도해주세요.', remainingChats: 0 });
+        return NextResponse.json({ success: false, error: '일일 대화 한도(70회)를 초과했습니다. 내일 다시 시도해주세요.', remainingChats: 0 });
       }
 
       // ----------------------------------------------------
@@ -252,7 +252,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       
       // 모델 설정 (업데이트된 GenerationConfig 사용)
       const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           ...finalGenerationConfig,
           temperature: 0.1,  // 더 결정적인 응답을 위해 온도 낮춤

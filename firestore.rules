@@ -19,6 +19,24 @@ service cloud.firestore {
       allow write: if false;  // admin 문서는 콘솔에서만 수정 가능
     }
 
+    // articles 컬렉션에 대한 규칙
+    match /articles/{document} {
+      allow read: if true;  // 모든 사용자가 읽기 가능
+      allow create: if isAuthenticated(); // 로그인한 사용자만 생성 가능 (뉴스 제안)
+      allow update: if isAuthenticated() || ( // 로그인한 사용자만 업데이트 가능 또는 특정 조건 하에 비로그인 사용자도 가능
+        !isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['view_count']) // 비로그인 시 view_count 필드만 업데이트 허용
+      );
+      allow delete: if false; // 뉴스 기사는 삭제 불가 (관리자만 가능)
+
+      // articles/{articleId}/comments 서브컬렉션에 대한 규칙
+      match /comments/{commentId} {
+        allow read: if true; // 모든 사용자가 댓글 읽기 가능
+        allow create: if isAuthenticated(); // 로그인한 사용자만 댓글 생성 가능
+        allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.authorId; // 작성자만 수정/삭제 가능
+      }
+    }
+
     // votes 컬렉션에 대한 규칙
     match /votes/{document} {
       allow read: if true;  // 모든 사용자가 읽기 가능
