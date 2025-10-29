@@ -69,7 +69,7 @@ export default function AllimpormentPage() {
 // 데이터 처리 로직 수정
   const handleSearch = async () => {
     if (!query.trim()) {
-      alert('검색어를 입력하세요.');
+      alert('유튜브에서 모두트리 검색');
       return;
     }
 
@@ -242,9 +242,9 @@ export default function AllimpormentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-900 py-20 px-10">
+    <main className="min-h-screen bg-gray-900 py-8 px-4 md:py-20 md:px-10">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-10 text-center">
+        <div className="mb-6 md:mb-10 text-center">
           <div className="flex justify-center mb-2">
             <Image
               src="/logos/logohole.png"
@@ -257,28 +257,28 @@ export default function AllimpormentPage() {
           <h1 className="text-2xl font-bold text-white">모두트리</h1>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row gap-2 mb-6">
           <input
             type="text"
-            placeholder="가을 듣기 좋은 노래 유튜브 영상 추천"
+            placeholder="검색어를 입력하세요"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 border border-gray-600 bg-gray-800 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+            className="flex-1 border border-gray-600 bg-gray-800 text-white p-3 md:p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 text-sm md:text-base"
             disabled={loading}
           />
 
           {loading ? (
             <button
               onClick={handleCancel}
-              className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
+              className="bg-red-600 text-white px-4 py-3 md:px-6 rounded-lg hover:bg-red-700 transition w-full sm:w-auto text-sm md:text-base"
             >
               취소
             </button>
           ) : (
             <button
               onClick={handleSearch}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+              className="bg-blue-600 text-white px-4 py-3 md:px-6 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 w-full sm:w-auto text-sm md:text-base"
               disabled={!query.trim()}
             >
               검색
@@ -317,10 +317,10 @@ export default function AllimpormentPage() {
         )}
 
         {(recommendations.length > 0 || summaryAnswer) && (
-          <div className="flex gap-4 mb-6 border-b border-gray-600">
+          <div className="flex gap-2 md:gap-4 mb-6 border-b border-gray-600 overflow-x-auto">
             <button
               onClick={() => setActiveTab('answer')}
-              className={`px-4 py-2 font-semibold transition ${
+              className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
                 activeTab === 'answer'
                   ? 'border-b-2 border-blue-500 text-blue-400'
                   : 'text-gray-400 hover:text-gray-200'
@@ -330,7 +330,7 @@ export default function AllimpormentPage() {
             </button>
             <button
               onClick={() => setActiveTab('sources')}
-              className={`px-4 py-2 font-semibold transition ${
+              className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
                 activeTab === 'sources'
                   ? 'border-b-2 border-blue-500 text-blue-400'
                   : 'text-gray-400 hover:text-gray-200'

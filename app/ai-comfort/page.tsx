@@ -3,9 +3,9 @@
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/firebase';
-import { Bot, Send, ArrowLeft } from 'lucide-react';
+import { Bot, Send, ArrowLeft, Search, User, Heart, MessageSquare } from 'lucide-react';
 import { SearchResultCard } from '@/components/chat/SearchResultCard';
-import { loadSlim } from "tsparticles-slim";
+import { loadFull } from "tsparticles";
 import Particles from "react-tsparticles";
 import { cn } from "@/lib/utils";
 import { saveChat, loadChat } from '@/lib/comfort-chat-service';
@@ -13,6 +13,7 @@ import { Timestamp } from 'firebase/firestore';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import type { ChatMessage, SearchResult } from '@/types/chat';
 
 function SearchParamsHandler({ onInitialMessage }: { onInitialMessage: (message: string) => void }) {
@@ -132,7 +133,7 @@ export default function AiComfortPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const particlesInit = useCallback(async (engine: any) => {
-    await loadSlim(engine);
+    await loadFull(engine);
   }, []);
 
   useEffect(() => {
@@ -170,20 +171,20 @@ export default function AiComfortPage() {
         className="fixed inset-0"
         init={particlesInit}
         options={{
-          fpsLimit: 60,
+          fpsLimit: 120,
           particles: {
             color: {
-              value: ["#ffffff", "#87CEEB"]
+              value: ["#ffffff", "#87CEEB", "#FFD700"]
             },
             links: {
               color: "#ffffff",
               distance: 150,
               enable: true,
               opacity: 0.02,
-              width: 1
+              width: 1,
             },
             collisions: {
-              enable: false
+              enable: false,
             },
             move: {
               direction: "none",
@@ -192,7 +193,7 @@ export default function AiComfortPage() {
                 default: "out"
               },
               random: true,
-              speed: { min: 0.1, max: 0.3 },
+              speed: { min: 0.05, max: 0.1 },
               straight: false,
               attract: {
                 enable: true,
@@ -207,7 +208,7 @@ export default function AiComfortPage() {
                 enable: true,
                 area: 800
               },
-              value: 100
+              value: 80
             },
             opacity: {
               animation: {
@@ -217,27 +218,27 @@ export default function AiComfortPage() {
                 sync: false
               },
               random: true,
-              value: { min: 0.1, max: 0.3 }
+              value: { min: 0.1, max: 0.4 }
             },
             shape: {
               type: "circle"
             },
             size: {
-              value: { min: 1, max: 2 }
+              value: { min: 1, max: 3 }
             },
             twinkle: {
               lines: {
                 enable: true,
-                frequency: 0.005,
-                opacity: 0.2,
+                frequency: 0.001,
+                opacity: 0.1,
                 color: {
                   value: ["#ffffff", "#87CEEB"]
                 }
               },
               particles: {
                 enable: true,
-                frequency: 0.05,
-                opacity: 0.2
+                frequency: 0.02,
+                opacity: 0.3
               }
             }
           },
@@ -262,8 +263,8 @@ export default function AiComfortPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 bg-gray-800 border-gray-700 text-white">
-              <DropdownMenuItem onClick={() => router.push('/health/analyze')} className="cursor-pointer hover:bg-gray-700">건강 AI</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/modoo-ai/create')} className="cursor-pointer hover:bg-gray-700">사연 AI</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer hover:bg-gray-700">내 페이지</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/search')} className="cursor-pointer hover:bg-gray-700">통합검색</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -330,6 +331,56 @@ export default function AiComfortPage() {
                               </p>
                             ))}
                           </div>
+                          
+                          {/* 🆕 상황별 퀵 액세스 버튼들 - 텍스트 기반 매칭 */}
+                          {msg.role === 'ai' && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {/* 실시간 정보 관련 */}
+                              {msg.content.includes('통합검색') && (
+                                <Link 
+                                  href="/search" 
+                                  className="inline-flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 px-2.5 py-1.5 rounded-md border border-blue-600/30 transition text-xs font-medium"
+                                >
+                                  <Search className="w-3 h-3" />
+                                  통합검색
+                                </Link>
+                              )}
+                              
+                              {/* 메모/일기 관련 */}
+                              {(msg.content.includes('메모') || msg.content.includes('일기') || msg.content.includes('내 페이지')) && (
+                                <Link 
+                                  href="/profile" 
+                                  className="inline-flex items-center gap-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-300 px-2.5 py-1.5 rounded-md border border-green-600/30 transition text-xs font-medium"
+                                >
+                                  <User className="w-3 h-3" />
+                                  내 페이지
+                                </Link>
+                              )}
+                              
+                              {/* 건강 관련 */}
+                              {msg.content.includes('건강') && (
+                                <Link 
+                                  href="/health" 
+                                  className="inline-flex items-center gap-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-2.5 py-1.5 rounded-md border border-red-600/30 transition text-xs font-medium"
+                                >
+                                  <Heart className="w-3 h-3" />
+                                  건강 기록
+                                </Link>
+                              )}
+                              
+                              {/* 사연 관련 */}
+                              {msg.content.includes('사연') && (
+                                <Link 
+                                  href="/modoo-ai" 
+                                  className="inline-flex items-center gap-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-2.5 py-1.5 rounded-md border border-purple-600/30 transition text-xs font-medium"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                  사연 AI
+                                </Link>
+                              )}
+                            </div>
+                          )}
+                          
                           {'searchResults' in msg && msg.searchResults?.length > 0 && (
                             <div className="space-y-2 mt-4 border-t border-white/10 pt-4">
                               <div className="text-sm text-gray-400">관련 정보:</div>

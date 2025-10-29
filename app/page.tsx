@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,6 @@ import LoginOutButton from '@/components/ui/LoginOutButton'; // LoginOutButton �
 export default function Home() {
   const [inputMessage, setInputMessage] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -28,57 +27,14 @@ export default function Home() {
   const [currentX, setCurrentX] = useState(0);
   const router = useRouter();
 
-  const rotatingTexts = [
-    "공감 친구, 모두트리 AI",
-    "모두트리, 특별한 하루 기록"
-  ];
-
-  // 3초마다 텍스트 변경
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTextIndex((prevIndex) => 
-        prevIndex === rotatingTexts.length - 1 ? 0 : prevIndex + 1
-      );
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const suggestedQueries = [
-    { text: "모두트리 전체 서비스를 설명해줘" },
-    { text: "오늘 대화 내용으로 사연 투표를 만들어 줄수 있어?" },
+    { text: "모두트리 내 페이지를 설명해줘" },
+    { text: "오늘 대화 내용으로 일기 메모 건강 분석 가능해?" },
     { text: "모투트리 문의 게시판은 어디에 있는거야?" }
   ];
 
-  // 샘플 투표 데이터 (실제로는 API에서 가져와야 함)
-  const sampleVotes = [
-    // 뉴스투표 2개
-    { id: 1, type: 'news', title: '경제 정책 변화에 대한 의견', category: '경제' },
-    { id: 2, type: 'news', title: '환경 보호 정책 효과성', category: '환경' },
-    // 공감투표 2개  
-    { id: 3, type: 'empathy', title: '직장에서의 스트레스 해결법', category: '고민' },
-    { id: 4, type: 'empathy', title: '새로운 취미 시작하기', category: '행복' },
-    // 사진투표 2개
-    { id: 5, type: 'photo', title: '가을 풍경 중 가장 아름다운 곳', category: '자연' },
-    { id: 6, type: 'photo', title: '맛있어 보이는 음식 선택', category: '음식' }
-  ];
 
-  const getItemsPerSlide = () => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-      return 3; // PC: 3개
-    }
-    return 2; // 모바일: 2개
-  };
-
-  const nextSlide = () => {
-    const itemsPerSlide = getItemsPerSlide();
-    setCarouselIndex((prev) => (prev + 1) % Math.ceil(sampleVotes.length / itemsPerSlide));
-  };
-
-  const prevSlide = () => {
-    const itemsPerSlide = getItemsPerSlide();
-    setCarouselIndex((prev) => (prev - 1 + Math.ceil(sampleVotes.length / itemsPerSlide)) % Math.ceil(sampleVotes.length / itemsPerSlide));
-  };
 
   // 드래그/스와이프 핸들러
   const handleStart = (clientX: number) => {
@@ -92,55 +48,6 @@ export default function Home() {
     setCurrentX(clientX);
   };
 
-  const handleEnd = () => {
-    if (!isDragging) return;
-    
-    const diff = startX - currentX;
-    const threshold = 50; // 최소 드래그 거리
-    
-    if (Math.abs(diff) > threshold) {
-      if (diff > 0) {
-        nextSlide(); // 오른쪽으로 드래그 = 다음 슬라이드
-      } else {
-        prevSlide(); // 왼쪽으로 드래그 = 이전 슬라이드
-      }
-    }
-    
-    setIsDragging(false);
-    setStartX(0);
-    setCurrentX(0);
-  };
-
-  // 마우스 이벤트
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    handleStart(e.clientX);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    handleMove(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    handleEnd();
-  };
-
-  const handleMouseLeave = () => {
-    handleEnd();
-  };
-
-  // 터치 이벤트
-  const handleTouchStart = (e: React.TouchEvent) => {
-    handleStart(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    handleMove(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    handleEnd();
-  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -179,7 +86,7 @@ export default function Home() {
               color: "#ffffff",
               distance: 150,
               enable: true,
-              opacity: 0.05,
+              opacity: 0.02,
               width: 1,
             },
             collisions: {
@@ -258,31 +165,24 @@ export default function Home() {
       </div>
 
       {/* 로고 이미지 */}
-      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[15vh]"> {/* 상단에서 30% 위치로 조정 */}
+      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[20vh]"> {/* 상단에서 30% 위치로 조정 */}
         <Link href="/profile" className="transform hover:scale-105 transition-transform">
           <img src="/logos/logohole.png" alt="Logo" className="w-32 h-32 object-contain" />
         </Link>
 
-        {/* 통합검색 링크 - 로고와 딱 붙어있게 */}
-        <div className="text-center mb-15 -mt-4">
-          <p className="text-gray-500 text-xs">
-            검색 페이지는{' '}
-            <Link href="/search" className="text-blue-500 hover:text-blue-400 underline hover:opacity-90">
-              클릭
-            </Link>
-            {' '}, 공감 채팅 아래 입력창
-          </p>
-        </div>
 
         <div className="text-center mb-1">
-          <p className="text-2xl text-gray-400 transition-opacity duration-500" style={{ opacity: 1 }}>{rotatingTexts[currentTextIndex]}</p>
+          <p className="text-2xl text-gray-400 md:block hidden">모두트리 AI로 기록 되는 특별한 나의 페이지</p>
+          <div className="md:hidden block">
+            <p className="text-[20px] text-gray-300">모두트리 AI로 기록되는 나의 페이지</p>
+          </div>
         </div>
 
         {/* 입력창과 버튼 영역 */}
         <div className="flex items-center gap-2 w-full px-4 md:max-w-3xl mx-auto mt-4">
           <div className="flex-1 relative">
             <Textarea
-              placeholder="안녕하세요 저는 공감상담 전용 AI입니다, 통합검색 아래 사람 모양 아이콘 클릭하세요"
+              placeholder="안녕하세요 모두트리 AI입니다, 요즘 어떠신가요?"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onFocus={() => setIsInputFocused(true)}
@@ -342,81 +242,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 투표 미리보기 캐로셀 - 데스크톱에서만 표시 */}
-        <div className="hidden md:block w-full max-w-3xl mx-auto mt-64 px-2 mb-8">
-          <div className="relative">
-            {/* 캐로셀 컨테이너 */}
-            <div 
-              className="overflow-hidden rounded-lg cursor-grab active:cursor-grabbing select-none"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseLeave}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <div 
-                className={`flex transition-transform duration-300 ease-in-out ${isDragging ? 'transition-none' : ''}`}
-                style={{ 
-                  transform: `translateX(-${carouselIndex * 100}%)`,
-                  userSelect: 'none'
-                }}
-              >
-                {Array.from({ length: Math.ceil(sampleVotes.length / getItemsPerSlide()) }, (_, slideIndex) => (
-                  <div key={slideIndex} className={`w-full flex-shrink-0 grid gap-4 px-2 ${
-                    getItemsPerSlide() === 3 ? 'grid-cols-3' : 'grid-cols-2'
-                  }`}>
-                    {sampleVotes.slice(slideIndex * getItemsPerSlide(), slideIndex * getItemsPerSlide() + getItemsPerSlide()).map((vote) => (
-                      <Link 
-                        key={vote.id} 
-                        href={vote.type === 'news' ? '/news-vote' : vote.type === 'empathy' ? '/modoo-vote' : '/photo-story'}
-                        className="block"
-                        onClick={(e) => {
-                          // 드래그 중이면 링크 클릭 방지
-                          if (isDragging || Math.abs(startX - currentX) > 10) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        <div className="bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-4 transition-colors border border-gray-700/50 h-full pointer-events-auto">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              vote.type === 'news' ? 'bg-blue-500/20 text-blue-300' :
-                              vote.type === 'empathy' ? 'bg-green-500/20 text-green-300' :
-                              'bg-purple-500/20 text-purple-300'
-                            }`}>
-                              {vote.type === 'news' ? '뉴스' : vote.type === 'empathy' ? '공감' : '사진'}
-                            </span>
-                            <span className="text-xs text-gray-400">{vote.category}</span>
-                          </div>
-                          <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
-                            {vote.title}
-                          </h4>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 인디케이터 */}
-            {Math.ceil(sampleVotes.length / getItemsPerSlide()) > 1 && (
-              <div className="flex justify-center mt-6 gap-2">
-                {Array.from({ length: Math.ceil(sampleVotes.length / getItemsPerSlide()) }, (_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCarouselIndex(index)}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      index === carouselIndex ? 'bg-blue-500' : 'bg-gray-600'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
 
       </div>
 

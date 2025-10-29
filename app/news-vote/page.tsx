@@ -190,9 +190,8 @@ export default function NewsVotePage({ isActive = true }: { isActive?: boolean }
           <div className="fixed top-0 left-0 right-0 z-20 w-full">
             <LoginOutButton />
           </div>
-          <div className="container mx-auto px-4 py-6">
-            <h1 className="text-3xl font-bold mb-2 text-center">세상의 모든 투표</h1>
-            <p className="text-gray-400 text-center mb-6">가입 없이도 투표는 가능, 투표 제안은 회원가입 필수</p>
+          <div className="container mx-auto px-4 py-2">
+           
 
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full flex flex-col items-center">
               <TabsList className="grid w-full max-w-lg grid-cols-3 bg-gray-700/50 mb-6 p-1 rounded-lg shadow-md">

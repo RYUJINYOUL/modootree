@@ -72,3 +72,4 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
 
 
 
+

@@ -216,11 +216,31 @@ export default function ProfilePage() {
 
 
   const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return '오늘 아침 기분은 어떠세요?';
-    if (hour < 18) return '조금 피곤하지 않으세요?';
-    return '오늘 하루는 어떻게 보냈어요?';
-  };
+    // currentTime은 이미 컴포넌트 상태에서 관리되고 있으므로, 그 값을 사용합니다.
+    const hour = currentTime.getHours(); 
+
+    if (hour >= 0 && hour <= 5) {
+        // 심야: 00:00 - 05:59
+        return '잠 못 이루는 새벽이세요?';
+    } else if (hour >= 6 && hour <= 9) {
+        // 아침 시작: 06:00 - 09:59
+        return '어제 잠은 잘 주무셨나요?';
+    } else if (hour >= 10 && hour <= 11) {
+        // 오전 활동: 10:00 - 11:59
+        return '오늘 아침 식사는 하셨나요?';
+    } else if (hour >= 12 && hour <= 13) {
+        // 점심: 12:00 - 13:59
+        return '오늘 맛있는 점심식사 하셨나요?';
+    } else if (hour >= 14 && hour <= 17) {
+        // 오후 활동/피곤: 14:00 - 17:59
+        return '오늘 저녁 약속은 있으세요?';
+    } else if (hour >= 18 && hour <= 20) {
+        // 저녁: 18:00 - 20:59
+        return '오늘 저녁 식사 후 산책 또는 운동하셨나요?';
+    } else { // 21:00 - 23:59 (밤/취침 전)
+        return '오늘은 어떠셨나요?';
+    }
+};
 
   // 메모 상태별 카운트 함수들
   const getTodayMemoCount = () => {
@@ -232,7 +252,9 @@ export default function ProfilePage() {
   };
 
   const getTodoMemoCount = () => {
-    return memos.filter(memo => memo.status === 'todo').length;
+    const today = new Date();
+    const todayStr = today.toDateString();
+    return memos.filter(memo => memo.date.toDateString() === todayStr).length;
   };
 
   return (
@@ -249,7 +271,7 @@ export default function ProfilePage() {
                     alt="모두트리" 
                     className="w-8 h-8"
                   />
-                  <h1 className="text-2xl font-bold text-white">
+                  <h1 className="text-md font-medium text-white">
                     {getGreeting()}
                   </h1>
                 </div>
@@ -270,20 +292,20 @@ export default function ProfilePage() {
            <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-[#56ab91]" />
-            오늘의 활동
+            메모 현황
           </h2>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              <Link href="/profile/memo" className="bg-[#358f80]/60 border border-red-400/50 rounded-lg p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
                <div className="text-3xl font-bold text-red-400 mb-1">{getTodoMemoCount()}</div>
-               <div className="text-sm text-gray-200 font-medium">오늘 메모</div>
+               <div className="text-sm text-gray-200 font-medium">오늘</div>
              </Link>
              <Link href="/profile/memo" className="bg-[#358f80]/60 border border-[#56ab91]/30 rounded-lg p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
                <div className="text-3xl font-bold text-[#56ab91] mb-1">{getTodayMemoCount()}</div>
-               <div className="text-sm text-gray-200 font-medium">메모 목록</div>
+               <div className="text-sm text-gray-200 font-medium">목록</div>
              </Link>
              <Link href="/profile/memo" className="bg-[#358f80]/60 border border-[#56ab91]/30 rounded-lg p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
                <div className="text-3xl font-bold text-[#56ab91] mb-1">{getCompletedMemoCount()}</div>
-               <div className="text-sm text-gray-200 font-medium">완료 목록</div>
+               <div className="text-sm text-gray-200 font-medium">완료</div>
              </Link>
            </div>
           <div className="mt-4 text-center">

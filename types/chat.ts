@@ -13,9 +13,11 @@ interface ChatMessage {
   timestamp: any; // Firestore Timestamp
   isLoading?: boolean;
   searchResults?: SearchResult[];
+  suggestedActions?: string[]; // 추천 액션 배열
 }
 
 export type { SearchResult, ChatMessage };
+
 
 
 

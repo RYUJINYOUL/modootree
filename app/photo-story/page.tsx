@@ -509,9 +509,7 @@ export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean
       <div className="absolute inset-0 z-0">
         <ParticlesComponent /> {/* ParticlesComponent를 z-0으로 설정 */}
       </div>
-      <div className="container mx-auto px-4 py-6 relative z-10">
-        <h1 className="text-3xl font-bold mb-2 text-center">세상의 모든 투표</h1> {/* 제목 추가 */}
-        <p className="text-gray-400 text-center mb-6">가입 없이도 투표는 가능, 투표 제안은 회원가입 필수</p> {/* 설명 추가 */}
+      <div className="container mx-auto px-4 py-2 relative z-10">
 
         <Tabs 
           value="photo-story"
