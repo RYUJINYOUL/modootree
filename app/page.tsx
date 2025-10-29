@@ -1,35 +1,75 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Send } from 'lucide-react';
+import { Send, Search } from 'lucide-react';
 import { auth } from '@/firebase';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Particles from "react-tsparticles"; // Particles 임포트
-import { loadSlim } from "tsparticles-slim"; // loadSlim 임포트
+import { loadFull } from "tsparticles"; // loadFull 임포트
 import LoginOutButton from '@/components/ui/LoginOutButton'; // LoginOutButton 임포트
 
 export default function Home() {
   const [inputMessage, setInputMessage] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
   const router = useRouter();
+
+  const rotatingTexts = [
+    "공감 친구, 모두트리 AI 입니다.",
+    "모두트리, 특별한 하루를 기록하세요."
+  ];
+
+  // 3초마다 텍스트 변경
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prevIndex) => 
+        prevIndex === rotatingTexts.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const suggestedQueries = [
+    { text: "모두트리 전체 서비스를 설명해줘" },
+    { text: "일기 작성 가능해?" },
+    { text: "오늘 대화 내용으로 사연 투표를 만들어 줄수 있어?" },
+    { text: "모투트리 문의 게시판은 어디에 있는거야?" }
+  ];
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    router.push(`/ai-comfort?initialMessage=${encodeURIComponent(inputMessage)}`);
+    const user = auth.currentUser;
+    if (!user) {
+      setShowLoginDialog(true);
+      return;
+    }
+
+    const targetUrl = `/ai-comfort?initialMessage=${encodeURIComponent(inputMessage)}`;
+    console.log('handleSendMessage - 이동할 URL:', targetUrl);
+    router.push(targetUrl);
     setInputMessage('');
   };
 
   // Particles 초기화
   const particlesInit = useCallback(async (engine: any) => {
-    await loadSlim(engine);
+    await loadFull(engine);
   }, []);
 
   return (
     <main className={cn(
-      "flex flex-col h-screen text-white relative bg-gray-900 justify-center items-center"
+      "flex flex-col h-screen text-white relative bg-gray-900 justify-center items-center overflow-hidden"
     )}>
       <Particles
         className="fixed inset-0"
@@ -57,7 +97,7 @@ export default function Home() {
                 default: "out"
               },
               random: true,
-              speed: { min: 0.1, max: 0.3 },
+              speed: { min: 0.05, max: 0.1 },
               straight: false,
               attract: {
                 enable: true,
@@ -72,7 +112,7 @@ export default function Home() {
                 enable: true,
                 area: 800
               },
-              value: 120
+              value: 80
             },
             opacity: {
               animation: {
@@ -82,7 +122,7 @@ export default function Home() {
                 sync: false
               },
               random: true,
-              value: { min: 0.1, max: 0.8 }
+              value: { min: 0.1, max: 0.4 }
             },
             shape: {
               type: "circle"
@@ -95,21 +135,21 @@ export default function Home() {
                 sync: false
               },
               random: true,
-              value: { min: 1, max: 3 }
+              value: { min: 1, max: 2 }
             },
             twinkle: {
               lines: {
                 enable: true,
-                frequency: 0.005,
-                opacity: 0.5,
+                frequency: 0.001,
+                opacity: 0.1,
                 color: {
                   value: ["#ffffff", "#87CEEB"]
                 }
               },
               particles: {
                 enable: true,
-                frequency: 0.05,
-                opacity: 0.5
+                frequency: 0.02,
+                opacity: 0.3
               }
             }
           },
@@ -122,20 +162,44 @@ export default function Home() {
         <LoginOutButton />
       </div>
 
-      {/* 상단 텍스트 */}
-      <div className="flex flex-col justify-center items-center flex-1 w-full relative z-10 pt-[80px]"> {/* 헤더 높이만큼 pt 추가 */}
+      {/* 로고 이미지 */}
+      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[20vh]"> {/* 상단에서 30% 위치로 조정 */}
+        <Link href="/profile" className="mb-8 transform hover:scale-105 transition-transform">
+          <img src="/logos/logohole.png" alt="Logo" className="w-32 h-32 object-contain" />
+        </Link>
         <div className="text-center mb-1">
-          <p className="text-2xl text-gray-400">AI 대화로 나의 하루를 기록하세요.</p>
+          <p className="text-2xl text-gray-400 transition-opacity duration-500" style={{ opacity: 1 }}>{rotatingTexts[currentTextIndex]}</p>
         </div>
 
         {/* 입력창과 버튼 영역 */}
-        <div className="flex items-center gap-2 w-full px-[20px] md:px-[600px] mt-4">
-          <Textarea
-            placeholder="AI에게 메시지를 보내세요... (엔터로 줄 바꿈, 전송은 아이콘 클릭)"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            className="flex-1 bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 resize-none py-1 min-h-[55px] max-h-[120px] overflow-y-auto"
-          />
+        <div className="flex items-center gap-2 w-full px-4 md:max-w-3xl mx-auto mt-4">
+          <div className="flex-1 relative">
+            <Textarea
+              placeholder="안녕하세요, 오늘 하루 어떻게 보내셨나요?"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
+              className="flex-1 w-full bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 resize-none py-1 min-h-[55px] max-h-[120px] overflow-y-auto"
+            />
+            {isInputFocused && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden z-20">
+                {suggestedQueries.map((query, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setInputMessage(query.text);
+                      setIsInputFocused(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-4 py-3 hover:bg-gray-700/50 transition-colors text-left"
+                  >
+                    <Search className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-300">{query.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <Button
             onClick={handleSendMessage}
             disabled={!inputMessage.trim()}
@@ -149,14 +213,17 @@ export default function Home() {
         <div className="w-full flex justify-center mt-3 px-[10px] md:px-[100px] relative z-10"> 
           <div className="flex flex-row overflow-x-auto gap-4 py-2 scrollbar-hide">
             {[ 
-              { icon: "/logos/feed.png", path: "/feed" },
+              // { icon: "/logos/feed.png", path: "/feed" }, // AI와 함께 이야기 - 비공개
               { icon: "/logos/news.png", path: "/news-vote" },
-              { icon: "/logos/ai5.png", path: "/art-generation" },
+              // { icon: "/logos/ai5.png", path: "/art-generation" }, // 사진 예술 작품 - 비공개
+             
               { icon: "/logos/ai1.png", path: "/health" },
-              { icon: "/logos/ai2.png", path: "/photo-story" },
-              { icon: "/logos/ai3.png", path: "/modoo-ai" },
-              { icon: "/logos/m12.png", path: "/your-site-path" }, // '내 사이트'는 동적 경로이므로 임시 경로 설정
-            ].map((item, index) => (
+              { icon: "/logos/m1.png", path: "/profile" },
+              { icon: "/logos/ai4.png", path: "/inquiry" },
+              // { icon: "/logos/ai2.png", path: "/photo-story" }, // 공유 익명 일기 - 비공개
+              // { icon: "/logos/ai3.png", path: "/modoo-vote" }, // 한페이지 선물 - 비공개
+              // { icon: "/logos/m12.png", path: "/site" }, // 내 사이트 페이지 - 비공개
+            ].filter(item => item).map((item, index) => (
               <Link key={index} href={item.path || '#'}>
                 <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 transition-colors w-[50px] h-[50px] flex-shrink-0">
                   <img src={item.icon} alt="icon" className="w-8 h-8 object-contain" />
@@ -167,6 +234,42 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* 프로필 플로팅 버튼 */}
+      <Link
+        href="/profile"
+        className="fixed bottom-4 right-4 z-[40] w-10 h-10 bg-[#56ab91]/60 rounded-full flex items-center justify-center shadow-lg hover:bg-[#56ab91]/80 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50"
+      >
+        <img src="/logos/m1.png" alt="Profile" className="w-6 h-6 object-contain" />
+        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          내 페이지
+        </span>
+      </Link>
+
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="bg-gray-900 text-white border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center">모두트리에 오신 것을 환영합니다!</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 mt-4">
+            <Link href="/feed" className="w-full">
+              <Button variant="outline" className="w-full bg-gray-800 hover:bg-gray-700 text-white border-gray-700">
+                회원가입 없이 둘러보기
+              </Button>
+            </Link>
+            <Link href="/register" className="w-full">
+              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                5초 회원가입
+              </Button>
+            </Link>
+            <Link href="/login" className="w-full">
+              <Button variant="secondary" className="w-full bg-green-600 hover:bg-green-700 text-white">
+                3초 로그인
+              </Button>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

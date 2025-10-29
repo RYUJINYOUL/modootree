@@ -7,37 +7,37 @@ import useEmblaCarousel from 'embla-carousel-react';
 const sampleUsers = [
   {
     id: 1,
-    username: '공개 및 비공개 일기장 커플·가족·모임에서도 함께 쓸 수는 있고 익명일기로 커뮤니티 공유도 가능합니다',
+    username: 'AI가 분석 간추린 뉴스를 읽고 투표 해보세요 또한 주요 뉴스로 투표를 만들 수도 있으며 공유도 가능합니다',
     thumbnail: '/samples/31.png',
-    description: '오늘 일기',
+    description: '뉴스 투표',
     bgColor: 'bg-[#2a6f97]'
   },
   {
     id: 2,
-    username: '오픈 일정표을 문자 SNS으로 간편 공유하세요, 교회·학원·아파트·현장 등의 중요한 일정을 공유하세요',
+    username: '모두트리 AI 대화 내용으로 사연 투표를 AI가 만들어 드립니다, 익명 등록 공유 가능합니다',
     thumbnail: '/samples/32.png',
-    description: '오픈 일정표',
+    description: '사연 투표',
     bgColor: 'bg-[#2a6f97]'
   },
   {
     id: 3,
-    username: '작지만 강력한 커뮤니티를 만들어 보세요, 교회·학원·아파트·소모임 등의 작은 게시판을 선물합니다',
+    username: '아침 점심 저녁 야식 운동을 작성 해주세요, 오늘 건강을 AI가 분석해 드립니다',
     thumbnail: '/samples/33.png',
-    description: '작은 커뮤니티',
+    description: '건강 분석',
     bgColor: 'bg-[#2a6f97]'
   },
   {
     id: 4,
-    username: '이름, 연락처, 인스타그램, 캘린더 예약 링크까지 하나의 카드로 정리해서 카톡이나 메신저로 전송해요',
+    username: '휴대폰에 간직한 소중한 사진을 예술 작품으로 변환 하세요, 지브리 스타일 등 22개 스타일이 준비되어 있습니다',
     thumbnail: '/samples/34.png',
-    description: '온라인 명함',
+    description: '사진 변환',
     bgColor: 'bg-[#2a6f97]'
   },
   {
     id: 5,
-    username: '나 만의 온라인 게스트북으로 소통해 보세요, 새로운 응원과 격려로 가득한 프라이빗 공간을 만드세요',
+    username: '열린 자유 게시판입니다, 언제든 수정 개선사항에 대해 이야기 해주세요 1:1 채팅 문의도 가능합니다',
     thumbnail: '/samples/35.png',
-    description: '온라인 게스트북',
+    description: '열린게시판',
     bgColor: 'bg-[#2a6f97]'
   }
 ];

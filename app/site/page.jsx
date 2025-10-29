@@ -207,7 +207,7 @@ export default function Page() {
 
   const renderViewSiteButton = () => {
     const className = 'bg-blue-600 hover:bg-blue-700';
-    const label = '내 사이트 만들기';
+    const label = '클릭 2번으로 무료 사이트 만들기';
 
     if (userData?.username) {
       return (
@@ -321,15 +321,33 @@ export default function Page() {
             </Sheet>
             <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
               <p className="text-lg text-white/80 mb-2">나만의 특별한 한페이지를 만들어 보세요</p>
-              <p className="text-lg text-white/80 mb-10">모두트리 AI와 함께 공유 공감 하세요</p>
+              <p className="text-lg text-white/80 mb-10">모두트리 AI 대화 만으로 하루가 정리 됩니다</p>
 
             <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-8">
               {renderViewSiteButton('main')}
               <Link
-                href="/inquiry"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
+                href="/farmtoolceo"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
               >
-                열린 모두 게시판
+                모두트리 사이트 샘플 확인하세요
+              </Link>
+              <Link
+                href={`/${userData?.username || ''}`}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
+                onClick={(e) => {
+                  if (!currentUser?.uid) {
+                    e.preventDefault();
+                    push('/login');
+                    return;
+                  }
+                  if (!userData?.username) {
+                    e.preventDefault();
+                    setIsOpen(true);
+                    return;
+                  }
+                }}
+              >
+                내 사이트로 이동합니다
               </Link>
             </div>
           </div>
@@ -346,29 +364,10 @@ export default function Page() {
           <div className="max-w-[1500px] mx-auto">
              <Tabs defaultValue="features" className="w-full custom-home-tabs">
              <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">주요 기능</TabsTrigger>
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">활용 예시</TabsTrigger>
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="intro">모두 샘플</TabsTrigger>
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내 사이트</TabsTrigger>
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">커뮤니티</TabsTrigger>
              </TabsList>
 
-          <TabsContent value="intro">
-            <div className="relative rounded-2xl py-4 overflow-hidden">
-              <ParticlesComponent />
-              <div className="relative z-10 py-4">
-                <div className="flex flex-col items-center justify-center text-center mb-12">
-                  <h2 className="md:hidden text-xl font-medium text-white/90 mb-2 leading-relaxed">
-                    모두트리는 대한민국 5,500만명에게<br />
-                    작지만 의미 있는 한페이지를 선물합니다.
-                  </h2>
-                  <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-2 leading-relaxed">
-                    모두트리는 대한민국 5,500만명에게<br />
-                    작지만 의미 있는 한페이지를 선물합니다.
-                  </h2>
-                </div>
-                <UserSampleCarousel />
-              </div>
-            </div>
-          </TabsContent>
 
                   <TabsContent value="features">
                     <div className="relative rounded-2xl py-4 overflow-hidden">
@@ -378,10 +377,10 @@ export default function Page() {
                       <div className="relative z-10 py-4">
                         <div className="flex flex-col items-center justify-center text-center">
                           <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                            세심하게 설계된 에디터 간편 기능<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
+                          모두트리 Ai 대화 하루를 정리하세요.<br /> AI가 하루를 분석해 일기 메모 건강 분석까지 내사이트에 자동으로 저장해 드립니다 
                           </h2>
                           <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                            모두트리의 세심하게 설계된 에디터 간편 기능과<br /> 초대 · 번역 · 알림 · 템플릿 · 공감 · 공유 · AI답변 기능을 만나보세요 
+                            모두트리 AI 대화로 하루를 정리 하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 내 사이트 자동 저장  
                           </h2>
                         </div>
                         <UserSampleCarousel2 />
@@ -397,10 +396,10 @@ export default function Page() {
               <div className="relative z-10 py-4">
                 <div className="flex flex-col items-center justify-center text-center">
                   <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                    모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
+                    즐거운 모두트리 커뮤니티에 초대합니다<br /> 뉴스투표 · 사연투표 · 사진투표 ·건강분석 · 사진변환 · 열린게시판
                   </h2>
                   <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                    모두트리 이렇게 사용해 보세요<br /> 커플일기 · 오픈일정표 · 포트폴리오 · 링크모음 · 게스트북 · 커뮤니티
+                  즐거운 모두트리 커뮤니티에 초대합니다<br /> 뉴스투표 · 사연투표 · 사진투표 ·건강분석 · 사진변환 · 열린게시판
                   </h2>
                 </div>
                 <UserSampleCarousel3 />
@@ -515,30 +514,34 @@ export default function Page() {
 const faqs = [
   {
     question: '모두트리는 무료인가요?',
-    answer: '네, 모두트리의 기본 기능은 모두 무료로 제공됩니다.'
+    answer: '네, 모두트리의 모든 기능은 모두 무료로 제공됩니다.'
   },
   {
-    question: '페이지는 몇 개까지 만들 수 있나요?',
-    answer: '현재는 계정당 1개의 페이지를 만들 수 있습니다.'
+    question: '내 사이트는 몇 개까지 만들 수 있나요?',
+    answer: '계정당 1개의 페이지를 만들 수 있습니다.'
   },
   {
-    question: '다른 사람의 페이지를 수정할 수 있나요?',
-    answer: '페이지 소유자가 초대한 경우에만 수정이 가능합니다.'
+    question: '모든 투표 생성은 익명으로 가능한가요?',
+    answer: '네 모두트리 모든 투표는 익명 필수 조건입니다, 하지만 투표나 게시물의 답글은 일부 익명은 아닙니다'
   },
   {
-    question: '페이지 주소를 변경할 수 있나요?',
+    question: '다른 사람의 사이트를 수정할 수 있나요?',
+    answer: '일부 컴포넌트에서 사이트 소유자가 초대한 경우에만 수정 가능합니다.'
+  },
+  {
+    question: '사이트 주소를 변경할 수 있나요?',
     answer: '아니요, 현재는 한 번 설정한 페이지 주소는 변경할 수 없습니다. 신중하게 설정해주세요.'
   },
   {
     question: '추가 개선하고 싶은 기능은 있나요?',
-    answer: '게시판에 글 남겨주시면 최대한 반영하겠습니다.'
+    answer: '열린게시판에 글 남겨주시면 최대한 반영하겠습니다.'
   },
   {
     question: 'AI 기능은 어떤 컴포넌트에서 가능한가요?',
-    answer: '현재 다이어리 또는 게스트북을 오늘 메모로 사용하면 AI 기능을 사용할 수 있습니다'
+    answer: '현재는 일부 컴포넌트에서만 가능한데 추후 전체 컴포넌트에 적용될 예정입니다'
   },
   {
     question: '제작하는 방법을 잘 모르겠습니다?',
-    answer: '카카오톡 체널 실시간 문의 주세요, 링크버튼 게시판 기재'
+    answer: '카카오톡 채널 실시간 문의 주세요, 열린 게시판 내 카톡 문의 버튼 클릭'
   }
 ];

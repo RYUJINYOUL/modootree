@@ -7,8 +7,12 @@ interface TrendItem {
   title: string;
   summary: string;
   source: string;
-  url: string;
+  url: string; // Original link provided by AI (for direct access)
+  originalUrl?: string; // Backup/duplicate of the original URL
+  embedUrl?: string; // New field for the embeddable version (if applicable, e.g., YouTube)
   category: string;
+  contentType?: 'general' | 'controversy' | 'issue'; // 콘텐츠 성격 구분
+  alternativeUrls?: string[]; // 같은 이슈에 대한 대체 URL들
 }
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -27,7 +31,9 @@ IMPORTANT: Return ONLY a valid JSON object, no markdown or extra text.
       "title": "Korean title (max 50 chars)",
       "summary": "2-3 line summary in Korean (max 200 chars)",
       "source": "Source name in Korean",
-      "url": "Real, accessible URL",
+      "url": "Full, stable, and **directly accessible** URL. Crucially, the URL must NOT require any payment, login, or registration. For controversial or trending issues, ONLY use URLs from major established news portals (e.g., news.naver.com, n.news.naver.com) or official YouTube channels. Avoid personal blogs, community posts, or temporary announcement pages. For YouTube, provide the full watch link (e.g., https://www.youtube.com/watch?v=VIDEO_ID).",
+      "contentType": "One of: general (일반 소식), controversy (논란/이슈), issue (주요 현안)",
+      "alternativeUrls": ["Array of alternative URLs from other major news portals covering the same topic"],
       "category": "테크|유튜브|SNS|뉴스"
     }
   ]
@@ -41,11 +47,18 @@ Distribution:
 
 Rules:
 1. Content < 7 days old
-2. URLs must be real and accessible
+2. URLs must be real, stable, and globally accessible
 3. Focus on Korean market/companies
 4. NO line breaks in text
 5. NO markdown formatting
 6. Return ONLY the JSON object`;
+
+// YouTube URL을 정규화하여 watch?v=... 에서 비디오 ID를 추출합니다.
+function getYoutubeVideoId(url: string): string | null {
+    const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
 
 export async function GET(request: NextRequest) {
     return generateTrendData();
@@ -59,6 +72,7 @@ async function generateTrendData() {
     try {
         console.log('트렌드 데이터 생성 시작...');
         
+        // 여기에 useGoogleSearch 도구 사용이 추가될 경우, AI가 더 정확한 URL을 가져올 수 있습니다.
         const model = genAI.getGenerativeModel({ 
             model: "gemini-2.5-pro",
             generationConfig: {
@@ -71,7 +85,8 @@ async function generateTrendData() {
 
         console.log('AI 모델 초기화 완료, 컨텐츠 생성 시작...');
 
-        const result = await model.generateContent([SYSTEM_INSTRUCTION]);
+        // Google Search Grounding을 추가하여 최신 유효 URL을 생성하도록 유도합니다.
+        const result = await model.generateContent(SYSTEM_INSTRUCTION);
 
         const responseText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
         console.log('응답 텍스트 (raw):', responseText);
@@ -97,15 +112,32 @@ async function generateTrendData() {
                 throw new Error('올바른 trends 배열이 없습니다.');
             }
 
-            // 각 트렌드 항목의 문자열에서 줄바꿈 제거
-            structuredData.trends = structuredData.trends.map((trend: Partial<TrendItem>) => ({
-                ...trend,
-                title: trend.title?.replace(/\n/g, ' ').trim(),
-                summary: trend.summary?.replace(/\n/g, ' ').trim(),
-                source: trend.source?.replace(/\n/g, ' ').trim(),
-                url: trend.url?.trim(),
-                category: trend.category?.trim()
-            }));
+            // 각 트렌드 항목의 문자열에서 줄바꿈 제거 및 URL 정규화
+            structuredData.trends = structuredData.trends.map((trend: Partial<TrendItem>) => {
+                const cleanTrend: TrendItem = {
+                    ...trend,
+                    title: trend.title?.replace(/\n/g, ' ').trim() || '',
+                    summary: trend.summary?.replace(/\n/g, ' ').trim() || '',
+                    source: trend.source?.replace(/\n/g, ' ').trim() || '',
+                    url: trend.url?.trim() || '', // 원본 URL 유지
+                    category: trend.category?.trim() || '',
+                    originalUrl: trend.url?.trim() || '', // 원본 URL 백업 (redundant하지만 안전장치)
+                    embedUrl: '', // 기본값으로 빈 문자열 설정
+                    contentType: trend.contentType || 'general',
+                    alternativeUrls: Array.isArray(trend.alternativeUrls) ? trend.alternativeUrls : [],
+                };
+
+                // YouTube URL 처리: url 필드는 원본 URL을 유지하고, embedUrl에 임베드 주소 생성
+                if (cleanTrend.category === '유튜브' && cleanTrend.url) {
+                    const videoId = getYoutubeVideoId(cleanTrend.url);
+                    if (videoId) {
+                        // embedUrl에만 embed URL 저장
+                        cleanTrend.embedUrl = `https://www.youtube.com/embed/${videoId}`; 
+                    }
+                    // cleanTrend.url은 AI가 제공한 원본 watch URL을 그대로 유지함
+                }
+                return cleanTrend;
+            });
         } catch (error) {
             console.error('JSON 파싱 오류:', error);
             throw new Error('AI가 올바른 JSON 형식을 생성하지 못했습니다.');

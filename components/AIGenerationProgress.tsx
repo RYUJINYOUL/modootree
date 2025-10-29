@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 export const AIGenerationProgress = ({ initialSeconds = 80 }) => {
   const [seconds, setSeconds] = useState(initialSeconds);
   const steps = [
-    { text: "이미지 업로드 중...", duration: 15 },
-    { text: "AI가 이미지 분석 중...", duration: 25 },
-    { text: "재미있는 투표 옵션 생성 중...", duration: 30 },
+    { text: "업로드 중...", duration: 15 },
+    { text: "AI가 분석 중...", duration: 25 },
+    { text: "투표 옵션 생성 중...", duration: 30 },
     { text: "최종 저장 중...", duration: 10 }
   ];
 
@@ -34,7 +34,8 @@ export const AIGenerationProgress = ({ initialSeconds = 80 }) => {
   const currentStep = getCurrentStep();
 
   return (
-    <div className="space-y-6 p-6 bg-gray-900/50 rounded-lg">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60">
+      <div className="space-y-6 p-8 bg-gray-900 rounded-xl border border-blue-500/20 shadow-2xl max-w-md w-full mx-4">
       {/* 진행 단계 표시 */}
       <div className="space-y-3">
         {steps.map((step, index) => (
@@ -74,6 +75,7 @@ export const AIGenerationProgress = ({ initialSeconds = 80 }) => {
       <div className="text-center text-sm text-gray-400">
         예상 소요 시간: {seconds}초
       </div>
+    </div>
     </div>
   );
 };

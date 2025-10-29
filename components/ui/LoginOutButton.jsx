@@ -87,25 +87,17 @@ export default function LoginOutButton() {
                 </div>
               </SheetHeader>
               <nav className="flex-1 mt-2 space-y-3 overflow-y-auto py-2">
-                {/* 공지사항 */}
-                <div className="mx-4 py-3 px-4 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-lg text-center">
-                  <p className="text-white/90 text-sm">10월 30일 정식 오픈 예정</p>
-                  <p className="text-white/70 text-xs mt-0.5">일부 오류가 있을 수 있습니다.</p>
-                </div>
+               
 
                 {[
                   {
-                    title: "모두트리 AI",
-                    description: "AI와 함께 이야기하며 공감과 위로를 나눠요",
+                    title: "내 기록 페이지",
+                    description: "AI와 함께 작성하는 나만의 기록 페이지",
                     icon: "/logos/m1.png",
-                    path: "/ai-comfort"
+                    path: "/profile"
                   },
-                  {
-                    title: "AI 예술 작품",
-                    description: "사진을 예술 작품으로 변화되는 즐거움을 선물합니다",
-                    icon: "/logos/ai5.png",
-                    path: "/art-generation"
-                  },
+                 
+                 
                   {
                     title: "AI 건강 기록",
                     description: "당신의 건강한 하루를 AI가 분석해 드립니다",
@@ -113,29 +105,13 @@ export default function LoginOutButton() {
                     path: "/health"
                   },
                   {
-                    title: "AI 사진 투표",
-                    description: "AI가 만들어 주는 사진 투표 당신의 선택은?",
-                    icon: "/logos/ai2.png",
-                    path: "/photo-story"
+                    title: "AI 투표",
+                    description: "AI가 만들어 주는 뉴스 사연 사진 투표 당신의 선택은?",
+                    icon: "/logos/news.png",
+                    path: "/modoo-vote"
                   },
-                  {
-                    title: "AI 사연 투표",
-                    description: "AI가 만들어 주는 사연 투표 당신의 선택은?",
-                    icon: "/logos/ai3.png",
-                    path: "/modoo-ai"
-                  },
-                  {
-                    title: "공감 한 조각",
-                    description: "내 감정 기록 은근 공감 받는 공유 익명 일기",
-                    icon: "/logos/ai6.png",
-                    path: "/likes/all"
-                  },
-                  {
-                    title: "내 사이트 만들기",
-                    description: "모두트리의 작지만 의미 있는 한페이지 선물",
-                    icon: "/logos/m12.png",
-                    path: "/site"
-                  },
+                  
+                 
                   {
                     title: "열린 게시판",
                     description: "모두트리의 열린 게시판과 1:1 채팅 문의",
@@ -174,9 +150,12 @@ export default function LoginOutButton() {
         </div>
         <div className="flex gap-4 items-center">
           {currentUser?.uid && (
-            <span className="text-sm text-blue-300 font-semibold">
-              {currentUser.displayName || currentUser.email}
-            </span>
+            <Link href="/profile" className="flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200 transition-colors">
+              <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center">
+                {currentUser.displayName?.[0]?.toUpperCase() || currentUser.email?.[0]?.toUpperCase()}
+              </div>
+              <span className="font-semibold">{currentUser.displayName || currentUser.email}</span>
+            </Link>
           )}
           {currentUser?.uid ? (
             <button

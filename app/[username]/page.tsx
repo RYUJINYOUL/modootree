@@ -231,19 +231,13 @@ export default function UserPublicPage() {
     }
   };
 
-  // 메뉴가 열릴 때 트렌드 데이터 가져오기
+  // 페이지 로드 시 트렌드 데이터 가져오기
   useEffect(() => {
     async function fetchTrendData() {
-      console.log('메뉴 상태 체크:', {
-        isMenuOpen,
+      console.log('트렌드 데이터 요청:', {
         currentUser,
         hasToken: !!currentUser?.token
       });
-
-      if (!isMenuOpen) {
-        console.log('메뉴가 닫혀있어 요청 중단');
-        return;
-      }
 
       // 임시 토큰 사용 (테스트용)
       const testToken = 'valid_token';
@@ -670,7 +664,7 @@ export default function UserPublicPage() {
                         <span className="text-xs text-white/70 group-hover:text-white/90">사진</span>
                     </Link>
                     <Link 
-                      href="/modoo-ai"
+                      href="/modoo-vote"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >

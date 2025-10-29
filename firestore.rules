@@ -54,6 +54,11 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;  // 작성자만 삭제 가능
     }
 
+    // dailyChats 컬렉션에 대한 규칙 추가
+    match /dailyChats/{document} {
+      allow read, write: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
     // users 컬렉션 - 모든 users 관련 규칙을 여기 하나로 통합
     match /users/{userId} {
       // 문서 자체에 대한 규칙

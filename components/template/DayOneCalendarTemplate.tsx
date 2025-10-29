@@ -7,7 +7,7 @@ import { ko } from 'date-fns/locale';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { collection, query, orderBy, getDocs, doc, getDoc, onSnapshot, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc, onSnapshot, addDoc, updateDoc, deleteDoc, where } from 'firebase/firestore';
 import { db, storage } from '@/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { cn } from '@/lib/utils';
@@ -74,6 +74,21 @@ interface MemoItem {
   status: 'todo' | 'today' | 'completed';
 }
 
+interface HealthRecord {
+  id: string;
+  userId: string;
+  date: string;
+  analysis: {
+    dailySummary: {
+      balanceScore: number;
+      varietyScore: number;
+      effortScore: number;
+      overallComment: string;
+    };
+  };
+  createdAt: any;
+}
+
 const CATEGORIES = [
   '일상',
   '감정',
@@ -94,6 +109,7 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [memos, setMemos] = useState<MemoItem[]>([]);
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [isWriting, setIsWriting] = useState(false);
@@ -144,7 +160,30 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
       setDiaries(loadedDiaries);
     });
 
-    // 2. 메모 데이터 구독
+    // 2. 건강 기록 데이터 가져오기
+    const fetchHealthRecords = async () => {
+      try {
+        const healthQuery = query(
+          collection(db, 'health_records'),
+          where('userId', '==', userId),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const healthSnapshot = await getDocs(healthQuery);
+        const healthData = healthSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as HealthRecord[];
+        
+        setHealthRecords(healthData);
+      } catch (error) {
+        console.error('Error fetching health records:', error);
+      }
+    };
+
+    fetchHealthRecords();
+
+    // 3. 메모 데이터 구독
     const memosQuery = query(
       collection(db, `users/${userId}/memos`),
       orderBy('date', 'desc')
@@ -169,6 +208,30 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
       memosUnsubscribe();
     };
   }, [userId]);
+
+  // 해당 날짜의 건강 기록 찾기
+  const getHealthRecordForDate = (date: Date) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    return healthRecords.find(record => record.date === dateString);
+  };
+
+  // 건강 점수 계산
+  const getHealthScore = (healthRecord: HealthRecord | undefined) => {
+    if (!healthRecord?.analysis?.dailySummary) return null;
+    
+    const { balanceScore, varietyScore, effortScore } = healthRecord.analysis.dailySummary;
+    return Math.round((balanceScore + varietyScore + effortScore) / 3);
+  };
+
+  // 건강 점수에 따른 색상 반환
+  const getHealthScoreColor = (score: number | null) => {
+    if (score === null) return 'transparent';
+    if (score >= 90) return '#10B981'; // 초록색 (excellent)
+    if (score >= 80) return '#3B82F6'; // 파란색 (good)
+    if (score >= 70) return '#F59E0B'; // 노란색 (fair)
+    if (score >= 60) return '#F97316'; // 주황색 (poor)
+    return '#EF4444'; // 빨간색 (very poor)
+  };
 
   // 메모 불러오기
   useEffect(() => {
@@ -500,11 +563,10 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                       {format(date, 'd', { locale: ko })}
                     </div>
                     {mainEmotion ? (
-                      <div 
-                        className={cn(
-                          "flex items-center justify-center w-10 h-10 transition-transform hover:scale-110 mb-1",
-                          diary && "ring-2 ring-offset-2 rounded-full"
-                        )}
+                        <div 
+                          className={cn(
+                            "flex items-center justify-center w-10 h-10 transition-transform hover:scale-110 mb-3"
+                          )}
                         style={{
                           borderColor: styleSettings.color
                         }}
@@ -513,8 +575,8 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                         <Image
                           src={EMOTION_IMAGES[mainEmotion.emotion] || '/emotions/neutral.png'}
                           alt={mainEmotion.emotion}
-                          width={40}
-                          height={40}
+                          width={48}
+                          height={48}
                           className={cn(
                             "opacity-90",
                             !diary && "grayscale opacity-50"
@@ -530,6 +592,30 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                         }}
                       />
                     )}
+                    
+                    {/* 건강 점수 표시 */}
+                    {(() => {
+                      const healthRecord = getHealthRecordForDate(date);
+                      const healthScore = getHealthScore(healthRecord);
+                      const scoreColor = getHealthScoreColor(healthScore);
+                      
+                      if (healthScore !== null) {
+                        return (
+                          <div 
+                            className="text-xs font-bold px-2.5 py-1 rounded-full mb-2 shadow-lg"
+                            style={{ 
+                              backgroundColor: scoreColor,
+                              color: 'white'
+                            }}
+                            title={`건강 점수: ${healthScore}점`}
+                          >
+                            {healthScore}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    
                     {dayMemos.length > 0 && (
                       <div 
                         className="text-base font-medium px-3 py-1.5 rounded-full"
@@ -646,7 +732,7 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                     {mainEmotion ? (
                       <div 
                         className={cn(
-                          "flex items-center justify-center w-10 h-10 transition-transform hover:scale-110 mb-1",
+                          "flex items-center justify-center w-12 h-12 transition-transform hover:scale-110 mb-3",
                           diary && "ring-2 ring-offset-2 rounded-full"
                         )}
                         style={{
@@ -657,8 +743,8 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                         <Image
                           src={EMOTION_IMAGES[mainEmotion.emotion] || '/emotions/neutral.png'}
                           alt={mainEmotion.emotion}
-                          width={40}
-                          height={40}
+                          width={48}
+                          height={48}
                           className={cn(
                             "opacity-90",
                             !diary && "grayscale opacity-50"
@@ -674,6 +760,30 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                         }}
                       />
                     )}
+                    
+                    {/* 건강 점수 표시 */}
+                    {(() => {
+                      const healthRecord = getHealthRecordForDate(date);
+                      const healthScore = getHealthScore(healthRecord);
+                      const scoreColor = getHealthScoreColor(healthScore);
+                      
+                      if (healthScore !== null) {
+                        return (
+                          <div 
+                            className="text-xs font-bold px-3 py-1.5 rounded-full mb-2 shadow-lg"
+                            style={{ 
+                              backgroundColor: scoreColor,
+                              color: 'white'
+                            }}
+                            title={`건강 점수: ${healthScore}점`}
+                          >
+                            {healthScore}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    
                     {dayMemos.length > 0 && (
                       <div 
                         className="text-base font-medium px-3 py-1.5 rounded-full"
@@ -1097,6 +1207,26 @@ export default function DayOneCalendarTemplate({ userId, editable = true }: DayO
                     </p>
                   </div>
                 )}
+
+                {/* AI 건강 분석 버튼 - 모든 사용자에게 표시 */}
+                <Button
+                  variant="outline"
+                  className="w-full mt-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 hover:from-green-500/20 hover:to-blue-500/20 border-green-500/30"
+                  onClick={() => router.push('/health')}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    {(() => {
+                      const healthRecord = selectedDiary && getHealthRecordForDate(new Date(selectedDiary.date));
+                      const healthScore = getHealthScore(healthRecord);
+                      return (
+                        <span className="text-white/90">
+                          AI 건강 분석 - {healthScore ? `${healthScore}점` : '기록 없음'}
+                        </span>
+                      );
+                    })()}
+                    <span className="text-green-400">→</span>
+                  </div>
+                </Button>
 
                 {/* 같은 날짜의 메모 */}
                 {memos?.filter(memo => 

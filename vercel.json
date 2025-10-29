@@ -1,6 +1,8 @@
 {
-  "crons": [{
-    "path": "/api/ai-trend/cron",
-    "schedule": "0 15 * * *"
-  }]
+  "crons": [
+    {
+      "path": "/api/news/cron",
+      "schedule": "0 22 * * *"
+    }
+  ]
 }

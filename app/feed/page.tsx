@@ -13,19 +13,36 @@ import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
 
 // 감정별 이모티콘 매핑
+const MODOO_CATEGORIES = [
+  { id: 'all', label: '전체' },
+  { id: 'happy', label: '행복' },
+  { id: 'sad', label: '슬픔' },
+  { id: 'angry', label: '화남' },
+  { id: 'anxious', label: '불안' },
+  { id: 'comfort', label: '편안' },
+  { id: 'worry', label: '고민' },
+];
+
+const NEWS_CATEGORIES = [
+  { id: 'all', label: '전체' },
+  { id: 'current_affairs', label: '시사' },
+  { id: 'economy_it', label: '경제' },
+  { id: 'entertainment', label: '연예' },
+];
+
 const EMOTION_ICONS = {
   happy: '/logos/m1.png',    // 행복
   sad: '/logos/m6.png',      // 슬픔
   angry: '/logos/m9.png',    // 분노
   anxious: '/logos/m5.png',  // 불안
-  peaceful: '/logos/m4.png', // 평온
-  worried: '/logos/m14.png', // 걱정
+  comfort: '/logos/m8.png', // 편안
+  worry: '/logos/m14.png', // 고민
   default: '/logos/m1.png'   // 기본
 };
 
 interface FeedItem {
   id: string;
-  type: 'likes' | 'joy' | 'modoo-ai' | 'health';  // health 타입 추가
+  type: 'likes' | 'joy' | 'modoo-ai' | 'health' | 'news';  // news 타입 추가
   displayType: string;
   title?: string;
   content?: string;
@@ -63,7 +80,16 @@ export default function FeedPage() {
     setLoading(true);
     try {
       console.log('피드 데이터 로딩 시작...');
-      const [likesData, photoStoryData, modooData, healthData] = await Promise.all([
+      console.log('데이터 로딩 시작...');
+      const [newsData, likesData, photoStoryData, modooVoteData, healthData] = await Promise.all([
+        fetchFromCollection('articles', 10).then(data => {
+          console.log('뉴스 투표 데이터 로드:', {
+            collectionName: 'articles',
+            dataLength: data.length,
+            sampleData: data[0]
+          });
+          return data;
+        }),
         fetchFromCollection('likes', 10).then(data => {
           console.log('공감 데이터:', data.length);
           return data;
@@ -72,8 +98,8 @@ export default function FeedPage() {
           console.log('사진 스토리 데이터:', data.length);
           return data;
         }),
-        fetchFromCollection('modoo-ai-tests', 10).then(data => {
-          console.log('사연 데이터:', data.length);
+        fetchFromCollection('modoo-vote-articles', 10).then(data => {
+          console.log('공감 투표 데이터:', data.length);
           return data;
         }),
         fetchFromCollection('health_records', 10).then(data => {
@@ -83,7 +109,15 @@ export default function FeedPage() {
       ]);
 
       console.log('데이터 포맷팅 시작...');
-      const [formattedLikes, formattedPhotoStory, formattedModoo, formattedHealth] = await Promise.all([
+      const [formattedNews, formattedLikes, formattedPhotoStory, formattedModooVote, formattedHealth] = await Promise.all([
+        formatData(newsData, 'news').then(data => {
+          console.log('뉴스 데이터 포맷팅:', {
+            originalLength: newsData.length,
+            formattedLength: data.length,
+            sampleFormattedData: data[0]
+          });
+          return data;
+        }),
         formatData(likesData, 'likes').then(data => {
           console.log('공감 데이터 포맷팅 완료:', data.length);
           return data;
@@ -92,8 +126,8 @@ export default function FeedPage() {
           console.log('사진 스토리 데이터 포맷팅 완료:', data.length);
           return data;
         }),
-        formatData(modooData, 'modoo-ai').then(data => {
-          console.log('사연 데이터 포맷팅 완료:', data.length);
+        formatData(modooVoteData, 'modoo-vote-articles').then(data => {
+          console.log('사연 투표 데이터 포맷팅 완료:', data.length);
           return data;
         }),
         formatData(healthData, 'health').then(data => {
@@ -104,9 +138,10 @@ export default function FeedPage() {
 
       console.log('데이터 병합 시작...');
       const combinedData = [
+        ...formattedNews,
         ...formattedLikes,
         ...formattedPhotoStory,
-        ...formattedModoo,
+        ...formattedModooVote,
         ...formattedHealth
       ].sort((a: any, b: any) => b.createdAt - a.createdAt);
 
@@ -129,27 +164,47 @@ export default function FeedPage() {
   };
 
   const fetchFromCollection = async (collectionName: string, itemLimit: number = 10): Promise<any[]> => {
-    console.log(`${collectionName} 컬렉션에서 데이터 가져오기 시작...`);
-    const q = query(
-      collection(db, collectionName),
-      orderBy('createdAt', 'desc'),
-      limit(itemLimit)
-    );
-    
-    const snapshot = await getDocs(q);
-    console.log(`${collectionName} 컬렉션 데이터 개수:`, snapshot.size);
-    
-    const data = snapshot.docs.map(doc => {
-      const docData = doc.data();
-      console.log(`${collectionName} 문서 데이터:`, { id: doc.id, ...docData });
-      return {
-      id: doc.id,
-        ...docData,
-        createdAt: docData.createdAt?.toDate()
-      };
-    });
-    
-    return data;
+    try {
+      console.log(`${collectionName} 컬렉션에서 데이터 가져오기 시작...`);
+      
+      // 뉴스 데이터의 경우 created_at 필드를 사용
+      const orderByField = collectionName === 'articles' ? 'created_at' : 'createdAt';
+      
+      const q = query(
+        collection(db, collectionName),
+        orderBy(orderByField, 'desc'),
+        limit(itemLimit)
+      );
+      
+      const snapshot = await getDocs(q);
+      console.log(`${collectionName} 컬렉션 데이터 개수:`, snapshot.size);
+      
+      const data = snapshot.docs.map(doc => {
+        const docData = doc.data();
+        console.log(`${collectionName} 문서 데이터:`, { id: doc.id, ...docData });
+        
+        // 뉴스 데이터의 경우 created_at 필드를 createdAt으로 정규화
+        if (collectionName === 'articles') {
+          return {
+            id: doc.id,
+            ...docData,
+            createdAt: docData.created_at?.toDate() || docData.createdAt?.toDate() || new Date()
+          };
+        }
+        
+        return {
+          id: doc.id,
+          ...docData,
+          createdAt: docData.createdAt?.toDate() || new Date()
+        };
+      });
+      
+      console.log(`${collectionName} 데이터 처리 완료:`, data);
+      return data;
+    } catch (error) {
+      console.error(`${collectionName} 데이터 가져오기 실패:`, error);
+      return [];  // 에러 발생 시 빈 배열 반환
+    }
   };
 
   const formatData = async (data: any[], type: string): Promise<FeedItem[]> => {
@@ -160,6 +215,12 @@ export default function FeedPage() {
         const commentsQuery = query(
           collection(db, 'photo-story-comments'),
           where('storyId', '==', item.id)
+        );
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentCount = commentsSnapshot.size;
+      } else if (type === 'news' || type === 'modoo-vote-articles') {
+        const commentsQuery = query(
+          collection(db, type === 'news' ? 'news-vote-articles' : 'modoo-vote-articles', item.id, 'comments')
         );
         const commentsSnapshot = await getDocs(commentsQuery);
         commentCount = commentsSnapshot.size;
@@ -177,7 +238,10 @@ export default function FeedPage() {
 
       // 좋아요 수 가져오기
       let likeCount = 0;
-      if (type === 'modoo-ai') {
+      if (type === 'news') {
+        // 뉴스는 total_votes를 사용
+        likeCount = item.total_votes || 0;
+      } else if (type === 'modoo-ai') {
         // modoo-ai는 stats.likeCount를 직접 사용
         likeCount = item.stats?.likeCount || 0;
       } else if (type === 'photo-story') {
@@ -195,19 +259,40 @@ export default function FeedPage() {
         likeCount = likesSnapshot.size;
       }
 
-      let formattedItem = {
-        ...item,
-        type,
-        displayType: 
-          type === 'likes' ? '공감 한조각' :
-          type === 'photo-story' ? 'AI 사진 스토리' :
-          type === 'health' ? 'AI 건강기록' :
-          '사연 한조각',
-        previewContent: item.content || item.description || '',
-        emotionIcon: type === 'modoo-ai' ? EMOTION_ICONS[(item.emotion as keyof typeof EMOTION_ICONS) || 'default'] : null,
-        comments: commentCount,
-        likes: likeCount
-      };
+      let formattedItem;
+      
+      if (type === 'news') {
+        formattedItem = {
+          id: item.id,
+          type,
+          displayType: '뉴스 투표',
+          title: item.title || '',
+          summary: item.summary || '',
+          category: item.category || '',
+          total_votes: item.total_votes || 0,
+          view_count: item.view_count || 0,
+          vote_options: item.vote_options || [],
+          createdAt: item.createdAt,
+          comments: commentCount,
+          likes: likeCount
+        };
+      } else {
+        formattedItem = {
+          ...item,
+          type,
+          displayType: 
+            type === 'likes' ? '공감 한조각' :
+            type === 'photo-story' ? 'AI 사진 스토리' :
+            type === 'health' ? 'AI 건강기록' :
+            type === 'modoo-vote-articles' ? '사연 투표' :
+            '사연 한조각',
+          previewContent: item.content || item.description || '',
+          emotionIcon: type === 'modoo-vote-articles' ? 
+                   EMOTION_ICONS[item.category as keyof typeof EMOTION_ICONS] || EMOTION_ICONS.default : null,
+          comments: commentCount,
+          likes: likeCount
+        };
+      }
 
       // 건강 기록인 경우 추가 데이터 포맷팅
       if (type === 'health') {
@@ -232,9 +317,10 @@ export default function FeedPage() {
 
   const FILTERS = [
     { id: 'all', label: '전체' },
+    { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' },
     { id: 'likes', label: '공감', path: '/likes/all', fullLabel: '공감 한조각' },
     { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
-    { id: 'modoo-ai', label: '사연', path: '/modoo-ai', fullLabel: '사연 한조각' },
+    { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' },
     { id: 'health', label: '건강', path: '/health', fullLabel: 'AI 건강기록' }
   ];
 
@@ -328,7 +414,7 @@ export default function FeedPage() {
       <div className="relative z-10 w-full max-w-[2000px] mx-auto px-4 pt-6 pb-20">
         {/* 필터 캐러셀만 유지 */}
         <div className="flex justify-center mb-4">
-          <div className="max-w-md w-full">
+          <div className="w-full max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl">
                 <CategoryCarousel
                   categories={FILTERS}
                   selectedCategory={activeFilter}
@@ -356,8 +442,10 @@ export default function FeedPage() {
                 <div 
                   key={item.id}
                   onClick={() => {
-                    if (item.type === 'modoo-ai') {
-                      router.push(`/modoo-ai/tests/${item.id}`);
+                    if (item.type === 'news') {
+                      router.push(`/news-vote/${item.id}`);
+                    } else if (item.type === 'modoo-vote-articles') {
+                      router.push(`/modoo-vote/${item.id}`);
                     } else if (item.type === 'photo-story') {
                       router.push(`/photo-story/${item.id}`);
                     } else if (item.type === 'health') {
@@ -372,13 +460,28 @@ export default function FeedPage() {
                 >
                   {/* 썸네일 영역 */}
                   <div className="aspect-square relative bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-                    {item.type === 'modoo-ai' ? (
-                      // 사연 한조각인 경우 이모티콘 표시
+                    {item.type === 'news' ? (
+                      // 뉴스 투표인 경우
+                      <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-blue-500/20">
+                        <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-blue-500/50 backdrop-blur-sm text-white text-sm font-medium">
+                          {NEWS_CATEGORIES.find(cat => cat.id === item.category)?.label || '뉴스'}
+                        </div>
+                        <div className="text-center">
+                          <h3 className="text-lg font-bold text-white line-clamp-3 mb-2">
+                            {item.title}
+                          </h3>
+                          <p className="text-sm text-white/70 line-clamp-2">
+                            {item.summary}
+                          </p>
+                        </div>
+                      </div>
+                    ) : item.type === 'modoo-vote-articles' ? (
+                      // 공감 투표인 경우 이모티콘 표시
                       <div className="relative w-full h-full flex items-center justify-center">
                       <div className="w-24 h-24 relative">
                         <img
-                          src={item.emotionIcon}
-                          alt="감정 이모티콘"
+                          src={EMOTION_ICONS[item.category as keyof typeof EMOTION_ICONS] || EMOTION_ICONS.default}
+                          alt="감정 아이콘"
                           className="w-24 h-24 object-contain"
                         />
                       </div>
@@ -424,9 +527,13 @@ export default function FeedPage() {
                       <span className="text-sm text-blue-400">{item.displayType}</span>
                     </div>
                     
-                    {/* 제목 영역 - 두 줄 고정 */}
+                    {/* 제목 영역 */}
                     <h3 className="text-lg font-semibold text-white mb-2 h-[3.5rem] line-clamp-2">
-                      {item.type === 'modoo-ai' ? item.title :
+                      {item.type === 'news' ? (
+                        item.title
+                      ) : item.type === 'modoo-vote-articles' ? (
+                        item.title
+                      ) :
                        item.type === 'photo-story' ? 
                          (Array.isArray(item.aiStories) 
                            ? item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content 

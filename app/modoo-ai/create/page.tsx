@@ -143,14 +143,43 @@ export default function CreateTestPage() {
   const [story, setStory] = useState('');
   const [emotionOpen, setEmotionOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [isSummarizingChat, setIsSummarizingChat] = useState(false); // 채팅 요약 로딩 상태
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
   const [formattedVote, setFormattedVote] = useState<FormattedVote>({ questions: [] });
+
+  const handleSummarizeChat = async () => {
+    if (!currentUser?.uid) return;
+    setIsSummarizingChat(true);
+    try {
+      const response = await fetch('/api/ai-story-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: currentUser.uid }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '채팅 내용 요약에 실패했습니다.');
+      }
+
+      const data = await response.json();
+      setStory(data.summary);
+      alert('채팅 내용이 요약되어 사연으로 사용되었습니다.');
+    } catch (error) {
+      console.error('채팅 요약 실패:', error);
+      alert(error instanceof Error ? error.message : '채팅 내용 요약에 실패했습니다.');
+    } finally {
+      setIsSummarizingChat(false);
+    }
+  };
 
   // AI 응답 생성
   const handleGenerate = async () => {
     try {
       setIsGenerating(true);
-      const response = await fetch('/api/modoo-vote', {
+      const response = await fetch('/api/ai-conversation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,6 +243,13 @@ export default function CreateTestPage() {
                 placeholder="사연을 자유롭게 작성해주세요. AI가 공감 투표를 만들고 도움이 될 만한 컨텐츠를 추천해드립니다."
                 className="bg-gray-700 border-gray-600 text-white min-h-[200px]"
               />
+              <Button
+                onClick={handleSummarizeChat}
+                disabled={isSummarizingChat || !currentUser?.uid}
+                className="w-full bg-blue-500 hover:bg-blue-600 h-10 text-base mt-2"
+              >
+                {isSummarizingChat ? '채팅 내용 요약 중...' : '오늘 채팅 내용으로 사연 생성'}
+              </Button>
             </div>
 
             {/* 2. 감정 선택 */}

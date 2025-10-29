@@ -18,6 +18,9 @@ import { ChevronLeft, ChevronRight, ImageIcon, Loader2, MessageSquareDashed } fr
 import Link from 'next/link';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 import { AIGenerationProgress } from '@/components/AIGenerationProgress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Tabs 컴포넌트 임포트
+import NewsVotePage from '../news-vote/page'; // NewsVotePage 임포트
+import ModooVotePage from '../modoo-vote/page'; // ModooVotePage 임포트
 
 interface PhotoStory {
   id: string;
@@ -50,7 +53,7 @@ const ParticlesComponent = () => {
 
   return (
     <Particles
-      className="absolute inset-0"
+      className="absolute inset-0 pointer-events-none"
       init={particlesInit}
       options={{
         background: {
@@ -132,7 +135,7 @@ const ParticlesComponent = () => {
   );
 };
 
-export default function PhotoStoryPage() {
+export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean }) {
   const router = useRouter();
   const currentUser = useSelector((state: any) => state.user.currentUser);
   const [stories, setStories] = useState<PhotoStory[]>([]);
@@ -150,8 +153,11 @@ export default function PhotoStoryPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isAdmin = currentUser?.uid === 'vW1OuC6qMweyOqu73N0558pv4b03';
-
   const fetchStories = useCallback(async () => {
+    if (!isActive) {
+      setLoading(false);
+      return;
+    }
     try {
       const q = query(
         collection(db, 'photo-stories')
@@ -198,7 +204,7 @@ export default function PhotoStoryPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isActive]); // isActive 의존성만 필요
 
   useEffect(() => {
     fetchStories();
@@ -434,7 +440,7 @@ export default function PhotoStoryPage() {
                     </div>
                   </div>
                 </div>
-                {isAdmin && (
+                {(isAdmin || story.author.uid === currentUser?.uid) && (
                   <button
                     onClick={async (e) => {
                       e.stopPropagation(); // 클릭 이벤트 전파 방지
@@ -467,9 +473,10 @@ export default function PhotoStoryPage() {
                         }
                       }
                     }}
-                    className={`ml-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors ${
+                    className={`ml-2 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors group relative ${
                       deleting === story.id ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
+                    title="삭제하기"
                     disabled={deleting === story.id}
                   >
                     {deleting === story.id ? (
@@ -493,7 +500,72 @@ export default function PhotoStoryPage() {
 
   return (
     <>
-    <LoginOutButton />
+    {/* LoginOutButton을 고정된 헤더로 추가 */}
+    <div className="fixed top-0 left-0 right-0 z-20 w-full">
+      <LoginOutButton />
+    </div>
+
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 relative overflow-hidden pt-[80px]"> {/* pt-[80px] 추가 */}
+      <div className="absolute inset-0 z-0">
+        <ParticlesComponent /> {/* ParticlesComponent를 z-0으로 설정 */}
+      </div>
+      <div className="container mx-auto px-4 py-6 relative z-10">
+        <h1 className="text-3xl font-bold mb-2 text-center">세상의 모든 투표</h1> {/* 제목 추가 */}
+        <p className="text-gray-400 text-center mb-6">가입 없이도 투표는 가능, 투표 제안은 회원가입 필수</p> {/* 설명 추가 */}
+
+        <Tabs 
+          value="photo-story"
+          className="w-full flex flex-col items-center"
+        >
+          <TabsList className="grid w-full max-w-lg grid-cols-3 bg-gray-700/50 mb-6 p-1 rounded-lg shadow-md">
+            <TabsTrigger 
+              value="news-vote" 
+              className="py-2 px-4 rounded-md transition-colors text-gray-300 hover:bg-gray-600"
+              onClick={() => router.push('/news-vote')}
+            >
+              뉴스투표
+            </TabsTrigger>
+            <TabsTrigger 
+              value="modoo-vote" 
+              className="py-2 px-4 rounded-md transition-colors text-gray-300 hover:bg-gray-600"
+              onClick={() => router.push('/modoo-vote')}
+            >
+              공감투표
+            </TabsTrigger>
+            <TabsTrigger 
+              value="photo-story" 
+              className="py-2 px-4 rounded-md transition-colors bg-blue-600 text-white"
+            >
+              사진투표
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="photo-story" className="w-full">
+            <div className="mb-10">
+              {currentUser?.uid && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    onClick={() => setShowWriteForm(true)}
+                    variant="default"
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    만들기
+                  </Button>
+                </div>
+              )}
+              {!currentUser && (
+                <p className="text-sm text-gray-400 text-center mt-4">
+                  * 제작은 로그인이 필요합니다
+                </p>
+              )}
+
+              {renderStoryList()}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </main>
+
     {/* 카카오톡 문의 플로팅 버튼 */}
     <a
       href="http://pf.kakao.com/_pGNPn/chat"
@@ -507,42 +579,16 @@ export default function PhotoStoryPage() {
       </span>
     </a>
 
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90 relative overflow-hidden">
-      <ParticlesComponent />
-      <div className="container mx-auto px-4 py-10 relative z-10">
-        <div className="mb-10">
-          <div className="flex justify-between items-center mb-8">
-            <div className="text-center flex-grow">
-              <h1 className="text-2xl font-bold text-white mb-2">
-                AI 사진 스토리
-              </h1>
-              <p className="text-sm text-gray-400">
-                사진 속 이야기를 AI가 상상해드립니다
-              </p>
-            </div>
-            {currentUser?.uid && (
-              <div className="flex-shrink-0 ml-4">
-                <Button
-                  onClick={() => setShowWriteForm(true)}
-                  variant="default"
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                  만들기
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {!currentUser && (
-            <p className="text-sm text-gray-400 text-center mt-4">
-              * 제작은 로그인이 필요합니다
-            </p>
-          )}
-
-          {renderStoryList()}
-        </div>
-      </div>
-    </main>
+    {/* AI 플로팅 버튼 */}
+    <Link
+      href="/ai-comfort"
+      className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+    >
+      <span className="text-white font-medium text-base">AI</span>
+      <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        모두트리 AI와 대화하기
+      </span>
+    </Link>
 
     {/* 작성 모달 */}
     <Dialog open={showWriteForm} onOpenChange={setShowWriteForm}>
@@ -645,19 +691,7 @@ export default function PhotoStoryPage() {
         )}
       </DialogContent>
     </Dialog>
-
     <CollapsibleFooter />
-
-      {/* AI 플로팅 버튼 */}
-      <Link
-        href="/ai-comfort"
-        className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
-      >
-        <span className="text-white font-medium text-base">AI</span>
-        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          모두트리 AI와 대화하기
-        </span>
-      </Link>
     </>
   );
 }

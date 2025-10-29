@@ -177,8 +177,8 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, styleSettings, ..
     }
 
     // 저장 시작
-    const messageToSave = message;
     setSaveStatus('저장 중...');
+    const messageToSave = message.trim();
     
     // 이름이 없을 경우 '익명'으로 설정
     const finalName = name.trim() || '익명';
@@ -190,26 +190,6 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, styleSettings, ..
         const commentDoc = await getDoc(commentRef)
         const currentReplies = commentDoc.data().replies || []
 
-        // AI 답변 생성
-        let aiResponse = '';
-        try {
-          const response = await fetch('/api/ai-response', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ content: message })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            aiResponse = data.response;
-          }
-        } catch (error) {
-          console.error('AI 답변 생성 중 오류:', error);
-          aiResponse = '죄송합니다. AI 답변을 생성하는 중에 오류가 발생했습니다.';
-        }
-
         await updateDoc(commentRef, {
           replies: [...currentReplies, {
             name: finalName,
@@ -218,33 +198,16 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, styleSettings, ..
             uid: currentUser?.uid || null,
             profileImage: currentUser?.photoURL || null,
             likes: 0,
-            likedBy: [],
-            aiResponse
+            likedBy: []
           }]
-        })
+        });
+        
+        // 답글 저장 완료 후 상태 초기화
+        setMessage('');
+        setReplyTo(null);
+        setSaveStatus('');
       } else {
         // 새 방명록 작성
-        // AI 답변 생성
-        let aiResponse = '';
-        setSaveStatus('AI 답변을 생성하고 있습니다...');
-        try {
-          const response = await fetch('/api/ai-response', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ content: messageToSave })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            aiResponse = data.response;
-          }
-        } catch (error) {
-          console.error('AI 답변 생성 중 오류:', error);
-          aiResponse = '죄송합니다. AI 답변을 생성하는 중에 오류가 발생했습니다.';
-        }
-        
         // 저장 완료 후 폼 초기화
         setMessage('');
         setName('');
@@ -259,8 +222,7 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, styleSettings, ..
           profileImage: currentUser?.photoURL || null,
           likes: 0,
           likedBy: [],
-          replies: [],
-          aiResponse
+          replies: []
         })
 
         // 구독자들에게 알림 전송
@@ -447,44 +409,6 @@ const HeaderDrawer = ({ children, drawerContentClassName, uid, styleSettings, ..
                             </button>
                           </div>
                         </div>
-                        {reply.aiResponse && (
-                          <div 
-                            className={cn(
-                              "p-3 backdrop-blur-sm ml-4",
-                              styleSettings.rounded === 'none' && 'rounded-none',
-                              styleSettings.rounded === 'sm' && 'rounded',
-                              styleSettings.rounded === 'md' && 'rounded-lg',
-                              styleSettings.rounded === 'lg' && 'rounded-xl',
-                              styleSettings.rounded === 'full' && 'rounded-full'
-                            )}
-                            style={{
-                              backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
-                              boxShadow: (() => {
-                                const shadowColor = styleSettings.shadowColor 
-                                  ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
-                                  : 'rgba(0, 0, 0, 0.2)';
-                                return styleSettings.shadow === 'none' ? 'none' : `0 2px 4px ${shadowColor}`;
-                              })()
-                            }}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">
-                                <div 
-                                  className="w-6 h-6 rounded-full flex items-center justify-center"
-                                  style={{ 
-                                    backgroundColor: `${styleSettings.bgColor}${Math.round(0.2 * 255).toString(16).padStart(2, '0')}`,
-                                    border: `1px solid ${styleSettings.textColor}20`
-                                  }}
-                                >
-                                  <span className="text-xs font-medium" style={{ color: styleSettings.textColor }}>AI</span>
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm whitespace-pre-wrap" style={{ color: styleSettings.textColor }}>{reply.aiResponse}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -953,44 +877,6 @@ export default function GuestbookTemplate({ username, uid }) {
               <p style={{ color: styleSettings.textColor }} className="leading-relaxed">
                 {entry.message}
               </p>
-              {entry.aiResponse && (
-                <div 
-                  className={cn(
-                    "mt-4 p-3 backdrop-blur-sm",
-                    styleSettings.rounded === 'none' && 'rounded-none',
-                    styleSettings.rounded === 'sm' && 'rounded',
-                    styleSettings.rounded === 'md' && 'rounded-lg',
-                    styleSettings.rounded === 'lg' && 'rounded-xl',
-                    styleSettings.rounded === 'full' && 'rounded-full'
-                  )}
-                  style={{
-                    backgroundColor: `${styleSettings.bgColor}${Math.round((styleSettings.bgOpacity || 0.1) * 255).toString(16).padStart(2, '0')}`,
-                    boxShadow: (() => {
-                      const shadowColor = styleSettings.shadowColor 
-                        ? `rgba(${parseInt(styleSettings.shadowColor.slice(1, 3), 16)}, ${parseInt(styleSettings.shadowColor.slice(3, 5), 16)}, ${parseInt(styleSettings.shadowColor.slice(5, 7), 16)}, ${styleSettings.shadowOpacity ?? 0.2})`
-                        : 'rgba(0, 0, 0, 0.2)';
-                      return styleSettings.shadow === 'none' ? 'none' : `0 2px 4px ${shadowColor}`;
-                    })()
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                        style={{ 
-                          backgroundColor: `${styleSettings.bgColor}${Math.round(0.2 * 255).toString(16).padStart(2, '0')}`,
-                          border: `1px solid ${styleSettings.textColor}20`
-                        }}
-                      >
-                        <span className="text-xs font-medium" style={{ color: styleSettings.textColor }}>AI</span>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm" style={{ color: styleSettings.textColor }}>{entry.aiResponse}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
               <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center gap-4">

@@ -1,0 +1,22 @@
+// photo-stories 컬렉션에 대한 규칙 (간단한 버전 - 테스트용)
+match /photo-stories/{document} {
+  allow read: if true;  // 모든 사용자가 읽기 가능
+  allow create: if isAuthenticated(); // 로그인한 사용자만 생성 가능
+  allow update: if true; // 임시로 모든 업데이트 허용 (테스트용)
+  allow delete: if false; // 삭제 불가 (관리자만 가능)
+}
+
+// photo-story-votes 컬렉션에 대한 규칙 추가
+match /photo-story-votes/{document} {
+  allow read, write: if true; // 임시로 모든 권한 허용 (테스트용)
+}
+
+// photo-story-likes 컬렉션에 대한 규칙 추가
+match /photo-story-likes/{document} {
+  allow read, write: if true; // 임시로 모든 권한 허용 (테스트용)
+}
+
+// photo-story-comments 컬렉션에 대한 규칙 추가
+match /photo-story-comments/{document} {
+  allow read, write: if true; // 임시로 모든 권한 허용 (테스트용)
+}

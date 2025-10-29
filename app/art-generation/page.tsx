@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
-import { loadSlim } from "tsparticles-slim";
+import { useRouter, usePathname } from 'next/navigation';
+import { loadFull } from "tsparticles";
 import Particles from "react-tsparticles";
 import LoginOutButton from '@/components/ui/LoginOutButton';
 import CollapsibleFooter from '@/components/ui/CollapsibleFooter';
@@ -15,7 +15,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { RadioGroup } from '@/components/ui/radio-group';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2, ImageIcon } from 'lucide-react';
+import { ImageIcon } from 'lucide-react';
+import { AIGenerationProgress } from '@/components/AIGenerationProgress';
 const LOGO_URL = '/logos/m1.png';
 
 // 스타일 카테고리 정의
@@ -108,9 +109,10 @@ const resizeImage = async (file: File): Promise<Blob> => {
 export default function ArtGenerationPage() {
   const { user, loading } = useAuth() as { user: User | null, loading: boolean };
   const router = useRouter();
+  const pathname = usePathname();
 
   const particlesInit = useCallback(async (engine: any) => {
-    await loadSlim(engine);
+    await loadFull(engine);
   }, []);
   
   const [style, setStyle] = useState('');
@@ -365,8 +367,8 @@ export default function ArtGenerationPage() {
             {user && (
               <p className="text-sm text-blue-400 mt-2">
                 {remainingGenerations === null ? '' :
-                 remainingGenerations === 0 ? '오늘의 작품 생성 횟수를 모두 사용했습니다. 내일 다시 시도해주세요.' :
-                 `오늘 남은 작품 생성 횟수: ${remainingGenerations}회`}
+                 remainingGenerations === 0 ? '오늘의 작품 생성 횟수(3회)를 모두 사용했습니다. 내일 다시 시도해주세요.' :
+                 `오늘 남은 작품 생성 횟수: ${remainingGenerations}회 (하루 3회 제한)`}
               </p>
             )}
           </div>
@@ -447,33 +449,33 @@ export default function ArtGenerationPage() {
               />
             </div>
 
-            <div className="bg-blue-900/20 backdrop-blur-sm rounded-xl p-8 border border-blue-500/20 shadow-lg">
-              <div className="flex justify-center">
-                {user ? (
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={generating || !result?.base64Data || !style || !colorMood || remainingGenerations === 0}
-                    className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600"
-                  >
-                    {generating ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        변환 중...
-                      </>
-                    ) : (
-                      '예술 작품으로 변환하기'
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => router.push('/login')}
-                    className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700"
-                  >
-                    로그인하고 예술 작품 만들기
-                  </Button>
-                )}
+            {/* 변환 버튼을 상단으로 이동 */}
+            {(result?.base64Data && style && colorMood) && (
+              <div className="bg-blue-900/20 backdrop-blur-sm rounded-xl p-8 border border-blue-500/20 shadow-lg mb-8">
+                <div className="flex justify-center">
+                  {user ? (
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={generating || remainingGenerations === 0}
+                      className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600"
+                    >
+                      {generating ? (
+                        <AIGenerationProgress />
+                      ) : (
+                        '예술 작품으로 변환하기'
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => router.push('/login')}
+                      className="w-full md:w-auto text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700"
+                    >
+                      로그인하고 예술 작품 만들기
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {result && (
               <div className="mt-8 space-y-4">
@@ -605,7 +607,7 @@ export default function ArtGenerationPage() {
                             link.click();
                             document.body.removeChild(link);
                           }}
-                          className="bg-black/30 hover:bg-black/50 w-full sm:w-auto"
+                          className="bg-black/30 hover:bg-black/50 flex-1 sm:flex-initial sm:min-w-[120px]"
                         >
                           저장하기
                         </Button>
@@ -621,7 +623,7 @@ export default function ArtGenerationPage() {
                             const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
                             if (fileInput) fileInput.value = '';
                           }}
-                          className="bg-black/30 hover:bg-black/50 w-full sm:w-auto"
+                          className="bg-black/30 hover:bg-black/50 flex-1 sm:flex-initial sm:min-w-[120px]"
                         >
                           새 사진 업로드
                         </Button>
@@ -638,15 +640,17 @@ export default function ArtGenerationPage() {
       <CollapsibleFooter />
       
       {/* AI 플로팅 버튼 */}
-      <Link
-        href="/ai-comfort"
-        className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
-      >
-        <span className="text-white font-medium text-base">AI</span>
-        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          모두트리 AI와 대화하기
-        </span>
-      </Link>
+      {pathname && !pathname.includes('/profile') && (
+        <Link
+          href="/ai-comfort"
+          className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
+        >
+          <span className="text-white font-medium text-base">AI</span>
+          <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            모두트리 AI와 대화하기
+          </span>
+        </Link>
+      )}
     </>
   );
 }

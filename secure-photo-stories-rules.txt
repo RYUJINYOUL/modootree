@@ -1,0 +1,22 @@
+// photo-stories 컬렉션에 대한 규칙 (보안 강화 버전)
+match /photo-stories/{document} {
+  allow read: if true;  // 모든 사용자가 읽기 가능
+  allow create: if isAuthenticated(); // 로그인한 사용자만 생성 가능
+  
+  // 업데이트 규칙을 세분화
+  allow update: if 
+    // 로그인한 사용자는 자신이 만든 스토리만 수정 가능
+    (isAuthenticated() && request.auth.uid == resource.data.author.uid) ||
+    
+    // 비로그인 사용자는 특정 필드만 업데이트 가능
+    (!isAuthenticated() && 
+     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats', 'votes', 'likeCount']) &&
+     
+     // 추가 보안: 값이 증가만 가능 (감소 불가)
+     request.resource.data.stats.viewCount >= resource.data.stats.viewCount &&
+     request.resource.data.stats.participantCount >= resource.data.stats.participantCount &&
+     (request.resource.data.likeCount == null || request.resource.data.likeCount >= (resource.data.likeCount || 0))
+    );
+    
+  allow delete: if false; // 삭제 불가 (관리자만 가능)
+}

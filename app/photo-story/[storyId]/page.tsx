@@ -227,22 +227,21 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
   }, [resolvedParams.storyId, router, currentUser]);
 
   const handleVote = async (storyId: string) => {
-    if (!currentUser) {
-      alert('투표하려면 로그인이 필요합니다.');
-      return;
-    }
+    // 비로그인 사용자도 투표 가능하도록 로그인 체크 제거
 
     if (voting || hasVoted) return;
 
     setVoting(true);
     try {
-      // 투표 기록 저장
-      await addDoc(collection(db, 'photo-story-votes'), {
-        storyId: story!.id,
-        userId: currentUser.uid,
-        votedStoryId: storyId,
-        createdAt: new Date()
-      });
+      // 투표 기록 저장 (로그인 사용자만)
+      if (currentUser?.uid) {
+        await addDoc(collection(db, 'photo-story-votes'), {
+          storyId: story!.id,
+          userId: currentUser.uid,
+          votedStoryId: storyId,
+          createdAt: new Date()
+        });
+      }
 
       // 투표수 증가
       const storyRef = doc(db, 'photo-stories', story!.id);
@@ -376,7 +375,7 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
                       <button
                         key={storyId}
                         onClick={() => handleVote(storyId)}
-                        disabled={!currentUser || hasVoted}
+                        disabled={hasVoted}
                         className={`w-full p-4 rounded-lg text-left transition-colors ${
                           storyId === story.selectedStoryId
                             ? 'bg-green-500/20 border-green-500'
@@ -406,12 +405,7 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
                   })}
                 </div>
 
-                {!currentUser && (
-                  <p className="text-sm text-center text-gray-400">
-                    * 투표하려면 로그인이 필요합니다
-                  </p>
-                )}
-                {currentUser && hasVoted && (
+                {hasVoted && (
                   <p className="text-sm text-center text-gray-400">
                     * 이미 투표하셨습니다
                   </p>

@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { uploadHealthImage, saveHealthRecord, fileToBase64, analyzeHealthRecord, analyzeAllInputs } from '@/lib/health-service';
-import { Loader2, Check, Sparkles, ImageIcon } from 'lucide-react';
+import { Check, Sparkles, ImageIcon } from 'lucide-react';
+import { AIGenerationProgress } from '@/components/AIGenerationProgress';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 
 interface ParsedMeal {
@@ -573,13 +574,11 @@ export default function HealthAnalyzePage() {
               }
               className="w-full flex justify-center items-center px-6 py-4 text-lg font-bold rounded-xl transition-all duration-300 shadow-xl 
                 active:scale-[0.98] bg-gradient-to-r from-green-600 to-emerald-600
-                hover:from-green-700 hover:to-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                hover:from-green-700 hover:to-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed
+                relative overflow-hidden"
             >
               {isFinalAnalyzing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  <span>분석 중...</span>
-                </>
+                <AIGenerationProgress />
               ) : (
                 <>
                   <Check className="w-5 h-5 mr-2" />

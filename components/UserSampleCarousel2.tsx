@@ -40,60 +40,53 @@ interface Sample {
 const sampleUsers: Sample[] = [
   {
     id: 1,
-    username: '일기, 일정표 페이지를 동료, 가족, 친구, 지인을 초대 함께 작성할 수도 있습니다',
-    thumbnail: '/samples/schedule.png',
-    description: '초대 기능',
+    username: '모두트리 AI 채팅창 메모 내용 입력 후 저장을 요청 하세요',
+    thumbnail: '/samples/s1.png',
+    description: 'AI 메모 저장',
     bgColor: 'bg-[#358f80]'
   },
   {
     id: 2,
-    username: '페이지 상단의 작은 번역 버튼이 있어, 희망하는 언어로 간단하게 자동 번역됩니다.',
-    thumbnail: '/samples/diary.png',
-    description: '번역 기능',
+    username: '모두트리 AI와 대화한 내용으로 AI가 오늘 일기를 작성해 드립니다',
+    thumbnail: '/samples/s2.png',
+    description: 'AI 일기 작성',
     bgColor: 'bg-[#469d89]'
   },
   {
     id: 3,
-    username: '모든 컴포넌트를 드래그 앤 드롭 방식으로 쉽게 만들 수 있습니다. 정말 쉽습니다.',
-    thumbnail: '/samples/music.png',
-    description: '편집 기능',
+    username: '오늘 하루를 대화 해보세요 AI가 오늘 건강을 분석해 드립니다',
+    thumbnail: '/samples/s3.png',
+    description: 'AI 건강 분석',
     bgColor: 'bg-[#56ab91]'
   },
   {
     id: 4,
-    username: '페이지의 새 글이 등록 될때마다 이메일로 알림을 보내 드리는 기능이 탑재되어 있습니다',
-    thumbnail: '/samples/album.png',
-    description: '알림 기능',
+    username: '모두트리 AI와 오늘 일과를 대화 하세요 내 사이트에서 자동 저장 됩니다',
+    thumbnail: '/samples/s4.png',
+    description: 'AI 자동 저장',
     bgColor: 'bg-[#67b99a]'
   },
   {
     id: 5,
-    username: '수 많은 디자인 배경 스킨을 적용해 보세요, 유튜브 영상도 배경으로 가능합니다',
-    thumbnail: '/samples/links.png',
+    username: '내 사이트 디자인 배경 스킨을 적용하세요, 내 사진도 배경 설정 가능합니다',
+    thumbnail: '/samples/s5.png',
     description: '디자인 기능',
     bgColor: 'bg-[#358f80]'
   },
   {
     id: 6,
-    username: '익명 일기 공유 커뮤니티 공간과 포트폴리오 공간, 내 페이지 공유 공간을 준비하고 있습니다',
-    thumbnail: '/samples/blog2.png',
-    description: '커뮤니티',
+    username: '내 사이트를 SNS 명함 공유 나만의 게시판을 만들 수 있습니다',
+    thumbnail: '/samples/s6.png',
+    description: '응원게시판',
     bgColor: 'bg-[#469d89]'
   },
   {
     id: 7,
-    username: '단 두번의 클릭으로 내 페이지를 아주 쉽게 공유할 수 있고 내 페이지를 방문자도 쉽게 공유 가능합니다',
-    thumbnail: '/samples/contact.png',
-    description: '공유 기능',
+    username: '단 두번 클릭으로 내 사이트를 만들 수 있습니다',
+    thumbnail: '/samples/s7.png',
+    description: '드래그드롭',
     bgColor: 'bg-[#56ab91]'
   },
-  {
-    id: 8,
-    username: '일기글과 오늘 메모글의 AI 답변 기능이 기본 탑재되어 위로 격려를 받을 수 있습니다',
-    thumbnail: '/samples/ai.png',
-    description: 'AI 답변',
-    bgColor: 'bg-[#56ab91]'
-  }
 ];
 
 export default function UserSampleCarousel2() {

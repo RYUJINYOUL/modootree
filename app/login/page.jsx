@@ -201,7 +201,13 @@ const LoginPage = () => {
             로그인
           </button>
         </form>
-        <div className="w-full flex justify-end mt-4">
+        <div className="w-full flex flex-col gap-4 items-center mt-4">
+          <button
+            onClick={() => push("/feed")}
+            className="text-gray-300 hover:text-white text-sm transition-colors"
+          >
+            회원가입 없이 먼저 둘러보기
+          </button>
           <button
             onClick={() => push("/register")}
             className="text-blue-300 hover:underline text-sm"

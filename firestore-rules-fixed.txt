@@ -1,0 +1,43 @@
+// photo-stories 컬렉션에 대한 규칙 (수정된 버전)
+match /photo-stories/{document} {
+  allow read: if true;  // 모든 사용자가 읽기 가능
+  allow create: if isAuthenticated(); // 로그인한 사용자만 생성 가능
+  allow update: if isAuthenticated() || ( // 로그인한 사용자 또는 비로그인 투표 허용
+    !isAuthenticated() &&
+    // 비로그인 시 허용되는 필드들 - 실제 업데이트되는 필드명과 일치시킴
+    (
+      // votes 필드만 업데이트하는 경우
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes']) ||
+      // stats 객체 업데이트하는 경우  
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']) ||
+      // votes와 stats 둘 다 업데이트하는 경우
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes', 'stats']) ||
+      // 조회수만 업데이트하는 경우
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats']) ||
+      // 좋아요수만 업데이트하는 경우
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+    )
+  );
+  allow delete: if false; // 삭제 불가 (관리자만 가능)
+}
+
+// photo-story-votes 컬렉션에 대한 규칙 추가
+match /photo-story-votes/{document} {
+  allow read: if true;  // 모든 사용자가 읽기 가능
+  allow create: if isAuthenticated(); // 로그인한 사용자만 투표 기록 생성 가능
+  allow update, delete: if false; // 투표 기록은 수정/삭제 불가
+}
+
+// photo-story-likes 컬렉션에 대한 규칙 추가
+match /photo-story-likes/{document} {
+  allow read: if true;  // 모든 사용자가 읽기 가능
+  allow create, delete: if isAuthenticated(); // 로그인한 사용자만 좋아요 추가/제거 가능
+  allow update: if false; // 좋아요는 수정 불가
+}
+
+// photo-story-comments 컬렉션에 대한 규칙 추가
+match /photo-story-comments/{document} {
+  allow read: if true; // 모든 사용자가 댓글 읽기 가능
+  allow create: if isAuthenticated(); // 로그인한 사용자만 댓글 생성 가능
+  allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId; // 작성자만 수정/삭제 가능
+}

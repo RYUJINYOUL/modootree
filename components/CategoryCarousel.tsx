@@ -46,7 +46,7 @@ export default function CategoryCarousel({
   return (
     <div 
       ref={scrollContainerRef}
-      className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide snap-x snap-mandatory"
+      className="flex overflow-x-auto md:justify-center gap-2 pb-2 scrollbar-hide snap-x snap-mandatory"
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
@@ -59,7 +59,7 @@ export default function CategoryCarousel({
           data-category={category.id}
           variant={selectedCategory === category.id ? "default" : "outline"}
           onClick={() => onSelect(category.id)}
-          className={`flex-shrink-0 snap-center whitespace-nowrap px-6 transition-all border ${
+          className={`flex-shrink-0 snap-center whitespace-nowrap px-4 md:px-6 py-2 text-sm md:text-base transition-all border ${
             selectedCategory === category.id 
               ? 'bg-blue-500 hover:bg-blue-600 text-white border-transparent' 
               : 'bg-blue-500/10 hover:bg-blue-500/30 text-white/90 hover:text-white border-blue-500/30'

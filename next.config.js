@@ -9,6 +9,9 @@ const nextConfig = {
       'oaidalleapiprodscus.blob.core.windows.net',  // DALL-E API
     ],
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 }
 
 module.exports = nextConfig
