@@ -29,8 +29,8 @@ export default function Home() {
   const router = useRouter();
 
   const rotatingTexts = [
-    "공감 친구, 모두트리 AI 입니다.",
-    "모두트리, 특별한 하루를 기록하세요."
+    "공감 친구, 모두트리 AI",
+    "모두트리, 특별한 하루 기록"
   ];
 
   // 3초마다 텍스트 변경
@@ -46,7 +46,6 @@ export default function Home() {
 
   const suggestedQueries = [
     { text: "모두트리 전체 서비스를 설명해줘" },
-    { text: "일기 작성 가능해?" },
     { text: "오늘 대화 내용으로 사연 투표를 만들어 줄수 있어?" },
     { text: "모투트리 문의 게시판은 어디에 있는거야?" }
   ];
@@ -343,8 +342,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 투표 미리보기 캐로셀 */}
-        <div className="w-full max-w-3xl mx-auto mt-64 px-2 mb-8">
+        {/* 투표 미리보기 캐로셀 - 데스크톱에서만 표시 */}
+        <div className="hidden md:block w-full max-w-3xl mx-auto mt-64 px-2 mb-8">
           <div className="relative">
             {/* 캐로셀 컨테이너 */}
             <div 
