@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Send, Search } from 'lucide-react';
+import { Send, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth } from '@/firebase';
 import {
   Dialog,
@@ -22,6 +22,10 @@ export default function Home() {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [currentX, setCurrentX] = useState(0);
   const router = useRouter();
 
   const rotatingTexts = [
@@ -46,6 +50,98 @@ export default function Home() {
     { text: "오늘 대화 내용으로 사연 투표를 만들어 줄수 있어?" },
     { text: "모투트리 문의 게시판은 어디에 있는거야?" }
   ];
+
+  // 샘플 투표 데이터 (실제로는 API에서 가져와야 함)
+  const sampleVotes = [
+    // 뉴스투표 2개
+    { id: 1, type: 'news', title: '경제 정책 변화에 대한 의견', category: '경제' },
+    { id: 2, type: 'news', title: '환경 보호 정책 효과성', category: '환경' },
+    // 공감투표 2개  
+    { id: 3, type: 'empathy', title: '직장에서의 스트레스 해결법', category: '고민' },
+    { id: 4, type: 'empathy', title: '새로운 취미 시작하기', category: '행복' },
+    // 사진투표 2개
+    { id: 5, type: 'photo', title: '가을 풍경 중 가장 아름다운 곳', category: '자연' },
+    { id: 6, type: 'photo', title: '맛있어 보이는 음식 선택', category: '음식' }
+  ];
+
+  const getItemsPerSlide = () => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      return 3; // PC: 3개
+    }
+    return 2; // 모바일: 2개
+  };
+
+  const nextSlide = () => {
+    const itemsPerSlide = getItemsPerSlide();
+    setCarouselIndex((prev) => (prev + 1) % Math.ceil(sampleVotes.length / itemsPerSlide));
+  };
+
+  const prevSlide = () => {
+    const itemsPerSlide = getItemsPerSlide();
+    setCarouselIndex((prev) => (prev - 1 + Math.ceil(sampleVotes.length / itemsPerSlide)) % Math.ceil(sampleVotes.length / itemsPerSlide));
+  };
+
+  // 드래그/스와이프 핸들러
+  const handleStart = (clientX: number) => {
+    setIsDragging(true);
+    setStartX(clientX);
+    setCurrentX(clientX);
+  };
+
+  const handleMove = (clientX: number) => {
+    if (!isDragging) return;
+    setCurrentX(clientX);
+  };
+
+  const handleEnd = () => {
+    if (!isDragging) return;
+    
+    const diff = startX - currentX;
+    const threshold = 50; // 최소 드래그 거리
+    
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        nextSlide(); // 오른쪽으로 드래그 = 다음 슬라이드
+      } else {
+        prevSlide(); // 왼쪽으로 드래그 = 이전 슬라이드
+      }
+    }
+    
+    setIsDragging(false);
+    setStartX(0);
+    setCurrentX(0);
+  };
+
+  // 마우스 이벤트
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
+  };
+
+  const handleMouseLeave = () => {
+    handleEnd();
+  };
+
+  // 터치 이벤트
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handleMove(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    handleEnd();
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -163,10 +259,22 @@ export default function Home() {
       </div>
 
       {/* 로고 이미지 */}
-      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[20vh]"> {/* 상단에서 30% 위치로 조정 */}
-        <Link href="/profile" className="mb-8 transform hover:scale-105 transition-transform">
+      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[15vh]"> {/* 상단에서 30% 위치로 조정 */}
+        <Link href="/profile" className="transform hover:scale-105 transition-transform">
           <img src="/logos/logohole.png" alt="Logo" className="w-32 h-32 object-contain" />
         </Link>
+
+        {/* 통합검색 링크 - 로고와 딱 붙어있게 */}
+        <div className="text-center mb-15 -mt-4">
+          <p className="text-gray-500 text-xs">
+            검색 페이지는{' '}
+            <Link href="/search" className="text-blue-500 hover:text-blue-400 underline hover:opacity-90">
+              클릭
+            </Link>
+            {' '}, 공감 채팅 아래 입력창
+          </p>
+        </div>
+
         <div className="text-center mb-1">
           <p className="text-2xl text-gray-400 transition-opacity duration-500" style={{ opacity: 1 }}>{rotatingTexts[currentTextIndex]}</p>
         </div>
@@ -175,7 +283,7 @@ export default function Home() {
         <div className="flex items-center gap-2 w-full px-4 md:max-w-3xl mx-auto mt-4">
           <div className="flex-1 relative">
             <Textarea
-              placeholder="안녕하세요, 오늘 하루 어떻게 보내셨나요?"
+              placeholder="안녕하세요 저는 공감상담 전용 AI입니다, 통합검색 아래 사람 모양 아이콘 클릭하세요"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onFocus={() => setIsInputFocused(true)}
@@ -209,6 +317,7 @@ export default function Home() {
           </Button>
         </div>
 
+
         {/* 하단 아이콘 버튼들 */} 
         <div className="w-full flex justify-center mt-3 px-[10px] md:px-[100px] relative z-10"> 
           <div className="flex flex-row overflow-x-auto gap-4 py-2 scrollbar-hide">
@@ -220,6 +329,7 @@ export default function Home() {
               { icon: "/logos/ai1.png", path: "/health" },
               { icon: "/logos/m1.png", path: "/profile" },
               { icon: "/logos/ai4.png", path: "/inquiry" },
+              { icon: "/logos/ai5.png", path: "/search" },
               // { icon: "/logos/ai2.png", path: "/photo-story" }, // 공유 익명 일기 - 비공개
               // { icon: "/logos/ai3.png", path: "/modoo-vote" }, // 한페이지 선물 - 비공개
               // { icon: "/logos/m12.png", path: "/site" }, // 내 사이트 페이지 - 비공개
@@ -230,6 +340,82 @@ export default function Home() {
                 </div>
               </Link>
             ))}
+          </div>
+        </div>
+
+        {/* 투표 미리보기 캐로셀 */}
+        <div className="w-full max-w-3xl mx-auto mt-64 px-2 mb-8">
+          <div className="relative">
+            {/* 캐로셀 컨테이너 */}
+            <div 
+              className="overflow-hidden rounded-lg cursor-grab active:cursor-grabbing select-none"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div 
+                className={`flex transition-transform duration-300 ease-in-out ${isDragging ? 'transition-none' : ''}`}
+                style={{ 
+                  transform: `translateX(-${carouselIndex * 100}%)`,
+                  userSelect: 'none'
+                }}
+              >
+                {Array.from({ length: Math.ceil(sampleVotes.length / getItemsPerSlide()) }, (_, slideIndex) => (
+                  <div key={slideIndex} className={`w-full flex-shrink-0 grid gap-4 px-2 ${
+                    getItemsPerSlide() === 3 ? 'grid-cols-3' : 'grid-cols-2'
+                  }`}>
+                    {sampleVotes.slice(slideIndex * getItemsPerSlide(), slideIndex * getItemsPerSlide() + getItemsPerSlide()).map((vote) => (
+                      <Link 
+                        key={vote.id} 
+                        href={vote.type === 'news' ? '/news-vote' : vote.type === 'empathy' ? '/modoo-vote' : '/photo-story'}
+                        className="block"
+                        onClick={(e) => {
+                          // 드래그 중이면 링크 클릭 방지
+                          if (isDragging || Math.abs(startX - currentX) > 10) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <div className="bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-4 transition-colors border border-gray-700/50 h-full pointer-events-auto">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              vote.type === 'news' ? 'bg-blue-500/20 text-blue-300' :
+                              vote.type === 'empathy' ? 'bg-green-500/20 text-green-300' :
+                              'bg-purple-500/20 text-purple-300'
+                            }`}>
+                              {vote.type === 'news' ? '뉴스' : vote.type === 'empathy' ? '공감' : '사진'}
+                            </span>
+                            <span className="text-xs text-gray-400">{vote.category}</span>
+                          </div>
+                          <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
+                            {vote.title}
+                          </h4>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 인디케이터 */}
+            {Math.ceil(sampleVotes.length / getItemsPerSlide()) > 1 && (
+              <div className="flex justify-center mt-6 gap-2">
+                {Array.from({ length: Math.ceil(sampleVotes.length / getItemsPerSlide()) }, (_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCarouselIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === carouselIndex ? 'bg-blue-500' : 'bg-gray-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -252,7 +438,7 @@ export default function Home() {
             <DialogTitle className="text-xl font-bold text-center">모두트리에 오신 것을 환영합니다!</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 mt-4">
-            <Link href="/feed" className="w-full">
+            <Link href="/news-vote" className="w-full">
               <Button variant="outline" className="w-full bg-gray-800 hover:bg-gray-700 text-white border-gray-700">
                 회원가입 없이 둘러보기
               </Button>

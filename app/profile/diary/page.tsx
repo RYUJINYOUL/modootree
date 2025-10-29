@@ -26,6 +26,33 @@ interface DiaryItem {
 
 export default function DiaryPage() {
   const { currentUser } = useSelector((state: any) => state.user);
+  
+  // 로그인하지 않은 경우 바로 안내 메시지 표시
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">로그인이 필요한 서비스입니다</h2>
+          <p className="text-gray-400">다이어리 기능을 사용하려면 회원가입 후 로그인해주세요.</p>
+          <div className="space-x-4">
+            <Button 
+              onClick={() => window.location.href = '/login'}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              로그인
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/signup'}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              회원가입
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   const [activeTab, setActiveTab] = useState<'list' | 'calendar' | 'gallery'>('list');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [diaries, setDiaries] = useState<DiaryItem[]>([]);

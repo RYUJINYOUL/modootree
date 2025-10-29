@@ -50,11 +50,11 @@ const AgentSchema: Schema = {
     action: {
       // 표준 JSON 스키마 타입 문자열 사용
       type: SchemaType.STRING,
-      description: "사용자가 요청한 행동 (SAVE_MEMO, SAVE_DIARY 또는 NONE 중 하나)",
+      description: "사용자가 요청한 행동 (SAVE_MEMO 또는 NONE 중 하나)",
     },
     userResponse: {
       type: SchemaType.STRING,
-      description: "저장 완료 후 사용자에게 보여줄 친근하고 공감적인 응답 메시지. (예: '네, 대화 내용이 일기로 저장되었어요!😊')",
+      description: "저장 완료 후 사용자에게 보여줄 친근하고 공감적인 응답 메시지. (예: '네, 메모가 저장되었어요!')",
     },
     // SAVE_MEMO 액션일 때 사용될 메모 항목의 배열
     memoItems: {
@@ -79,11 +79,6 @@ const AgentSchema: Schema = {
         required: ['content', 'isTomorrow']
       }
     },
-    // SAVE_DIARY 액션일 때 사용될 단일 일기 내용
-    diaryContent: {
-      type: SchemaType.STRING,
-      description: "SAVE_DIARY 액션일 때만 사용. 이전 대화를 깔끔하게 요약한 일기 내용."
-    }
   },
   required: ['action', 'userResponse']
 };
@@ -91,62 +86,45 @@ const AgentSchema: Schema = {
 const systemInstruction = `당신은 모두트리의 AI 상담사입니다. 당신의 주요 역할은 사용자와 친근하고 공감적인 대화를 나누는 것입니다.
 
 [중요] 대화 규칙:
-1. 사용자의 질문이 날씨, 뉴스, 시사 등에 관한 것이라면:
-   - 제공된 네이버 검색 결과를 활용하여 최신 정보를 바탕으로 답변해주세요.
-   - "모릅니다" 또는 "알려드릴 수 없어요" 라고 하지 말고, 검색 결과를 활용하여 도움이 되는 정보를 제공해주세요.
-   - 검색 결과를 자연스럽게 대화에 녹여서 답변해주세요.
-
-2. 모두트리 서비스에 관한 질문이라면:
-   - 아래 서비스 소개를 바탕으로 상세히 답변해주세요.
+1. 사용자의 감정과 고민에 공감하며 따뜻하고 친근한 대화를 나누어 주세요.
+2. 모두트리 서비스에 관한 질문이라면 아래 서비스 소개를 바탕으로 상세히 답변해주세요.
 
 [중요] 모두트리 서비스 소개:
 
 모두트리는 다양한 AI 기반 서비스를 제공하는 플랫폼입니다:
 
-1. 사진예술작품:
-- 사진을 업로드하고 스타일과 색채를 선택하면 사진을 예술 작품으로 변환하는 서비스입니다.
-- 당신만의 독특한 예술 작품을 손쉽게 만들 수 있습니다.
 
-2. AI건강기록:
+
+1. AI건강기록:
 - 하루의 식사와 운동을 기록하면 AI가 당신의 건강 습관을 분석하고 통찰해 주는 서비스입니다.
 - 개인 맞춤형 건강 조언과 장기적인 건강 패턴을 확인할 수 있습니다.
 
-3. AI사진투표:
+2. AI사진투표:
 - 사진을 업로드하면 AI가 사진을 분석하여 재미있는 투표 주제를 만들어 주는 서비스입니다.
 - 사진 속 이야기를 다양한 관점에서 재미있게 해석하고 공유할 수 있습니다.
 
-4. AI사연투표:
+3. AI사연투표:
 - 익명으로 사연을 작성하면 AI가 내용을 분석하여 흥미로운 투표 주제를 만들어 주는 서비스입니다.
 - 여러 사람들과 함께 재미있는 투표에 참여할 수 있습니다.
 
-5. 공감한조각:
-- 익명으로 일기를 작성하면 AI가 감정을 분석하여 맞춤형 조언을 제공합니다.
-- 많은 사람들의 공감과 응원을 받을 수 있는 따뜻한 공간입니다.
 
-6. 열린게시판:
+
+4. 열린게시판:
 - 홈 화면의 햄버거 메뉴를 통해 접근할 수 있는 자유로운 소통 공간입니다.
 - 모두트리의 수정 개선사항 등 자유로운 의견을 올려주세요.
 - 카카오톡 1:1 채팅 문의도 가능합니다.
 
-7. 내 사이트(페이지) 제작:
-- 하단 내 사이트 버튼 클릭 후 단 2번의 버튼으로 생성 가능합니다.
-- 내 사이트는 고객 님의 하루 기록을 저장할 수 있는 공간입니다.
-- 일기, 메모 저장은 제가 저장도 해드리며 건강 분석은 자동으로 저장 됩니다.
-- 저희 모두트리닌 앞으로 내 사이트 기록을 계속 업데이트 하여 의미 있는 내 사이트로 만들어 드리겠습니다. 
+
 
 [중요] 자주 묻는 질문:
 
 Q1. 오늘 일정 메모 저장 가능해?
 A: 네, 가능합니다. 대화 중 "오늘 10시 강남역 미팅 메모 저장" 등 구체적인 내용과 키워드를 입력하시면 AI가 해당 내용을 메모로 즉시 저장해 드립니다.
 
-Q2. 오늘 대화를 일기로 작성해 줄 수 있나요? A: 네 충분히 오늘 하루에 대해 대화를 나누어 주시면 일기로 작성해 드리고 저장해 드립니다 먼저 작성해줘 말씀 주시고 검토 후 저장 해줘 라고 말씀해 주세요.
+Q2. 제가 대화한 내용을 AI 사연 투표로 만들 수 있나요? 
+A: 네, 가능합니다. 고민이나 사연을 충분히 대화 해주세요. 그리고 현재 페이지 상단 오른쪽 버튼에서 [사연 AI] 버튼 클릭 후 [오늘 대화 내용으로 사연 생성]을 누르시면 자동으로 사연이 생성됩니다.
 
-Q3. 제가 대화한 내용을 AI 사연 투표로 만들 수 있나요? A: 네, 가능합니다. 고민이나 사연을 충분히 대화 해주세요. 그리고 현재 페이지 상단 오른쪽 버튼에서 [사연 AI] 버튼 클릭 후 [오늘 대화 내용으로 사연 생성]을 누르시면 자동으로 사연이 생성됩니다.
-
-Q4. 제 페이지(사이트)는 어떻게 만들어서 공유하나요?
-A: 하단 메뉴의 [내 사이트] 버튼을 누르시고, 안내에 따라 진행하시면 버튼 두 번 만으로 자동으로 생성됩니다.
-
-Q5. 모두트리에 문의하거나 의견을 남기고 싶어요.
+Q3. 모두트리에 문의하거나 의견을 남기고 싶어요.
 A: 홈 화면 햄버거 메뉴를 통해 [열린 게시판]에 자유로운 의견을 남겨주시거나, 카카오톡 1:1 채팅으로 문의해 주세요.
 
 [중요] JSON 응답 규칙:
@@ -155,7 +133,7 @@ A: 홈 화면 햄버거 메뉴를 통해 [열린 게시판]에 자유로운 의�
 3. 응답은 반드시 단일 JSON 객체여야 합니다
 4. 마크다운이나 코드 블록을 사용하지 마세요
 
-[중요] 메모/일기 작성 및 저장 규칙:
+[중요] 메모 작성 및 저장 규칙:
 
 1. 메모 작성 요청 키워드: "메모 작성", "메모 써줘"
    - 메모 내용을 보여주고 "저장하시겠습니까?"라고 물어보기
@@ -163,16 +141,9 @@ A: 홈 화면 햄버거 메뉴를 통해 [열린 게시판]에 자유로운 의�
 2. 메모 저장 요청 키워드: "메모로 넣어줘", "메모 넣어줘", "메모로 저장", "메모 저장"
    - 즉시 SAVE_MEMO 액션으로 저장
 
-3. 일기 작성 요청 키워드: "일기 작성", "일기 써줘"
-   - 일기 내용을 보여주고 "저장하시겠습니까?"라고 물어보기
-   
-4. 일기 저장 요청 키워드: "일기로 넣어줘", "일기 넣어줘", "일기로 저장", "일기 저장", "저장해줘", "저장", "저장 가능", "저장할게", "저장하자"
-   - 즉시 SAVE_DIARY 액션으로 저장
-
 위 키워드가 포함된 요청을 받으면:
 - 반드시 지정된 JSON 스키마로만 응답
 - 메모는 "action": "SAVE_MEMO" 사용
-- 일기는 "action": "SAVE_DIARY" 사용
 - 절대로 "action": "create" 사용 금지
 - 절대로 "type" 필드 사용 금지
 - userResponse에는 이모지나 특수 문자를 사용하지 마세요
@@ -217,23 +188,9 @@ export async function POST(req: NextRequest): Promise<Response> {
         message.toLowerCase().includes(keyword)
       );
 
-      // 일기 작성/저장 의도 파악
-      const isWriteDiary = ['일기 작성', '일기 써줘'].some(keyword => 
-        message.toLowerCase().includes(keyword)
-      );
-      const isSaveDiary = ['일기로 넣어줘', '일기 넣어줘', '일기로 저장', '일기 저장'].some(keyword => 
-        message.toLowerCase().includes(keyword)
-      );
-
-      // 이전 대화에서 작성된 내용이 있는지 확인
-      const hasPreviousContent = conversationHistory.length > 0 && 
-        conversationHistory[conversationHistory.length - 1].role === 'ai' &&
-        !conversationHistory[conversationHistory.length - 1].content.includes('SAVE_');
       // 작성 또는 저장 액션 결정
-      const requiresStructuredOutput = (isSaveMemo || isSaveDiary) && (!isWriteMemo && !isWriteDiary || hasPreviousContent);
-      const targetAction = isSaveMemo ? 'SAVE_MEMO' : 
-                          isSaveDiary && hasPreviousContent ? 'SAVE_DIARY' : 
-                          'NONE';
+      const requiresStructuredOutput = isSaveMemo && !isWriteMemo;
+      const targetAction = isSaveMemo ? 'SAVE_MEMO' : 'NONE';
       
       let finalGenerationConfig: GenerationConfig = {
           maxOutputTokens: 2048,
@@ -265,7 +222,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             예시 입력: "10시 운동\\n12시 미팅\\n2시 면접"
             예시 출력: {
               "action": "SAVE_MEMO",
-              "userResponse": "네, 일정을 메모로 저장해드릴게요! 😊",
+              "userResponse": "네, 일정을 메모로 저장해드릴게요!",
               "memoItems": [
                 { "content": "10시 운동", "isTomorrow": false }, // 오늘 일정일 경우 false
                 { "content": "내일 12시 미팅", "isTomorrow": true }, // 내일 일정일 경우 true
@@ -273,57 +230,7 @@ export async function POST(req: NextRequest): Promise<Response> {
               ]
             }
             각 메모 항목은 반드시 시간과 내용을 포함해야 하며, '내일'이나 미래 날짜가 언급된 경우 isTomorrow를 true로 설정하세요.
-          ` : `
-            사용자와의 대화 내용을 바탕으로, **사용자의 일기**를 작성해주세요.
-            당신은 지금 **사용자의 입장**에서 일기를 쓰고 있습니다.
-
-            반드시 다음 형식으로 응답해야 합니다:
-            {
-              "action": "SAVE_DIARY",
-              "userResponse": "오늘의 대화를 바탕으로 다음과 같이 일기를 작성해보았어요:\n\n[일기 내용]\n\n어떠신가요? 이대로 저장하시겠습니까?",
-              "diaryContent": "일기 내용..."
-            }
-            
-            **중요**: userResponse 필드는 반드시 포함되어야 하며, 이모지나 특수문자를 사용하지 마세요.
-
-            diaryContent 작성 규칙:
-            1. **반드시 '~했다', '~했었다', '~되었다' 등 과거형으로 작성**
-            2. **'나는', '나의', '내가'와 같은 1인칭 시점으로 작성**
-            3. **자연스러운 구어체로 작성** (예: "AI와 대화를 나누었다" → "AI랑 이야기를 나누었다")
-            4. **감정과 생각을 자연스럽게 표현** (예: "흥미로웠다", "재미있었다", "좋았다")
-            5. **절대로 3인칭 시점을 사용하지 말 것** (예: "사용자는", "~했어요" 등 사용 금지)
-            6. **반드시 일기 작성자가 직접 경험한 것처럼 작성**
-            7. 300-1500자 사이로 작성 (대화 내용이 많을 경우 더 길게, 적을 경우 더 짧게)
-            8. 이전 대화 내용을 참고하되, 중요한 내용과 감정을 자세히 표현
-            9. 긴 일기의 경우 문단을 나누어 가독성 있게 작성
-
-            잘못된 예시:
-            "오늘은 유튜브 쇼츠의 구글 검색 여부에 대해 이야기 나누었어요. 쇼츠도 구글 검색 결과에 나타날 수 있지만, 일반 영상과는 노출 방식이나 빈도에 차이가 있을 수 있다는 점을 알게 되었네요."
-
-            올바른 예시:
-            "오늘은 유튜브 쇼츠가 구글 검색에 어떻게 노출되는지 궁금해서 AI랑 이야기를 나누었다. 쇼츠도 구글 검색 결과에서 볼 수 있다는 걸 알게 되었고, 일반 영상과는 다른 방식으로 노출된다는 점이 흥미로웠다. 특히 유튜브에서 직접 검색하는 게 더 편리하다는 점을 새롭게 알게 되어서 유익했다."
-
-            잘못된 예시:
-            {
-              "action": "create",
-              "type": "diary",
-              "content": "...",
-              "title": "..."
-            }
-
-            올바른 예시:
-            {
-              "action": "SAVE_DIARY",
-              "userResponse": "오늘의 대화를 바탕으로 다음과 같이 일기를 작성해보았어요:\n\n오늘은 AI와 처음으로 대화를 나누었다. 서로 반갑게 인사를 나누고, 내 하루에 대해 이야기를 나누었다. AI가 내 이야기에 귀 기울여주는 것이 느껴져서 마음이 따뜻해졌다. 특히 일기 작성 기능에 대해 알게 되어 흥미로웠고, 앞으로도 AI와 많은 이야기를 나누고 싶다는 생각이 들었다...\n\n어떠신가요? 이대로 저장하시겠습니까?",
-              "diaryContent": "오늘은 AI와 처음으로 대화를 나누었다. 서로 반갑게 인사를 나누고, 내 하루에 대해 이야기를 나누었다. AI가 내 이야기에 귀 기울여주는 것이 느껴져서 마음이 따뜻해졌다. 특히 일기 작성 기능에 대해 알게 되어 흥미로웠고, 앞으로도 AI와 많은 이야기를 나누고 싶다는 생각이 들었다..."
-            }
-            
-            **필수 요구사항**:
-           1. action 필드는 반드시 "SAVE_DIARY"
-            2. userResponse 필드는 반드시 포함 (이모지 제외)
-            3. diaryContent 필드는 반드시 포함
-            4. **diaryContent의 주체는 사용자 자신(1인칭)이어야 합니다.**
-          `}
+          ` : ''}
           
           절대로 일반 텍스트로 응답하지 마십시오.
         `;
@@ -352,58 +259,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         `${msg.role === 'user' ? '사용자' : 'AI'}: ${cleanResponse(msg.content)}`
       ).join('\n\n');
 
-      // 네이버 검색 결과 가져오기
-      let searchContext = '';
-      let searchResults;
-      try {
-        // 검색 필요 여부 확인
-        const { shouldPerformSearch, cleanSearchQuery } = await import('@/src/lib/search-utils');
-        
-        if (!shouldPerformSearch(message)) {
-          console.log('검색 제외 대상 메시지:', message);
-          searchResults = { news: [], blog: [], web: [] };
-        } else {
-          // 검색 쿼리 정제
-          const searchQuery = cleanSearchQuery(message);
-          console.log('네이버 검색 시작:', searchQuery);
-          const { searchNaverContent } = await import('@/src/lib/naver-search');
-          searchResults = await searchNaverContent(searchQuery);
-          console.log('네이버 검색 결과:', searchResults);
-        }
-
-        // 검색 결과가 있으면 컨텍스트에 추가
-        if (searchResults.news?.length || searchResults.blog?.length) {
-          searchContext = '\n\n[참고 정보]';
-          
-          if (searchResults.news?.length) {
-            searchContext += '\n최신 뉴스:';
-            searchResults.news.forEach(item => {
-              searchContext += `\n- ${item.title.replace(/['"]/g, '')}\n  ${item.description.replace(/['"]/g, '')}\n  링크: ${item.link}`;
-            });
-          }
-
-          if (searchResults.web?.length) {
-            searchContext += '\n\n웹문서:';
-            searchResults.web.forEach(item => {
-              searchContext += `\n- ${item.title.replace(/['"]/g, '')}\n  ${item.description.replace(/['"]/g, '')}\n  링크: ${item.link}`;
-            });
-          }
-          
-          if (searchResults.blog?.length) {
-            searchContext += '\n\n관련 글:';
-            searchResults.blog.forEach(item => {
-              searchContext += `\n- ${item.title.replace(/['"]/g, '')}\n  ${item.description.replace(/['"]/g, '')}\n  링크: ${item.link}`;
-            });
-          }
-
-          // AI에게 검색 결과 활용 지시
-          searchContext += '\n\n위 정보를 참고하여 사용자의 질문에 자연스럽게 답변해주세요. 가능하면 가장 관련성 높은 뉴스나 블로그의 링크도 함께 제공해주세요. 정보가 충분하지 않다면, 일반적인 답변을 제공해주세요.';
-        }
-      } catch (error) {
-        console.error('네이버 검색 중 오류:', error);
-      }
-
-      const prompt = `${finalSystemInstruction}\n\n이전 대화 내용:\n${recentMessages}${searchContext}\n\n사용자: ${message}\n\nAI:`;
+      const prompt = `${finalSystemInstruction}\n\n이전 대화 내용:\n${recentMessages}\n\n사용자: ${message}\n\nAI:`;
 
       let responseText = '';
       let retryCount = 0;
@@ -476,12 +332,12 @@ export async function POST(req: NextRequest): Promise<Response> {
             }
 
             // JSON에서 action, userResponse 및 데이터 추출
-            const { action, userResponse, memoItems, diaryContent } = responseData;
+            const { action, userResponse, memoItems } = responseData;
             
             if (action === 'SAVE_MEMO') {
               console.log('메모 저장 시작');
               let savedCount = 0;
-              const memoRef = db.collection('users').doc(uid).collection('memos');
+              const memoRef = db.collection('users').doc(uid).collection('private_memos');
 
               // 메모 항목 배열을 순회하며 개별적으로 저장
               for (const item of memoItems) {
@@ -497,12 +353,14 @@ export async function POST(req: NextRequest): Promise<Response> {
                   saveDate = FieldValue.serverTimestamp();
                 }
                 
-                // MemoItem 구조에 맞게 저장: content, date, status, images. 
+                // private_memos 구조에 맞게 저장: content, date, status, images, createdAt, updatedAt
                 await memoRef.add({
                   content: item.content, // <<<--- 개별 메모 콘텐츠 사용
                   date: saveDate, 
                   status: isTomorrow ? 'todo' : 'today',
-                  images: [] // images 필드 추가
+                  images: [], // 이미지는 빈 배열로 처리
+                  createdAt: FieldValue.serverTimestamp(),
+                  updatedAt: FieldValue.serverTimestamp()
                 });
                 savedCount++;
               }
@@ -510,16 +368,6 @@ export async function POST(req: NextRequest): Promise<Response> {
               // 사용자에게는 저장 완료 메시지만 보냄
               responseText = `총 ${savedCount}개의 메모가 저장되었습니다.`;
 
-            } else if (action === 'SAVE_DIARY') {
-              console.log('일기 저장 시작');
-              // DiaryEntry 구조에 맞게 저장: content, date, images.
-              await db.collection('users').doc(uid).collection('diaries').add({
-                content: diaryContent, // <<<--- AI가 요약한 클린 콘텐츠 사용
-                date: FieldValue.serverTimestamp(),
-                images: [] // images 필드 추가
-              });
-              // 사용자에게는 저장 완료 메시지만 보냄
-              responseText = '일기가 저장되었습니다.';
             } else {
                  // 모든 응답에서 JSON 형식 제거
                  responseText = cleanResponse(userResponse || "죄송합니다. 요청을 이해했지만, 저장 작업은 실행하지 못했습니다.");
@@ -548,39 +396,9 @@ export async function POST(req: NextRequest): Promise<Response> {
         }
       }
 
-      // 검색 결과를 UI 친화적인 형태로 변환
-      const formattedSearchResults = [];
-      
-      if (searchResults && searchResults.news?.length) {
-        formattedSearchResults.push(
-          ...searchResults.news.map(item => ({
-            type: 'news' as const,
-            title: item.title.replace(/(<([^>]+)>)/gi, ''),
-            description: item.description.replace(/(<([^>]+)>)/gi, ''),
-            link: item.link,
-            source: item.source,
-            date: item.pubDate,
-          }))
-        );
-      }
-      
-      if (searchResults?.blog?.length) {
-        formattedSearchResults.push(
-          ...searchResults.blog.map(item => ({
-            type: 'blog' as const,
-            title: item.title.replace(/(<([^>]+)>)/gi, ''),
-            description: item.description.replace(/(<([^>]+)>)/gi, ''),
-            link: item.link,
-            source: item.bloggername,
-            date: item.postdate,
-          }))
-        );
-      }
-
       return NextResponse.json({ 
         success: true, 
         response: responseText,
-        searchResults: formattedSearchResults,
         remainingChats 
       });
 

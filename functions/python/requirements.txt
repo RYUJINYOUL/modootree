@@ -1,9 +1,7 @@
-Flask==3.0.0
+flask==3.0.0
 flask-cors==4.0.0
 requests==2.31.0
-google-genai==1.0.0
-gunicorn==23.0.0
-Pillow==10.4.0
-gevent==24.2.1
-qdrant-client
-google-cloud-storage
+google-genai==1.46.0
+trafilatura==1.12.2
+functions-framework==3.*
+gunicorn==21.2.0

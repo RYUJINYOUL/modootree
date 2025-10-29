@@ -203,7 +203,7 @@ const LoginPage = () => {
         </form>
         <div className="w-full flex flex-col gap-4 items-center mt-4">
           <button
-            onClick={() => push("/feed")}
+            onClick={() => push("/news-vote")}
             className="text-gray-300 hover:text-white text-sm transition-colors"
           >
             회원가입 없이 먼저 둘러보기
