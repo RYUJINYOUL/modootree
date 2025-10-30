@@ -3,7 +3,7 @@
 import { useSelector } from 'react-redux';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Banana, Rocket } from 'lucide-react';
+import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Download, Banana, Rocket } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
 import { db } from '@/lib/firebase';
@@ -38,6 +38,8 @@ export default function ProfilePage() {
   });
   const [countsLoading, setCountsLoading] = useState(true);
   const [memos, setMemos] = useState<MemoItem[]>([]);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showPWAButton, setShowPWAButton] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -50,6 +52,54 @@ export default function ProfilePage() {
 
     return () => unsubscribe();
   }, []);
+
+  // PWA 설치 이벤트 리스너
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowPWAButton(true);
+    };
+
+    const handleAppInstalled = () => {
+      setShowPWAButton(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // 이미 설치된 경우 체크
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowPWAButton(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  // PWA 설치 함수
+  const handlePWAInstall = async () => {
+    if (!deferredPrompt) return;
+
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        console.log('PWA 설치 승인됨');
+      } else {
+        console.log('PWA 설치 거부됨');
+      }
+      
+      setDeferredPrompt(null);
+      setShowPWAButton(false);
+    } catch (error) {
+      console.error('PWA 설치 오류:', error);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -275,42 +325,54 @@ export default function ProfilePage() {
                     {getGreeting()}
                   </h1>
                 </div>
-                <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-gray-400 text-right">
-                  <div>
-                    <span>{formatDate(currentTime)}</span>
+                <div className="flex items-center gap-3">
+                  {showPWAButton && (
+                    <button
+                      onClick={handlePWAInstall}
+                      className="flex items-center gap-2 bg-[#56ab91]/80 hover:bg-[#56ab91] text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium"
+                      title="앱 설치하기"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">앱 설치</span>
+                    </button>
+                  )}
+                    <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-gray-400 text-right">
+                      <div>
+                        <span>{formatDate(currentTime)}</span>
+                      </div>
+                      <div>
+                        <span>{formatTime(currentTime)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span>{formatTime(currentTime)}</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </div>
 
            {/* 최근 활동 요약 */}
-           <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6">
+           <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl py-6 px-2">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-[#56ab91]" />
             메모 현황
           </h2>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <Link href="/profile/memo" className="bg-[#358f80]/60 border border-red-400/50 rounded-lg p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
-               <div className="text-3xl font-bold text-red-400 mb-1">{getTodoMemoCount()}</div>
-               <div className="text-sm text-gray-200 font-medium">오늘</div>
+           <div className="grid grid-cols-3 gap-2 md:gap-4">
+             <Link href="/profile/memo" className="bg-[#358f80]/60 border border-red-400/50 rounded-lg p-2 md:p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
+               <div className="text-xl md:text-3xl font-bold text-red-400 mb-1">{getTodoMemoCount()}</div>
+               <div className="text-xs md:text-sm text-gray-200 font-medium">오늘</div>
              </Link>
-             <Link href="/profile/memo" className="bg-[#358f80]/60 border border-[#56ab91]/30 rounded-lg p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
-               <div className="text-3xl font-bold text-[#56ab91] mb-1">{getTodayMemoCount()}</div>
-               <div className="text-sm text-gray-200 font-medium">목록</div>
+             <Link href="/profile/memo" className="bg-[#358f80]/60 border border-[#56ab91]/30 rounded-lg p-2 md:p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
+               <div className="text-xl md:text-3xl font-bold text-[#56ab91] mb-1">{getTodayMemoCount()}</div>
+               <div className="text-xs md:text-sm text-gray-200 font-medium">목록</div>
              </Link>
-             <Link href="/profile/memo" className="bg-[#358f80]/60 border border-[#56ab91]/30 rounded-lg p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
-               <div className="text-3xl font-bold text-[#56ab91] mb-1">{getCompletedMemoCount()}</div>
-               <div className="text-sm text-gray-200 font-medium">완료</div>
+             <Link href="/profile/memo" className="bg-[#358f80]/60 border border-[#56ab91]/30 rounded-lg p-2 md:p-4 text-center hover:bg-[#358f80]/80 transition-colors cursor-pointer">
+               <div className="text-xl md:text-3xl font-bold text-[#56ab91] mb-1">{getCompletedMemoCount()}</div>
+               <div className="text-xs md:text-sm text-gray-200 font-medium">완료</div>
              </Link>
            </div>
           <div className="mt-4 text-center">
             <p className="text-gray-400 text-sm">
-              오늘도 좋은 하루 보내세요! 언제든지 기록하고 분석해보세요.
+              오늘 메모 현황 입니다. 
             </p>
           </div>
          </div>

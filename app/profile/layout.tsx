@@ -2,7 +2,7 @@
 
 import { useSelector } from 'react-redux';
 import { useState, useCallback, useEffect } from 'react';
-import { Menu, Home, Notebook, Book, MessageSquare, ClipboardPlus, Atom, X, Maximize2, Minimize2, Banana, Rocket } from 'lucide-react';
+import { Menu, Home, Notebook, Book, MessageSquare, ClipboardPlus, Atom, X, Maximize2, Minimize2, ArrowLeft, Banana, Rocket } from 'lucide-react';
 import { useState as useModalState } from 'react';
 import ProfileSettingsButton from '@/components/ui/ProfileSettingsButton';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -349,9 +349,6 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         className="fixed bottom-4 right-4 z-[40] w-10 h-10 bg-[#56ab91]/60 rounded-full flex items-center justify-center shadow-lg hover:bg-[#56ab91]/80 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50"
       >
         <span className="text-white font-medium text-base">AI</span>
-        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          모두트리 AI와 대화하기
-        </span>
       </button>
 
       {/* AI 채팅 슬라이드 패널 */}
@@ -366,7 +363,16 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         <div className="flex flex-col h-full">
           {/* 헤더 */}
           <div className="flex items-center justify-between p-4 border-b border-[#358f80]/30">
-            <h2 className="text-lg font-semibold text-white">AI 채팅</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => window.history.back()}
+                className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-[#358f80]/30 transition-colors"
+                title="뒤로가기"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-semibold text-white">AI 채팅</h2>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsFullScreen(!isFullScreen)}
