@@ -59,6 +59,17 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
+    // linkLetters 컬렉션에 대한 규칙 (링크 편지 커뮤니티)
+    match /linkLetters/{letterId} {
+      allow read: if true; // 모든 사용자가 읽기 가능
+      allow create: if isAuthenticated(); // 로그인한 사용자만 생성 가능
+      allow update: if isAuthenticated() && (
+        resource.data.author.uid == request.auth.uid || // 작성자만 수정 가능
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount', 'likeCount']) // 조회수/좋아요는 누구나 업데이트 가능
+      );
+      allow delete: if isAuthenticated() && resource.data.author.uid == request.auth.uid; // 작성자만 삭제 가능
+    }
+
     // users 컬렉션 - 모든 users 관련 규칙을 여기 하나로 통합
     match /users/{userId} {
       // 문서 자체에 대한 규칙

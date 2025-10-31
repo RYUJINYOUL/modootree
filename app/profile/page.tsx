@@ -3,11 +3,11 @@
 import { useSelector } from 'react-redux';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Link as LinkIcon, Banana, Rocket } from 'lucide-react';
+import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Link as LinkIcon, Banana, Rocket, MessageCircle, Send, X } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
 import { db } from '@/firebase';
-import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 interface CategoryCounts {
   memo: number;
@@ -40,6 +40,10 @@ export default function ProfilePage() {
   });
   const [countsLoading, setCountsLoading] = useState(true);
   const [memos, setMemos] = useState<MemoItem[]>([]);
+  const [greetingResponses, setGreetingResponses] = useState<any[]>([]);
+  const [myResponse, setMyResponse] = useState('');
+  const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
+  const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -295,6 +299,70 @@ export default function ProfilePage() {
     return memos.filter(memo => memo.date.toDateString() === todayStr).length;
   };
 
+  // 이메일 표시 (실명 제거, 이메일만)
+  const getDisplayName = (user: any) => {
+    if (user.email) {
+      const emailPrefix = user.email.split('@')[0];
+      // 6자 초과 시 앞6자... 형태, 6자 이하면 전체 표시
+      return emailPrefix.length > 6 ? `${emailPrefix.substring(0, 6)}...` : emailPrefix;
+    }
+    return '유저님';
+  };
+
+  // 인사말 답변 제출
+  const handleSubmitResponse = async () => {
+    if (!myResponse.trim() || !currentUser?.uid) return;
+    
+    setIsSubmittingResponse(true);
+    try {
+      const currentGreeting = getGreeting();
+      const displayName = getDisplayName(currentUser);
+      
+      await addDoc(collection(db, 'greetingResponses'), {
+        userId: currentUser.uid,
+        userName: displayName,
+        userAvatar: currentUser.photoURL || '',
+        greeting: currentGreeting,
+        response: myResponse.trim(),
+        timestamp: serverTimestamp(),
+        isAnonymous: false
+      });
+      
+      setMyResponse('');
+      setIsResponseModalOpen(false);
+    } catch (error) {
+      console.error('답변 저장 실패:', error);
+      alert('답변 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmittingResponse(false);
+    }
+  };
+
+  // 인사말 답변 실시간 구독
+  useEffect(() => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const q = query(
+      collection(db, 'greetingResponses'),
+      where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
+      orderBy('timestamp', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const responses = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate() || new Date()
+      }));
+      setGreetingResponses(responses);
+    }, (error) => {
+      console.error('인사말 답변 구독 에러:', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto">
       <div className="px-2 md:px-0 space-y-6">
@@ -302,26 +370,67 @@ export default function ProfilePage() {
         <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
             <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <img 
                     src="/logos/m1.png" 
                     alt="모두트리" 
-                    className="w-8 h-8"
+                    className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0"
                   />
-                  <h1 className="text-md font-medium text-white">
+                  <h1 className="text-sm sm:text-md font-medium text-white flex-1 min-w-0">
                     {getGreeting()}
                   </h1>
+                  <button
+                    onClick={() => setIsResponseModalOpen(true)}
+                    className="p-1.5 bg-[#56ab91]/20 hover:bg-[#56ab91]/40 rounded-full transition-colors flex-shrink-0"
+                    title="답변하기"
+                  >
+                    <MessageCircle className="w-4 h-4 text-[#56ab91]" />
+                  </button>
                 </div>
-                <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-gray-400 text-right">
-                  <div>
+                <div className="flex sm:flex-col gap-2 text-xs sm:text-sm text-gray-400 sm:text-right">
+                  <div className="flex-1 sm:flex-none">
                     <span>{formatDate(currentTime)}</span>
                   </div>
-                  <div>
+                  <div className="flex-shrink-0">
                     <span>{formatTime(currentTime)}</span>
                   </div>
                 </div>
               </div>
+              
+              {/* 실시간 답변 목록 - 모바일 최적화 */}
+              {greetingResponses.length > 0 && (
+                <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
+                  <div className="text-xs text-gray-400 mb-1.5">💬 오늘의 답변들</div>
+                  {greetingResponses.slice(0, 3).map((response) => (
+                    <div key={response.id} className="bg-[#358f80]/10 rounded-lg p-2.5">
+                      <div className="flex items-start gap-2">
+                        <div className="w-5 h-5 rounded-full bg-[#56ab91]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-xs text-[#56ab91] font-medium">
+                            {response.userName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="font-medium text-[#56ab91] text-xs">{response.userName}</span>
+                            <span className="text-xs text-gray-500">
+                              {response.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div className="text-gray-300 text-xs leading-relaxed break-words">
+                            {response.response}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {greetingResponses.length > 3 && (
+                    <div className="text-xs text-gray-400 text-center py-1">
+                      +{greetingResponses.length - 3}개 더
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -453,17 +562,17 @@ export default function ProfilePage() {
               </div>
             </Link>
 
-            <Link href="/profile/inquiry" className="group bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6 hover:bg-[#2A4D45]/80 transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer block">
+            <Link href="/link-letter" className="group bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6 hover:bg-[#2A4D45]/80 transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer block">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-orange-500/20 border-orange-400/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Rocket className="w-6 h-6 text-orange-400" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-[#56ab91] transition-colors">
-                    열린게시판
+                    링크편지
                   </h3>
                   <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">
-                    모두트리 열린게시판, 말씀 감사합니다.
+                    퀴즈를 풀어야만 편지를 읽을 수 있습니다
                   </p>
                 </div>
               </div>
@@ -472,6 +581,65 @@ export default function ProfilePage() {
         </div>
 
       </div>
+      
+      {/* 답변 모달 - 모바일 최적화 */}
+      {isResponseModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#2A4D45] border-t border-[#358f80]/30 sm:border sm:border-[#358f80]/30 rounded-t-xl sm:rounded-xl p-4 sm:p-6 w-full max-w-md sm:max-w-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">💬 답변하기</h3>
+              <button
+                onClick={() => setIsResponseModalOpen(false)}
+                className="text-gray-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <div className="text-sm text-gray-300 mb-2">질문</div>
+              <div className="text-white bg-[#358f80]/20 rounded-lg p-3 text-sm">
+                {getGreeting()}
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <div className="text-sm text-gray-300 mb-2">답변</div>
+              <textarea
+                value={myResponse}
+                onChange={(e) => setMyResponse(e.target.value)}
+                placeholder="솔직한 답변을 들려주세요..."
+                className="w-full bg-[#358f80]/20 border border-[#358f80]/30 text-white rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-[#56ab91] placeholder-gray-400 text-sm"
+                rows={4}
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsResponseModalOpen(false)}
+                className="flex-1 bg-gray-600/50 hover:bg-gray-600/70 text-white rounded-lg py-3 px-4 transition-colors text-sm font-medium"
+                disabled={isSubmittingResponse}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSubmitResponse}
+                disabled={!myResponse.trim() || isSubmittingResponse}
+                className="flex-1 bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white rounded-lg py-3 px-4 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                {isSubmittingResponse ? (
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    답변하기
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -169,7 +169,6 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     { icon: Atom, label: '분석', href: '/profile/mind' },
     { icon: MessageSquare, label: '기록', href: '/profile/chats' },
     { icon: LinkIcon, label: '링크', href: '/profile/links' },
-    { icon: Banana, label: '투표', href: '/photo-story' },
     { icon: Rocket, label: '문의', href: '/profile/inquiry' },
   ];
 
