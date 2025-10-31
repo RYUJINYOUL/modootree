@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
 import { storage } from '@/lib/firebase';
@@ -38,7 +38,8 @@ interface LinkLetterBackground {
   };
 }
 
-export default function LinkLetterBackgroundSettings() {
+// useSearchParams를 사용하는 컴포넌트를 분리
+function LinkLetterBackgroundContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -739,5 +740,18 @@ export default function LinkLetterBackgroundSettings() {
         </Dialog>
       </div>
     </div>
+  );
+}
+
+// Suspense boundary로 감싸는 메인 컴포넌트
+export default function LinkLetterBackgroundSettings() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-white text-lg">로딩 중...</div>
+      </div>
+    }>
+      <LinkLetterBackgroundContent />
+    </Suspense>
   );
 }
