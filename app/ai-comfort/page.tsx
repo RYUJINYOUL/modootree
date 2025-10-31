@@ -10,8 +10,6 @@ import Particles from "react-tsparticles";
 import { cn } from "@/lib/utils";
 import { saveChat, loadChat } from '@/lib/comfort-chat-service';
 import { Timestamp } from 'firebase/firestore';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { ChatMessage, SearchResult } from '@/types/chat';
@@ -56,9 +54,9 @@ export default function AiComfortPage() {
     if (!messageContent.trim()) return;
 
     setIsComfortLoading(true);
+    const user = auth.currentUser;
 
     try {
-      const user = auth.currentUser;
       if (!user) {
         router.push('/login');
         throw new Error('인증이 필요합니다.');
@@ -107,23 +105,44 @@ export default function AiComfortPage() {
         prev.filter(msg => !('isLoading' in msg))
       );
       setComfortConversation(prev => [...prev, aiMsg]);
+      console.log('AI 답변 저장 시도:', aiMsg);
       await saveChat(user.uid, aiMsg);
+      console.log('AI 답변 저장 완료');
 
     } catch (error: any) {
       console.error('AI 상담 오류 (초기 메시지):', error);
+      let errorMsg;
       if (error.message.includes('인증') || error.message.includes('로그인')) {
-        setComfortConversation(prev => [...prev, {
+        errorMsg = {
           role: 'ai' as const,
           content: '로그인이 만료되었습니다. 다시 로그인해주세요.',
           timestamp: Timestamp.fromDate(new Date())
-        }]);
+        };
+        setComfortConversation(prev => [...prev, errorMsg]);
+        // 에러 메시지도 저장
+        try {
+          if (user) {
+            await saveChat(user.uid, errorMsg);
+          }
+        } catch (saveError) {
+          console.error('에러 메시지 저장 실패:', saveError);
+        }
         router.push('/login');
       } else {
-        setComfortConversation(prev => [...prev, {
+        errorMsg = {
           role: 'ai' as const,
           content: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요. 🙏',
           timestamp: Timestamp.fromDate(new Date())
-        }]);
+        };
+        setComfortConversation(prev => [...prev, errorMsg]);
+        // 에러 메시지도 저장
+        try {
+          if (user) {
+            await saveChat(user.uid, errorMsg);
+          }
+        } catch (saveError) {
+          console.error('에러 메시지 저장 실패:', saveError);
+        }
       }
     } finally {
       setIsComfortLoading(false);
@@ -254,19 +273,14 @@ export default function AiComfortPage() {
             >
               <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-xl font-semibold">모두트리 AI</h1>
+            <h1 className="text-xl font-semibold">AI 채팅</h1>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="text-gray-300/90 hover:text-gray-200 p-2 rounded-full hover:bg-white/10">
-                <MoreVertical className="w-6 h-6" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48 bg-gray-800 border-gray-700 text-white">
-              <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer hover:bg-gray-700">내 페이지</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/search')} className="cursor-pointer hover:bg-gray-700">통합검색</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Link 
+            href="/search"
+            className="bg-[#56ab91]/80 hover:bg-[#56ab91] text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium"
+          >
+            AI 지식 검색
+          </Link>
         </div>
       </div>
 
@@ -462,24 +476,45 @@ export default function AiComfortPage() {
                 prev.filter(msg => !('isLoading' in msg))
               );
               setComfortConversation(prev => [...prev, aiMsg]);
+              console.log('AI 답변 저장 시도 (메인):', aiMsg);
               await saveChat(auth.currentUser.uid, aiMsg);
+              console.log('AI 답변 저장 완료 (메인)');
 
             } catch (error: any) {
               console.error('AI 상담 오류:', error);
               
+              let errorMsg;
               if (error.message.includes('인증') || error.message.includes('로그인')) {
-                setComfortConversation(prev => [...prev, {
+                errorMsg = {
                   role: 'ai' as const,
                   content: '로그인이 만료되었습니다. 다시 로그인해주세요.',
                   timestamp: Timestamp.fromDate(new Date())
-                }]);
+                };
+                setComfortConversation(prev => [...prev, errorMsg]);
+                // 에러 메시지도 저장
+                try {
+                  if (auth.currentUser) {
+                    await saveChat(auth.currentUser.uid, errorMsg);
+                  }
+                } catch (saveError) {
+                  console.error('에러 메시지 저장 실패:', saveError);
+                }
                 router.push('/login');
               } else {
-                setComfortConversation(prev => [...prev, {
+                errorMsg = {
                   role: 'ai' as const,
                   content: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요. 🙏',
                   timestamp: Timestamp.fromDate(new Date())
-                }]);
+                };
+                setComfortConversation(prev => [...prev, errorMsg]);
+                // 에러 메시지도 저장
+                try {
+                  if (auth.currentUser) {
+                    await saveChat(auth.currentUser.uid, errorMsg);
+                  }
+                } catch (saveError) {
+                  console.error('에러 메시지 저장 실패:', saveError);
+                }
               }
             } finally {
               setIsComfortLoading(false);

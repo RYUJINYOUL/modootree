@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Loader2, Clock, X } from 'lucide-react';
 import Image from 'next/image';
 
 interface SourceItem {
@@ -45,10 +45,18 @@ interface ProcessingStatus {
   progress: number;
 }
 
+interface SearchHistory {
+  id: string;
+  query: string;
+  timestamp: Date;
+  category: string;
+}
+
 export default function AllimpormentPage() {
   const [activeTab, setActiveTab] = useState<'answer' | 'sources'>('answer');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [error, setError] = useState('');
   const [status, setStatus] = useState<ProcessingStatus>({
@@ -61,6 +69,74 @@ export default function AllimpormentPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const API_URL = 'https://allimpom-run-service-1027717723153.asia-northeast3.run.app/stream';
+
+  // 검색 내역 로드
+  useEffect(() => {
+    loadSearchHistory();
+  }, []);
+
+  const loadSearchHistory = () => {
+    try {
+      const saved = localStorage.getItem('search-history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const history = parsed.map((item: any) => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        }));
+        
+        // 3일 이내 검색 내역만 필터링
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        
+        const recentHistory = history.filter((item: SearchHistory) => 
+          item.timestamp >= threeDaysAgo
+        );
+        
+        setSearchHistory(recentHistory);
+      }
+    } catch (error) {
+      console.error('검색 내역 로드 실패:', error);
+    }
+  };
+
+  const saveSearchToHistory = (searchQuery: string, category: string) => {
+    const newSearch: SearchHistory = {
+      id: Date.now().toString(),
+      query: searchQuery,
+      timestamp: new Date(),
+      category
+    };
+
+    const updatedHistory = [newSearch, ...searchHistory].slice(0, 50); // 최대 50개 유지
+    setSearchHistory(updatedHistory);
+    
+    try {
+      localStorage.setItem('search-history', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('검색 내역 저장 실패:', error);
+    }
+  };
+
+  const removeFromHistory = (id: string) => {
+    const updatedHistory = searchHistory.filter(item => item.id !== id);
+    setSearchHistory(updatedHistory);
+    
+    try {
+      localStorage.setItem('search-history', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('검색 내역 삭제 실패:', error);
+    }
+  };
+
+  const clearAllHistory = () => {
+    setSearchHistory([]);
+    try {
+      localStorage.removeItem('search-history');
+    } catch (error) {
+      console.error('검색 내역 전체 삭제 실패:', error);
+    }
+  };
 
   const updateStatus = (stage: string, message: string, progress: number) => {
     setStatus({ stage, message, progress });
@@ -84,6 +160,9 @@ export default function AllimpormentPage() {
     setSummaryAnswer('');
     setSources([]);
     updateStatus('started', '검색 시작...', 10);
+
+    // 검색 내역에 저장
+    saveSearchToHistory(query.trim(), '통합검색');
 
     abortControllerRef.current = new AbortController();
 
@@ -286,6 +365,69 @@ export default function AllimpormentPage() {
           )}
         </div>
 
+        {/* 검색 내역 */}
+        {searchHistory.length > 0 && !loading && !summaryAnswer && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                최근 검색 (3일)
+              </h3>
+              <button
+                onClick={clearAllHistory}
+                className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+              >
+                전체 삭제
+              </button>
+            </div>
+            <div className="space-y-2">
+              {searchHistory.slice(0, 10).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between bg-gray-800/50 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors group"
+                >
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => {
+                      setQuery(item.query);
+                      // 약간의 지연 후 검색 실행 (상태 업데이트 후)
+                      setTimeout(() => {
+                        const searchEvent = new Event('search');
+                        handleSearch();
+                      }, 100);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm">{item.query}</span>
+                      <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
+                        {item.category}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {item.timestamp.toLocaleDateString('ko-KR', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromHistory(item.id);
+                    }}
+                    className="text-gray-500 hover:text-red-400 p-1 rounded opacity-0 group-hover:opacity-100 transition-all"
+                    title="삭제"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
          {/* 로딩 상태 표시 */}
                 {loading && (
                   <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-6">
@@ -317,27 +459,55 @@ export default function AllimpormentPage() {
         )}
 
         {(recommendations.length > 0 || summaryAnswer) && (
-          <div className="flex gap-2 md:gap-4 mb-6 border-b border-gray-600 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('answer')}
-              className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
-                activeTab === 'answer'
-                  ? 'border-b-2 border-blue-500 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              통합 답변
-            </button>
-            <button
-              onClick={() => setActiveTab('sources')}
-              className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
-                activeTab === 'sources'
-                  ? 'border-b-2 border-blue-500 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              참고 출처 ({sources.length})
-            </button>
+          <div className="flex items-center justify-between mb-6 border-b border-gray-600">
+            <div className="flex gap-2 md:gap-4 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('answer')}
+                className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
+                  activeTab === 'answer'
+                    ? 'border-b-2 border-blue-500 text-blue-400'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                통합 답변
+              </button>
+              <button
+                onClick={() => setActiveTab('sources')}
+                className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
+                  activeTab === 'sources'
+                    ? 'border-b-2 border-blue-500 text-blue-400'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                참고 출처 ({sources.length})
+              </button>
+            </div>
+            
+            {/* 검색 내역 관리 버튼 */}
+            {searchHistory.length > 0 && (
+              <div className="flex items-center gap-2 ml-4">
+                <button
+                  onClick={() => {
+                    setSummaryAnswer('');
+                    setRecommendations([]);
+                    setSources([]);
+                    setActiveTab('answer');
+                  }}
+                  className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700 transition-colors flex items-center gap-1"
+                  title="검색 내역 보기"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span className="hidden sm:inline">내역</span>
+                </button>
+                <button
+                  onClick={clearAllHistory}
+                  className="text-gray-400 hover:text-red-400 text-sm px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+                  title="검색 내역 전체 삭제"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -515,7 +685,7 @@ export default function AllimpormentPage() {
           <div className="text-center py-4">
             
             <p className="text-gray-400 text-lg">
-              모두트리 통합 검색 페이지입니다. 
+              모두트리 AI 지식 검색 페이지 입니다. 
             </p>
           </div>
         )}

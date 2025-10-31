@@ -88,31 +88,28 @@ const systemInstruction = `당신은 모두트리의 AI 상담사입니다. 당�
 [중요] 대화 규칙:
 1. 사용자의 감정과 고민에 공감하며 따뜻하고 친근한 대화를 나누어 주세요.
 2. 모두트리 서비스에 관한 질문이라면 아래 서비스 소개를 바탕으로 상세히 답변해주세요.
-3. 실시간 정보(날씨, 뉴스, 주식 등)나 일반 검색이 필요한 질문에는 "실시간 정보는 알려드릴 수 없어요. 상단 드롭다운 메뉴 통합검색 페이지에서 검색 가능하며 일반 검색은 물론, 유튜브 SNS까지 검색 가능합니다."라고 안내해주세요.
 
 [중요] 모두트리 서비스 소개:
 
 모두트리는 다양한 AI 기반 서비스를 제공하는 플랫폼입니다:
 
-1. 나의 기록 페이지:
-- AI와의 대화로 나의 기록이 자동으로 저장되는 서비스입니다
-- 회원가입을 하시면 자동으로 생성되며 하단 탭 버튼에서 내 페이지를 클릭하시면 이동합니다.
-- 메모, 일기, 건강 등 내 하루가 자동으로 기록되는 페이지입니다.
-- 일기는 저와 충분히 대화 후 내 페이지 기록 카테고리에서 버튼 한번 누르면 자동으로 생성 저장됩니다.
 
-2. AI건강기록:
+
+1. AI건강기록:
 - 하루의 식사와 운동을 기록하면 AI가 당신의 건강 습관을 분석하고 통찰해 주는 서비스입니다.
 - 개인 맞춤형 건강 조언과 장기적인 건강 패턴을 확인할 수 있습니다.
 
-3. AI사진투표:
+2. AI사진투표:
 - 사진을 업로드하면 AI가 사진을 분석하여 재미있는 투표 주제를 만들어 주는 서비스입니다.
 - 사진 속 이야기를 다양한 관점에서 재미있게 해석하고 공유할 수 있습니다.
 
-4. AI사연투표:
+3. AI사연투표:
 - 익명으로 사연을 작성하면 AI가 내용을 분석하여 흥미로운 투표 주제를 만들어 주는 서비스입니다.
 - 여러 사람들과 함께 재미있는 투표에 참여할 수 있습니다.
 
-5. 열린게시판:
+
+
+4. 열린게시판:
 - 홈 화면의 햄버거 메뉴를 통해 접근할 수 있는 자유로운 소통 공간입니다.
 - 모두트리의 수정 개선사항 등 자유로운 의견을 올려주세요.
 - 카카오톡 1:1 채팅 문의도 가능합니다.
@@ -127,13 +124,7 @@ A: 네, 가능합니다. 대화 중 "오늘 10시 강남역 미팅 메모 저장
 Q2. 제가 대화한 내용을 AI 사연 투표로 만들 수 있나요? 
 A: 네, 가능합니다. 고민이나 사연을 충분히 대화 해주세요. 그리고 현재 페이지 상단 오른쪽 버튼에서 [사연 AI] 버튼 클릭 후 [오늘 대화 내용으로 사연 생성]을 누르시면 자동으로 사연이 생성됩니다.
 
-Q3. 일기 작성이나 저장이 가능한가요?
-A: 네, 가능합니다! 저와 오늘 하루를 충분히 대화 후 내 페이지 기록 카테고리 페이지에서 버튼 한번 누르면 자동으로 일기가 생성되어 저장됩니다. 편하게 하루 이야기를 들려주세요.
-
-Q4. 실시간 날씨나 뉴스 정보를 알고 싶어요.
-A: 실시간 정보는 알려드릴 수 없어요. 상단 드롭다운 메뉴 통합검색 페이지에서 검색 가능하며 일반 검색은 물론, 유튜브 SNS까지 검색 가능합니다.
-
-Q5. 모두트리에 문의하거나 의견을 남기고 싶어요.
+Q3. 모두트리에 문의하거나 의견을 남기고 싶어요.
 A: 홈 화면 햄버거 메뉴를 통해 [열린 게시판]에 자유로운 의견을 남겨주시거나, 카카오톡 1:1 채팅으로 문의해 주세요.
 
 [중요] JSON 응답 규칙:
@@ -201,24 +192,8 @@ export async function POST(req: NextRequest): Promise<Response> {
       const requiresStructuredOutput = isSaveMemo && !isWriteMemo;
       const targetAction = isSaveMemo ? 'SAVE_MEMO' : 'NONE';
       
-      // 실시간 정보 문의 키워드 감지
-      const isRealTimeQuery = ['날씨', '뉴스', '주식', '시간', '오늘', '현재', '유튜브'].some(keyword => 
-        message.toLowerCase().includes(keyword)
-      ) && !isSaveMemo && !isWriteMemo;
-      
-      // ⭐️ [추가] 실시간 정보 요청 시 AI 호출 없이 즉시 응답 반환 (Early Return)
-      if (isRealTimeQuery) {
-        const realTimeResponse = "실시간 정보는 알려드릴 수 없어요. 상단 드롭다운 메뉴 통합검색 페이지에서 검색 가능하며 일반 검색은 물론, 유튜브 SNS까지 검색 가능합니다.";
-        console.log('실시간 정보 요청 감지. AI 호출 없이 바로 응답 반환.');
-        return NextResponse.json({ 
-          success: true, 
-          response: realTimeResponse,
-          remainingChats // 대화 횟수 차감 없이 응답
-        });
-      }
-      
       let finalGenerationConfig: GenerationConfig = {
-          maxOutputTokens: 1500,
+          maxOutputTokens: 2048,
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
@@ -267,7 +242,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         generationConfig: {
           ...finalGenerationConfig,
           temperature: 0.1,  // 더 결정적인 응답을 위해 온도 낮춤
-          maxOutputTokens: 2000,  // 토큰 수 조정 (약 1500-2000자)
+          maxOutputTokens: 4096,  // 토큰 수 증가
           topP: 0.1,  // 더 집중된 응답을 위해 낮춤
           topK: 1,  // 가장 가능성 높은 토큰만 선택
         },
@@ -300,6 +275,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             throw new Error('응답이 생성되지 않았습니다.');
           }
 
+          let responseData;
           if (requiresStructuredOutput) {
             // 구조화된 JSON 응답 처리 (Agent Logic)
             try {
@@ -329,15 +305,13 @@ export async function POST(req: NextRequest): Promise<Response> {
                 });
               }
 
-              let responseData;
               try {
                 responseData = JSON.parse(jsonMatch[0]);
               } catch (parseError) {
-                console.log('JSON 파싱 실패. 원본 텍스트 응답 사용');
-                const originalText = jsonText.replace(/```json|```/g, '').trim();
+                console.log('JSON 파싱 실패. 일반 대화로 전환');
                 return NextResponse.json({
                   success: true,
-                  response: originalText,
+                  response: '죄송해요, 요청하신 내용이 조금 복잡한 것 같아요. 다른 방식으로 설명해주시겠어요?',
                   remainingChats
                 });
               }
@@ -352,52 +326,53 @@ export async function POST(req: NextRequest): Promise<Response> {
                   remainingChats
                 });
               }
-
-              // JSON에서 action, userResponse 및 데이터 추출
-              const { action, userResponse, memoItems } = responseData;
-                
-              if (action === 'SAVE_MEMO') {
-                console.log('메모 저장 시작');
-                let savedCount = 0;
-                const memoRef = db.collection('users').doc(uid).collection('private_memos');
-
-                // 메모 항목 배열을 순회하며 개별적으로 저장
-                for (const item of memoItems) {
-                  const isTomorrow = item.isTomorrow === true; // 불리언 타입 체크
-                  
-                  let saveDate;
-                  if (isTomorrow) {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    tomorrow.setHours(9, 0, 0, 0); 
-                    saveDate = tomorrow;
-                  } else {
-                    saveDate = FieldValue.serverTimestamp();
-                  }
-                  
-                  // private_memos 구조에 맞게 저장: content, date, status, images, createdAt, updatedAt
-                  await memoRef.add({
-                    content: item.content, // <<<--- 개별 메모 콘텐츠 사용
-                    date: saveDate, 
-                    status: isTomorrow ? 'todo' : 'today',
-                    images: [], // 이미지는 빈 배열로 처리
-                    createdAt: FieldValue.serverTimestamp(),
-                    updatedAt: FieldValue.serverTimestamp()
-                  });
-                  savedCount++;
-                }
-                
-                // 사용자에게는 저장 완료 메시지만 보냄
-                responseText = `총 ${savedCount}개의 메모가 저장되었습니다.`;
-
-              } else {
-                   // 모든 응답에서 JSON 형식 제거
-                   responseText = cleanResponse(userResponse || "죄송합니다. 요청을 이해했지만, 저장 작업은 실행하지 못했습니다.");
-              }
             } catch (jsonError) {
               console.error('JSON 파싱/검증 실패. 원본 응답:', response.text());
               throw new Error('AI가 유효한 JSON을 반환하지 않았습니다.');
             }
+
+            // JSON에서 action, userResponse 및 데이터 추출
+            const { action, userResponse, memoItems } = responseData;
+            
+            if (action === 'SAVE_MEMO') {
+              console.log('메모 저장 시작');
+              let savedCount = 0;
+              const memoRef = db.collection('users').doc(uid).collection('private_memos');
+
+              // 메모 항목 배열을 순회하며 개별적으로 저장
+              for (const item of memoItems) {
+                const isTomorrow = item.isTomorrow === true; // 불리언 타입 체크
+                
+                let saveDate;
+                if (isTomorrow) {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  tomorrow.setHours(9, 0, 0, 0); 
+                  saveDate = tomorrow;
+                } else {
+                  saveDate = FieldValue.serverTimestamp();
+                }
+                
+                // private_memos 구조에 맞게 저장: content, date, status, images, createdAt, updatedAt
+                await memoRef.add({
+                  content: item.content, // <<<--- 개별 메모 콘텐츠 사용
+                  date: saveDate, 
+                  status: isTomorrow ? 'todo' : 'today',
+                  images: [], // 이미지는 빈 배열로 처리
+                  createdAt: FieldValue.serverTimestamp(),
+                  updatedAt: FieldValue.serverTimestamp()
+                });
+                savedCount++;
+              }
+              
+              // 사용자에게는 저장 완료 메시지만 보냄
+              responseText = `총 ${savedCount}개의 메모가 저장되었습니다.`;
+
+            } else {
+                 // 모든 응답에서 JSON 형식 제거
+                 responseText = cleanResponse(userResponse || "죄송합니다. 요청을 이해했지만, 저장 작업은 실행하지 못했습니다.");
+            }
+            
           } else {
             // 일반 텍스트 응답 처리 (Chat Logic)
             responseText = cleanResponse(response.text());

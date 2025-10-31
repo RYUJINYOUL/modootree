@@ -14,6 +14,20 @@
   .animate-floating {
     animation: floating 5s ease-in-out infinite;
   }
+
+  /* 스크롤바 숨김 (스크롤은 가능) */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
+
+  /* 터치 스크롤 부드럽게 */
+  .scroll-smooth-touch {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 body{

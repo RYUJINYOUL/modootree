@@ -3,10 +3,10 @@
 import { useSelector } from 'react-redux';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Download, Banana, Rocket } from 'lucide-react';
+import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Link as LinkIcon, Banana, Rocket } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
-import { db } from '@/lib/firebase';
+import { db } from '@/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 interface CategoryCounts {
@@ -15,6 +15,7 @@ interface CategoryCounts {
   health: number;
   mind: number;
   chats: number;
+  links: number;
 }
 
 interface MemoItem {
@@ -34,12 +35,11 @@ export default function ProfilePage() {
     diary: 0,
     health: 0,
     mind: 0,
-    chats: 0
+    chats: 0,
+    links: 0
   });
   const [countsLoading, setCountsLoading] = useState(true);
   const [memos, setMemos] = useState<MemoItem[]>([]);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showPWAButton, setShowPWAButton] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -52,54 +52,6 @@ export default function ProfilePage() {
 
     return () => unsubscribe();
   }, []);
-
-  // PWA 설치 이벤트 리스너
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowPWAButton(true);
-    };
-
-    const handleAppInstalled = () => {
-      setShowPWAButton(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    // 이미 설치된 경우 체크
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setShowPWAButton(false);
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  // PWA 설치 함수
-  const handlePWAInstall = async () => {
-    if (!deferredPrompt) return;
-
-    try {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      
-      if (outcome === 'accepted') {
-        console.log('PWA 설치 승인됨');
-      } else {
-        console.log('PWA 설치 거부됨');
-      }
-      
-      setDeferredPrompt(null);
-      setShowPWAButton(false);
-    } catch (error) {
-      console.error('PWA 설치 오류:', error);
-    }
-  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -114,7 +66,7 @@ export default function ProfilePage() {
     try {
       setCountsLoading(true);
       
-      const [memoCount, diaryCount, healthCount, mindCount, chatCount] = await Promise.all([
+      const [memoCount, diaryCount, healthCount, mindCount, chatCount, linkCount] = await Promise.all([
         // 메모 개수 - users/{userId}/private_memos
         getDocs(query(collection(db, `users/${userId}/private_memos`)))
           .then(snapshot => snapshot.size)
@@ -138,6 +90,11 @@ export default function ProfilePage() {
         // AI 채팅 기록 개수 - users/{userId}/chat_diaries
         getDocs(query(collection(db, `users/${userId}/chat_diaries`)))
           .then(snapshot => snapshot.size)
+          .catch(() => 0),
+        
+        // 링크 개수 - users/{userId}/linkpage
+        getDocs(query(collection(db, `users/${userId}/linkpage`)))
+          .then(snapshot => snapshot.size)
           .catch(() => 0)
       ]);
 
@@ -146,7 +103,8 @@ export default function ProfilePage() {
         diary: diaryCount,
         health: healthCount,
         mind: mindCount,
-        chats: chatCount
+        chats: chatCount,
+        links: linkCount
       });
     } catch (error) {
       console.error('카테고리 카운트를 가져오는데 실패했습니다:', error);
@@ -156,7 +114,8 @@ export default function ProfilePage() {
         diary: 0,
         health: 0,
         mind: 0,
-        chats: 0
+        chats: 0,
+        links: 0
       });
     } finally {
       setCountsLoading(false);
@@ -193,6 +152,26 @@ export default function ProfilePage() {
       setMemos(loadedMemos);
     }, (error) => {
       console.error('메모 구독 에러:', error);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser?.uid, localUser?.uid]);
+
+  // 링크 실시간 구독 (카운트 업데이트)
+  useEffect(() => {
+    const userId = currentUser?.uid || localUser?.uid;
+    if (!userId) return;
+    
+    const linksQuery = query(collection(db, `users/${userId}/linkpage`));
+
+    const unsubscribe = onSnapshot(linksQuery, (snapshot) => {
+      // 링크 카운트만 업데이트
+      setCounts(prev => ({
+        ...prev,
+        links: snapshot.size
+      }));
+    }, (error) => {
+      console.error('링크 구독 에러:', error);
     });
 
     return () => unsubscribe();
@@ -244,6 +223,15 @@ export default function ProfilePage() {
       color: 'bg-pink-500/20 border-pink-400/30',
       iconColor: 'text-pink-400',
       key: 'chats' as keyof CategoryCounts
+    },
+    { 
+      icon: LinkIcon, 
+      label: '링크', 
+      href: '/profile/links',
+      description: '저장된 링크와 북마크',
+      color: 'bg-cyan-500/20 border-cyan-400/30',
+      iconColor: 'text-cyan-400',
+      key: 'links' as keyof CategoryCounts
     }
   ];
 
@@ -325,26 +313,14 @@ export default function ProfilePage() {
                     {getGreeting()}
                   </h1>
                 </div>
-                <div className="flex items-center gap-3">
-                  {showPWAButton && (
-                    <button
-                      onClick={handlePWAInstall}
-                      className="flex items-center gap-2 bg-[#56ab91]/80 hover:bg-[#56ab91] text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium"
-                      title="앱 설치하기"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span className="hidden sm:inline">앱 설치</span>
-                    </button>
-                  )}
-                    <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-gray-400 text-right">
-                      <div>
-                        <span>{formatDate(currentTime)}</span>
-                      </div>
-                      <div>
-                        <span>{formatTime(currentTime)}</span>
-                      </div>
-                    </div>
+                <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-gray-400 text-right">
+                  <div>
+                    <span>{formatDate(currentTime)}</span>
                   </div>
+                  <div>
+                    <span>{formatTime(currentTime)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

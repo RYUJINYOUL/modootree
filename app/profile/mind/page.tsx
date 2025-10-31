@@ -175,7 +175,7 @@ export default function AnalysisPage() {
         <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl mb-6">
           {/* 헤더 - 접기/펼치기 버튼 */}
           <div className="flex items-center justify-between p-6 pb-4">
-            <h2 className="text-xl font-bold text-white">챗gpt 제미나이 클로드 대화 입력</h2>
+            <h2 className="text-xl font-bold text-white">AI 대화 입력(gpt, 제미나이)</h2>
             <button
               onClick={() => setIsInputSectionExpanded(!isInputSectionExpanded)}
               className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"

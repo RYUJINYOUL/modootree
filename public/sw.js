@@ -1,9 +1,10 @@
-const CACHE_NAME = 'modootree-v1';
+const CACHE_NAME = 'modootree-v2';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
   '/static/css/main.css',
-  '/logos/m1.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/logos/logohole.png'
 ];
 

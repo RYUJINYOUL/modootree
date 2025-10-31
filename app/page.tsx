@@ -172,9 +172,9 @@ export default function Home() {
 
 
         <div className="text-center mb-1">
-          <p className="text-2xl text-gray-400 md:block hidden">모두트리 AI로 기록 되는 특별한 나의 페이지</p>
+          <p className="text-2xl text-gray-400 md:block hidden">모두트리 AI로 기록하는 나만의 페이지</p>
           <div className="md:hidden block">
-            <p className="text-[20px] text-gray-300">모두트리 AI로 기록되는 나의 페이지</p>
+            <p className="text-[20px] text-gray-300">모두트리 AI로 기록, 나만의 페이지</p>
           </div>
         </div>
 
