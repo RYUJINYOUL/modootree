@@ -70,6 +70,8 @@ export default function HealthListPage() {
   const [viewMode, setViewMode] = useState<'all' | 'my'>('all');
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [selectedFilter, setSelectedFilter] = useState<'latest' | 'highest'>('latest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage] = useState(6); // 페이지당 6개 기록
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -133,7 +135,16 @@ export default function HealthListPage() {
     };
 
     fetchRecords();
+    setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
   }, [viewMode, selectedFilter]);
+
+  // 페이지네이션 계산
+  const indexOfLastRecord = currentPage * recordsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+  const currentRecords = records.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.ceil(records.length / recordsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const handleNewAnalysis = () => {
     router.push('/health/analyze');
@@ -245,7 +256,7 @@ export default function HealthListPage() {
         </div>
 
         <div className="grid gap-4">
-          {records.map((record) => {
+          {currentRecords.map((record) => {
             // 데이터 처리
             let dailySummary = {
               balanceScore: 0,
@@ -399,6 +410,96 @@ export default function HealthListPage() {
             </div>
           )}
         </div>
+
+        {/* 페이지네이션 */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-1 md:gap-2 mt-8 px-4">
+            <button
+              onClick={() => paginate(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-2 md:px-3 py-2 rounded-lg bg-blue-950/20 text-gray-400 hover:bg-blue-950/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+            >
+              이전
+            </button>
+            
+            {/* 모바일: 간소화된 페이지네이션 */}
+            <div className="flex md:hidden items-center gap-1">
+              {currentPage > 2 && (
+                <>
+                  <button
+                    onClick={() => paginate(1)}
+                    className="px-2 py-2 rounded-lg bg-blue-950/20 text-gray-400 hover:bg-blue-950/30 transition-all text-sm"
+                  >
+                    1
+                  </button>
+                  {currentPage > 3 && <span className="text-gray-400 px-1">...</span>}
+                </>
+              )}
+              
+              {currentPage > 1 && (
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  className="px-2 py-2 rounded-lg bg-blue-950/20 text-gray-400 hover:bg-blue-950/30 transition-all text-sm"
+                >
+                  {currentPage - 1}
+                </button>
+              )}
+              
+              <button className="px-2 py-2 rounded-lg bg-blue-600 text-white text-sm">
+                {currentPage}
+              </button>
+              
+              {currentPage < totalPages && (
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  className="px-2 py-2 rounded-lg bg-blue-950/20 text-gray-400 hover:bg-blue-950/30 transition-all text-sm"
+                >
+                  {currentPage + 1}
+                </button>
+              )}
+              
+              {currentPage < totalPages - 1 && (
+                <>
+                  {currentPage < totalPages - 2 && <span className="text-gray-400 px-1">...</span>}
+                  <button
+                    onClick={() => paginate(totalPages)}
+                    className="px-2 py-2 rounded-lg bg-blue-950/20 text-gray-400 hover:bg-blue-950/30 transition-all text-sm"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+            
+            {/* 데스크톱: 전체 페이지네이션 */}
+            <div className="hidden md:flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                <button
+                  key={number}
+                  onClick={() => paginate(number)}
+                  className={`px-3 py-2 rounded-lg transition-all ${
+                    currentPage === number
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-blue-950/20 text-gray-400 hover:bg-blue-950/30'
+                  }`}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => paginate(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-2 md:px-3 py-2 rounded-lg bg-blue-950/20 text-gray-400 hover:bg-blue-950/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+            >
+              다음
+            </button>
+          </div>
+        )}
+
+        {/* 하단 여백 */}
+        <div className="h-20 md:h-32"></div>
       </main>
       {/* AI 플로팅 버튼 */}
       <Link

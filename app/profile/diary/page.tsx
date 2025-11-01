@@ -453,7 +453,7 @@ export default function DiaryPage() {
               <Textarea
                 value={writeForm.content}
                 onChange={(e) => setWriteForm(prev => ({ ...prev, content: e.target.value }))}
-                placeholder="일기를 작성해주세요..."
+                placeholder="일기를 직접 작성하시거나 AI와 하루 대화 후 왼쪽 카테고리 기록에서 작성하기 버튼을 누르면 자동 작성됩니다"
                 className="min-h-[200px] bg-[#2A4D45]/40 border-[#358f80]/20 text-white placeholder-gray-400"
               />
             </div>

@@ -406,6 +406,7 @@ export default function ModooVoteDetailPage() {
             )}
           </div>
         </div>
+        
 
         <div className="mt-8 flex justify-center gap-3">
           <Button onClick={() => router.push('/modoo-vote')} className="bg-blue-600 hover:bg-blue-700">
@@ -427,6 +428,9 @@ export default function ModooVoteDetailPage() {
           </Button>
         </div>
       </div>
+      {/* 하단 여백 */}
+      <div className="h-20 md:h-32"></div>
     </div>
+    
   );
 }

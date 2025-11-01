@@ -444,7 +444,7 @@ export default function MemoPage() {
               <Textarea
                 value={writeForm.content}
                 onChange={(e) => setWriteForm(prev => ({ ...prev, content: e.target.value }))}
-                placeholder="메모를 입력하세요..."
+                placeholder="메모를 입력하시거나 오른쪽 AI대화로 메모 저장 오전 11시 강남역 미팅 채팅으로 요청하셔도 저장됩니다"
                 className="min-h-[200px] bg-[#2A4D45]/40 border-[#358f80]/20 text-white placeholder-gray-400"
               />
             </div>

@@ -222,13 +222,12 @@ export default function Home() {
           <div className="flex flex-row overflow-x-auto gap-4 py-2 scrollbar-hide">
             {[ 
               // { icon: "/logos/feed.png", path: "/feed" }, // AI와 함께 이야기 - 비공개
+              { icon: "/logos/ai5.png", path: "/link-letter" },
               { icon: "/logos/news.png", path: "/news-vote" },
               // { icon: "/logos/ai5.png", path: "/art-generation" }, // 사진 예술 작품 - 비공개
-             
-              { icon: "/logos/ai1.png", path: "/health" },
               { icon: "/logos/m1.png", path: "/profile" },
+              { icon: "/logos/ai1.png", path: "/health" },
               { icon: "/logos/ai4.png", path: "/inquiry" },
-              { icon: "/logos/ai5.png", path: "/search" },
               // { icon: "/logos/ai2.png", path: "/photo-story" }, // 공유 익명 일기 - 비공개
               // { icon: "/logos/ai3.png", path: "/modoo-vote" }, // 한페이지 선물 - 비공개
               // { icon: "/logos/m12.png", path: "/site" }, // 내 사이트 페이지 - 비공개

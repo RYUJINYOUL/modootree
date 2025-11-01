@@ -242,13 +242,13 @@ export default function HealthResultContent({ id }: { id: string }) {
                      meal === 'lunch' ? '점심' :
                      meal === 'dinner' ? '저녁' : '기타'}
                   </h3>
-                  {(record.meals[meal].description || record.meals[meal].imageUrl) && (
+                  {(record.meals[meal]?.description || record.meals[meal]?.imageUrl) && (
                     <>
-                      {record.meals[meal].imageUrl && (
+                      {record.meals[meal]?.imageUrl && (
                         <div className="mb-4">
                           <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-blue-950/30">
                             <Image
-                              src={record.meals[meal].imageUrl}
+                              src={record.meals[meal]?.imageUrl}
                               alt={`${meal === 'breakfast' ? '아침' : meal === 'lunch' ? '점심' : meal === 'dinner' ? '저녁' : '간식'} 식사`}
                               fill
                               className="object-cover"
@@ -257,10 +257,10 @@ export default function HealthResultContent({ id }: { id: string }) {
                           </div>
                         </div>
                       )}
-                      {record.meals[meal].description && (
+                      {record.meals[meal]?.description && (
                         <div className="mb-4">
                           <div className="text-sm text-gray-400 mb-1">기록</div>
-                          <div className="text-gray-200">{record.meals[meal].description}</div>
+                          <div className="text-gray-200">{record.meals[meal]?.description}</div>
                         </div>
                       )}
                       <div className="space-y-4">
@@ -295,13 +295,13 @@ export default function HealthResultContent({ id }: { id: string }) {
           {/* 운동 분석 */}
           <div className="p-6 bg-blue-950/20 backdrop-blur-sm rounded-2xl border border-blue-500/20">
             <h2 className="text-2xl font-bold text-white mb-6">운동 분석</h2>
-            {(record.exercise.description || record.exercise.imageUrl) && (
+            {(record.exercise?.description || record.exercise?.imageUrl) && (
               <>
-                {record.exercise.imageUrl && (
+                {record.exercise?.imageUrl && (
                   <div className="mb-4">
                     <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-blue-950/30">
                       <Image
-                        src={record.exercise.imageUrl}
+                        src={record.exercise?.imageUrl}
                         alt="운동 기록"
                         fill
                         className="object-cover"
@@ -310,10 +310,10 @@ export default function HealthResultContent({ id }: { id: string }) {
                     </div>
                   </div>
                 )}
-                {record.exercise.description && (
+                {record.exercise?.description && (
                   <div className="mb-4">
                     <div className="text-sm text-gray-400 mb-1">기록</div>
-                    <div className="text-gray-200">{record.exercise.description}</div>
+                    <div className="text-gray-200">{record.exercise?.description}</div>
                   </div>
                 )}
                 <div className="space-y-4">
@@ -342,6 +342,9 @@ export default function HealthResultContent({ id }: { id: string }) {
             )}
           </div>
         </div>
+        
+        {/* 하단 여백 */}
+        <div className="h-20 md:h-32"></div>
       </main>
     </div>
   );

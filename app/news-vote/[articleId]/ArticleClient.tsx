@@ -326,6 +326,9 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
             )}
           </div>
         </div>
+        
+        {/* 하단 여백 */}
+        <div className="h-20 md:h-32"></div>
       </div>
     </main>
   );

@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, db } from '@/lib/firebase';
-import { uploadHealthImage, saveHealthRecord, fileToBase64, analyzeHealthRecord, analyzeAllInputs } from '@/lib/health-service';
-import { Check, Sparkles, ImageIcon } from 'lucide-react';
+import { auth, db } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { uploadHealthImage, saveHealthRecord, fileToBase64, analyzeHealthRecord, analyzeAllInputs, analyzeDailyActivity } from '@/lib/health-service';
+import { Check, Sparkles, ImageIcon, Loader2 } from 'lucide-react';
 import { AIGenerationProgress } from '@/components/AIGenerationProgress';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 
@@ -358,7 +359,105 @@ export default function HealthAnalyzePage() {
       <main className="container mx-auto px-4 py-10 relative z-10 max-w-5xl">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-white mb-2">오늘 건강 기록</h1>
-          <p className="text-sm text-gray-400">당신의 오늘 건강 기록을 AI가 분석해 드립니다.</p>
+          <p className="text-sm text-gray-400 mb-4">당신의 오늘 건강 기록을 AI가 분석해 드립니다.</p>
+          
+          {/* AI 오늘 활동 채우기 버튼 */}
+          <button
+            onClick={async () => {
+              try {
+                setIsPreAnalyzing(true);
+                const token = await auth.currentUser?.getIdToken(true);
+                if (!token) {
+                  setError('인증이 필요합니다.');
+                  return;
+                }
+                
+                // 오늘 날짜 생성
+                const today = new Date();
+                const dateStr = new Date(today.getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
+                
+                const result = await analyzeDailyActivity(dateStr, token);
+                console.log('일일 활동 분석 결과:', result);
+
+                // 분석 결과로 입력란 채우기
+                if (result) {
+                  setMeals(prev => ({
+                    breakfast: { 
+                      ...prev.breakfast, 
+                      description: result.meals?.breakfast?.description || '',
+                      parsed: result.meals?.breakfast?.description ? {
+                        mainDish: result.meals.breakfast.description,
+                        sideDishes: '',
+                        portion: '1인분'
+                      } : undefined
+                    },
+                    lunch: { 
+                      ...prev.lunch, 
+                      description: result.meals?.lunch?.description || '',
+                      parsed: result.meals?.lunch?.description ? {
+                        mainDish: result.meals.lunch.description,
+                        sideDishes: '',
+                        portion: '1인분'
+                      } : undefined
+                    },
+                    dinner: { 
+                      ...prev.dinner, 
+                      description: result.meals?.dinner?.description || '',
+                      parsed: result.meals?.dinner?.description ? {
+                        mainDish: result.meals.dinner.description,
+                        sideDishes: '',
+                        portion: '1인분'
+                      } : undefined
+                    },
+                    snack: { 
+                      ...prev.snack, 
+                      description: result.meals?.snack?.description || '',
+                      parsed: result.meals?.snack?.description ? {
+                        mainDish: result.meals.snack.description,
+                        sideDishes: '',
+                        portion: '적당량'
+                      } : undefined
+                    }
+                  }));
+                  
+                  setExercise(prev => ({
+                    ...prev,
+                    description: result.exercise?.description || '',
+                    parsed: result.exercise?.description ? {
+                      type: result.exercise.description,
+                      duration: '30분',
+                      intensity: '중간'
+                    } : undefined
+                  }));
+                  
+                  setHasAnalyzed(true);
+                } else {
+                  setError('오늘의 답변 데이터를 찾을 수 없습니다.');
+                }
+              } catch (e) {
+                console.error('일일 활동 분석 중 오류:', e);
+                setError('오늘의 답변을 분석하는데 실패했습니다. 인사말 답변이 있는지 확인해주세요.');
+              } finally {
+                setIsPreAnalyzing(false);
+              }
+            }}
+            disabled={isPreAnalyzing}
+            className="inline-flex items-center px-6 py-3 text-sm font-medium rounded-lg transition-all duration-300 shadow-lg 
+              bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 
+              text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPreAnalyzing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <span>분석 중...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                <span>AI분석 오늘 활동 채우기</span>
+              </>
+            )}
+          </button>
         </div>
 
         {error && (
@@ -487,72 +586,8 @@ export default function HealthAnalyzePage() {
             ))}
           </div>
 
-          {/* 버튼 그룹 */}
-          <div className="space-y-4">
-            {/* 1차 분석 버튼 */}
-            <button
-              onClick={async () => {
-                try {
-                  setIsPreAnalyzing(true);
-                  const token = await auth.currentUser?.getIdToken(true);
-                  if (!token) {
-                    setError('인증이 필요합니다.');
-                    return;
-                  }
-                  const result = await analyzeAllInputs({
-                    meals: {
-                      breakfast: { description: meals.breakfast.description },
-                      lunch: { description: meals.lunch.description },
-                      dinner: { description: meals.dinner.description },
-                      snack: { description: meals.snack.description }
-                    },
-                    exercise: { description: exercise.description }
-                  }, token);
-
-                  console.log('API 응답 결과:', result);
-
-                  // 분석 결과 저장
-                  if (result && result.meals) {
-                    console.log('meals 데이터 저장 중:', result.meals);
-                    setMeals(prev => ({
-                      breakfast: { ...prev.breakfast, parsed: result.meals.breakfast },
-                      lunch: { ...prev.lunch, parsed: result.meals.lunch },
-                      dinner: { ...prev.dinner, parsed: result.meals.dinner },
-                      snack: { ...prev.snack, parsed: result.meals.snack }
-                    }));
-                    setExercise(prev => ({
-                      ...prev,
-                      parsed: result.exercise
-                    }));
-                  } else {
-                    console.log('result 또는 result.meals가 없음:', result);
-                  }
-                } catch (e) {
-                  console.error('분석 중 오류:', e);
-                  setError('분석에 실패했습니다. 다시 시도해주세요.');
-                } finally {
-                  setIsPreAnalyzing(false);
-                  setHasAnalyzed(true);
-                }
-              }}
-              disabled={isPreAnalyzing || hasAnalyzed || (!meals.breakfast.description && !meals.lunch.description && !meals.dinner.description && !meals.snack.description && !exercise.description)}
-              className="w-full flex justify-center items-center px-6 py-4 text-lg font-bold rounded-xl transition-all duration-300 shadow-xl 
-                active:scale-[0.98] bg-gradient-to-r from-indigo-600 to-blue-600
-                hover:from-indigo-700 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isPreAnalyzing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  <span>분석 중...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  <span>AI로 입력 내용 확인하기</span>
-                </>
-              )}
-            </button>
-
+          {/* 최종 저장 버튼 */}
+          <div className="flex justify-center">
             {/* 최종 저장 버튼 */}
             <button
               onClick={handleAnalyze}
@@ -563,14 +598,7 @@ export default function HealthAnalyzePage() {
                  meals.lunch.description.trim().length === 0 && 
                  meals.dinner.description.trim().length === 0 && 
                  meals.snack.description.trim().length === 0 && 
-                 exercise.description.trim().length === 0) ||
-                // 하나라도 입력된 필드의 분석 결과가 없으면 비활성화
-                // 입력된 필드의 분석 결과가 없으면 비활성화
-                (meals.breakfast.description.trim().length > 0 && !meals.breakfast.parsed) ||
-                (meals.lunch.description.trim().length > 0 && !meals.lunch.parsed) ||
-                (meals.dinner.description.trim().length > 0 && !meals.dinner.parsed) ||
-                (meals.snack.description.trim().length > 0 && !meals.snack.parsed) ||
-                (exercise.description.trim().length > 0 && !exercise.parsed)
+                 exercise.description.trim().length === 0)
               }
               className="w-full flex justify-center items-center px-6 py-4 text-lg font-bold rounded-xl transition-all duration-300 shadow-xl 
                 active:scale-[0.98] bg-gradient-to-r from-green-600 to-emerald-600
@@ -588,6 +616,9 @@ export default function HealthAnalyzePage() {
             </button>
           </div>
         </div>
+        
+        {/* 하단 여백 */}
+        <div className="h-20 md:h-32"></div>
       </main>
     </div>
   );

@@ -10,6 +10,11 @@ const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GOOGLE_AI_KEY || pr
 // 응답 정리를 위한 유틸리티 함수
 const cleanResponse = (text: string): string => {
   try {
+    // 빈 문자열이나 null 체크
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+
     // JSON 형식인 경우 파싱 시도
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -23,22 +28,20 @@ const cleanResponse = (text: string): string => {
     }
 
     return text
-      // JSON 관련 문자열 제거
+      // JSON 관련 문자열 제거 (더 안전하게)
       .replace(/\{"action":[^}]+\}/g, '')
       .replace(/"action":\s*"[^"]*"/g, '')
       .replace(/"userResponse":\s*"([^"]*)"/g, '$1')
       .replace(/"diaryContent":\s*"([^"]*)"/g, '$1')
       .replace(/"memoItems":\s*\[[^\]]*\]/g, '')
-      // JSON 구조 제거
-      .replace(/[{}\[\]"\\]/g, '')
-      // 특수 문자 및 포맷팅 정리
-      .replace(/\s*:\s*/g, ' ')
+      // 기본적인 정리만 수행
       .replace(/\\n/g, '\n')
       .replace(/\n+/g, '\n')
       .replace(/\s+/g, ' ')
       .trim();
   } catch (e) {
-    return text.trim();
+    console.error('cleanResponse 오류:', e);
+    return text ? text.trim() : '';
   }
 };
 
@@ -91,41 +94,58 @@ const systemInstruction = `당신은 모두트리의 AI 상담사입니다. 당�
 
 [중요] 모두트리 서비스 소개:
 
-모두트리는 다양한 AI 기반 서비스를 제공하는 플랫폼입니다:
-
-
+모두트리는 내 페이지(기록 페이지)를 기반으로 유익한 커뮤니티를 제공하는 서비스입니다:
 
 1. AI건강기록:
-- 하루의 식사와 운동을 기록하면 AI가 당신의 건강 습관을 분석하고 통찰해 주는 서비스입니다.
-- 개인 맞춤형 건강 조언과 장기적인 건강 패턴을 확인할 수 있습니다.
+- 내 페이지 상단 ai질문에 간단하게 답변 하시면 자동 분석 가능합니다.
+- ai질문을 답하시고 건강 카테고리에서 상단 건강분석 버튼 클릭 페이지 이동하신 후 버튼 2번만 더 눌러주세요.
 
-2. AI사진투표:
-- 사진을 업로드하면 AI가 사진을 분석하여 재미있는 투표 주제를 만들어 주는 서비스입니다.
-- 사진 속 이야기를 다양한 관점에서 재미있게 해석하고 공유할 수 있습니다.
+2. 모두트리투표:
+- 사진, 뉴스, 사연을 올려주시면 ai가 자동으로 투표 페이지를 만들어 드립니다.
+- 내 페이지 홈화면에서 커뮤니티 카드를 클릭하시고 페이지 방문 버튼 2번만 더 눌러주시면 자동 투표가 완성됩니다.
+- 관심 있는 뉴스, 사진, 이야기로 투표로 만들고 주변 지인 분들께 공유해 보세요
 
-3. AI사연투표:
-- 익명으로 사연을 작성하면 AI가 내용을 분석하여 흥미로운 투표 주제를 만들어 주는 서비스입니다.
-- 여러 사람들과 함께 재미있는 투표에 참여할 수 있습니다.
+3. 링크편지:
+- 퀴즈를 풀어야 볼 수 있는 편지입니다
+- 내 페이지 홈화면에서 커뮤니티 카드를 클릭하시고 페이지 방문 링크 편지를 만들어보세요.
+- 가족 연인 지인 링크편지를 만들어서 공유해 보세요
 
+4. 내페이지:
+- 메모, 일기, 건강, ai분석, ai대화내용, 링크저장 페이지로 나의 모든 것을 기록할 수 있는 페이지입니다.
+- 업무툴과 학습툴로도 사용 가능하며 나의 메모 일기 장으로도 사용해 보세요.
+- ai와 함께 쓰는 나만의 특별한 기록 페이지입니다.
+- 하단 탭 메뉴에서 내 페이지 클릭하면 나만의 페이지를 볼 수 있습니다.
 
-
-4. 열린게시판:
-- 홈 화면의 햄버거 메뉴를 통해 접근할 수 있는 자유로운 소통 공간입니다.
-- 모두트리의 수정 개선사항 등 자유로운 의견을 올려주세요.
+5. 열린게시판:
+- 내 페이지 카테고리 문의로 방문하시고 자유롭게 해주세요.
+- 모두트리의 수정 개선사항 등 자유로운 의견을 올려 주세요.
 - 카카오톡 1:1 채팅 문의도 가능합니다.
-
-
 
 [중요] 자주 묻는 질문:
 
 Q1. 오늘 일정 메모 저장 가능해?
 A: 네, 가능합니다. 대화 중 "오늘 10시 강남역 미팅 메모 저장" 등 구체적인 내용과 키워드를 입력하시면 AI가 해당 내용을 메모로 즉시 저장해 드립니다.
 
-Q2. 제가 대화한 내용을 AI 사연 투표로 만들 수 있나요? 
+Q2. 제가 대화한 내용을 AI 사연 투표로 만들 수 있나요?
 A: 네, 가능합니다. 고민이나 사연을 충분히 대화 해주세요. 그리고 현재 페이지 상단 오른쪽 버튼에서 [사연 AI] 버튼 클릭 후 [오늘 대화 내용으로 사연 생성]을 누르시면 자동으로 사연이 생성됩니다.
 
 Q3. 모두트리에 문의하거나 의견을 남기고 싶어요.
 A: 홈 화면 햄버거 메뉴를 통해 [열린 게시판]에 자유로운 의견을 남겨주시거나, 카카오톡 1:1 채팅으로 문의해 주세요.
+
+Q4. AI 링크편지는 어떻게 만드나요?
+A: 링크편지 페이지에서 카테고리를 선택하고, 편지 내용과 퀴즈를 작성하면 됩니다. 받는 사람이 퀴즈를 맞춰야 편지를 볼 수 있어서 더욱 특별한 경험을 선사할 수 있어요.
+
+Q5. 페이지 배경화면 링크편지 배경화면 설정등 기능을 잘 모르겠어요?
+A: 각 페이지마다 설정 버튼이 모두 있지만, 정말 모르시겠다면 열린게시판 또는 1:1 카카오톡 문의 주세요. 상세하게 알려 드리겠습니다.
+
+Q6. 오늘 대화 내용으로 일기 메모 건강 분석 가능해?
+A: 건강 분석은 내 페이지 상단 ai질문에 간단하게 답변 하시면 자동 분석 가능합니다. 메모 저장하는 방법은 "오늘 10시 강남역 미팅 메모 저장"처럼 구체적인 내용과 함께 '메모 저장' 키워드를 말씀해 주시면 제가 바로 저장해 드릴 수 있어요. 일기는 ai와 하루 대화 후 내 페이지 기록 카테고리에서 작성하기 버튼을 누르면 일기가 작성되고 2번의 클릭으로 자동 저장됩니다.
+
+Q7. 모두트리는 어떤 서비스인가요?
+A: 모두트리는 내 페이지(기록 페이지)를 기반으로 유익한 커뮤니티를 제공하는 서비스입니다.
+
+Q8. AI가 답변하지 못하는 질문이 있나요?
+A: 네, 모두트리는 3시간마다 업데이트되어 저 또한 학습하지 못한 서비스가 있을 수 있습니다. 질문에 대한 답변을 잘 모르겠다면 열린게시판에서 글을 남기시거나 급한 업무이면 1:1채팅을 이용해주세요.
 
 [중요] JSON 응답 규칙:
 1. 이모지나 특수 문자를 사용하지 마세요
@@ -298,33 +318,24 @@ export async function POST(req: NextRequest): Promise<Response> {
               const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
               if (!jsonMatch) {
                 console.log('JSON 형식이 아닌 응답 받음. 일반 대화로 전환');
-                return NextResponse.json({
-                  success: true,
-                  response: '죄송해요, 말씀하신 내용을 정확히 이해하지 못했어요. 조금 더 자세히 설명해주시겠어요?',
-                  remainingChats
-                });
+                responseText = '죄송해요, 말씀하신 내용을 정확히 이해하지 못했어요. 조금 더 자세히 설명해주시겠어요?';
+                break; // while 루프 종료하고 정상 저장 프로세스로
               }
 
               try {
                 responseData = JSON.parse(jsonMatch[0]);
               } catch (parseError) {
                 console.log('JSON 파싱 실패. 일반 대화로 전환');
-                return NextResponse.json({
-                  success: true,
-                  response: '죄송해요, 요청하신 내용이 조금 복잡한 것 같아요. 다른 방식으로 설명해주시겠어요?',
-                  remainingChats
-                });
+                responseText = '죄송해요, 요청하신 내용이 조금 복잡한 것 같아요. 다른 방식으로 설명해주시겠어요?';
+                break; // while 루프 종료하고 정상 저장 프로세스로
               }
               console.log('파싱된 JSON:', responseData);
 
               // 메모 저장 요청인데 유효한 메모 항목이 없는 경우
               if (responseData.action === 'SAVE_MEMO' && (!Array.isArray(responseData.memoItems) || responseData.memoItems.length === 0)) {
                 console.log('메모 항목이 없음. 일반 대화로 전환');
-                return NextResponse.json({
-                  success: true,
-                  response: '메모로 저장하고 싶으신 내용을 말씀해 주시겠어요? 예를 들어 "오후 3시 회의" 처럼 구체적으로 말씀해 주시면 도움이 될 것 같아요.',
-                  remainingChats
-                });
+                responseText = '메모로 저장하고 싶으신 내용을 말씀해 주시겠어요? 예를 들어 "오후 3시 회의" 처럼 구체적으로 말씀해 주시면 도움이 될 것 같아요.';
+                break; // while 루프 종료하고 정상 저장 프로세스로
               }
             } catch (jsonError) {
               console.error('JSON 파싱/검증 실패. 원본 응답:', response.text());
@@ -365,8 +376,10 @@ export async function POST(req: NextRequest): Promise<Response> {
                 savedCount++;
               }
               
-              // 사용자에게는 저장 완료 메시지만 보냄
-              responseText = `총 ${savedCount}개의 메모가 저장되었습니다.`;
+              // 사용자에게는 저장 완료 메시지와 함께 AI 응답도 보냄
+              const successMessage = `총 ${savedCount}개의 메모가 저장되었습니다.`;
+              const aiResponse = cleanResponse(userResponse || "메모 저장이 완료되었어요!");
+              responseText = `${successMessage}\n\n${aiResponse}`;
 
             } else {
                  // 모든 응답에서 JSON 형식 제거
@@ -387,7 +400,12 @@ export async function POST(req: NextRequest): Promise<Response> {
           
           if (retryCount === maxRetries) {
             console.log('최대 재시도 횟수 도달. 일반 대화로 전환');
-            responseText = '죄송해요, 지금은 제가 말씀하신 내용을 제대로 처리하기 어려운 것 같아요. 잠시 후에 다시 말씀해 주시거나, 다른 방식으로 설명해 주시면 감사하겠습니다.';
+            // 메모 저장 요청이었다면 더 구체적인 안내 제공
+            if (requiresStructuredOutput && targetAction === 'SAVE_MEMO') {
+              responseText = '메모 저장 요청을 받았지만 처리 중 문제가 발생했어요. 다시 한번 "10시 회의 메모 저장" 같은 형식으로 말씀해 주시겠어요?';
+            } else {
+              responseText = '죄송해요, 지금은 제가 말씀하신 내용을 제대로 처리하기 어려운 것 같아요. 잠시 후에 다시 말씀해 주시거나, 다른 방식으로 설명해 주시면 감사하겠습니다.';
+            }
             break;
           }
           

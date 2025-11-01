@@ -96,8 +96,12 @@ export default function LoginOutButton() {
                     icon: "/logos/m1.png",
                     path: "/profile"
                   },
-                 
-                 
+                  {
+                    title: "링크 편지",
+                    description: "퀴즈를 풀어야만 읽을 수 있는 링크 편지",
+                    icon: "/logos/ai5.png",
+                    path: "/link-letter"
+                  },
                   {
                     title: "AI 건강 기록",
                     description: "당신의 건강한 하루를 AI가 분석해 드립니다",

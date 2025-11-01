@@ -5,13 +5,27 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Heart, Gift, Users, Baby, MessageCircle, Plus, Eye, Share2, ArrowLeft, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Settings, Copy, Check } from 'lucide-react';
+import { Heart, Gift, Users, Baby, MessageCircle, Plus, Eye, Share2, ArrowLeft, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Settings, Copy, Check, Send, Lock, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 import { useSelector } from 'react-redux';
+
+interface Reply {
+  id: string;
+  content: string;
+  author: {
+    uid: string;
+    displayName: string;
+    email: string;
+    photoURL?: string;
+  };
+  createdAt: Date;
+  isPrivate: boolean; // 등록자만 볼 수 있는지 여부
+}
 
 interface LinkLetter {
   id: string;
@@ -51,6 +65,7 @@ interface LinkLetter {
     type: 'color' | 'gradient' | 'image' | 'default';
     value?: string;
   };
+  replies?: Reply[]; // 답글 목록
 }
 
 interface LinkLetterBackground {
@@ -171,11 +186,21 @@ export default function LinkLetterDetailPage() {
   const [attempts, setAttempts] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0); // 현재 퀴즈 인덱스
   const [completedQuizzes, setCompletedQuizzes] = useState<number[]>([]); // 완료된 퀴즈들
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // 현재 이미지 인덱스
   const [userBackground, setUserBackground] = useState<LinkLetterBackground | null>(null); // 사용자 배경 설정
   const [linkCopied, setLinkCopied] = useState(false); // 링크 복사 상태
+  
+  // 답글 관련 상태
+  const [replies, setReplies] = useState<Reply[]>([]);
+  const [replyContent, setReplyContent] = useState('');
+  const [isPrivateReply, setIsPrivateReply] = useState(false);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [repliesLoading, setRepliesLoading] = useState(true);
+  const [showBottomButton, setShowBottomButton] = useState(true);
+  
   const maxAttempts = 3;
 
   // 퀴즈 데이터 가져오기 (다중 퀴즈 지원)
@@ -210,6 +235,50 @@ export default function LinkLetterDetailPage() {
   const currentQuiz = quizData?.questions[currentQuizIndex];
   const isLastQuiz = currentQuizIndex === (quizData?.totalQuestions || 1) - 1;
   const allQuizzesCompleted = completedQuizzes.length === quizData?.totalQuestions;
+
+  // 답글 권한 확인 함수
+  const canViewReply = (reply: Reply) => {
+    if (!reply.isPrivate) return true; // 공개 답글
+    if (!currentUser) return false; // 로그인 안함
+    
+    return (
+      currentUser.uid === reply.author.uid || // 답글 작성자
+      currentUser.uid === letter?.author.uid    // 편지 작성자
+    );
+  };
+
+  // 답글 작성 함수
+  const handleSubmitReply = async () => {
+    if (!currentUser || !letter || !replyContent.trim()) return;
+
+    setIsSubmittingReply(true);
+    try {
+      const replyData = {
+        content: replyContent.trim(),
+        author: {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || '익명',
+          email: currentUser.email || '',
+          photoURL: currentUser.photoURL || ''
+        },
+        isPrivate: isPrivateReply,
+        createdAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'linkLetters', letterId, 'replies'), replyData);
+      
+      // 폼 초기화
+      setReplyContent('');
+      setIsPrivateReply(false);
+      
+      console.log('답글 작성 완료');
+    } catch (error) {
+      console.error('답글 작성 실패:', error);
+      alert('답글 작성 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
 
   // 임시 더미 데이터
   const dummyLetters: LinkLetter[] = [
@@ -348,6 +417,67 @@ export default function LinkLetterDetailPage() {
     fetchUserBackground();
   }, [currentUser?.uid]);
 
+  // 답글 실시간 구독
+  useEffect(() => {
+    if (!letterId) return;
+
+    console.log('답글 구독 시작:', letterId);
+    
+    const repliesQuery = query(
+      collection(db, 'linkLetters', letterId, 'replies'),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(repliesQuery, (snapshot) => {
+      console.log('답글 스냅샷 업데이트, 문서 개수:', snapshot.size);
+      
+      const repliesData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date()
+        } as Reply;
+      });
+
+      console.log('답글 데이터:', repliesData);
+      setReplies(repliesData);
+      setRepliesLoading(false);
+    }, (error) => {
+      console.error('답글 구독 실패:', error);
+      setRepliesLoading(false);
+    });
+
+    // 컴포넌트 언마운트 시 구독 해제
+    return () => {
+      console.log('답글 구독 해제');
+      unsubscribe();
+    };
+  }, [letterId]);
+
+  // 좋아요 상태 확인 및 로드
+  useEffect(() => {
+    if (!letterId || !currentUser?.uid) return;
+
+    const likeKey = `liked_${letterId}_${currentUser.uid}`;
+    const hasLiked = localStorage.getItem(likeKey) === 'true';
+    setIsLiked(hasLiked);
+  }, [letterId, currentUser?.uid]);
+
+  // 프로모션 버튼 로컬 스토리지 확인
+  useEffect(() => {
+    const hidePromo = localStorage.getItem('hideLinkLetterPromo');
+    if (hidePromo === 'true') {
+      setShowBottomButton(false);
+    }
+  }, []);
+
+  // 프로모션 버튼 닫기 함수
+  const handleClosePromoButton = () => {
+    setShowBottomButton(false);
+    localStorage.setItem('hideLinkLetterPromo', 'true');
+  };
+
   const handleQuizSubmit = () => {
     if (!currentQuiz) return;
     
@@ -382,9 +512,44 @@ export default function LinkLetterDetailPage() {
     }
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    // TODO: 좋아요 API 호출
+  const handleLike = async () => {
+    if (!currentUser?.uid || !letter || isLiking) return;
+
+    setIsLiking(true);
+    const newLikedState = !isLiked;
+    const likeKey = `liked_${letterId}_${currentUser.uid}`;
+
+    try {
+      // 로컬 상태 즉시 업데이트 (UX 향상)
+      setIsLiked(newLikedState);
+      
+      // 로컬 스토리지에 저장
+      if (newLikedState) {
+        localStorage.setItem(likeKey, 'true');
+      } else {
+        localStorage.removeItem(likeKey);
+      }
+
+      // Firebase에 좋아요 수 업데이트
+      const letterRef = doc(db, 'linkLetters', letterId);
+      await updateDoc(letterRef, {
+        likeCount: increment(newLikedState ? 1 : -1)
+      });
+
+      console.log(`좋아요 ${newLikedState ? '추가' : '제거'} 완료`);
+    } catch (error) {
+      console.error('좋아요 처리 실패:', error);
+      // 에러 시 상태 롤백
+      setIsLiked(!newLikedState);
+      if (newLikedState) {
+        localStorage.removeItem(likeKey);
+      } else {
+        localStorage.setItem(likeKey, 'true');
+      }
+      alert('좋아요 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsLiking(false);
+    }
   };
 
   const handleCopyLink = async () => {
@@ -909,19 +1074,91 @@ export default function LinkLetterDetailPage() {
                 </div>
               </div>
 
+              {/* 답글 작성 폼 */}
+              {currentUser && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    답글 남기기
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <textarea
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      placeholder="편지에 대한 답글을 남겨보세요..."
+                      className="w-full p-4 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 resize-none focus:outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-400"
+                      rows={4}
+                      maxLength={500}
+                    />
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isPrivateReply}
+                            onChange={(e) => setIsPrivateReply(e.target.checked)}
+                            className="rounded border-gray-400 text-orange-500 focus:ring-orange-500"
+                          />
+                          <Lock className="w-4 h-4" />
+                          편지 작성자만 보기
+                        </label>
+                        
+                        <span className="text-xs text-gray-400">
+                          {replyContent.length}/500
+                        </span>
+                      </div>
+                      
+                      <Button
+                        onClick={handleSubmitReply}
+                        disabled={!replyContent.trim() || isSubmittingReply}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSubmittingReply ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            작성 중...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            답글 작성
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {isPrivateReply && (
+                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+                        <p className="text-sm text-orange-200 flex items-center gap-2">
+                          <Lock className="w-4 h-4" />
+                          이 답글은 편지 작성자({letter.author.displayName})와 나만 볼 수 있습니다.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 액션 버튼들 */}
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Button
                   onClick={handleLike}
+                  disabled={isLiking}
                   variant="outline"
                   className={`flex items-center gap-2 ${
                     isLiked 
                       ? 'bg-pink-500/20 border-pink-500 text-pink-400' 
                       : 'border-white/20 text-gray-300 hover:bg-white/10'
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                  좋아요 ({letter.likeCount + (isLiked ? 1 : 0)})
+                  {isLiking ? (
+                    <div className="w-4 h-4 border-2 border-pink-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                  )}
+                  고마워 ({letter.likeCount + (isLiked ? 1 : 0)})
                 </Button>
                 
                 <Button
@@ -963,6 +1200,85 @@ export default function LinkLetterDetailPage() {
                 </Button>
               </div>
 
+              {/* 답글 목록 */}
+              {!repliesLoading && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    답글 ({replies.filter(reply => canViewReply(reply)).length})
+                  </h3>
+                  
+                  {replies.length === 0 ? (
+                    <div className="text-center py-8">
+                      <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-400">아직 답글이 없습니다.</p>
+                      <p className="text-sm text-gray-500 mt-1">첫 번째 답글을 남겨보세요!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {replies
+                        .filter(reply => canViewReply(reply))
+                        .map((reply) => (
+                          <div key={reply.id} className="border-b border-white/10 pb-4 last:border-b-0 last:pb-0">
+                            <div className="flex items-start gap-3">
+                              {/* 프로필 이미지 */}
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                                {reply.author.photoURL ? (
+                                  <img
+                                    src={reply.author.photoURL}
+                                    alt={reply.author.displayName}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-white font-medium text-sm">
+                                    {reply.author.displayName.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* 답글 내용 */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-medium text-white">
+                                    {reply.author.displayName}
+                                  </span>
+                                  
+                                  {reply.isPrivate && (
+                                    <span className="inline-flex items-center gap-1 text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                                      <Lock className="w-3 h-3" />
+                                      비공개
+                                    </span>
+                                  )}
+                                  
+                                  {reply.author.uid === letter.author.uid && (
+                                    <span className="text-xs bg-pink-500/20 text-pink-400 px-2 py-1 rounded-full">
+                                      편지 작성자
+                                    </span>
+                                  )}
+                                  
+                                  <span className="text-xs text-gray-400">
+                                    {reply.createdAt.toLocaleDateString('ko-KR', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+                                
+                                <p className="text-gray-200 whitespace-pre-wrap break-words">
+                                  {reply.content}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 성공 메시지 */}
               <div className="mt-8 text-center">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-full">
@@ -970,7 +1286,37 @@ export default function LinkLetterDetailPage() {
                   <span className="text-green-300 font-medium">퀴즈를 맞춰서 편지를 확인했어요! 🎉</span>
                 </div>
               </div>
+              
+              {/* 하단 여백 */}
+              <div className="h-20 md:h-32"></div>
             </div>
+          </div>
+        )}
+
+        {/* 하단 프로모션 버튼 */}
+        {showBottomButton && (
+          <div className="fixed bottom-[25px] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 max-w-[calc(100vw-2rem)]">
+            <Link
+              href="/link-letter"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all shadow-lg whitespace-nowrap"
+            >
+              <Image
+                src="/Image/logo.png"
+                alt="ModooTree Logo"
+                width={20}
+                height={20}
+                className="w-5 h-5"
+              />
+              <span className="text-black text-sm">모두트리 링크편지 무료 작성하기</span>
+            </Link>
+            <button
+              onClick={handleClosePromoButton}
+              className="p-1.5 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all"
+              aria-label="프로모션 배너 닫기"
+              title="닫기"
+            >
+              <X className="w-4 h-4 text-black" />
+            </button>
           </div>
         )}
 

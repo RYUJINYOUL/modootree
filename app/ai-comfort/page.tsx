@@ -35,7 +35,7 @@ export default function AiComfortPage() {
   const initialMessageSentRef = useRef(false);
   const [comfortConversation, setComfortConversation] = useState<ChatMessage[]>([{
     role: 'ai',
-    content: '안녕하세요! 모두트리 AI입니다. 😊\n\n저는 여러분의 이야기를 경청하고 공감하며, 함께 고민하고 해결책을 찾아가는 것을 돕고 있어요.\n\n무엇이든 편하게 이야기해주세요.',
+    content: '안녕하세요! 모두트리 AI입니다. 😊\n\n저는 이야기를 경청 공감하며, 함께 고민하고 해결책을 찾아가는 것을 돕고 있어요.\n\n무엇이든 편하게 이야기해주세요.',
     timestamp: Timestamp.fromDate(new Date())
   }]);
 
@@ -106,8 +106,13 @@ export default function AiComfortPage() {
       );
       setComfortConversation(prev => [...prev, aiMsg]);
       console.log('AI 답변 저장 시도:', aiMsg);
-      await saveChat(user.uid, aiMsg);
-      console.log('AI 답변 저장 완료');
+      try {
+        await saveChat(user.uid, aiMsg);
+        console.log('AI 답변 저장 완료');
+      } catch (saveError) {
+        console.error('AI 답변 저장 실패:', saveError);
+        // 저장 실패해도 UI에는 정상 응답 표시 유지
+      }
 
     } catch (error: any) {
       console.error('AI 상담 오류 (초기 메시지):', error);
@@ -169,9 +174,21 @@ export default function AiComfortPage() {
       }
 
       try {
+        console.log('이전 대화 불러오기 시도:', user.uid);
         const messages = await loadChat(user.uid);
+        console.log('불러온 메시지들:', messages);
         if (messages && messages.length > 0) {
-          setComfortConversation(messages);
+          // 초기 AI 인사말과 불러온 메시지를 합치되, 중복 제거
+          const initialMessage = comfortConversation[0];
+          const hasInitialMessage = messages.some(msg => 
+            msg.role === 'ai' && msg.content.includes('안녕하세요! 모두트리 AI입니다')
+          );
+          
+          if (hasInitialMessage) {
+            setComfortConversation(messages);
+          } else {
+            setComfortConversation([initialMessage, ...messages]);
+          }
         }
       } catch (error) {
         console.error('이전 대화 불러오기 실패:', error);
@@ -477,11 +494,21 @@ export default function AiComfortPage() {
               );
               setComfortConversation(prev => [...prev, aiMsg]);
               console.log('AI 답변 저장 시도 (메인):', aiMsg);
-              await saveChat(auth.currentUser.uid, aiMsg);
-              console.log('AI 답변 저장 완료 (메인)');
+              try {
+                await saveChat(auth.currentUser.uid, aiMsg);
+                console.log('AI 답변 저장 완료 (메인)');
+              } catch (saveError) {
+                console.error('AI 답변 저장 실패 (메인):', saveError);
+                // 저장 실패해도 UI에는 정상 응답 표시 유지
+              }
 
             } catch (error: any) {
               console.error('AI 상담 오류:', error);
+              
+              // 로딩 중인 메시지 제거
+              setComfortConversation(prev => 
+                prev.filter(msg => !('isLoading' in msg))
+              );
               
               let errorMsg;
               if (error.message.includes('인증') || error.message.includes('로그인')) {

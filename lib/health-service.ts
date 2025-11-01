@@ -131,3 +131,29 @@ export async function analyzeHealthRecord(data: {
     throw error;
   }
 }
+
+export async function analyzeDailyActivity(date: string, token: string) {
+  try {
+    const response = await fetch('/api/analyze-daily-activity', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        date
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '일일 활동 분석 요청에 실패했습니다.');
+    }
+
+    const result = await response.json();
+    return result.analysis;
+  } catch (error) {
+    console.error('일일 활동 분석 중 오류:', error);
+    throw error;
+  }
+}

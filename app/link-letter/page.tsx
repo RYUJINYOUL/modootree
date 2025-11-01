@@ -14,7 +14,7 @@ import { Heart, Gift, Users, Baby, MessageCircle, Plus, Eye, Share2, Upload, X, 
 import Link from 'next/link';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 import { useSelector } from 'react-redux';
-import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/firebase';
 
 interface LinkLetter {
@@ -61,6 +61,7 @@ interface LinkLetter {
 interface LetterForm {
   title: string;
   category: string;
+  author: string;
   content: string;
   quiz: {
     questions: {
@@ -187,10 +188,12 @@ export default function LinkLetterPage() {
   const [currentStep, setCurrentStep] = useState(1); // 1: 기본정보, 2: 퀴즈, 3: 사진, 4: 내용, 5: 배경
   const [cardImageIndexes, setCardImageIndexes] = useState<{[key: string]: number}>({}); // 각 카드별 이미지 인덱스
   const [showDescription, setShowDescription] = useState(false); // 설명 표시 여부
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // 삭제 중인 게시물 ID
   
   const [letterForm, setLetterForm] = useState<LetterForm>({
     title: '',
     category: '',
+    author: '',
     content: '',
     quiz: {
       questions: [{
@@ -221,7 +224,7 @@ export default function LinkLetterPage() {
       },
       author: {
         uid: 'user1',
-        displayName: '익명의 누군가',
+        displayName: '사랑하는 마음',
         email: 'user1@example.com'
       },
       isPublic: true,
@@ -242,7 +245,7 @@ export default function LinkLetterPage() {
       },
       author: {
         uid: 'user2',
-        displayName: '감사한 친구',
+        displayName: '고마운 마음을 전하는 친구',
         email: 'user2@example.com'
       },
       isPublic: true,
@@ -263,7 +266,7 @@ export default function LinkLetterPage() {
       },
       author: {
         uid: 'user3',
-        displayName: '베스트프렌드',
+        displayName: '평생친구 민수',
         email: 'user3@example.com'
       },
       isPublic: true,
@@ -284,7 +287,7 @@ export default function LinkLetterPage() {
       },
       author: {
         uid: 'user4',
-        displayName: '효자',
+        displayName: '사랑하는 아들 준호',
         email: 'user4@example.com'
       },
       isPublic: true,
@@ -305,7 +308,7 @@ export default function LinkLetterPage() {
       },
       author: {
         uid: 'user5',
-        displayName: '반성하는 사람',
+        displayName: '미안한 마음의 지영',
         email: 'user5@example.com'
       },
       isPublic: true,
@@ -326,7 +329,7 @@ export default function LinkLetterPage() {
       },
       author: {
         uid: 'user6',
-        displayName: '축하하는 친구',
+        displayName: '생일을 축하하는 수진',
         email: 'user6@example.com'
       },
       isPublic: true,
@@ -396,6 +399,7 @@ export default function LinkLetterPage() {
     setLetterForm({
       title: '',
       category: '',
+      author: '',
       content: '',
       quiz: {
         questions: [{
@@ -541,7 +545,7 @@ export default function LinkLetterPage() {
     }));
   };
 
-  // 이미지 압축 및 Base64 변환 함수
+  // 이미지 압축 및 Base64 변환 함수 (편지 사진용)
   const convertImageToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
@@ -576,7 +580,51 @@ export default function LinkLetterPage() {
         
         // JPEG 품질 0.7로 압축 (70% 품질)
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        console.log(`이미지 압축: ${file.size} bytes → ${Math.round(compressedBase64.length * 0.75)} bytes`);
+        console.log(`편지 사진 압축: ${file.size} bytes → ${Math.round(compressedBase64.length * 0.75)} bytes`);
+        resolve(compressedBase64);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // 배경 이미지 전용 압축 함수 (고품질)
+  const convertBackgroundImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // 최대 크기 설정 (1920x1080) - 16:9 비율
+        const maxWidth = 1920;
+        const maxHeight = 1080;
+        
+        let { width, height } = img;
+        
+        // 비율 유지하면서 크기 조정
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // 이미지 그리기 및 압축
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // JPEG 품질 1.0으로 압축 (100% 품질)
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 1.0);
+        console.log(`배경 이미지 압축: ${file.size} bytes → ${Math.round(compressedBase64.length * 0.75)} bytes`);
         resolve(compressedBase64);
       };
       
@@ -603,6 +651,10 @@ export default function LinkLetterPage() {
     }
     if (!letterForm.category) {
       alert('카테고리를 선택해주세요.');
+      return;
+    }
+    if (!letterForm.author.trim()) {
+      alert('작성자 이름을 입력해주세요.');
       return;
     }
     // 퀴즈 유효성 검사
@@ -658,7 +710,7 @@ export default function LinkLetterPage() {
         },
         author: {
           uid: currentUser.uid,
-          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || '익명',
+          displayName: letterForm.author.trim(),
           email: currentUser.email || '',
           photoURL: currentUser.photoURL || ''
         },
@@ -730,6 +782,44 @@ export default function LinkLetterPage() {
       ...prev,
       [letterId]: ((prev[letterId] || 0) - 1 + totalImages) % totalImages
     }));
+  };
+
+  // 관리자 권한 확인
+  const isAdmin = currentUser?.uid === 'vW1OuC6qMweyOqu73N0558pv4b03';
+
+  // 삭제 권한 확인 함수
+  const canDeleteLetter = (letter: LinkLetter) => {
+    return isAdmin || (currentUser?.uid && letter.author.uid === currentUser.uid);
+  };
+
+  // 게시물 삭제 함수
+  const handleDeleteLetter = async (letter: LinkLetter, e: React.MouseEvent) => {
+    e.stopPropagation(); // 카드 클릭 이벤트 방지
+    
+    if (!canDeleteLetter(letter)) {
+      alert('본인이 작성한 편지만 삭제할 수 있습니다.');
+      return;
+    }
+
+    const isOwnLetter = letter.author.uid === currentUser?.uid;
+    const confirmMessage = isOwnLetter 
+      ? '정말로 내 편지를 삭제하시겠습니까?\n삭제된 편지는 복구할 수 없습니다.'
+      : '정말로 이 편지를 삭제하시겠습니까? (관리자)\n삭제된 편지는 복구할 수 없습니다.';
+    
+    const confirmDelete = window.confirm(confirmMessage);
+    if (!confirmDelete) return;
+
+    setIsDeleting(letter.id);
+    try {
+      await deleteDoc(doc(db, 'linkLetters', letter.id));
+      console.log('편지 삭제 완료:', letter.id);
+      alert('편지가 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('편지 삭제 실패:', error);
+      alert('편지 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   const filteredLetters = letters.filter(letter => {
@@ -855,8 +945,28 @@ export default function LinkLetterPage() {
                   <span className="text-xs text-white font-medium">{category?.name}</span>
                 </div>
                 
+                {/* 삭제 버튼 (관리자 또는 본인 게시물) */}
+                {canDeleteLetter(letter) && (
+                  <button
+                    onClick={(e) => handleDeleteLetter(letter, e)}
+                    disabled={isDeleting === letter.id}
+                    className={`absolute top-3 right-3 w-8 h-8 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      letter.author.uid === currentUser?.uid 
+                        ? 'bg-orange-500/80 hover:bg-orange-500' 
+                        : 'bg-red-500/80 hover:bg-red-500'
+                    }`}
+                    title={letter.author.uid === currentUser?.uid ? "내 편지 삭제" : "편지 삭제 (관리자)"}
+                  >
+                    {isDeleting === letter.id ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4 text-white" />
+                    )}
+                  </button>
+                )}
+                
                 {/* 비공개 배지 */}
-                {!letter.isPublic && (
+                {!letter.isPublic && !canDeleteLetter(letter) && (
                   <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                     <span className="text-xs text-white font-medium">🔒</span>
                   </div>
@@ -893,14 +1003,12 @@ export default function LinkLetterPage() {
                   </span>
                 </div>
                 
-                {/* 작성자 (내 편지가 아닐 때만) */}
-                {!showMyLetters && letter.author.uid !== currentUser?.uid && (
-                  <div className="mt-2 pt-2 border-t border-white/10">
-                    <span className="text-xs text-gray-500">
-                      by {letter.author.displayName || letter.author.email?.split('@')[0]}
-                    </span>
-                  </div>
-                )}
+                {/* 작성자 (항상 표시) */}
+                <div className="mt-2 pt-2 border-t border-white/10">
+                  <span className="text-xs text-gray-500">
+                    by {letter.author.displayName || letter.author.email?.split('@')[0] || '익명'}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -927,7 +1035,7 @@ export default function LinkLetterPage() {
           {/* 페이지 헤더 */}
           <div className="text-center mb-10">
              <div className="inline-flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-lg overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg overflow-hidden">
                 <img 
                   src="/logos/m1.png" 
                   alt="링크 편지 로고" 
@@ -962,10 +1070,10 @@ export default function LinkLetterPage() {
             {showDescription && (
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-2xl mx-auto mb-4 animate-in slide-in-from-top-2 duration-300">
                 <p className="text-lg text-gray-300 leading-relaxed">
-                  <span className="text-pink-300 font-semibold">💌 링크 편지란?</span><br />
-                  퀴즈를 풀어야 볼 수 있는 특별한 편지입니다.<br />
-                  <span className="text-blue-300">🎯 사용법:</span> 편지를 작성하고 링크를 복사해서 소중한 사람에게 보내보세요!<br />
-                  <span className="text-purple-300">✨ 특징:</span> 고백, 감사, 우정, 효도, 사과, 축하 등 다양한 카테고리의 편지를 작성할 수 있어요.
+                  <span className="text-blue-300 font-semibold">링크 편지 :</span> 퀴즈를 풀어야 볼 수 있는 특별한 편지입니다.<br />
+              
+                  <span className="text-blue-300">사용법 :</span> 편지를 작성하고 링크를 복사해서 소중한 사람에게 보내보세요!<br />
+                  <span className="text-blue-300">특징 :</span> 다양한 카테고리의 편지를 작성할 수 있어요.
                 </p>
               </div>
             )}
@@ -1083,6 +1191,9 @@ export default function LinkLetterPage() {
 
           {/* 편지 목록 */}
           {renderLetterList()}
+          
+          {/* 하단 여백 */}
+          <div className="h-20 md:h-32"></div>
         </div>
 
         {/* AI 플로팅 버튼 */}
@@ -1162,6 +1273,20 @@ export default function LinkLetterPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="author" className="text-white">작성자 *</Label>
+                  <Input
+                    id="author"
+                    value={letterForm.author}
+                    onChange={(e) => setLetterForm(prev => ({ ...prev, author: e.target.value }))}
+                    placeholder="작성자 이름을 입력하세요"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-white/70 mt-1">
+                    편지를 받는 사람이 볼 작성자 이름입니다
+                  </p>
                 </div>
               </div>
             )}
@@ -1353,7 +1478,7 @@ export default function LinkLetterPage() {
                           }
                         </p>
                         <p className="text-xs text-white/60 mt-1">
-                          * 이미지는 자동으로 압축됩니다
+                          * 이미지는 캡쳐 사진 사용 권장
                         </p>
                         <p className="text-xs text-white/60 mt-1">
                           {letterForm.images.length}/5 장 업로드됨
@@ -1412,6 +1537,7 @@ export default function LinkLetterPage() {
                   <div className="text-sm text-white/90">
                     <p><strong>제목:</strong> {letterForm.title || '제목 없음'}</p>
                     <p><strong>카테고리:</strong> {letterCategories.find(cat => cat.id === letterForm.category)?.name || '선택 안함'}</p>
+                    <p><strong>작성자:</strong> {letterForm.author || '작성자 없음'}</p>
                     <p><strong>퀴즈:</strong> {letterForm.quiz.questions.length}개 질문</p>
                     <p><strong>사진:</strong> {letterForm.images.length}장</p>
                     <div className="mt-2 p-2 bg-white/10 rounded border border-white/20 max-h-20 overflow-y-auto backdrop-blur-sm">
@@ -1533,20 +1659,20 @@ export default function LinkLetterPage() {
                          onChange={async (e) => {
                            const file = e.target.files?.[0];
                            if (file) {
-                             // 파일 크기 체크 (5MB 제한)
-                             if (file.size > 5 * 1024 * 1024) {
-                               alert('이미지 크기는 5MB 이하로 선택해주세요.');
+                             // 파일 크기 체크 (10MB 제한)
+                             if (file.size > 10 * 1024 * 1024) {
+                               alert('이미지 크기는 10MB 이하로 선택해주세요.');
                                return;
                              }
                              try {
-                               const base64Image = await convertImageToBase64(file);
+                               const base64Image = await convertBackgroundImageToBase64(file);
                                setLetterForm(prev => ({
                                  ...prev,
                                  background: { type: 'image', value: base64Image }
                                }));
                              } catch (error) {
-                               console.error('이미지 변환 실패:', error);
-                               alert('이미지 처리 중 오류가 발생했습니다.');
+                               console.error('배경 이미지 변환 실패:', error);
+                               alert('배경 이미지 처리 중 오류가 발생했습니다.');
                              }
                            }
                          }}
@@ -1560,12 +1686,12 @@ export default function LinkLetterPage() {
                         <div className="flex flex-col items-center gap-2">
                           <Upload className="w-6 h-6 text-white/70" />
                           <span className="text-sm">이미지 선택하기</span>
-                          <span className="text-xs text-white/60">JPG, PNG, GIF (최대 5MB)</span>
+                          <span className="text-xs text-white/60">캡쳐 사진 사용 권장 (최대 5MB)</span>
                         </div>
                       </button>
                     </div>
                     <p className="text-xs text-white/60">
-                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율)
+                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 10MB)
                     </p>
                   </div>
                 </div>

@@ -7,7 +7,7 @@ import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, 
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
 import { db } from '@/firebase';
-import { collection, getDocs, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 interface CategoryCounts {
   memo: number;
@@ -318,15 +318,69 @@ export default function ProfilePage() {
       const currentGreeting = getGreeting();
       const displayName = getDisplayName(currentUser);
       
-      await addDoc(collection(db, 'greetingResponses'), {
-        userId: currentUser.uid,
+      const today = new Date();
+      const dateStr = new Date(today.getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0]; // KST 날짜
+      const currentHour = new Date().getHours();
+      
+      // TTL 설정 (2일 후 자동 삭제)
+      const expireAt = new Date();
+      expireAt.setDate(expireAt.getDate() + 2);
+      
+      const now = new Date();
+      const responseData = {
         userName: displayName,
         userAvatar: currentUser.photoURL || '',
         greeting: currentGreeting,
         response: myResponse.trim(),
-        timestamp: serverTimestamp(),
+        timestamp: now,
+        hour: currentHour,
         isAnonymous: false
-      });
+      };
+      
+      // 유저별 날짜 문서에 저장 (배열로 관리)
+      const userDateDocRef = doc(db, `users/${currentUser.uid}/greetingResponses`, dateStr);
+      const userDateDoc = await getDoc(userDateDocRef);
+      
+      if (userDateDoc.exists()) {
+        // 기존 날짜 문서에 응답 추가
+        await updateDoc(userDateDocRef, {
+          responses: arrayUnion(responseData),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // 새 날짜 문서 생성
+        await setDoc(userDateDocRef, {
+          date: dateStr,
+          responses: [responseData],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          expireAt: expireAt
+        });
+      }
+      
+      // 전체 공유용 컬렉션에도 저장 (커뮤니티 기능용)
+      const sharedDateDocRef = doc(db, 'greetingResponses', dateStr);
+      const sharedDateDoc = await getDoc(sharedDateDocRef);
+      
+      const sharedResponseData = {
+        ...responseData,
+        userId: currentUser.uid
+      };
+      
+      if (sharedDateDoc.exists()) {
+        await updateDoc(sharedDateDocRef, {
+          responses: arrayUnion(sharedResponseData),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await setDoc(sharedDateDocRef, {
+          date: dateStr,
+          responses: [sharedResponseData],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          expireAt: expireAt
+        });
+      }
       
       setMyResponse('');
       setIsResponseModalOpen(false);
@@ -338,30 +392,57 @@ export default function ProfilePage() {
     }
   };
 
-  // 인사말 답변 실시간 구독
+  // 인사말 답변 실시간 구독 - 전체 답변 (커뮤니티용)
   useEffect(() => {
     const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dateStr = new Date(today.getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    const q = query(
-      collection(db, 'greetingResponses'),
-      where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
-      orderBy('timestamp', 'desc')
-    );
+    // 오늘과 어제 데이터 구독
+    const todayDocRef = doc(db, 'greetingResponses', dateStr);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = new Date(yesterday.getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const yesterdayDocRef = doc(db, 'greetingResponses', yesterdayStr);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const responses = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-      }));
-      setGreetingResponses(responses);
+    const unsubscribeToday = onSnapshot(todayDocRef, (doc) => {
+      let allResponses: any[] = [];
+      
+      if (doc.exists()) {
+        const todayData = doc.data();
+        if (todayData.responses) {
+          allResponses = todayData.responses.map((response: any, index: number) => ({
+            id: `today-${index}`,
+            ...response,
+            timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
+          }));
+        }
+      }
+      
+      // 어제 데이터도 가져오기
+      getDoc(yesterdayDocRef).then((yesterdayDoc) => {
+        if (yesterdayDoc.exists()) {
+          const yesterdayData = yesterdayDoc.data();
+          if (yesterdayData.responses) {
+            const yesterdayResponses = yesterdayData.responses.map((response: any, index: number) => ({
+              id: `yesterday-${index}`,
+              ...response,
+              timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
+            }));
+            allResponses = [...allResponses, ...yesterdayResponses];
+          }
+        }
+        
+        // 시간순 정렬
+        allResponses.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setGreetingResponses(allResponses);
+      });
     }, (error) => {
       console.error('인사말 답변 구독 에러:', error);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeToday();
   }, []);
+
 
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto">
@@ -380,13 +461,22 @@ export default function ProfilePage() {
                   <h1 className="text-sm sm:text-md font-medium text-white flex-1 min-w-0">
                     {getGreeting()}
                   </h1>
-                  <button
-                    onClick={() => setIsResponseModalOpen(true)}
-                    className="p-1.5 bg-[#56ab91]/20 hover:bg-[#56ab91]/40 rounded-full transition-colors flex-shrink-0"
-                    title="답변하기"
-                  >
-                    <MessageCircle className="w-4 h-4 text-[#56ab91]" />
-                  </button>
+                  <div className="flex gap-2">
+                    <Link
+                      href="/profile/greeting-responses"
+                      className="p-1.5 bg-blue-500/20 hover:bg-blue-500/40 rounded-full transition-colors flex-shrink-0"
+                      title="답변 보기"
+                    >
+                      <MessageCircle className="w-4 h-4 text-blue-400" />
+                    </Link>
+                    <button
+                      onClick={() => setIsResponseModalOpen(true)}
+                      className="p-1.5 bg-[#56ab91]/20 hover:bg-[#56ab91]/40 rounded-full transition-colors flex-shrink-0"
+                      title="답변하기"
+                    >
+                      <Send className="w-4 h-4 text-[#56ab91]" />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex sm:flex-col gap-2 text-xs sm:text-sm text-gray-400 sm:text-right">
                   <div className="flex-1 sm:flex-none">
@@ -398,10 +488,10 @@ export default function ProfilePage() {
                 </div>
               </div>
               
-              {/* 실시간 답변 목록 - 모바일 최적화 */}
+              {/* 전체 답변 목록 - 커뮤니티 */}
               {greetingResponses.length > 0 && (
                 <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
-                  <div className="text-xs text-gray-400 mb-1.5">💬 오늘의 답변들</div>
+                  <div className="text-xs text-gray-400 mb-1.5">💬 모든 사람들의 답변</div>
                   {greetingResponses.slice(0, 3).map((response) => (
                     <div key={response.id} className="bg-[#358f80]/10 rounded-lg p-2.5">
                       <div className="flex items-start gap-2">
@@ -425,9 +515,12 @@ export default function ProfilePage() {
                     </div>
                   ))}
                   {greetingResponses.length > 3 && (
-                    <div className="text-xs text-gray-400 text-center py-1">
+                    <Link 
+                      href="/profile/greeting-responses"
+                      className="text-xs text-gray-400 hover:text-gray-300 text-center py-1 block transition-colors cursor-pointer"
+                    >
                       +{greetingResponses.length - 3}개 더
-                    </div>
+                    </Link>
                   )}
                 </div>
               )}

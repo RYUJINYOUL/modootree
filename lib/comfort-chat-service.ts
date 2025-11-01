@@ -5,6 +5,7 @@ export interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
   timestamp: Timestamp;
+  searchResults?: any[]; // 선택적 필드로 추가
 }
 
 export interface ChatSession {
@@ -21,6 +22,16 @@ export const saveChat = async (userId: string, message: ChatMessage) => {
     const docId = `${dateKey}_${userId}`; // 날짜와 userId를 결합한 문서 ID
     const chatRef = doc(db, 'dailyChats', docId); // 새로운 컬렉션 경로
     console.log('saveChat - chatRef:', chatRef.path);
+    
+    // Firestore 호환 메시지 객체 생성 (undefined 필드 제거)
+    const cleanMessage = {
+      role: message.role,
+      content: message.content,
+      timestamp: message.timestamp,
+      ...(message.searchResults && { searchResults: message.searchResults })
+    };
+    console.log('saveChat - cleanMessage:', cleanMessage);
+    
     const chatDoc = await getDoc(chatRef);
 
     if (!chatDoc.exists()) {
@@ -28,14 +39,14 @@ export const saveChat = async (userId: string, message: ChatMessage) => {
       await setDoc(chatRef, {
         userId: userId, // userId 필드 추가
         dateKey: dateKey, // dateKey 필드 추가
-        messages: [message],
+        messages: [cleanMessage],
         lastUpdated: serverTimestamp()
       });
     } else {
       console.log('saveChat - 기존 문서 업데이트:', docId);
       const data = chatDoc.data() as ChatSession;
       await updateDoc(chatRef, {
-        messages: [...(data.messages || []), message],
+        messages: [...(data.messages || []), cleanMessage],
         lastUpdated: serverTimestamp()
       });
     }
