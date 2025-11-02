@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/firebase';
-import { Bot, Send, ArrowLeft, Search, User, Heart, MessageSquare } from 'lucide-react';
+import { Bot, Send, ArrowLeft, Search, User, Heart, MessageSquare, Mail, MessageCircle } from 'lucide-react';
 import { SearchResultCard } from '@/components/chat/SearchResultCard';
 import { loadFull } from "tsparticles";
 import Particles from "react-tsparticles";
@@ -367,18 +367,18 @@ export default function AiComfortPage() {
                           {msg.role === 'ai' && (
                             <div className="flex flex-wrap gap-1.5 mt-3">
                               {/* 실시간 정보 관련 */}
-                              {msg.content.includes('통합검색') && (
+                              {(msg.content.includes('지식검색') || msg.content.includes('정보') || msg.content.includes('찾아줘') || msg.content.includes('최신') || msg.content.includes('맛집') || msg.content.includes('유튜브')) && (
                                 <Link 
                                   href="/search" 
                                   className="inline-flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 px-2.5 py-1.5 rounded-md border border-blue-600/30 transition text-xs font-medium"
                                 >
                                   <Search className="w-3 h-3" />
-                                  통합검색
+                                  지식검색
                                 </Link>
                               )}
                               
                               {/* 메모/일기 관련 */}
-                              {(msg.content.includes('메모') || msg.content.includes('일기') || msg.content.includes('내 페이지')) && (
+                              {(msg.content.includes('내 페이지')) && (
                                 <Link 
                                   href="/profile" 
                                   className="inline-flex items-center gap-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-300 px-2.5 py-1.5 rounded-md border border-green-600/30 transition text-xs font-medium"
@@ -400,7 +400,7 @@ export default function AiComfortPage() {
                               )}
                               
                               {/* 사연 관련 */}
-                              {msg.content.includes('사연') && (
+                              {(msg.content.includes('사연') || msg.content.includes('투표') || msg.content.includes('사진투표') || msg.content.includes('뉴스투표')) && (
                                 <Link 
                                   href="/modoo-ai" 
                                   className="inline-flex items-center gap-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-2.5 py-1.5 rounded-md border border-purple-600/30 transition text-xs font-medium"
@@ -409,8 +409,33 @@ export default function AiComfortPage() {
                                   사연 AI
                                 </Link>
                               )}
+
+                              {/* 링크편지 관련 */}
+                            {msg.content.includes('링크편지') && (
+                               <Link 
+                                 href="/link-letter" 
+                                 className="inline-flex items-center gap-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-2.5 py-1.5 rounded-md border border-yellow-600/30 transition text-xs font-medium"
+                               >
+                                 <Mail className="w-3 h-3" />
+                                  링크편지
+                               </Link>
+                                 )}
+
+                                  {/* 열린게시판 관련 */}
+                            {(msg.content.includes('문의') || msg.content.includes('수정') || msg.content.includes('모르겠어') || msg.content.includes('찾을 수 없어') || msg.content.includes('개선') || msg.content.includes('게시판') || msg.content.includes('고객센터') || msg.content.includes('모두트리')) && (
+                               <Link 
+                                 href="/inquiry" 
+                                 className="inline-flex items-center gap-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-2.5 py-1.5 rounded-md border border-yellow-600/30 transition text-xs font-medium"
+                               >
+                                 <MessageCircle className="w-3 h-3" />
+                                  열린게시판
+                               </Link>
+                                 )}
+
                             </div>
                           )}
+
+                          
                           
                           {'searchResults' in msg && msg.searchResults?.length > 0 && (
                             <div className="space-y-2 mt-4 border-t border-white/10 pt-4">

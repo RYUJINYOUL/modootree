@@ -118,7 +118,7 @@ export default function MemoPage() {
     return () => unsubscribe();
   }, [currentUser?.uid]);
 
-  // 메모 추가
+  // 메모 추가/수정
   const handleAddMemo = async () => {
     if (!writeForm.content.trim() || !currentUser?.uid) return;
 
@@ -141,26 +141,40 @@ export default function MemoPage() {
       // 오늘이면 today, 나머지는 모두 todo로 설정
       const status: TabType = memoDate.getTime() === today.getTime() ? 'today' : 'todo';
 
+      // 기존 이미지와 새로 업로드된 이미지 합치기
+      const allImages = [...writeForm.images, ...uploadedUrls];
+
       const memoData = {
         content: writeForm.content,
         date: writeForm.date,
         status,
-        images: uploadedUrls,
-        createdAt: serverTimestamp(),
+        images: allImages,
         updatedAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, `users/${currentUser.uid}/private_memos`), memoData);
+      if (editingMemo) {
+        // 수정 모드: updateDoc 사용
+        await updateDoc(doc(db, `users/${currentUser.uid}/private_memos`, editingMemo.id), memoData);
+      } else {
+        // 새로 추가 모드: addDoc 사용
+        const newMemoData = {
+          ...memoData,
+          createdAt: serverTimestamp()
+        };
+        await addDoc(collection(db, `users/${currentUser.uid}/private_memos`), newMemoData);
+      }
 
+      // 상태 초기화
       setWriteForm({
         content: '',
         images: [],
         pendingImages: [],
         date: new Date()
       });
+      setEditingMemo(null);
       setIsWriting(false);
     } catch (error) {
-      console.error('메모 추가 실패:', error);
+      console.error(editingMemo ? '메모 수정 실패:' : '메모 추가 실패:', error);
       alert('메모 저장 중 오류가 발생했습니다.');
     }
   };
@@ -514,6 +528,7 @@ export default function MemoPage() {
               className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-[#2A4D45]/50"
               onClick={() => {
                 setIsWriting(false);
+                setEditingMemo(null);
                 setWriteForm({
                   content: '',
                   images: [],
