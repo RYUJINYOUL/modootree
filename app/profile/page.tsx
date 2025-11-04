@@ -3,7 +3,7 @@
 import { useSelector } from 'react-redux';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Link as LinkIcon, Banana, Rocket, MessageCircle, Send, X } from 'lucide-react';
+import { Notebook, Book, ClipboardPlus, Atom, MessageSquare, TrendingUp, Users, Link as LinkIcon, Banana, Rocket, MessageCircle, Send, X, Download, Smartphone } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
 import { db } from '@/firebase';
@@ -45,6 +45,9 @@ export default function ProfilePage() {
   const [myResponse, setMyResponse] = useState('');
   const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isPWAInstalled, setIsPWAInstalled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -56,6 +59,43 @@ export default function ProfilePage() {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // PWA 설치 이벤트 리스너
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsPWAInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    // PWA 설치 상태 확인
+    const checkPWAInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isInWebAppiOS = (window.navigator as any).standalone === true;
+      setIsPWAInstalled(isStandalone || isInWebAppiOS);
+    };
+
+    // 모바일 환경 감지
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+      setIsMobile(isMobileDevice);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    checkPWAInstalled();
+    checkMobile();
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -308,6 +348,33 @@ export default function ProfilePage() {
       return emailPrefix.length > 6 ? `${emailPrefix.substring(0, 6)}...` : emailPrefix;
     }
     return '유저님';
+  };
+
+  // PWA 설치 핸들러
+  const handlePWAInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
+
+  // 앱 스토어로 이동
+  const handleAppStore = () => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    
+    if (/android/i.test(userAgent)) {
+      // Android - Google Play Store
+      window.open('https://play.google.com/store/apps/details?id=com.modootree.app', '_blank');
+    } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+      // iOS - App Store
+      window.open('https://apps.apple.com/app/modootree/id123456789', '_blank');
+    } else {
+      // 기본값 - PWA 설치 시도
+      handlePWAInstall();
+    }
   };
 
   // 인사말 답변 제출
@@ -735,6 +802,30 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* 플로팅 버튼들 */}
+       <div className="fixed bottom-17 right-1 flex flex-col gap-2 z-40">
+           {/* 앱 스토어 버튼 - 모바일에서만 노출 */}
+           {isMobile && (
+             <button
+               onClick={handleAppStore}
+               className="w-8 h-8 bg-green-500 hover:bg-green-400/90 text-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 hover:scale-105"
+               title="앱 다운로드"
+             >
+               <Smartphone className="w-4 h-4" />
+             </button>
+           )}
+         {/* PWA 설치 버튼 - PC에서만 노출 */}
+         {!isMobile && (
+           <button
+             onClick={handlePWAInstall}
+             className="w-8 h-8 bg-blue-500 hover:bg-blue-400/90 text-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 hover:scale-105"
+             title="PC앱 설치하기"
+           >
+             <Download className="w-4 h-4" />
+           </button>
+         )}
+       </div>
       </div>
     </ProfileRefreshWrapper>
   );
