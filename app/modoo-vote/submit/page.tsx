@@ -374,7 +374,9 @@ export default function SubmitModooVotePage() {
           {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}공감 투표 등록하기
         </Button>
       </div>
+      <div className="h-20 md:h-32"></div>
     </div>
+    
   );
 }
 

@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import Link from 'next/link';
-import { ArrowLeft, MessageCircle, Clock, Users } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Clock, Users, Trash2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/firebase';
-import { collection, query, where, orderBy, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export default function GreetingResponsesPage() {
   const { currentUser } = useSelector((state: any) => state.user);
@@ -15,6 +15,82 @@ export default function GreetingResponsesPage() {
   const [allGreetingResponses, setAllGreetingResponses] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'my' | 'all'>('my');
   const [loading, setLoading] = useState(true);
+  
+  // 관리자 UID
+  const ADMIN_UID = 'vW1OuC6qMweyOqu73N0558pv4b03';
+  
+  // 관리자 권한 확인
+  const isAdmin = (currentUser?.uid || localUser?.uid) === ADMIN_UID;
+  
+  // 개별 유저 답변 삭제 함수 (관리자만)
+  const handleDeleteUserResponse = async (dateStr: string, userId: string, userName: string) => {
+    if (!isAdmin) {
+      alert('관리자만 삭제할 수 있습니다.');
+      return;
+    }
+    
+    if (!confirm(`${userName}님의 ${dateStr} 답변을 삭제하시겠습니까?`)) {
+      return;
+    }
+    
+    try {
+      // 1. 개인 저장소에서 삭제 (userId가 있는 경우에만)
+      if (userId) {
+        const userDocRef = doc(db, `users/${userId}/greetingResponses`, dateStr);
+        try {
+          await deleteDoc(userDocRef);
+          console.log(`개인 저장소에서 ${userName}님의 ${dateStr} 답변 삭제 완료`);
+        } catch (error) {
+          console.warn('개인 저장소 삭제 실패 (문서가 없을 수 있음):', error);
+        }
+      }
+      
+      // 2. 공용 저장소에서 해당 유저 답변만 제거 (greetingResponses/{dateStr})
+      const publicDocRef = doc(db, 'greetingResponses', dateStr);
+      const publicDoc = await getDoc(publicDocRef);
+      
+      if (publicDoc.exists()) {
+        const data = publicDoc.data();
+        const responses = data.responses || [];
+        
+        // 해당 유저의 답변만 필터링해서 제거 (userName 기준)
+        const filteredResponses = responses.filter(resp => 
+          resp.userName !== userName
+        );
+        
+        if (filteredResponses.length > 0) {
+          await updateDoc(publicDocRef, { responses: filteredResponses });
+          console.log(`공용 저장소에서 ${userName}님의 답변 제거 완료`);
+        } else {
+          // 모든 답변이 삭제되면 문서 자체를 삭제
+          await deleteDoc(publicDocRef);
+          console.log(`${dateStr} 날짜 문서 전체 삭제 완료`);
+        }
+      }
+      
+      alert('답변이 삭제되었습니다.');
+      
+      // 삭제 후 UI 즉시 업데이트
+      if (activeTab === 'all') {
+        // 모든 답변에서 해당 유저의 해당 날짜 답변 모두 제거
+        setAllGreetingResponses(prev => 
+          prev.filter(resp => !(resp.userName === userName && resp.dateStr === dateStr))
+        );
+      }
+      
+      // 내 답변도 업데이트 (삭제된 유저가 현재 사용자인 경우)
+      const currentUserId = currentUser?.uid || localUser?.uid;
+      if (userId === currentUserId || (!userId && activeTab === 'my')) {
+        setMyGreetingResponses(prev => 
+          prev.filter(resp => !(resp.userName === userName && resp.dateStr === dateStr))
+        );
+      }
+      
+    } catch (error) {
+      console.error('답변 삭제 실패:', error);
+      alert('답변 삭제 중 오류가 발생했습니다.');
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -51,6 +127,8 @@ export default function GreetingResponsesPage() {
             const todayResponses = todayData.responses.map((response: any, index: number) => ({
               id: `today-${index}`,
               ...response,
+              userId: userId, // 유저 ID 추가
+              dateStr: dateStr, // 날짜 문자열 추가
               timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
             }));
             allMyResponses = [...allMyResponses, ...todayResponses];
@@ -70,6 +148,8 @@ export default function GreetingResponsesPage() {
             const yesterdayResponses = yesterdayData.responses.map((response: any, index: number) => ({
               id: `yesterday-${index}`,
               ...response,
+              userId: userId, // 유저 ID 추가
+              dateStr: yesterdayStr, // 어제 날짜 문자열 추가
               timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
             }));
             allMyResponses = [...allMyResponses, ...yesterdayResponses];
@@ -110,6 +190,7 @@ export default function GreetingResponsesPage() {
             const todayResponses = todayData.responses.map((response: any, index: number) => ({
               id: `today-${index}`,
               ...response,
+              dateStr: dateStr, // 날짜 문자열 추가
               timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
             }));
             allResponses = [...allResponses, ...todayResponses];
@@ -129,6 +210,7 @@ export default function GreetingResponsesPage() {
             const yesterdayResponses = yesterdayData.responses.map((response: any, index: number) => ({
               id: `yesterday-${index}`,
               ...response,
+              dateStr: yesterdayStr, // 어제 날짜 문자열 추가
               timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
             }));
             allResponses = [...allResponses, ...yesterdayResponses];
@@ -171,13 +253,26 @@ export default function GreetingResponsesPage() {
           </span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            {showUser && (
-              <span className="font-medium text-[#56ab91] text-sm">{response.userName}</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {showUser && (
+                <span className="font-medium text-[#56ab91] text-sm">{response.userName}</span>
+              )}
+              <span className="text-xs text-gray-400">
+                {formatTime(response.timestamp)}
+              </span>
+            </div>
+            
+            {/* 관리자 삭제 버튼 (모든 답변 탭에서만 표시) */}
+            {isAdmin && activeTab === 'all' && (
+              <button
+                onClick={() => handleDeleteUserResponse(response.dateStr, response.userId || '', response.userName)}
+                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all"
+                title={`${response.userName}님의 ${response.dateStr} 답변 삭제 (관리자)`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
-            <span className="text-xs text-gray-400">
-              {formatTime(response.timestamp)}
-            </span>
           </div>
           <div className="text-gray-300 text-sm leading-relaxed mb-3">
             <div className="text-xs text-gray-400 mb-1">질문:</div>

@@ -60,19 +60,60 @@ export default function DiaryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDiary, setSelectedDiary] = useState<DiaryItem | null>(null);
   const [editingDiary, setEditingDiary] = useState<DiaryItem | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [writeForm, setWriteForm] = useState<{
     title: string;
     content: string;
     images: string[];
     pendingImages: File[];
+    existingImages: string[];
     date: Date;
   }>({
     title: '',
     content: '',
     images: [],
     pendingImages: [],
+    existingImages: [],
     date: new Date()
   });
+
+  // 이미지 최적화 함수
+  const optimizeImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // 비율 유지하면서 리사이징
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        const newWidth = img.width * ratio;
+        const newHeight = img.height * ratio;
+        
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        // 이미지 그리기
+        ctx?.drawImage(img, 0, 0, newWidth, newHeight);
+        
+        // Blob으로 변환
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const optimizedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file); // 최적화 실패 시 원본 반환
+          }
+        }, 'image/jpeg', quality);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   // 일기 실시간 구독
   useEffect(() => {
@@ -103,20 +144,43 @@ export default function DiaryPage() {
     if (!writeForm.content.trim() || !currentUser?.uid) return;
 
     try {
-      // 이미지 업로드
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      // 새로 추가된 이미지만 업로드 (최적화 포함)
       const uploadedUrls = await Promise.all(
-        writeForm.pendingImages.map(async (file) => {
-          const fileRef = ref(storage, `private_diary/${currentUser.uid}/${Date.now()}_${file.name}`);
-          await uploadBytes(fileRef, file);
-          return getDownloadURL(fileRef);
+        writeForm.pendingImages.map(async (file, index) => {
+          try {
+            // 이미지 최적화
+            const optimizedFile = await optimizeImage(file);
+            
+            const fileRef = ref(storage, `private_diary/${currentUser.uid}/${Date.now()}_${optimizedFile.name}`);
+            await uploadBytes(fileRef, optimizedFile);
+            const url = await getDownloadURL(fileRef);
+            
+            // 진행률 업데이트
+            const progress = ((index + 1) / writeForm.pendingImages.length) * 100;
+            setUploadProgress(progress);
+            
+            return url;
+          } catch (error) {
+            console.error(`이미지 ${index + 1} 업로드 실패:`, error);
+            return null;
+          }
         })
       );
+
+      // 성공한 업로드만 필터링
+      const successfulUploads = uploadedUrls.filter(url => url !== null) as string[];
+
+      // 기존 이미지와 새로 업로드된 이미지 합치기
+      const allImages = [...writeForm.existingImages, ...successfulUploads];
 
       const diaryData = {
         title: writeForm.title,
         content: writeForm.content,
         date: writeForm.date,
-        images: uploadedUrls,
+        images: allImages,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -128,12 +192,16 @@ export default function DiaryPage() {
         content: '',
         images: [],
         pendingImages: [],
+        existingImages: [],
         date: new Date()
       });
       setIsWriting(false);
     } catch (error) {
       console.error('일기 추가 실패:', error);
       alert('일기 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -222,34 +290,11 @@ export default function DiaryPage() {
                     className="p-6 bg-[#2A4D45]/40 hover:bg-[#2A4D45]/50 backdrop-blur-sm rounded-lg transition-colors cursor-pointer group"
                     onClick={() => setSelectedDiary(diary)}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <h3 className="text-lg font-medium">{diary.title || '제목 없음'}</h3>
-                      <span className="text-sm text-gray-400">
-                        {format(new Date(diary.date), 'PPP', { locale: ko })}
-                      </span>
-                    </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white hover:text-white hover:bg-[#56ab91]/60"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingDiary(diary);
-                          setWriteForm({
-                            title: diary.title,
-                            content: diary.content,
-                            images: diary.images || [],
-                            pendingImages: [],
-                            date: new Date(diary.date)
-                          });
-                          setIsWriting(true);
-                        }}
-                      >
-                        <PenSquare className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-4 mb-4">
+                    <h3 className="text-lg font-medium">{diary.title || '제목 없음'}</h3>
+                    <span className="text-sm text-gray-400">
+                      {format(new Date(diary.date), 'PPP', { locale: ko })}
+                    </span>
                   </div>
                   <p className="text-gray-300 line-clamp-3">{diary.content}</p>
                   {diary.images && diary.images.length > 0 && (
@@ -294,27 +339,6 @@ export default function DiaryPage() {
                   backgroundColor: 'rgba(59, 130, 246, 0.3)',
                   borderRadius: '50%',
                   color: '#fff'
-                }
-              }}
-              components={{
-                DayContent: ({ date }) => {
-                  const hasEntry = diaries.some(diary => {
-                    const diaryDate = new Date(diary.date);
-                    return (
-                      diaryDate.getFullYear() === date.getFullYear() &&
-                      diaryDate.getMonth() === date.getMonth() &&
-                      diaryDate.getDate() === date.getDate()
-                    );
-                  });
-
-                  return (
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <span>{date.getDate()}</span>
-                      {hasEntry && (
-                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full" />
-                      )}
-                    </div>
-                  );
                 }
               }}
             />
@@ -394,11 +418,13 @@ export default function DiaryPage() {
         open={isWriting} 
         onOpenChange={(open) => {
           if (!open) {
+            setEditingDiary(null);
             setWriteForm({
               title: '',
               content: '',
               images: [],
               pendingImages: [],
+              existingImages: [],
               date: new Date()
             });
           }
@@ -465,28 +491,61 @@ export default function DiaryPage() {
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
-                    className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-[#2A4D45]/50"
+                    className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-[#2A4D45]/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
                   >
-                    사진 선택
+                    {isUploading ? '업로드 중...' : '사진 선택'}
                   </Button>
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const files = Array.from(e.target.files || []);
-                      const previewUrls = files.map(file => URL.createObjectURL(file));
-                      setWriteForm(prev => ({
-                        ...prev,
-                        images: [...prev.images, ...previewUrls],
-                        pendingImages: [...prev.pendingImages, ...files]
-                      }));
+                      if (files.length > 0) {
+                        // 이미지 파일만 필터링
+                        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+                        
+                        if (imageFiles.length !== files.length) {
+                          alert('이미지 파일만 업로드할 수 있습니다.');
+                        }
+                        
+                        if (imageFiles.length > 0) {
+                          // 미리보기용 URL 생성
+                          const previewUrls = imageFiles.map(file => URL.createObjectURL(file));
+                          
+                          setWriteForm(prev => ({
+                            ...prev,
+                            images: [...prev.existingImages, ...prev.pendingImages.map(f => URL.createObjectURL(f)), ...previewUrls],
+                            pendingImages: [...prev.pendingImages, ...imageFiles]
+                          }));
+                        }
+                        
+                        // 파일 입력 초기화하여 같은 파일 재선택 가능하게 함
+                        e.target.value = '';
+                      }
                     }}
                     className="hidden"
                   />
                 </div>
+
+                {/* 업로드 진행률 */}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-300">이미지 업로드 중...</span>
+                      <span className="text-[#56ab91]">{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-[#56ab91] h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* 이미지 미리보기 */}
                 {writeForm.images.length > 0 && (
@@ -500,13 +559,27 @@ export default function DiaryPage() {
                         />
                         <button
                           onClick={() => {
-                            setWriteForm(prev => ({
-                              ...prev,
-                              images: prev.images.filter((_, i) => i !== index),
-                              pendingImages: prev.pendingImages.filter((_, i) => i !== index)
-                            }));
+                            const existingImagesCount = writeForm.existingImages.length;
+                            
+                            if (index < existingImagesCount) {
+                              // 기존 이미지 삭제
+                              setWriteForm(prev => ({
+                                ...prev,
+                                existingImages: prev.existingImages.filter((_, i) => i !== index),
+                                images: prev.images.filter((_, i) => i !== index)
+                              }));
+                            } else {
+                              // 새로 추가된 이미지 삭제
+                              const pendingIndex = index - existingImagesCount;
+                              setWriteForm(prev => ({
+                                ...prev,
+                                pendingImages: prev.pendingImages.filter((_, i) => i !== pendingIndex),
+                                images: prev.images.filter((_, i) => i !== index)
+                              }));
+                            }
                           }}
                           className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={isUploading}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -522,7 +595,18 @@ export default function DiaryPage() {
             <Button 
               variant="outline"
               className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-[#2A4D45]/50"
-              onClick={() => setIsWriting(false)}
+              onClick={() => {
+                setIsWriting(false);
+                setEditingDiary(null);
+                setWriteForm({
+                  title: '',
+                  content: '',
+                  images: [],
+                  pendingImages: [],
+                  existingImages: [],
+                  date: new Date()
+                });
+              }}
             >
               취소
             </Button>
@@ -531,17 +615,37 @@ export default function DiaryPage() {
                 if (editingDiary) {
                   // 수정 모드
                   try {
-                    // 이미지 업로드 (새로 추가된 이미지만)
+                    setIsUploading(true);
+                    setUploadProgress(0);
+
+                    // 새로 추가된 이미지만 업로드 (최적화 포함)
                     const uploadedUrls = await Promise.all(
-                      writeForm.pendingImages.map(async (file) => {
-                        const fileRef = ref(storage, `private_diary/${currentUser.uid}/${Date.now()}_${file.name}`);
-                        await uploadBytes(fileRef, file);
-                        return getDownloadURL(fileRef);
+                      writeForm.pendingImages.map(async (file, index) => {
+                        try {
+                          // 이미지 최적화
+                          const optimizedFile = await optimizeImage(file);
+                          
+                          const fileRef = ref(storage, `private_diary/${currentUser.uid}/${Date.now()}_${optimizedFile.name}`);
+                          await uploadBytes(fileRef, optimizedFile);
+                          const url = await getDownloadURL(fileRef);
+                          
+                          // 진행률 업데이트
+                          const progress = ((index + 1) / writeForm.pendingImages.length) * 100;
+                          setUploadProgress(progress);
+                          
+                          return url;
+                        } catch (error) {
+                          console.error(`이미지 ${index + 1} 업로드 실패:`, error);
+                          return null;
+                        }
                       })
                     );
 
+                    // 성공한 업로드만 필터링
+                    const successfulUploads = uploadedUrls.filter(url => url !== null) as string[];
+
                     // 기존 이미지와 새로 업로드된 이미지 합치기
-                    const allImages = [...writeForm.images, ...uploadedUrls];
+                    const allImages = [...writeForm.existingImages, ...successfulUploads];
 
                     await updateDoc(doc(db, `users/${currentUser.uid}/private_diary`, editingDiary.id), {
                       title: writeForm.title,
@@ -551,20 +655,39 @@ export default function DiaryPage() {
                       updatedAt: serverTimestamp()
                     });
 
+                    setWriteForm({
+                      title: '',
+                      content: '',
+                      images: [],
+                      pendingImages: [],
+                      existingImages: [],
+                      date: new Date()
+                    });
                     setIsWriting(false);
                     setEditingDiary(null);
                   } catch (error) {
                     console.error('일기 수정 실패:', error);
                     alert('일기 수정 중 오류가 발생했습니다.');
+                  } finally {
+                    setIsUploading(false);
+                    setUploadProgress(0);
                   }
                 } else {
                   // 새 일기 작성
                   await handleAddDiary();
                 }
               }}
-              className="bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white"
+              disabled={isUploading}
+              className="bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {editingDiary ? '수정' : '저장'}
+              {isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  업로드 중...
+                </>
+              ) : (
+                editingDiary ? '수정' : '저장'
+              )}
             </Button>
           </div>
         </DialogContent>
@@ -576,21 +699,41 @@ export default function DiaryPage() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{selectedDiary?.title || '제목 없음'}</DialogTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    if (selectedDiary && window.confirm('정말 삭제하시겠습니까?')) {
-                      handleDelete(selectedDiary.id);
+              {selectedDiary && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingDiary(selectedDiary);
+                      setWriteForm({
+                        title: selectedDiary.title,
+                        content: selectedDiary.content,
+                        images: selectedDiary.images || [],
+                        pendingImages: [],
+                        existingImages: selectedDiary.images || [],
+                        date: new Date(selectedDiary.date)
+                      });
+                      setIsWriting(true);
                       setSelectedDiary(null);
-                    }
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  삭제
-                </Button>
-              </div>
+                    }}
+                  >
+                    <PenSquare className="w-2 h-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (window.confirm('정말 삭제하시겠습니까?')) {
+                        handleDelete(selectedDiary.id);
+                        setSelectedDiary(null);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-2 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </DialogHeader>
           <div className="mt-4">

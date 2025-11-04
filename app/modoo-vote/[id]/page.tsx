@@ -429,7 +429,7 @@ export default function ModooVoteDetailPage() {
         </div>
       </div>
       {/* 하단 여백 */}
-      <div className="h-20 md:h-32"></div>
+      <div className="h-20 md:h-72"></div>
     </div>
     
   );

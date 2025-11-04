@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Image as ImageIcon, Trash2, PenSquare, Calendar as CalendarIcon } from 'lucide-react';
+import { Image as ImageIcon, Trash2, PenSquare, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,6 +23,7 @@ interface MemoItem {
   date: Date;
   status: 'todo' | 'today' | 'completed';
   images?: string[];
+  important?: boolean;
 }
 
 export default function MemoPage() {
@@ -60,19 +61,61 @@ export default function MemoPage() {
   const [memos, setMemos] = useState<MemoItem[]>([]);
   const [isWriting, setIsWriting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showImportantOnly, setShowImportantOnly] = useState(false);
   const [editingMemo, setEditingMemo] = useState<MemoItem | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<MemoItem | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [writeForm, setWriteForm] = useState<{
     content: string;
     images: string[];
     pendingImages: File[];
+    existingImages: string[];
     date: Date;
   }>({
     content: '',
     images: [],
     pendingImages: [],
+    existingImages: [],
     date: new Date()
   });
+
+  // 이미지 최적화 함수
+  const optimizeImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = document.createElement('img');
+      
+      img.onload = () => {
+        // 비율 유지하면서 리사이징
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        const newWidth = img.width * ratio;
+        const newHeight = img.height * ratio;
+        
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        // 이미지 그리기
+        ctx?.drawImage(img, 0, 0, newWidth, newHeight);
+        
+        // Blob으로 변환
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const optimizedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file); // 최적화 실패 시 원본 반환
+          }
+        }, 'image/jpeg', quality);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,7 +149,8 @@ export default function MemoPage() {
         content: doc.data().content || '',
         status: doc.data().status as TabType,
         date: doc.data().date?.toDate() || new Date(),
-        images: doc.data().images || []
+        images: doc.data().images || [],
+        important: doc.data().important || false
       }));
       setMemos(loadedMemos);
       setLoading(false);
@@ -123,14 +167,34 @@ export default function MemoPage() {
     if (!writeForm.content.trim() || !currentUser?.uid) return;
 
     try {
-      // 이미지 업로드
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      // 새로 추가된 이미지만 업로드 (최적화 포함)
       const uploadedUrls = await Promise.all(
-        writeForm.pendingImages.map(async (file) => {
-          const fileRef = ref(storage, `private_memos/${currentUser.uid}/${Date.now()}_${file.name}`);
-          await uploadBytes(fileRef, file);
-          return getDownloadURL(fileRef);
+        writeForm.pendingImages.map(async (file, index) => {
+          try {
+            // 이미지 최적화
+            const optimizedFile = await optimizeImage(file);
+            
+            const fileRef = ref(storage, `private_memos/${currentUser.uid}/${Date.now()}_${optimizedFile.name}`);
+            await uploadBytes(fileRef, optimizedFile);
+            const url = await getDownloadURL(fileRef);
+            
+            // 진행률 업데이트
+            const progress = ((index + 1) / writeForm.pendingImages.length) * 100;
+            setUploadProgress(progress);
+            
+            return url;
+          } catch (error) {
+            console.error(`이미지 ${index + 1} 업로드 실패:`, error);
+            return null;
+          }
         })
       );
+
+      // 성공한 업로드만 필터링
+      const successfulUploads = uploadedUrls.filter(url => url !== null) as string[];
 
       // 날짜에 따른 status 결정
       const today = new Date();
@@ -142,7 +206,7 @@ export default function MemoPage() {
       const status: TabType = memoDate.getTime() === today.getTime() ? 'today' : 'todo';
 
       // 기존 이미지와 새로 업로드된 이미지 합치기
-      const allImages = [...writeForm.images, ...uploadedUrls];
+      const allImages = [...writeForm.existingImages, ...successfulUploads];
 
       const memoData = {
         content: writeForm.content,
@@ -169,6 +233,7 @@ export default function MemoPage() {
         content: '',
         images: [],
         pendingImages: [],
+        existingImages: [],
         date: new Date()
       });
       setEditingMemo(null);
@@ -176,6 +241,9 @@ export default function MemoPage() {
     } catch (error) {
       console.error(editingMemo ? '메모 수정 실패:' : '메모 추가 실패:', error);
       alert('메모 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -202,6 +270,20 @@ export default function MemoPage() {
       });
     } catch (error) {
       console.error('상태 변경 실패:', error);
+    }
+  };
+
+  // 중요문서 상태 변경
+  const handleImportantChange = async (memoId: string, isImportant: boolean) => {
+    if (!currentUser?.uid) return;
+    
+    try {
+      await updateDoc(doc(db, `users/${currentUser.uid}/private_memos`, memoId), {
+        important: isImportant,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('중요문서 상태 변경 실패:', error);
     }
   };
 
@@ -251,12 +333,48 @@ export default function MemoPage() {
           >
             <PenSquare className="w-6 h-6" />
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowImportantOnly(!showImportantOnly);
+              // 중요문서 필터 활성화 시 탭을 초기화하지 않고 현재 탭 유지
+            }}
+            className={`h-[60px] px-4 backdrop-blur-sm border-[#358f80]/20 transition-all ${
+              showImportantOnly 
+                ? 'bg-pink-500/60 hover:bg-pink-500/80 text-white' 
+                : 'bg-[#2A4D45]/40 hover:bg-[#2A4D45]/60 text-white'
+            }`}
+            title={showImportantOnly ? '전체 메모 보기' : '중요문서만 보기'}
+          >
+            <AlertTriangle className="w-6 h-6" />
+          </Button>
         </div>
+
+        {/* 중요문서 필터 안내 */}
+        {showImportantOnly && (
+          <div className="px-2 md:px-0">
+            <div className="bg-pink-500/10 border border-pink-500/20 rounded-lg p-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-pink-400" />
+              <span className="text-pink-300 text-sm">중요문서만 표시 중입니다</span>
+              <button
+                onClick={() => setShowImportantOnly(false)}
+                className="ml-auto text-pink-400 hover:text-pink-300 text-sm underline"
+              >
+                전체 보기
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 메모 목록 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-2 md:px-0">
           {(() => {
             const filteredMemos = memos.filter(memo => {
+              // 중요문서 필터가 활성화된 경우 중요문서가 아닌 메모는 제외
+              if (showImportantOnly && !memo.important) {
+                return false;
+              }
+
               const today = new Date();
               const memoDate = new Date(memo.date);
               const isToday = (
@@ -291,7 +409,9 @@ export default function MemoPage() {
               <>
                 {visibleMemos.length === 0 ? (
                       <div className="p-6 text-center bg-blue-500/10 backdrop-blur-sm border border-blue-500/20 rounded-lg md:col-span-3">
-                    <p className="text-gray-400">메모가 없습니다</p>
+                    <p className="text-gray-400">
+                      {showImportantOnly ? '중요문서가 없습니다' : '메모가 없습니다'}
+                    </p>
                   </div>
                 ) : (
                   visibleMemos.map(memo => (
@@ -352,6 +472,21 @@ export default function MemoPage() {
                                 })()
                               )}
                             </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('현재 중요문서 상태:', memo.important, '메모 ID:', memo.id);
+                                handleImportantChange(memo.id, !memo.important);
+                              }}
+                              className={`p-1 rounded-full transition-colors ${
+                                memo.important 
+                                  ? 'text-pink-400 hover:text-red-500 bg-pink-400/10 hover:bg-red-500/10' 
+                                  : 'text-gray-500 hover:text-pink-400 hover:bg-pink-400/10'
+                              }`}
+                              title={memo.important ? '중요문서 해제' : '중요문서로 설정'}
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                            </button>
                           </div>
                           <p className="whitespace-pre-wrap text-base line-clamp-3">
                             {memo.content}
@@ -402,6 +537,7 @@ export default function MemoPage() {
               content: '',
               images: [],
               pendingImages: [],
+              existingImages: [],
               date: new Date()
             });
           }
@@ -470,28 +606,61 @@ export default function MemoPage() {
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
-                    className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-[#2A4D45]/50"
+                    className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-[#2A4D45]/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
                   >
-                    사진 선택
+                    {isUploading ? '업로드 중...' : '사진 선택'}
                   </Button>
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const files = Array.from(e.target.files || []);
-                      const previewUrls = files.map(file => URL.createObjectURL(file));
-                      setWriteForm(prev => ({
-                        ...prev,
-                        images: [...prev.images, ...previewUrls],
-                        pendingImages: [...prev.pendingImages, ...files]
-                      }));
+                      if (files.length > 0) {
+                        // 이미지 파일만 필터링
+                        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+                        
+                        if (imageFiles.length !== files.length) {
+                          alert('이미지 파일만 업로드할 수 있습니다.');
+                        }
+                        
+                        if (imageFiles.length > 0) {
+                          // 미리보기용 URL 생성
+                          const previewUrls = imageFiles.map(file => URL.createObjectURL(file));
+                          
+                          setWriteForm(prev => ({
+                            ...prev,
+                            images: [...prev.existingImages, ...prev.pendingImages.map(f => URL.createObjectURL(f)), ...previewUrls],
+                            pendingImages: [...prev.pendingImages, ...imageFiles]
+                          }));
+                        }
+                        
+                        // 파일 입력 초기화하여 같은 파일 재선택 가능하게 함
+                        e.target.value = '';
+                      }
                     }}
                     className="hidden"
                   />
                 </div>
+
+                {/* 업로드 진행률 */}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-300">이미지 업로드 중...</span>
+                      <span className="text-[#56ab91]">{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-[#56ab91] h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* 이미지 미리보기 */}
                 {writeForm.images.length > 0 && (
@@ -505,13 +674,27 @@ export default function MemoPage() {
                         />
                         <button
                           onClick={() => {
-                            setWriteForm(prev => ({
-                              ...prev,
-                              images: prev.images.filter((_, i) => i !== index),
-                              pendingImages: prev.pendingImages.filter((_, i) => i !== index)
-                            }));
+                            const existingImagesCount = writeForm.existingImages.length;
+                            
+                            if (index < existingImagesCount) {
+                              // 기존 이미지 삭제
+                              setWriteForm(prev => ({
+                                ...prev,
+                                existingImages: prev.existingImages.filter((_, i) => i !== index),
+                                images: prev.images.filter((_, i) => i !== index)
+                              }));
+                            } else {
+                              // 새로 추가된 이미지 삭제
+                              const pendingIndex = index - existingImagesCount;
+                              setWriteForm(prev => ({
+                                ...prev,
+                                pendingImages: prev.pendingImages.filter((_, i) => i !== pendingIndex),
+                                images: prev.images.filter((_, i) => i !== index)
+                              }));
+                            }
                           }}
                           className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={isUploading}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -533,6 +716,7 @@ export default function MemoPage() {
                   content: '',
                   images: [],
                   pendingImages: [],
+                  existingImages: [],
                   date: new Date()
                 });
               }}
@@ -541,9 +725,17 @@ export default function MemoPage() {
             </Button>
             <Button 
               onClick={handleAddMemo}
-              className="bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white"
+              disabled={isUploading}
+              className="bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {editingMemo ? '수정' : '저장'}
+              {isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  업로드 중...
+                </>
+              ) : (
+                editingMemo ? '수정' : '저장'
+              )}
             </Button>
           </div>
         </DialogContent>
@@ -568,14 +760,15 @@ export default function MemoPage() {
                         content: selectedMemo.content,
                         images: selectedMemo.images || [],
                         pendingImages: [],
+                        existingImages: selectedMemo.images || [],
                         date: new Date(selectedMemo.date)
                       });
                       setIsWriting(true);
                       setSelectedMemo(null);
                     }}
                   >
-                    <PenSquare className="w-4 h-4 mr-2" />
-                    수정
+                    <PenSquare className="w-2 h-4" />
+                    
                   </Button>
                   <Button
                     variant="destructive"
@@ -587,8 +780,8 @@ export default function MemoPage() {
                       }
                     }}
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    삭제
+                    <Trash2 className="w-2 h-4" />
+                    
                   </Button>
                 </div>
               )}

@@ -15,7 +15,8 @@ import Link from 'next/link';
 import LoginOutButton from '@/components/ui/LoginOutButton';
 import { useSelector } from 'react-redux';
 import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/firebase';
 
 interface LinkLetter {
   id: string;
@@ -211,132 +212,7 @@ export default function LinkLetterPage() {
 
   // 임시 더미 데이터 (나중에 Firebase에서 가져올 예정)
   const dummyLetters: LinkLetter[] = [
-    {
-      id: '1',
-      title: '너에게 전하는 마음',
-      category: 'confession',
-      content: '오랫동안 말하지 못했던 내 마음을 전하고 싶어...',
-      quiz: {
-        question: '우리가 처음 만난 곳은?',
-        options: ['카페', '도서관', '공원', '학교'],
-        correctAnswer: 1,
-        hint: '조용하고 책이 많은 곳이에요'
-      },
-      author: {
-        uid: 'user1',
-        displayName: '사랑하는 마음',
-        email: 'user1@example.com'
-      },
-      isPublic: true,
-      viewCount: 24,
-      likeCount: 8,
-      createdAt: new Date('2024-10-30'),
-    },
-    {
-      id: '2',
-      title: '고마운 마음을 담아',
-      category: 'gratitude',
-      content: '항상 내 곁에서 힘이 되어줘서 정말 고마워...',
-      quiz: {
-        question: '내가 가장 좋아하는 음식은?',
-        options: ['피자', '치킨', '떡볶이', '라면'],
-        correctAnswer: 2,
-        hint: '매운 걸 좋아해요!'
-      },
-      author: {
-        uid: 'user2',
-        displayName: '고마운 마음을 전하는 친구',
-        email: 'user2@example.com'
-      },
-      isPublic: true,
-      viewCount: 15,
-      likeCount: 12,
-      createdAt: new Date('2024-10-29'),
-    },
-    {
-      id: '3',
-      title: '우리 우정 영원히',
-      category: 'friendship',
-      content: '함께한 시간들이 너무 소중해. 앞으로도 계속 친구하자!',
-      quiz: {
-        question: '우리가 함께 간 첫 여행지는?',
-        options: ['부산', '제주도', '강릉', '경주'],
-        correctAnswer: 1,
-        hint: '바다가 아름다운 섬이에요'
-      },
-      author: {
-        uid: 'user3',
-        displayName: '평생친구 민수',
-        email: 'user3@example.com'
-      },
-      isPublic: true,
-      viewCount: 31,
-      likeCount: 18,
-      createdAt: new Date('2024-10-28'),
-    },
-    {
-      id: '4',
-      title: '부모님께 드리는 편지',
-      category: 'filial',
-      content: '항상 저를 믿어주시고 사랑해주셔서 감사합니다...',
-      quiz: {
-        question: '우리 가족의 전통 요리는?',
-        options: ['김치찌개', '된장찌개', '미역국', '갈비탕'],
-        correctAnswer: 0,
-        hint: '빨갛고 매콤한 국물이에요'
-      },
-      author: {
-        uid: 'user4',
-        displayName: '사랑하는 아들 준호',
-        email: 'user4@example.com'
-      },
-      isPublic: true,
-      viewCount: 42,
-      likeCount: 25,
-      createdAt: new Date('2024-10-27'),
-    },
-    {
-      id: '5',
-      title: '미안한 마음을 담아',
-      category: 'apology',
-      content: '그때 상처를 줘서 정말 미안해. 용서해줄 수 있을까?',
-      quiz: {
-        question: '우리가 마지막으로 함께 본 영화는?',
-        options: ['액션 영화', '로맨스 영화', '코미디 영화', '호러 영화'],
-        correctAnswer: 1,
-        hint: '달콤한 사랑 이야기였어요'
-      },
-      author: {
-        uid: 'user5',
-        displayName: '미안한 마음의 지영',
-        email: 'user5@example.com'
-      },
-      isPublic: true,
-      viewCount: 18,
-      likeCount: 6,
-      createdAt: new Date('2024-10-26'),
-    },
-    {
-      id: '6',
-      title: '생일 축하해!',
-      category: 'celebration',
-      content: '너의 특별한 날을 축하해! 항상 행복하길 바라 🎂',
-      quiz: {
-        question: '생일 주인공이 가장 좋아하는 색깔은?',
-        options: ['빨강', '파랑', '노랑', '초록'],
-        correctAnswer: 2,
-        hint: '태양과 같은 밝은 색이에요'
-      },
-      author: {
-        uid: 'user6',
-        displayName: '생일을 축하하는 수진',
-        email: 'user6@example.com'
-      },
-      isPublic: true,
-      viewCount: 33,
-      likeCount: 21,
-      createdAt: new Date('2024-10-25')
-    }
+    
   ];
 
   useEffect(() => {
@@ -545,93 +421,48 @@ export default function LinkLetterPage() {
     }));
   };
 
-  // 이미지 압축 및 Base64 변환 함수 (편지 사진용)
-  const convertImageToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
+  // Firebase Storage에 편지 이미지 업로드 함수
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    try {
+      // 파일명 생성 (중복 방지)
+      const fileName = `link-letters/${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name}`;
+      const storageRef = ref(storage, fileName);
       
-      img.onload = () => {
-        // 최대 크기 설정 (800x600)
-        const maxWidth = 800;
-        const maxHeight = 600;
-        
-        let { width, height } = img;
-        
-        // 비율 유지하면서 크기 조정
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // 이미지 그리기 및 압축
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        // JPEG 품질 0.7로 압축 (70% 품질)
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        console.log(`편지 사진 압축: ${file.size} bytes → ${Math.round(compressedBase64.length * 0.75)} bytes`);
-        resolve(compressedBase64);
-      };
+      // Firebase Storage에 업로드 (원본 품질 유지)
+      const snapshot = await uploadBytes(storageRef, file);
       
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
+      // 다운로드 URL 반환
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log('편지 이미지 업로드 완료:', downloadURL);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('편지 이미지 업로드 실패:', error);
+      throw new Error('이미지 업로드에 실패했습니다.');
+    }
   };
 
-  // 배경 이미지 전용 압축 함수 (고품질)
-  const convertBackgroundImageToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
+  // Firebase Storage에 배경 이미지 업로드 함수
+  const uploadBackgroundImageToStorage = async (file: File): Promise<string> => {
+    try {
+      // 파일명 생성 (중복 방지)
+      const fileName = `link-letter-backgrounds/${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name}`;
+      const storageRef = ref(storage, fileName);
       
-      img.onload = () => {
-        // 최대 크기 설정 (1920x1080) - 16:9 비율
-        const maxWidth = 1920;
-        const maxHeight = 1080;
-        
-        let { width, height } = img;
-        
-        // 비율 유지하면서 크기 조정
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // 이미지 그리기 및 압축
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        // JPEG 품질 1.0으로 압축 (100% 품질)
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 1.0);
-        console.log(`배경 이미지 압축: ${file.size} bytes → ${Math.round(compressedBase64.length * 0.75)} bytes`);
-        resolve(compressedBase64);
-      };
+      // Firebase Storage에 업로드 (원본 품질 유지)
+      const snapshot = await uploadBytes(storageRef, file);
       
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
+      // 다운로드 URL 반환
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log('배경 이미지 업로드 완료:', downloadURL);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('배경 이미지 업로드 실패:', error);
+      throw new Error('배경 이미지 업로드에 실패했습니다.');
+    }
   };
+
 
   // 편지 제출
   const handleSubmitLetter = async () => {
@@ -676,31 +507,15 @@ export default function LinkLetterPage() {
 
     setIsSubmitting(true);
     try {
-      console.log('이미지 변환 시작, 이미지 개수:', letterForm.images.length);
+      console.log('이미지 업로드 시작, 이미지 개수:', letterForm.images.length);
       
-      // 이미지 개수 제한 (Firebase 문서 크기 제한 고려)
-      const maxImages = 5; // 최대 5개로 제한
-      const imagesToProcess = letterForm.images.slice(0, maxImages);
+      // Firebase Storage에 이미지들 업로드
+      const imageUploadPromises = letterForm.images.map(img => uploadImageToStorage(img));
+      const imageUrls = await Promise.all(imageUploadPromises);
       
-      if (letterForm.images.length > maxImages) {
-        console.warn(`이미지가 ${maxImages}개로 제한됩니다. (${letterForm.images.length}개 → ${maxImages}개)`);
-      }
-      
-      // 이미지들을 Base64로 변환 (압축 포함)
-      const imagePromises = imagesToProcess.map(img => convertImageToBase64(img));
-      const base64Images = await Promise.all(imagePromises);
-      
-      console.log('이미지 변환 완료, Base64 이미지 개수:', base64Images.length);
-      
-      // 총 크기 체크
-      const totalSize = JSON.stringify({ images: base64Images }).length;
-      console.log('이미지 데이터 총 크기:', Math.round(totalSize / 1024), 'KB');
-      
-      if (totalSize > 800000) { // 800KB 제한
-        throw new Error('이미지 크기가 너무 큽니다. 이미지를 줄이거나 개수를 줄여주세요.');
-      }
+      console.log('이미지 업로드 완료, URL 개수:', imageUrls.length);
 
-      // Firebase에 편지 저장
+      // Firebase에 편지 저장 (URL 배열로 저장)
       const letterData = {
         title: letterForm.title,
         category: letterForm.category,
@@ -718,7 +533,7 @@ export default function LinkLetterPage() {
         viewCount: 0,
         likeCount: 0,
         createdAt: serverTimestamp(), // Firebase 서버 타임스탬프 사용
-        images: base64Images, // Base64로 변환된 이미지들
+        images: imageUrls, // Storage URL 배열로 저장
         background: letterForm.background // 배경 정보 추가
       };
 
@@ -1659,20 +1474,20 @@ export default function LinkLetterPage() {
                          onChange={async (e) => {
                            const file = e.target.files?.[0];
                            if (file) {
-                             // 파일 크기 체크 (10MB 제한)
-                             if (file.size > 10 * 1024 * 1024) {
-                               alert('이미지 크기는 10MB 이하로 선택해주세요.');
+                             // 파일 크기 체크 (50MB 제한 - Storage는 더 큰 파일 지원)
+                             if (file.size > 50 * 1024 * 1024) {
+                               alert('이미지 크기는 50MB 이하로 선택해주세요.');
                                return;
                              }
                              try {
-                               const base64Image = await convertBackgroundImageToBase64(file);
+                               const imageUrl = await uploadBackgroundImageToStorage(file);
                                setLetterForm(prev => ({
                                  ...prev,
-                                 background: { type: 'image', value: base64Image }
+                                 background: { type: 'image', value: imageUrl }
                                }));
                              } catch (error) {
-                               console.error('배경 이미지 변환 실패:', error);
-                               alert('배경 이미지 처리 중 오류가 발생했습니다.');
+                               console.error('배경 이미지 업로드 실패:', error);
+                               alert('배경 이미지 업로드 중 오류가 발생했습니다.');
                              }
                            }
                          }}
@@ -1686,12 +1501,12 @@ export default function LinkLetterPage() {
                         <div className="flex flex-col items-center gap-2">
                           <Upload className="w-6 h-6 text-white/70" />
                           <span className="text-sm">이미지 선택하기</span>
-                          <span className="text-xs text-white/60">캡쳐 사진 사용 권장 (최대 5MB)</span>
+                          <span className="text-xs text-white/60">고품질 이미지 지원 (최대 50MB)</span>
                         </div>
                       </button>
                     </div>
                     <p className="text-xs text-white/60">
-                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 10MB)
+                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 50MB)
                     </p>
                   </div>
                 </div>

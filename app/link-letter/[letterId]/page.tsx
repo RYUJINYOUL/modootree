@@ -61,6 +61,7 @@ interface LinkLetter {
   createdAt: Date;
   expiresAt?: Date;
   scheduledAt?: Date;
+  images?: string[]; // 편지 이미지들
   background?: {
     type: 'color' | 'gradient' | 'image' | 'default';
     value?: string;
@@ -280,114 +281,42 @@ export default function LinkLetterDetailPage() {
     }
   };
 
-  // 임시 더미 데이터
-  const dummyLetters: LinkLetter[] = [
-    {
-      id: '1',
-      title: '너에게 전하는 마음',
-      category: 'confession',
-      content: `안녕, 오랫동안 말하지 못했던 내 마음을 이제야 전하게 되었어.
-
-우리가 처음 만났던 그 도서관에서부터 지금까지, 너와 함께한 모든 순간들이 내게는 소중한 보물이야.
-
-너의 웃음소리, 진지하게 책을 읽는 모습, 가끔 보여주는 장난스러운 표정까지... 모든 것이 내 마음 속 깊이 자리잡고 있어.
-
-이 편지를 읽고 있다는 건 너도 나에 대해 조금은 관심이 있다는 뜻이겠지? 
-
-용기를 내서 말할게. 나는 너를 좋아해. 정말 많이.
-
-답을 재촉하지는 않을게. 천천히 생각해보고, 네가 편한 때에 답해줘.
-
-그저 내 마음을 알아줬으면 해서 이렇게 편지를 써.
-
-언제나 너를 응원하고 있어. ❤️`,
-      quiz: {
-        question: '우리가 처음 만난 곳은?',
-        options: ['카페', '도서관', '공원', '학교'],
-        correctAnswer: 1,
-        hint: '조용하고 책이 많은 곳이에요'
-      },
-      author: {
-        uid: 'user1',
-        displayName: '익명의 누군가',
-        email: 'user1@example.com'
-      },
-      isPublic: true,
-      viewCount: 24,
-      likeCount: 8,
-      createdAt: new Date('2024-10-30'),
-    },
-    {
-      id: '2',
-      title: '고마운 마음을 담아',
-      category: 'gratitude',
-      content: `항상 내 곁에서 힘이 되어줘서 정말 고마워.
-
-힘들 때마다 네가 해준 따뜻한 말 한마디가 얼마나 큰 위로가 되었는지 몰라.
-
-특히 지난달에 내가 어려운 일로 고민할 때, 밤늦게까지 전화로 이야기 들어주고 조언해준 것... 정말 고마웠어.
-
-너 같은 친구가 있어서 내가 얼마나 행복한지 알까?
-
-앞으로도 우리 오래오래 좋은 친구로 지내자.
-
-고마워, 정말로. 💚`,
-      quiz: {
-        question: '내가 가장 좋아하는 음식은?',
-        options: ['피자', '치킨', '떡볶이', '라면'],
-        correctAnswer: 2,
-        hint: '매운 걸 좋아해요!'
-      },
-      author: {
-        uid: 'user2',
-        displayName: '감사한 친구',
-        email: 'user2@example.com'
-      },
-      isPublic: true,
-      viewCount: 15,
-      likeCount: 12,
-      createdAt: new Date('2024-10-29'),
-    }
-  ];
 
   useEffect(() => {
     const fetchLetter = async () => {
       console.log('편지 로드 시작, ID:', letterId);
       
-      // 먼저 더미 데이터에서 찾기
-      let foundLetter = dummyLetters.find(letter => letter.id === letterId);
+      let foundLetter = null;
       
-      if (!foundLetter) {
-        // Firebase에서 편지 찾기
-        try {
-          const docRef = doc(db, 'linkLetters', letterId);
-          const docSnap = await getDoc(docRef);
+      // Firebase에서 편지 찾기
+      try {
+        const docRef = doc(db, 'linkLetters', letterId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          foundLetter = {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date()
+          } as LinkLetter;
           
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            foundLetter = {
-              id: docSnap.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date()
-            } as LinkLetter;
-            
-            console.log('Firebase에서 편지 로드 성공:', foundLetter);
-            
-            // 조회수 증가
-            try {
-              await updateDoc(docRef, {
-                viewCount: increment(1)
-              });
-              console.log('조회수 증가 완료');
-            } catch (error) {
-              console.error('조회수 증가 실패:', error);
-            }
-          } else {
-            console.log('편지를 찾을 수 없습니다:', letterId);
+          console.log('Firebase에서 편지 로드 성공:', foundLetter);
+          
+          // 조회수 증가
+          try {
+            await updateDoc(docRef, {
+              viewCount: increment(1)
+            });
+            console.log('조회수 증가 완료');
+          } catch (error) {
+            console.error('조회수 증가 실패:', error);
           }
-        } catch (error) {
-          console.error('Firebase에서 편지 로드 실패:', error);
+        } else {
+          console.log('편지를 찾을 수 없습니다:', letterId);
         }
+      } catch (error) {
+        console.error('Firebase에서 편지 로드 실패:', error);
       }
       
       if (foundLetter) {

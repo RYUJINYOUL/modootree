@@ -8,6 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
 import { db } from '@/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import ProfileRefreshWrapper from '@/components/ui/ProfileRefreshWrapper';
 
 interface CategoryCounts {
   memo: number;
@@ -445,7 +446,8 @@ export default function ProfilePage() {
 
 
   return (
-    <div className="flex-1 md:p-6 py-6 overflow-auto">
+    <ProfileRefreshWrapper>
+      <div className="flex-1 md:p-6 py-6 overflow-auto">
       <div className="px-2 md:px-0 space-y-6">
         {/* 환영 메시지 및 시간 */}
         <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6">
@@ -733,6 +735,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ProfileRefreshWrapper>
   );
 }
