@@ -350,7 +350,7 @@ export default function ProfilePage() {
     return '유저님';
   };
 
-  // PWA 설치 핸들러
+  // PWA 설치 핸들러 (PC 홈화면 추가)
   const handlePWAInstall = async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
@@ -358,21 +358,28 @@ export default function ProfilePage() {
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
       }
+    } else {
+      // PWA 프롬프트가 없을 때 안내 메시지
+      alert('브라우저 주소창 오른쪽의 설치 아이콘을 클릭하거나, 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 선택하여 설치할 수 있습니다.');
     }
   };
 
-  // 앱 스토어로 이동
+  // 홈화면 추가 (모바일 PWA 설치)
   const handleAppStore = () => {
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
     
-    if (/android/i.test(userAgent)) {
-      // Android - Google Play Store
-      window.open('https://play.google.com/store/apps/details?id=com.modootree.app', '_blank');
-    } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
-      // iOS - App Store
-      window.open('https://apps.apple.com/app/modootree/id123456789', '_blank');
+    if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+      // iOS - 홈화면 추가 안내
+      alert('Safari 메뉴에서 "홈 화면에 추가"를 선택하여 앱을 설치할 수 있습니다.');
+    } else if (/android/i.test(userAgent)) {
+      // Android - PWA 설치 프롬프트 또는 홈화면 추가 안내
+      if (deferredPrompt) {
+        handlePWAInstall();
+      } else {
+        alert('브라우저 메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 선택하여 앱을 설치할 수 있습니다.');
+      }
     } else {
-      // 기본값 - PWA 설치 시도
+      // 기타 모바일 기기 - PWA 설치 시도
       handlePWAInstall();
     }
   };
@@ -804,13 +811,13 @@ export default function ProfilePage() {
       )}
 
       {/* 플로팅 버튼들 */}
-       <div className="fixed bottom-17 right-1 flex flex-col gap-2 z-40">
+       <div className="fixed bottom-5 left-3 flex flex-col gap-2 z-40">
            {/* 앱 스토어 버튼 - 모바일에서만 노출 */}
            {isMobile && (
              <button
                onClick={handleAppStore}
                className="w-8 h-8 bg-green-500 hover:bg-green-400/90 text-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 hover:scale-105"
-               title="앱 다운로드"
+               title="홈화면에 추가"
              >
                <Smartphone className="w-4 h-4" />
              </button>
@@ -820,7 +827,7 @@ export default function ProfilePage() {
            <button
              onClick={handlePWAInstall}
              className="w-8 h-8 bg-blue-500 hover:bg-blue-400/90 text-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 hover:scale-105"
-             title="PC앱 설치하기"
+             title="PC에 앱 설치"
            >
              <Download className="w-4 h-4" />
            </button>

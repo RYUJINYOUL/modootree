@@ -1,0 +1,12 @@
+# Firebase key & secrets
+env.yaml
+*.json
+*.pem
+
+# Python & Docker
+__pycache__/
+*.pyc
+.env
+.venv
+build/
+dist/

@@ -1,698 +1,680 @@
-'use client';
+"use client"
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Loader2, Clock, X } from 'lucide-react';
-import Image from 'next/image';
+import { useState, useRef, useEffect, useCallback } from "react"
+import { Send, Bot, User as UserIcon, Loader2, Menu, ExternalLink, Save, RefreshCw } from "lucide-react"
+import { cn } from "@/lib/utils"
+import useAuth from '@/hooks/useAuth'
+import { auth, db } from "@/firebase"
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+
+
+interface Message {
+    role: "user" | "assistant"
+    content: string
+    timestamp: Date
+    needsConfirmation?: boolean
+    hasSearchResults?: boolean
+    searchSources?: SourceItem[]
+}
 
 interface SourceItem {
-  title: string;
-  link: string;
-  snippet: string;
-  source: string;
+    title: string
+    link: string
+    snippet: string
+    source: string
 }
 
-interface RecommendationItem {
-  // 공통 필드
-  category: string;
-  name?: string;  // 장소/상품명
-  title?: string;  // 문서/뉴스 제목
-  imageUrl?: string | null;
-  summary: string;
-  sourceURL: string;
-  source: string | null;
-  
-  // 새로 추가된 필드
-  description?: string;  // 상세 설명
-  location?: string;     // 정확한 위치 정보
-  video?: string | null; // 비디오 링크
-  
-  // 맛집/카페 전용
-  address?: string | null;
-  rating?: string | null;
-  menu?: string | null;
-  price_range?: string | null;
-  
-  // 뉴스 전용
-  published_date?: string | null;
-  author?: string | null;
-  // 출처 정보 추가
-  sources?: SourceItem[]; // 출처 정보 추가
+type ChatAction = "EXECUTE_MEMO" | "GENERAL_CHAT" | undefined
+
+const CONFIRMATION_MESSAGE = "말씀하신 내용을 메모로 저장할까요? 아니면 다른 질문을 도와드릴까요?"
+
+// --- ConfirmationPrompt 컴포넌트 ---
+interface ConfirmationPromptProps {
+    onConfirm: (action: ChatAction) => void
+    lastMessageContent: string
 }
 
-interface ProcessingStatus {
-  stage: string;
-  message: string;
-  progress: number;
-}
+const ConfirmationPrompt: React.FC<ConfirmationPromptProps> = ({ onConfirm, lastMessageContent }) => {
+    if (lastMessageContent !== CONFIRMATION_MESSAGE) return null
 
-interface SearchHistory {
-  id: string;
-  query: string;
-  timestamp: Date;
-  category: string;
-}
-
-export default function AllimpormentPage() {
-  const [activeTab, setActiveTab] = useState<'answer' | 'sources'>('answer');
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
-  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
-  const [error, setError] = useState('');
-  const [status, setStatus] = useState<ProcessingStatus>({
-    stage: 'idle',
-    message: '검색 대기 중',
-    progress: 0,
-  });
-  const [sources, setSources] = useState<SourceItem[]>([]);
-  const [summaryAnswer, setSummaryAnswer] = useState<string>('');
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const API_URL = 'https://allimpom-run-service-1027717723153.asia-northeast3.run.app/stream';
-
-  // 검색 내역 로드
-  useEffect(() => {
-    loadSearchHistory();
-  }, []);
-
-  const loadSearchHistory = () => {
-    try {
-      const saved = localStorage.getItem('search-history');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const history = parsed.map((item: any) => ({
-          ...item,
-          timestamp: new Date(item.timestamp)
-        }));
-        
-        // 3일 이내 검색 내역만 필터링
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        
-        const recentHistory = history.filter((item: SearchHistory) => 
-          item.timestamp >= threeDaysAgo
-        );
-        
-        setSearchHistory(recentHistory);
-      }
-    } catch (error) {
-      console.error('검색 내역 로드 실패:', error);
-    }
-  };
-
-  const saveSearchToHistory = (searchQuery: string, category: string) => {
-    const newSearch: SearchHistory = {
-      id: Date.now().toString(),
-      query: searchQuery,
-      timestamp: new Date(),
-      category
-    };
-
-    const updatedHistory = [newSearch, ...searchHistory].slice(0, 50); // 최대 50개 유지
-    setSearchHistory(updatedHistory);
-    
-    try {
-      localStorage.setItem('search-history', JSON.stringify(updatedHistory));
-    } catch (error) {
-      console.error('검색 내역 저장 실패:', error);
-    }
-  };
-
-  const removeFromHistory = (id: string) => {
-    const updatedHistory = searchHistory.filter(item => item.id !== id);
-    setSearchHistory(updatedHistory);
-    
-    try {
-      localStorage.setItem('search-history', JSON.stringify(updatedHistory));
-    } catch (error) {
-      console.error('검색 내역 삭제 실패:', error);
-    }
-  };
-
-  const clearAllHistory = () => {
-    setSearchHistory([]);
-    try {
-      localStorage.removeItem('search-history');
-    } catch (error) {
-      console.error('검색 내역 전체 삭제 실패:', error);
-    }
-  };
-
-  const updateStatus = (stage: string, message: string, progress: number) => {
-    setStatus({ stage, message, progress });
-  };
-
-// 데이터 처리 로직 수정
-  const handleSearch = async () => {
-    if (!query.trim()) {
-      alert('유튜브에서 모두트리 검색');
-      return;
-    }
-
-    // 이전 요청 취소
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    setLoading(true);
-    setError('');
-    setRecommendations([]);
-    setSummaryAnswer('');
-    setSources([]);
-    updateStatus('started', '검색 시작...', 10);
-
-    // 검색 내역에 저장
-    saveSearchToHistory(query.trim(), '통합검색');
-
-    abortControllerRef.current = new AbortController();
-
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            query: query.trim(), 
-            include_sources: true  // 출처 정보 요청
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`서버 오류: ${response.status}`);
-      }
-
-      if (!response.body) {
-        throw new Error('응답 본문이 없습니다.');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-
-        if (done) {
-          console.log('✅ 스트림 종료');
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 마지막 불완전한 줄 보관
-
-        for (const line of lines) {
-          if (!line.trim() || !line.startsWith('data:')) continue;
-
-          const jsonStr = line.substring(5).trim(); // 'data:' 제거
-          if (!jsonStr) continue;
-
-          try {
-            const data = JSON.parse(jsonStr);
-            console.log('📦 받은 데이터:', data);
-
-            // 분류
-            if (data.stage === 'classify') {
-              if (data.status === 'finished') {
-                updateStatus('classify', data.message || `카테고리: ${data.category}`, data.progress || 10);
-              }
-            }
-
-            // 검색
-            else if (data.stage === 'search') {
-              if (data.status === 'started') {
-                updateStatus('search', data.message || '🔍 검색 중...', data.progress || 10);
-              } else if (data.status === 'finished') {
-                updateStatus('search', data.message || '✅ 검색 완료', data.progress || 25);
-              }
-            }
-
-            // 필터링
-            else if (data.stage === 'filter') {
-              if (data.status === 'finished') {
-                updateStatus('filter', data.message || `${data.count}개 결과 발견`, data.progress || 30);
-              }
-            }
-
-            // 스크래핑
-            else if (data.stage === 'scrape') {
-              if (data.status === 'started') {
-                updateStatus('scrape', data.message || '📄 페이지 분석 중...', data.progress || 35);
-              } else if (data.status === 'finished') {
-                updateStatus('scrape', data.message || `✅ ${data.count}개 페이지 분석 완료`, data.progress || 60);
-              }
-            }
-
-            // 합성 (LLM) - 스트리밍 지원
-            else if (data.stage === 'synthesis') {
-              if (data.status === 'started') {
-                updateStatus('synthesis', data.message || '✨ 답변 생성 중...', data.progress || 65);
-              } else if (data.status === 'streaming') {
-                // 🔥 실시간 답변 업데이트
-                if (data.partial_answer) {
-                  setSummaryAnswer(data.partial_answer);
-                  setActiveTab('answer');
-                }
-                updateStatus('synthesis', data.message || '✨ 답변 생성 중...', data.progress || 70);
-              } else if (data.status === 'finished') {
-                updateStatus('synthesis', data.message || '✅ 답변 생성 완료', data.progress || 95);
-              }
-            }
-
-            // 캐시 히트
-            else if (data.stage === 'cache' && data.status === 'hit') {
-              updateStatus('cache', '💾 캐시된 결과 불러오는 중...', 20);
-            }
-
-            // 완료
-            else if (data.stage === 'complete') {
-              if (data.status === 'finished' || data.status === 'success') {
-                const cacheLabel = data.from_cache ? ' (캐시)' : '';
-                updateStatus('complete', data.message || `✅ 완료 (${data.duration_sec}초)${cacheLabel}`, 100);
-
-                if (data.answer_summary || data.summary) {
-                  setSummaryAnswer(data.answer_summary || data.summary);
-                  setActiveTab('answer');
-                }
-
-                if (data.sources || data.results) {
-                  setSources(data.sources || data.results);
-                }
-
-                setLoading(false);
-              }
-            }
-
-            // 에러
-            else if (data.stage === 'error' || data.error) {
-              console.error('서버 에러:', data.error);
-              setError(data.error || '알 수 없는 오류');
-              updateStatus('error', '오류 발생', 0);
-              setLoading(false);
-            }
-
-          } catch (parseError) {
-            console.warn('JSON 파싱 오류:', parseError);
-          }
-        }
-      }
-
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        console.log('요청 취소됨');
-        return;
-      }
-
-      const errorMsg = err instanceof Error ? err.message : '알 수 없는 오류';
-      setError(`연결 오류: ${errorMsg}`);
-      updateStatus('error', '오류 발생', 0);
-
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setLoading(false);
-      updateStatus('idle', '검색 취소됨', 0);
-    }
-  };
-
-  return (
-    <main className="min-h-screen bg-gray-900 py-8 px-4 md:py-20 md:px-10">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6 md:mb-10 text-center">
-          <div className="flex justify-center mb-2">
-            <Image
-              src="/logos/logohole.png"
-              alt="모두트리 로고"
-              width={120}
-              height={90}
-              className="opacity-90"
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-white">모두트리</h1>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2 mb-6">
-          <input
-            type="text"
-            placeholder="검색어를 입력하세요"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 border border-gray-600 bg-gray-800 text-white p-3 md:p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 text-sm md:text-base"
-            disabled={loading}
-          />
-
-          {loading ? (
-            <button
-              onClick={handleCancel}
-              className="bg-red-600 text-white px-4 py-3 md:px-6 rounded-lg hover:bg-red-700 transition w-full sm:w-auto text-sm md:text-base"
-            >
-              취소
-            </button>
-          ) : (
-            <button
-              onClick={handleSearch}
-              className="bg-blue-600 text-white px-4 py-3 md:px-6 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 w-full sm:w-auto text-sm md:text-base"
-              disabled={!query.trim()}
-            >
-              검색
-            </button>
-          )}
-        </div>
-
-        {/* 검색 내역 */}
-        {searchHistory.length > 0 && !loading && !summaryAnswer && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                최근 검색 (3일)
-              </h3>
-              <button
-                onClick={clearAllHistory}
-                className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700 transition-colors"
-              >
-                전체 삭제
-              </button>
-            </div>
-            <div className="space-y-2">
-              {searchHistory.slice(0, 10).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between bg-gray-800/50 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors group"
+    return (
+        <div className="flex w-full justify-center">
+            <div className="flex gap-3">
+                <button
+                    onClick={() => onConfirm("EXECUTE_MEMO")}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-full hover:bg-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
-                  <div 
-                    className="flex-1 cursor-pointer"
-                    onClick={() => {
-                      setQuery(item.query);
-                      // 약간의 지연 후 검색 실행 (상태 업데이트 후)
-                      setTimeout(() => {
-                        const searchEvent = new Event('search');
-                        handleSearch();
-                      }, 100);
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-white text-sm">{item.query}</span>
-                      <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
-                        {item.category}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {item.timestamp.toLocaleDateString('ko-KR', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFromHistory(item.id);
-                    }}
-                    className="text-gray-500 hover:text-red-400 p-1 rounded opacity-0 group-hover:opacity-100 transition-all"
-                    title="삭제"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                    📝 메모로 저장
+                </button>
+                <button
+                    onClick={() => onConfirm("GENERAL_CHAT")}
+                    className="px-4 py-2 text-sm bg-gray-700 text-gray-200 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                    💬 다시 알아봐 드릴까요?
+                </button>
             </div>
-          </div>
-        )}
+        </div>
+    )
+}
 
-         {/* 로딩 상태 표시 */}
-                {loading && (
-                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Loader2 className="animate-spin h-5 w-5 text-blue-400" />
-                      <span className="font-semibold text-white">{status.message}</span>
+// --- SearchSourcesCard 컴포넌트 (개별 저장 기능 포함) ---
+interface SearchSourcesCardProps {
+    sources: SourceItem[]
+    summary: string
+    onSave: () => void
+    onResearch: () => void
+    onSaveIndividual: (source: SourceItem, index: number) => void
+    isSaving?: boolean
+    isResearching?: boolean
+    savingIndividualIndex?: number
+}
+
+const SearchSourcesCard: React.FC<SearchSourcesCardProps> = ({ 
+    sources, 
+    summary, 
+    onSave, 
+    onResearch,
+    onSaveIndividual,
+    isSaving = false,
+    isResearching = false,
+    savingIndividualIndex
+}) => {
+    const [showSources, setShowSources] = useState(false)
+
+    return (
+        <div className="w-full max-w-4xl mx-auto mt-4">
+            <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 shadow-2xl">
+                {/* 요약 섹션 */}
+                <div className="mb-3">
+                    <h3 className="text-base font-semibold text-blue-400 mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                        검색 요약
+                    </h3>
+                    <p className="text-sm text-gray-100 leading-relaxed whitespace-pre-wrap">{summary}</p>
+                </div>
+
+                {/* 출처 토글 버튼 */}
+                <button
+                    onClick={() => setShowSources(!showSources)}
+                    className="w-full text-left text-sm font-semibold text-blue-400 mb-3 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
+                >
+                    <ExternalLink className="w-3 h-3" />
+                    참고 출처 ({sources.length}개) {showSources ? '▲' : '▼'}
+                </button>
+
+                {/* 출처 리스트 (접기/펼치기) - 개별 저장 버튼 포함 */}
+                {showSources && (
+                    <div className="space-y-2 mb-3">
+                        {sources.slice(0, 5).map((source, index) => (
+                            <div key={index} className="relative">
+                                <a
+                                    href={source.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block p-3 bg-gray-800/80 hover:bg-gray-700/80 rounded-xl border border-gray-600/50 transition-all duration-200 text-sm pr-20 backdrop-blur-sm"
+                                >
+                                    <p className="font-semibold text-gray-100 line-clamp-1 mb-2">
+                                        {source.title}
+                                    </p>
+                                    <p className="text-gray-300 line-clamp-2 mb-2 text-sm">
+                                        {source.snippet}
+                                    </p>
+                                    <span className="text-xs font-semibold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-full">
+                                        {source.source}
+                                    </span>
+                                </a>
+                                {/* 개별 저장 버튼 */}
+                                <button
+                                    onClick={() => onSaveIndividual(source, index)}
+                                    disabled={savingIndividualIndex === index}
+                                    className="absolute top-3 right-3 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transform hover:scale-105"
+                                >
+                                    {savingIndividualIndex === index ? (
+                                        <>
+                                            <Loader2 className="w-2 h-2 animate-spin" />
+                                            저장중
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-2 h-2" />
+                                            저장
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                    
-                    {/* 프로그레스 바 */}
-                    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                      <div 
-                        className="bg-blue-500 h-full transition-all duration-300 ease-out"
-                        style={{ width: `${status.progress}%` }}
-                      />
-                    </div>
-                  </div>
                 )}
 
-        {error && (
-          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6">
-            <p className="text-red-200 font-semibold">오류: {error}</p>
-            <button
-              onClick={() => setError('')}
-              className="text-red-400 text-sm mt-2 hover:underline"
-            >
-              닫기
-            </button>
-          </div>
-        )}
-
-        {(recommendations.length > 0 || summaryAnswer) && (
-          <div className="flex items-center justify-between mb-6 border-b border-gray-600">
-            <div className="flex gap-2 md:gap-4 overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('answer')}
-                className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
-                  activeTab === 'answer'
-                    ? 'border-b-2 border-blue-500 text-blue-400'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                통합 답변
-              </button>
-              <button
-                onClick={() => setActiveTab('sources')}
-                className={`px-3 md:px-4 py-2 font-semibold transition text-sm md:text-base whitespace-nowrap ${
-                  activeTab === 'sources'
-                    ? 'border-b-2 border-blue-500 text-blue-400'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                참고 출처 ({sources.length})
-              </button>
-            </div>
-            
-            {/* 검색 내역 관리 버튼 */}
-            {searchHistory.length > 0 && (
-              <div className="flex items-center gap-2 ml-4">
-                <button
-                  onClick={() => {
-                    setSummaryAnswer('');
-                    setRecommendations([]);
-                    setSources([]);
-                    setActiveTab('answer');
-                  }}
-                  className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700 transition-colors flex items-center gap-1"
-                  title="검색 내역 보기"
-                >
-                  <Clock className="w-4 h-4" />
-                  <span className="hidden sm:inline">내역</span>
-                </button>
-                <button
-                  onClick={clearAllHistory}
-                  className="text-gray-400 hover:text-red-400 text-sm px-2 py-1 rounded hover:bg-gray-700 transition-colors"
-                  title="검색 내역 전체 삭제"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'answer' && summaryAnswer && (
-          <div className="bg-gray-800 border border-gray-600 rounded-xl shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 text-white">
-              통합 답변
-            </h2>
-
-            <div className="prose prose-sm max-w-none mb-6">
-              <p className="text-gray-200 text-base leading-relaxed whitespace-pre-wrap">
-                {summaryAnswer}
-              </p>
-            </div>
-
-            {sources.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-600">
-                <h3 className="text-lg font-semibold mb-4 text-gray-200">
-                  참고 출처
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {sources.map((source, index) => (
-                    <a
-                      key={index}
-                      href={source.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-600 transition"
+                {/* 액션 버튼들 */}
+                <div className="flex gap-2 justify-end">
+                    <button
+                        onClick={onSave}
+                        disabled={isSaving}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-full hover:bg-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transform hover:scale-105"
                     >
-                      <p className="font-medium text-gray-100 text-sm line-clamp-2 mb-1">
-                        {source.title}
-                      </p>
-                      <p className="text-xs text-gray-300 line-clamp-2 mb-2">
-                        {source.snippet}
-                      </p>
-                      <span className="text-xs font-semibold text-blue-400">
-                        {source.source}
-                      </span>
-                    </a>
-                  ))}
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                저장 중...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-3 h-3" />
+                                전체 저장
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={onResearch}
+                        disabled={isResearching}
+                        className="px-4 py-2 text-sm bg-gray-700 text-gray-200 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transform hover:scale-105"
+                    >
+                        {isResearching ? (
+                            <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                검색 중...
+                            </>
+                        ) : (
+                            <>
+                                <RefreshCw className="w-3 h-3" />
+                                다시 알아봐 드릴까요?
+                            </>
+                        )}
+                    </button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-        {/* 출처 탭 */}
-        {activeTab === 'sources' && sources.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold mb-4 text-white">
-              참고 출처
-            </h2>
-            {sources.map((source, index) => (
-              <a
-                key={index}
-                href={source.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-4 bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-600 transition"
-              >
-                <p className="font-semibold text-gray-100 mb-2">
-                  {source.title}
-                </p>
-                <p className="text-sm text-gray-300 line-clamp-2 mb-2">
-                  {source.snippet}
-                </p>
-                <span className="text-xs font-medium text-blue-400">
-                  {source.source}
-                </span>
-              </a>
-            ))}
-          </div>
-        )}
+            </div>
+        </div>
+    )
+}
 
-        {/* 기존 recommendations 렌더링은 제거 */}
-        {false && activeTab === 'sources' && recommendations.length > 0 && (
-          <div className="grid gap-4">
-            {recommendations.map((item, index) => (
-              <div
-                key={`${item.name || item.title}-${index}`}
-                className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow"
-              >
-                <div className={`flex ${item.imageUrl ? 'gap-4' : ''}`}>
-                  {item.imageUrl && (
-                    <div className="w-32 h-32 flex-shrink-0">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name || item.title}
-                        className="w-full h-full object-cover rounded-lg bg-gray-200"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (!target.dataset.fallback) {
-                            target.dataset.fallback = 'true';
-                            target.src = `https://placehold.co/128x128/e0e0e0/999999?text=${(item.name || item.title || 'No')
-                              .substring(0, 2)
-                              .toUpperCase()}`;
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
+// --- Chatbotpage 컴포넌트 ---
+export default function SearchChatPage() {
+    const { user, loading } = useAuth()
+    const [messages, setMessages] = useState<Message[]>([
+        {
+            role: "assistant",
+            content: "안녕하세요! 모두AI 검색 상담사입니다. 궁금한 것을 물어보세요!",
+            timestamp: new Date()
+        }
+    ])
+    const [input, setInput] = useState("")
+    const [isLoading, setIsLoading] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+    const [isResearching, setIsResearching] = useState(false)
+    const [savingIndividualIndex, setSavingIndividualIndex] = useState<number | undefined>(undefined)
+    const [remainingChats, setRemainingChats] = useState<number | null>(null)
+    const [originalMessageToSave, setOriginalMessageToSave] = useState<string | null>(null)
+    const messagesEndRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-bold truncate pr-2">
-                        {item.name || item.title}
-                      </h3>
-                      {item.rating && (
-                        <span className="text-yellow-500 font-semibold whitespace-nowrap text-sm">
-                          {item.rating}
-                        </span>
-                      )}
-                    </div>
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
 
-                    {item.address && (
-                      <p className="text-gray-600 text-sm mb-2">{item.address}</p>
-                    )}
+    useEffect(() => {
+        scrollToBottom()
+    }, [messages])
 
-                    <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                      {item.summary}
-                    </p>
+    const showConfirmation = messages.length > 0
+        && messages[messages.length - 1].content === CONFIRMATION_MESSAGE
+        && messages[messages.length - 1].needsConfirmation === true
 
-                    {item.location && (
-                      <div className="text-sm text-gray-600 mb-2">
-                        📍 {item.location}
-                      </div>
-                    )}
+    const sendMessage = useCallback(async (action: ChatAction = undefined, messageToSend: string = input) => {
+        if (!messageToSend.trim() || isLoading || !user) return
 
-                    {item.video && (
-                      <a
-                        href={item.video}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 text-sm mb-2 inline-block hover:underline"
-                      >
-                        🎥 비디오 보기
-                      </a>
-                    )}
+        let userMessage: Message
 
-                    <div className="flex flex-wrap gap-2 mb-3 text-xs">
-                      {item.menu && (
-                        <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded">
-                          {item.menu}
-                        </span>
-                      )}
-                      {item.price_range && (
-                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
-                          {item.price_range}
-                        </span>
-                      )}
-                      {item.published_date && (
-                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          {item.published_date}
-                        </span>
-                      )}
-                    </div>
+        // ✅ action이 없을 때만 사용자 메시지 추가 (최초 전송)
+        if (action === undefined) {
+            userMessage = {
+                role: "user",
+                content: messageToSend,
+                timestamp: new Date()
+            }
+            setMessages(prev => [...prev, userMessage])
+            setOriginalMessageToSave(messageToSend)
+        }
 
-                    {item.sourceURL && (
-                      <a
-                        href={item.sourceURL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 text-sm inline-block hover:underline font-medium"
-                      >
-                        {item.source || '상세정보'} →
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        const currentInput = messageToSend
+        if (action === undefined) setInput("")
+        setIsLoading(true)
 
-        {!summaryAnswer && !loading && !error && (
-          <div className="text-center py-4">
+        // ✅ needsConfirmation 플래그 제거
+        setMessages(prev => prev.map(msg => ({ ...msg, needsConfirmation: false })))
+
+        try {
+            const currentUser = auth.currentUser
+            if (!currentUser) {
+                throw new Error("사용자 인증 정보를 찾을 수 없습니다.")
+            }
+
+            const idToken = await currentUser.getIdToken()
+
+            const conversationHistory = messages.map(msg => ({
+                role: msg.role === "assistant" ? "model" : "user",
+                content: msg.content
+            }))
+
+            console.log("전송 데이터:", {
+                message: currentInput,
+                token: !!idToken,
+                conversationHistory,
+                action
+            })
+
+            const response = await fetch("https://aijob-server-712740047046.asia-northeast3.run.app/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: currentInput,
+                    token: idToken,
+                    conversationHistory: conversationHistory,
+                    action: action
+                })
+            })
+
+            if (!response.ok) {
+                const errorText = await response.text()
+                console.error("서버 응답 에러:", response.status, errorText)
+                throw new Error(`HTTP error! status: ${response.status}`)
+            }
+
+            const data = await response.json()
+            console.log("서버 응답:", data)
+
+            if (data.success) {
+                const assistantMessage: Message = {
+                    role: "assistant",
+                    content: data.response,
+                    timestamp: new Date(),
+                    needsConfirmation: data.needsConfirmation || false,
+                    hasSearchResults: data.hasSearchResults || false,
+                    searchSources: data.searchSources || []
+                }
+                setMessages(prev => [...prev, assistantMessage])
+
+                if (data.remainingChats !== undefined) {
+                    setRemainingChats(data.remainingChats)
+                }
+            } else {
+                throw new Error(data.response || "응답을 받지 못했습니다.")
+            }
+        } catch (error) {
+            console.error("Error:", error)
+            const errorMessage: Message = {
+                role: "assistant",
+                content: "죄송합니다. 오류가 발생했습니다. 다시 시도해 주세요.",
+                timestamp: new Date()
+            }
+            setMessages(prev => [...prev, errorMessage])
+        } finally {
+            setIsLoading(false)
+            inputRef.current?.focus()
+        }
+    }, [input, isLoading, user, messages])
+
+    const handleConfirmationAction = (action: ChatAction) => {
+        if (!originalMessageToSave) return
+        sendMessage(action, originalMessageToSave)
+        setOriginalMessageToSave(null)
+    }
+
+    const handleSaveSearchResult = async (message: Message) => {
+        if (!user || !message.searchSources || message.searchSources.length === 0) return
+    
+        setIsSaving(true)
+    
+        try {
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("인증 오류");
             
-            <p className="text-gray-400 text-lg">
-              모두트리 AI 지식 검색 페이지 입니다. 
-            </p>
-          </div>
-        )}
-      </div>
-      
-      {/* 하단 여백 */}
-      <div className="pb-12"></div>
-    </main>
-  );
+            const searchResultRef = collection(db, "search_results");
+            await addDoc(searchResultRef, {
+                userId: currentUser.uid,
+                summary: message.content,
+                sources: message.searchSources.map(s => ({
+                    title: s.title,
+                    link: s.link,
+                    snippet: s.snippet,
+                    source: s.source
+                })),
+                createdAt: serverTimestamp()
+            });
+
+            // 성공 메시지
+            const successMessage: Message = {
+                role: "assistant",
+                content: "✅ 검색 결과가 저장되었습니다!",
+                timestamp: new Date()
+            }
+            setMessages(prev => [...prev, successMessage])
+
+        } catch (error) {
+            console.error("저장 오류:", error)
+            const errorMessage: Message = {
+                role: "assistant",
+                content: "❌ 저장 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                timestamp: new Date()
+            }
+            setMessages(prev => [...prev, errorMessage])
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    // 🆕 개별 출처 저장
+    const handleSaveIndividualSource = async (source: SourceItem, index: number) => {
+        if (!user) return
+    
+        setSavingIndividualIndex(index)
+    
+        try {
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("인증 오류");
+            
+            const searchResultRef = collection(db, "search_results");
+            await addDoc(searchResultRef, {
+                userId: currentUser.uid,
+                summary: `출처: ${source.title}`,
+                sources: [{
+                    title: source.title,
+                    link: source.link,
+                    snippet: source.snippet,
+                    source: source.source
+                }],
+                createdAt: serverTimestamp(),
+                isIndividualSource: true
+            });
+
+            // 성공 메시지
+            const successMessage: Message = {
+                role: "assistant",
+                content: `✅ "${source.title}" 출처가 저장되었습니다!`,
+                timestamp: new Date()
+            }
+            setMessages(prev => [...prev, successMessage])
+
+        } catch (error) {
+            console.error("개별 저장 오류:", error)
+            const errorMessage: Message = {
+                role: "assistant",
+                content: "❌ 출처 저장 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                timestamp: new Date()
+            }
+            setMessages(prev => [...prev, errorMessage])
+        } finally {
+            setSavingIndividualIndex(undefined)
+        }
+    }
+
+    // 🔥 재검색 (캐시 무시를 위한 타임스탬프 추가)
+    // 재검색 함수 수정
+const handleResearch = async (originalQuery: string) => {
+    setIsResearching(true)
+    
+    const researchMessage: Message = {
+        role: "assistant",
+        content: "🔍 새로운 정보로 다시 검색하고 있습니다...",
+        timestamp: new Date()
+    }
+    setMessages(prev => [...prev, researchMessage])
+
+    // ✅ 깔끔한 원본 쿼리만 표시
+    const userMessage: Message = {
+        role: "user",
+        content: originalQuery,
+        timestamp: new Date()
+    }
+    setMessages(prev => [...prev, userMessage])
+    
+    try {
+        const currentUser = auth.currentUser
+        if (!currentUser) throw new Error("인증 오류")
+        
+        const idToken = await currentUser.getIdToken()
+        
+        // ✅ 쿼리는 그대로, 헤더에만 플래그 추가
+        const response = await fetch("https://aijob-server-712740047046.asia-northeast3.run.app/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Force-Refresh": "true",  // 백엔드에서 캐시 무시
+                "X-Refresh-Timestamp": Date.now().toString()
+            },
+            body: JSON.stringify({
+                message: originalQuery,  // ✅ 태그 없이 전송
+                token: idToken,
+                conversationHistory: messages.map(msg => ({
+                    role: msg.role === "assistant" ? "model" : "user",
+                    content: msg.content
+                })),
+                action: undefined
+            })
+        })
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        
+        const data = await response.json()
+        
+        if (data.success) {
+            const assistantMessage: Message = {
+                role: "assistant",
+                content: data.response,
+                timestamp: new Date(),
+                hasSearchResults: data.hasSearchResults || false,
+                searchSources: data.searchSources || []
+            }
+            setMessages(prev => [...prev, assistantMessage])
+        }
+        
+    } catch (error) {
+        console.error("재검색 실패:", error)
+        const errorMessage: Message = {
+            role: "assistant",
+            content: "❌ 재검색 중 오류가 발생했습니다.",
+            timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
+    } finally {
+        setIsResearching(false)
+    }
+}
+
+    const handleInitialSend = () => {
+        sendMessage(undefined, input)
+    }
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault()
+            handleInitialSend()
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    if (!user) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-black">
+                <Bot className="w-16 h-16 mb-4 text-primary" />
+                <h1 className="text-2xl font-bold mb-2 text-white">로그인이 필요합니다</h1>
+                <p className="text-gray-400">AI 챗봇을 사용하려면 로그인해주세요.</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col h-screen w-full bg-gradient-to-br from-gray-900 via-black to-gray-900">
+            {/* Header */}
+            <div className="bg-gray-900/95 backdrop-blur-sm w-full shadow-xl border-b border-blue-500/20">
+            <div className="w-full bg-transparent px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                        <Bot className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="font-bold text-xl text-white">모두AI 검색</h1>
+                        {remainingChats !== null && (
+                            <p className="text-sm text-blue-400">
+                                💬 남은 대화: {remainingChats}회
+                            </p>
+                        )}
+                    </div>
+                </div>
+                {/* <button
+                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="메뉴"
+                >
+                    <Menu className="w-4 h-4" />
+                </button> */}
+            </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
+                {messages.map((message, index) => (
+                    <div key={`${message.role}-${index}-${message.timestamp.getTime()}`}>
+                        <div
+                            className={cn(
+                                "flex gap-4 w-full max-w-4xl mx-auto",
+                                message.role === "user" ? "justify-end" : "justify-start"
+                            )}
+                        >
+                            <div className={cn(
+                                "flex gap-3 max-w-2xl",
+                                message.role === "user" ? "flex-row-reverse" : "flex-row"
+                            )}>
+                                <div
+                                    className={cn(
+                                        "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
+                                        message.role === "user"
+                                            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                                            : "bg-gradient-to-r from-gray-700 to-gray-800 text-gray-200 border border-gray-600"
+                                    )}
+                                >
+                                    {message.role === "user" ? (
+                                        <UserIcon className="w-5 h-5" />
+                                    ) : (
+                                        <Bot className="w-5 h-5" />
+                                    )}
+                                </div>
+                                <div
+                                    className={cn(
+                                        "px-4 py-3 rounded-2xl text-sm shadow-lg backdrop-blur-sm",
+                                        message.role === "user"
+                                            ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+                                            : "bg-gray-800/90 text-gray-100 border border-gray-700/50"
+                                    )}
+                                >
+                                    <p className="whitespace-pre-wrap break-words leading-relaxed">
+                                        {message.content}
+                                    </p>
+                                    <p
+                                        className={cn(
+                                            "text-xs mt-2 opacity-70",
+                                            message.role === "user" ? "text-blue-100" : "text-gray-400"
+                                        )}
+                                    >
+                                        {message.timestamp.toLocaleTimeString("ko-KR", {
+                                            hour: "2-digit",
+                                            minute: "2-digit"
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 검색 결과 카드 표시 */}
+                        {message.role === "assistant" && message.hasSearchResults && message.searchSources && message.searchSources.length > 0 && (
+                            <SearchSourcesCard
+                                sources={message.searchSources}
+                                summary={message.content}
+                                onSave={() => handleSaveSearchResult(message)}
+                                onResearch={() => {
+                                    // 바로 이전 사용자 메시지 찾기
+                                    let userQuery = ""
+                                    for (let i = index - 1; i >= 0; i--) {
+                                        if (messages[i].role === "user") {
+                                            userQuery = messages[i].content
+                                            break
+                                        }
+                                    }
+                                    if (userQuery) {
+                                        handleResearch(userQuery)
+                                    }
+                                }}
+                                onSaveIndividual={handleSaveIndividualSource}
+                                isSaving={isSaving}
+                                isResearching={isResearching}
+                                savingIndividualIndex={savingIndividualIndex}
+                            />
+                        )}
+                    </div>
+                ))}
+
+                {showConfirmation && messages.length > 0 && (
+                    <ConfirmationPrompt
+                        onConfirm={handleConfirmationAction}
+                        lastMessageContent={messages[messages.length - 1].content}
+                    />
+                )}
+
+                {isLoading && (
+                    <div className="flex gap-4 w-full max-w-4xl mx-auto justify-start">
+                        <div className="flex gap-3 max-w-2xl">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-center shadow-lg border border-gray-600">
+                                <Bot className="w-5 h-5 text-gray-200" />
+                            </div>
+                            <div className="px-4 py-3 rounded-2xl bg-gray-800/90 border border-gray-700/50 shadow-lg backdrop-blur-sm">
+                                <div className="flex gap-1">
+                                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
+                                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.1s]" />
+                                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input - Fixed Bottom */}
+            <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-blue-500/20 p-6 shadow-2xl">
+                <div className="w-full max-w-4xl mx-auto">
+                    <div className="flex gap-4">
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="💬 검색어를 입력하세요..."
+                            disabled={isLoading}
+                            className="flex-1 px-6 py-4 text-base border border-gray-600/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-800/50 bg-gray-800/80 text-white placeholder-gray-400 shadow-lg backdrop-blur-sm transition-all duration-200"
+                        />
+                        <button
+                            onClick={handleInitialSend}
+                            disabled={isLoading || !input.trim()}
+                            className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 shadow-lg transform hover:scale-105"
+                            aria-label="메시지 전송"
+                        >
+                            <Send className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <p className="text-center text-sm text-blue-400/80 mt-3">
+                        ✨ AI 검색은 실시간 정보를 수집하여 답변합니다
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
 }

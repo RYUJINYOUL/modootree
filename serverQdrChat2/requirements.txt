@@ -1,0 +1,14 @@
+langgraph>=0.6.1
+langgraph-checkpoint-firestore
+uvicorn
+fastapi
+google-generativeai
+firebase-admin
+pydantic
+qdrant-client
+google-cloud-firestore
+trafilatura
+youtube-search
+requests
+flask
+flask-cors
