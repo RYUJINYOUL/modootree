@@ -80,39 +80,90 @@ export default function MemoPage() {
     date: new Date()
   });
 
-  // 이미지 최적화 함수
+  // 이미지 최적화 함수 (신형 기종 호환성 개선)
   const optimizeImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<File> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // 파일이 이미 작으면 최적화 건너뛰기 (1MB 미만)
+      if (file.size < 1024 * 1024) {
+        console.log('파일 크기가 작아 최적화 건너뛰기:', file.size);
+        resolve(file);
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const img = document.createElement('img');
+      const img = document.createElement('img') as HTMLImageElement; // ✅ TypeScript 호환 표준 방법
+      
+      // 전체 프로세스 타임아웃 (신형 기종의 지연 대응)
+      const mainTimeout = setTimeout(() => {
+        console.warn('이미지 최적화 타임아웃 - 원본 파일 사용');
+        URL.revokeObjectURL(img.src);
+        resolve(file);
+      }, 15000); // 15초 타임아웃
       
       img.onload = () => {
-        // 비율 유지하면서 리사이징
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-        const newWidth = img.width * ratio;
-        const newHeight = img.height * ratio;
-        
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-        
-        // 이미지 그리기
-        ctx?.drawImage(img, 0, 0, newWidth, newHeight);
-        
-        // Blob으로 변환
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const optimizedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-            resolve(optimizedFile);
-          } else {
-            resolve(file); // 최적화 실패 시 원본 반환
-          }
-        }, 'image/jpeg', quality);
+        try {
+          // 메모리 해제
+          URL.revokeObjectURL(img.src);
+          
+          // 비율 유지하면서 리사이징
+          const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+          const newWidth = img.width * ratio;
+          const newHeight = img.height * ratio;
+          
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+          
+          // 이미지 그리기
+          ctx?.drawImage(img, 0, 0, newWidth, newHeight);
+          
+          let blobCallbackCalled = false;
+          
+          // Blob으로 변환
+          canvas.toBlob((blob) => {
+            if (blobCallbackCalled) return; // 중복 호출 방지
+            blobCallbackCalled = true;
+            clearTimeout(mainTimeout);
+            
+            if (blob) {
+              const optimizedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              console.log('이미지 최적화 성공:', file.size, '→', blob.size);
+              resolve(optimizedFile);
+            } else {
+              console.warn('Canvas toBlob 실패 - 원본 파일 사용');
+              resolve(file);
+            }
+          }, 'image/jpeg', quality);
+          
+          // toBlob 콜백이 호출되지 않는 경우를 대비한 추가 타임아웃
+          setTimeout(() => {
+            if (!blobCallbackCalled) {
+              blobCallbackCalled = true;
+              clearTimeout(mainTimeout);
+              console.warn('toBlob 콜백 지연 - 원본 파일 사용');
+              resolve(file);
+            }
+          }, 8000); // 8초 후 강제 해제
+          
+        } catch (error) {
+          clearTimeout(mainTimeout);
+          console.error('이미지 최적화 오류:', error);
+          resolve(file);
+        }
       };
       
+      img.onerror = () => {
+        clearTimeout(mainTimeout);
+        URL.revokeObjectURL(img.src);
+        console.error('이미지 로드 실패');
+        resolve(file);
+      };
+      
+      // CORS 문제 방지
+      img.crossOrigin = 'anonymous';
       img.src = URL.createObjectURL(file);
     });
   };

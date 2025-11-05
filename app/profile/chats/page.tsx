@@ -114,12 +114,11 @@ export default function ChatsPage() {
       // 토큰 가져오기
       const token = await auth.currentUser.getIdToken(true);
 
-      // AI에게 일기 작성 요청
-      const response = await fetch('/api/ai-comfort', {
+      // AI에게 일기 작성 요청 (새로운 전용 API 사용)
+      const response = await fetch('/api/ai-diary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: '이 대화를 일기로 작성해줘',
           token,
           conversationHistory: chat.messages
         })

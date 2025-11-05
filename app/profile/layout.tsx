@@ -522,7 +522,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           {/* 채팅 영역 */}
           <div className="flex-1 p-4 overflow-y-auto">
             <iframe
-              src="/ai-comfort"
+              src="/search"
               className="w-full h-full border-0 bg-transparent"
               title="AI Chat"
             />
@@ -568,7 +568,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           {/* 채팅 영역 */}
           <div className="flex-1 p-4 overflow-y-auto">
             <iframe
-              src="/ai-comfort"
+              src="/search"
               className="w-full h-full border-0 bg-transparent"
               title="AI Chat"
             />

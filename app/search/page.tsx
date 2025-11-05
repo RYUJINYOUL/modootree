@@ -1,17 +1,37 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Send, Bot, User as UserIcon, Loader2, Menu, ExternalLink, Save, RefreshCw } from "lucide-react"
+import { Send, Bot, User as UserIcon, Loader2, Menu, ExternalLink, Save, RefreshCw, ArrowLeft, Search, User, Heart, MessageSquare, Mail, MessageCircle } from "lucide-react"
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import Particles from "react-tsparticles"
+import { loadFull } from "tsparticles"
 import { cn } from "@/lib/utils"
 import useAuth from '@/hooks/useAuth'
 import { auth, db } from "@/firebase"
-import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore"
+import { saveChat, loadChat, ChatMessage } from '@/lib/comfort-chat-service'
 
+// 타입 변환 함수들
+const convertChatMessageToMessage = (chatMessage: ChatMessage): Message => ({
+    role: chatMessage.role === 'ai' ? 'assistant' : chatMessage.role,
+    content: chatMessage.content,
+    timestamp: chatMessage.timestamp,
+    needsConfirmation: false,
+    hasSearchResults: false,
+    searchSources: []
+})
+
+const convertMessageToChatMessage = (message: Message): ChatMessage => ({
+    role: message.role === 'assistant' ? 'ai' : message.role,
+    content: message.content,
+    timestamp: message.timestamp instanceof Timestamp ? message.timestamp : Timestamp.fromDate(new Date(message.timestamp))
+})
 
 interface Message {
     role: "user" | "assistant"
     content: string
-    timestamp: Date
+    timestamp: Date | Timestamp
     needsConfirmation?: boolean
     hasSearchResults?: boolean
     searchSources?: SourceItem[]
@@ -191,11 +211,18 @@ const SearchSourcesCard: React.FC<SearchSourcesCardProps> = ({
 // --- Chatbotpage 컴포넌트 ---
 export default function SearchChatPage() {
     const { user, loading } = useAuth()
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    
+    // 파티클 초기화 함수 (메인 페이지와 동일)
+    const particlesInit = useCallback(async (engine: any) => {
+        await loadFull(engine);
+    }, []);
     const [messages, setMessages] = useState<Message[]>([
         {
             role: "assistant",
             content: "안녕하세요! 모두AI 검색 상담사입니다. 궁금한 것을 물어보세요!",
-            timestamp: new Date()
+            timestamp: Timestamp.fromDate(new Date())
         }
     ])
     const [input, setInput] = useState("")
@@ -212,9 +239,66 @@ export default function SearchChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
-    useEffect(() => {
+  useEffect(() => {
         scrollToBottom()
     }, [messages])
+
+    // 대화 내역 불러오기 (AI 위로 채팅과 동일한 로직)
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                return;
+            }
+
+            try {
+                console.log('검색 대화 내역 불러오기 시도:', user.uid);
+                const chatMessages = await loadChat(user.uid);
+                console.log('불러온 검색 메시지들:', chatMessages);
+                
+                if (chatMessages && chatMessages.length > 0) {
+                    // ChatMessage를 Message로 변환
+                    const convertedMessages = chatMessages.map(convertChatMessageToMessage);
+                    
+                    // 초기 AI 인사말과 불러온 메시지를 합치되, 중복 제거
+                    const initialMessage = messages[0];
+                    const hasInitialMessage = convertedMessages.some(msg => 
+                        msg.role === 'assistant' && msg.content.includes('안녕하세요! 모두AI 검색 상담사입니다')
+                    );
+                    
+                    if (hasInitialMessage) {
+                        setMessages(convertedMessages);
+                    } else {
+                        setMessages([initialMessage, ...convertedMessages]);
+                    }
+                }
+            } catch (error) {
+                console.error('검색 대화 내역 불러오기 실패:', error);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [])
+
+    // 초기 메시지 처리 (메인 페이지에서 전달된 메시지)
+    useEffect(() => {
+        const initialMessage = searchParams.get('initialMessage');
+        if (initialMessage && user && !loading) {
+            // URL 파라미터 제거
+            const url = new URL(window.location.href);
+            url.searchParams.delete('initialMessage');
+            window.history.replaceState({}, '', url.toString());
+            
+            // 입력창에 메시지 설정하고 자동 전송
+            setInput(initialMessage);
+            
+            // 약간의 지연 후 자동 전송 (UI가 완전히 로드된 후)
+            setTimeout(() => {
+                if (initialMessage.trim()) {
+                    sendMessage(undefined, initialMessage);
+                }
+            }, 500);
+        }
+    }, [user, loading, searchParams])
 
     const showConfirmation = messages.length > 0
         && messages[messages.length - 1].content === CONFIRMATION_MESSAGE
@@ -230,9 +314,18 @@ export default function SearchChatPage() {
             userMessage = {
                 role: "user",
                 content: messageToSend,
-                timestamp: new Date()
+                timestamp: Timestamp.fromDate(new Date())
             }
             setMessages(prev => [...prev, userMessage])
+            
+            // 대화 저장
+            try {
+                await saveChat(user.uid, convertMessageToChatMessage(userMessage));
+                console.log('사용자 메시지 저장 완료');
+            } catch (saveError) {
+                console.error('사용자 메시지 저장 실패:', saveError);
+            }
+            
             setOriginalMessageToSave(messageToSend)
         }
 
@@ -289,12 +382,20 @@ export default function SearchChatPage() {
                 const assistantMessage: Message = {
                     role: "assistant",
                     content: data.response,
-                    timestamp: new Date(),
+                    timestamp: Timestamp.fromDate(new Date()),
                     needsConfirmation: data.needsConfirmation || false,
                     hasSearchResults: data.hasSearchResults || false,
                     searchSources: data.searchSources || []
                 }
                 setMessages(prev => [...prev, assistantMessage])
+                
+                // AI 응답 저장
+                try {
+                    await saveChat(user.uid, convertMessageToChatMessage(assistantMessage));
+                    console.log('AI 응답 저장 완료');
+                } catch (saveError) {
+                    console.error('AI 응답 저장 실패:', saveError);
+                }
 
                 if (data.remainingChats !== undefined) {
                     setRemainingChats(data.remainingChats)
@@ -302,12 +403,12 @@ export default function SearchChatPage() {
             } else {
                 throw new Error(data.response || "응답을 받지 못했습니다.")
             }
-        } catch (error) {
+    } catch (error) {
             console.error("Error:", error)
             const errorMessage: Message = {
                 role: "assistant",
                 content: "죄송합니다. 오류가 발생했습니다. 다시 시도해 주세요.",
-                timestamp: new Date()
+                timestamp: Timestamp.fromDate(new Date())
             }
             setMessages(prev => [...prev, errorMessage])
         } finally {
@@ -348,7 +449,7 @@ export default function SearchChatPage() {
             const successMessage: Message = {
                 role: "assistant",
                 content: "✅ 검색 결과가 저장되었습니다!",
-                timestamp: new Date()
+                timestamp: Timestamp.fromDate(new Date())
             }
             setMessages(prev => [...prev, successMessage])
 
@@ -357,7 +458,7 @@ export default function SearchChatPage() {
             const errorMessage: Message = {
                 role: "assistant",
                 content: "❌ 저장 중 오류가 발생했습니다. 다시 시도해 주세요.",
-                timestamp: new Date()
+                timestamp: Timestamp.fromDate(new Date())
             }
             setMessages(prev => [...prev, errorMessage])
         } finally {
@@ -393,7 +494,7 @@ export default function SearchChatPage() {
             const successMessage: Message = {
                 role: "assistant",
                 content: `✅ "${source.title}" 출처가 저장되었습니다!`,
-                timestamp: new Date()
+                timestamp: Timestamp.fromDate(new Date())
             }
             setMessages(prev => [...prev, successMessage])
 
@@ -402,7 +503,7 @@ export default function SearchChatPage() {
             const errorMessage: Message = {
                 role: "assistant",
                 content: "❌ 출처 저장 중 오류가 발생했습니다. 다시 시도해 주세요.",
-                timestamp: new Date()
+                timestamp: Timestamp.fromDate(new Date())
             }
             setMessages(prev => [...prev, errorMessage])
         } finally {
@@ -418,7 +519,7 @@ const handleResearch = async (originalQuery: string) => {
     const researchMessage: Message = {
         role: "assistant",
         content: "🔍 새로운 정보로 다시 검색하고 있습니다...",
-        timestamp: new Date()
+        timestamp: Timestamp.fromDate(new Date())
     }
     setMessages(prev => [...prev, researchMessage])
 
@@ -426,7 +527,7 @@ const handleResearch = async (originalQuery: string) => {
     const userMessage: Message = {
         role: "user",
         content: originalQuery,
-        timestamp: new Date()
+        timestamp: Timestamp.fromDate(new Date())
     }
     setMessages(prev => [...prev, userMessage])
     
@@ -437,7 +538,7 @@ const handleResearch = async (originalQuery: string) => {
         const idToken = await currentUser.getIdToken()
         
         // ✅ 쿼리는 그대로, 헤더에만 플래그 추가
-        const response = await fetch("https://aijob-server-712740047046.asia-northeast3.run.app/chat", {
+        const response = await fetch("https://aijob-server-2dwga2mlya-du.a.run.app/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -463,7 +564,7 @@ const handleResearch = async (originalQuery: string) => {
             const assistantMessage: Message = {
                 role: "assistant",
                 content: data.response,
-                timestamp: new Date(),
+                timestamp: Timestamp.fromDate(new Date()),
                 hasSearchResults: data.hasSearchResults || false,
                 searchSources: data.searchSources || []
             }
@@ -475,7 +576,7 @@ const handleResearch = async (originalQuery: string) => {
         const errorMessage: Message = {
             role: "assistant",
             content: "❌ 재검색 중 오류가 발생했습니다.",
-            timestamp: new Date()
+            timestamp: Timestamp.fromDate(new Date())
         }
         setMessages(prev => [...prev, errorMessage])
     } finally {
@@ -512,12 +613,138 @@ const handleResearch = async (originalQuery: string) => {
         )
     }
 
-    return (
-        <div className="flex flex-col h-screen w-full bg-gradient-to-br from-gray-900 via-black to-gray-900">
+  return (
+        <div className="flex flex-col h-screen w-full bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
+            {/* 파티클 배경 */}
+            <Particles
+                id="tsparticles"
+                init={particlesInit}
+                options={{
+                    background: {
+                        color: {
+                            value: "transparent",
+                        },
+                    },
+                    fpsLimit: 60,
+                    interactivity: {
+                        events: {
+                            onClick: {
+                                enable: true,
+                                mode: "push",
+                            },
+                            onHover: {
+                                enable: false,
+                                mode: "repulse",
+                            },
+                            resize: true,
+                        },
+                        modes: {
+                            push: {
+                                quantity: 4,
+                            },
+                            repulse: {
+                                distance: 200,
+                                duration: 0.4,
+                            },
+                        },
+                    },
+                    particles: {
+                        color: {
+                            value: ["#ffffff", "#87CEEB", "#4169E1", "#00BFFF"]
+                        },
+                        links: {
+                            color: "#ffffff",
+                            distance: 150,
+                            enable: true,
+                            opacity: 0.1,
+                            width: 1,
+                        },
+                        collisions: {
+                            enable: true,
+                        },
+                        move: {
+                            direction: "none",
+                            enable: true,
+                            outModes: {
+                                default: "bounce",
+                            },
+                            random: true,
+                            speed: { min: 0.05, max: 0.1 },
+                            straight: false,
+                            attract: {
+                                enable: true,
+                                rotate: {
+                                    x: 600,
+                                    y: 1200
+                                }
+                            }
+                        },
+                        number: {
+                            density: {
+                                enable: true,
+                                area: 800
+                            },
+                            value: 80
+                        },
+                        opacity: {
+                            animation: {
+                                enable: true,
+                                minimumValue: 0.1,
+                                speed: 1,
+                                sync: false
+                            },
+                            random: true,
+                            value: { min: 0.1, max: 0.4 }
+                        },
+                        shape: {
+                            type: "circle"
+                        },
+                        size: {
+                            animation: {
+                                enable: true,
+                                minimumValue: 0.1,
+                                speed: 2,
+                                sync: false
+                            },
+                            random: true,
+                            value: { min: 1, max: 2 }
+                        },
+                        twinkle: {
+                            lines: {
+                                enable: true,
+                                frequency: 0.001,
+                                opacity: 0.1,
+                                color: {
+                                    value: ["#ffffff", "#87CEEB"]
+                                }
+                            },
+                            particles: {
+                                enable: true,
+                                frequency: 0.001,
+                                opacity: 0.1,
+                                color: {
+                                    value: ["#ffffff", "#87CEEB"]
+                                }
+                            }
+                        }
+                    },
+                    detectRetina: true,
+                }}
+                className="absolute inset-0 z-0"
+            />
+            
             {/* Header */}
-            <div className="bg-gray-900/95 backdrop-blur-sm w-full shadow-xl border-b border-blue-500/20">
+            <div className="bg-gray-900/95 backdrop-blur-sm w-full shadow-xl border-b border-blue-500/20 relative z-10">
             <div className="w-full bg-transparent px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
+                    {/* 뒤로가기 버튼 */}
+                    <button
+                        onClick={() => router.back()}
+                        className="w-10 h-10 bg-gray-800/80 hover:bg-gray-700/80 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105"
+                        title="뒤로가기"
+                    >
+                        <ArrowLeft className="w-5 h-5 text-white" />
+                    </button>
                     <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
                         <Bot className="w-6 h-6 text-white" />
                     </div>
@@ -527,8 +754,8 @@ const handleResearch = async (originalQuery: string) => {
                             <p className="text-sm text-blue-400">
                                 💬 남은 대화: {remainingChats}회
                             </p>
-                        )}
-                    </div>
+          )}
+        </div>
                 </div>
                 {/* <button
                     className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
@@ -540,15 +767,43 @@ const handleResearch = async (originalQuery: string) => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
-                {messages.map((message, index) => (
-                    <div key={`${message.role}-${index}-${message.timestamp.getTime()}`}>
-                        <div
-                            className={cn(
-                                "flex gap-4 w-full max-w-4xl mx-auto",
-                                message.role === "user" ? "justify-end" : "justify-start"
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32 relative z-10">
+                {messages.map((message, index) => {
+                    // 날짜별 구분선 표시 (AI 위로 채팅과 동일한 로직)
+                    const currentDate = message.timestamp instanceof Timestamp ? 
+                        message.timestamp.toDate() : 
+                        message.timestamp instanceof Date ? 
+                            message.timestamp : 
+                            new Date(message.timestamp);
+                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                    const prevDate = prevMessage ? 
+                        (prevMessage.timestamp instanceof Timestamp ? 
+                            prevMessage.timestamp.toDate() : 
+                            prevMessage.timestamp instanceof Date ? 
+                                prevMessage.timestamp : 
+                                new Date(prevMessage.timestamp)) : null;
+                    
+                    return (
+                        <div key={`${message.role}-${index}-${currentDate.getTime()}`}>
+                            {/* 날짜 구분선 */}
+                            {(!prevDate || currentDate.toDateString() !== prevDate.toDateString()) && (
+                                <div className="flex items-center justify-center my-6">
+                                    <div className="bg-gray-800/50 px-4 py-1 rounded-full text-sm text-gray-400">
+                                        {currentDate.toLocaleDateString('ko-KR', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            weekday: 'long'
+                                        })}
+                                    </div>
+                                </div>
                             )}
-                        >
+                            <div
+                                className={cn(
+                                    "flex gap-4 w-full mx-auto px-4",
+                                    message.role === "user" ? "justify-end" : "justify-start"
+                                )}
+                            >
                             <div className={cn(
                                 "flex gap-3 max-w-2xl",
                                 message.role === "user" ? "flex-row-reverse" : "flex-row"
@@ -556,50 +811,117 @@ const handleResearch = async (originalQuery: string) => {
                                 <div
                                     className={cn(
                                         "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
-                                        message.role === "user"
+                            message.role === "user" 
                                             ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                                             : "bg-gradient-to-r from-gray-700 to-gray-800 text-gray-200 border border-gray-600"
                                     )}
                                 >
-                                    {message.role === "user" ? (
+                            {message.role === "user" ? (
                                         <UserIcon className="w-5 h-5" />
-                                    ) : (
+                            ) : (
                                         <Bot className="w-5 h-5" />
-                                    )}
-                                </div>
+                            )}
+                    </div>
                                 <div
                                     className={cn(
                                         "px-4 py-3 rounded-2xl text-sm shadow-lg backdrop-blur-sm",
-                                        message.role === "user"
+                            message.role === "user"
                                             ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
                                             : "bg-gray-800/90 text-gray-100 border border-gray-700/50"
                                     )}
                                 >
                                     <p className="whitespace-pre-wrap break-words leading-relaxed">
-                                        {message.content}
-                                    </p>
+                                {message.content}
+                            </p>
+
+                                    {/* 상황별 퀵 액세스 버튼들 - AI 메시지에만 표시 */}
+                                    {message.role === "assistant" && (
+                                        <div className="flex flex-wrap gap-1.5 mt-3">
+                                           
+                                             {/* 메모/일기 관련 */}
+                                            {(message.content.includes('내 페이지')) && (
+                                                <Link 
+                                                    href="/profile" 
+                                                    className="inline-flex items-center gap-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-300 px-2.5 py-1.5 rounded-md border border-green-600/30 transition text-xs font-medium"
+                                                >
+                                                    <User className="w-3 h-3" />
+                                                    내 페이지
+                                                </Link>
+                                            )}
+                                            
+                                            {/* 건강 관련 */}
+                                            {message.content.includes('건강') && (
+                                                <Link 
+                                                    href="/health" 
+                                                    className="inline-flex items-center gap-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-2.5 py-1.5 rounded-md border border-red-600/30 transition text-xs font-medium"
+                                                >
+                                                    <Heart className="w-3 h-3" />
+                                                    건강 기록
+                                                </Link>
+                                            )}
+                                            
+                                            {/* 사연 관련 */}
+                                            {(message.content.includes('사연') || message.content.includes('투표') || message.content.includes('사진투표') || message.content.includes('뉴스투표')) && (
+                                                <Link 
+                                                    href="/modoo-ai" 
+                                                    className="inline-flex items-center gap-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-2.5 py-1.5 rounded-md border border-purple-600/30 transition text-xs font-medium"
+                                                >
+                                                    <MessageSquare className="w-3 h-3" />
+                                                    사연 AI
+                                                </Link>
+                                            )}
+
+                                            {/* 링크편지 관련 */}
+                                            {message.content.includes('링크편지') && (
+                                                <Link 
+                                                    href="/link-letter" 
+                                                    className="inline-flex items-center gap-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-2.5 py-1.5 rounded-md border border-yellow-600/30 transition text-xs font-medium"
+                                                >
+                                                    <Mail className="w-3 h-3" />
+                                                    링크편지
+                                                </Link>
+                                            )}
+
+                                            {/* 열린게시판 관련 */}
+                                            {(message.content.includes('문의') || message.content.includes('수정') || message.content.includes('모르겠어') || message.content.includes('찾을 수 없어') || message.content.includes('개선') || message.content.includes('게시판') || message.content.includes('고객센터') || message.content.includes('모두트리')) && (
+                                                <Link 
+                                                    href="/inquiry" 
+                                                    className="inline-flex items-center gap-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-2.5 py-1.5 rounded-md border border-yellow-600/30 transition text-xs font-medium"
+                                                >
+                                                    <MessageCircle className="w-3 h-3" />
+                                                    열린게시판
+                                                </Link>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <p
                                         className={cn(
-                                            "text-xs mt-2 opacity-70",
-                                            message.role === "user" ? "text-blue-100" : "text-gray-400"
+                                "text-xs mt-2 opacity-70",
+                                message.role === "user" ? "text-blue-100" : "text-gray-400"
                                         )}
                                     >
-                                        {message.timestamp.toLocaleTimeString("ko-KR", {
+                                        {(message.timestamp instanceof Timestamp ? 
+                                            message.timestamp.toDate() : 
+                                            message.timestamp instanceof Date ? 
+                                                message.timestamp : 
+                                                new Date(message.timestamp)
+                                        ).toLocaleTimeString("ko-KR", {
                                             hour: "2-digit",
                                             minute: "2-digit"
                                         })}
                                     </p>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
+                  </div>
+                    </div>
 
-                        {/* 검색 결과 카드 표시 */}
+                            {/* 검색 결과 카드 표시 */}
                         {message.role === "assistant" && message.hasSearchResults && message.searchSources && message.searchSources.length > 0 && (
-                            <SearchSourcesCard
-                                sources={message.searchSources}
-                                summary={message.content}
-                                onSave={() => handleSaveSearchResult(message)}
-                                onResearch={() => {
+                        <SearchSourcesCard
+                            sources={message.searchSources}
+                            summary={message.content}
+                            onSave={() => handleSaveSearchResult(message)}
+                            onResearch={() => {
                                     // 바로 이전 사용자 메시지 찾기
                                     let userQuery = ""
                                     for (let i = index - 1; i >= 0; i--) {
@@ -610,16 +932,17 @@ const handleResearch = async (originalQuery: string) => {
                                     }
                                     if (userQuery) {
                                         handleResearch(userQuery)
-                                    }
-                                }}
-                                onSaveIndividual={handleSaveIndividualSource}
-                                isSaving={isSaving}
-                                isResearching={isResearching}
-                                savingIndividualIndex={savingIndividualIndex}
-                            />
+                                }
+                            }}
+                            onSaveIndividual={handleSaveIndividualSource}
+                            isSaving={isSaving}
+                            isResearching={isResearching}
+                            savingIndividualIndex={savingIndividualIndex}
+                        />
                         )}
-                    </div>
-                ))}
+                        </div>
+                    )
+                })}
 
                 {showConfirmation && messages.length > 0 && (
                     <ConfirmationPrompt
@@ -629,7 +952,7 @@ const handleResearch = async (originalQuery: string) => {
                 )}
 
                 {isLoading && (
-                    <div className="flex gap-4 w-full max-w-4xl mx-auto justify-start">
+                    <div className="flex gap-4 w-full mx-auto px-4 justify-start">
                         <div className="flex gap-3 max-w-2xl">
                             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-center shadow-lg border border-gray-600">
                                 <Bot className="w-5 h-5 text-gray-200" />
@@ -639,42 +962,42 @@ const handleResearch = async (originalQuery: string) => {
                                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
                                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.1s]" />
                                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+          </div>
+            </div>
+              </div>
+          </div>
+        )}
                 <div ref={messagesEndRef} />
             </div>
 
             {/* Input - Fixed Bottom */}
-            <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-blue-500/20 p-6 shadow-2xl">
-                <div className="w-full max-w-4xl mx-auto">
+            <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-blue-500/20 p-6 shadow-2xl relative z-20">
+                <div className="w-full mx-auto">
                     <div className="flex gap-4">
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyPress={handleKeyPress}
                             placeholder="💬 검색어를 입력하세요..."
-                            disabled={isLoading}
+                        disabled={isLoading}
                             className="flex-1 px-6 py-4 text-base border border-gray-600/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-800/50 bg-gray-800/80 text-white placeholder-gray-400 shadow-lg backdrop-blur-sm transition-all duration-200"
-                        />
-                        <button
-                            onClick={handleInitialSend}
+                    />
+                    <button
+                        onClick={handleInitialSend}
                             disabled={isLoading || !input.trim()}
                             className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 shadow-lg transform hover:scale-105"
                             aria-label="메시지 전송"
-                        >
+                    >
                             <Send className="w-5 h-5" />
-                        </button>
+                    </button>
                     </div>
                     <p className="text-center text-sm text-blue-400/80 mt-3">
                         ✨ AI 검색은 실시간 정보를 수집하여 답변합니다
                     </p>
                 </div>
-            </div>
-        </div>
+              </div>
+          </div>
     )
 }

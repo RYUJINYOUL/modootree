@@ -54,7 +54,7 @@ export interface ArtGenerationParams {
     style: keyof typeof artStyles;
     colorMood: keyof typeof colorMoods;
     userId?: string;
-    imageData: string;  // base64 encoded image data (MIME 타입 포함)
+    imageData: string;  // base64 encoded image data (MIME 타입 포함)
 }
 
 /**
@@ -126,44 +126,22 @@ export const generateArtwork = async ({
         // 🚨 API 키를 환경 변수에서 가져옵니다. (Canvas 환경에서는 빈 문자열로 처리)
         const apiKey = typeof process !== 'undefined' && process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY : "";
 
+
         // **[수정됨] 프롬프트 로직 간소화 및 스타일 강조**
         
         // 극단적인 스타일(Cubism, Glitch 등)인 경우 내용 보존 규칙을 완화합니다.
         const isStructuralTransformation = structuralTransformationStyles.includes(style);
 
         const contentPreservationClause = isStructuralTransformation
-            ? `Transform the face creatively while keeping basic recognizability:
-               - Keep general facial shape and main features
-               - Maintain basic eye and mouth positions
-               - Allow artistic interpretation of details
-               - Feel free to enhance expressions
-               The style should be bold and transformative.`
-            : `Apply artistic style to the face while maintaining general likeness:
-               - Keep basic facial structure recognizable
-               - Allow creative interpretation of features
-               - Feel free to enhance or stylize details
-               - Maintain general expression
-               The face can be stylized to match the artistic theme.`;
+            ? `You must **MAINTAIN** the subject matter, gender, and general background but **RADICALLY TRANSFORM** the composition and structure to fully fit the artistic style. Ignore the original pose if necessary for the style.`
+            : `You must **STRICTLY MAINTAIN** the subject matter, composition, pose, gender, and background elements of the original photograph.`;
 
-        const prompt = `Transform this photograph into an artistic interpretation with creative freedom. Follow these guidelines:
+        const prompt = `Completely restyle the visual appearance of the uploaded photograph. This must be a dramatic, full style transfer, not a minor adjustment. Apply the following attributes:
 
-            1. ARTISTIC STYLE:
-               Apply the **${artStyles[style]}** style boldly:
-               - Transform the entire image including the face
-               - Create a dramatic artistic effect
-               - Feel free to interpret features creatively
-               - Make it visually striking and expressive
-            
-            2. COLOR TREATMENT:
-               Use **${colorMoods[colorMood]}** color palette:
-               - Apply artistic color interpretation
-               - Create mood-appropriate color effects
-               - Feel free to enhance and stylize colors
-            
-            3. BALANCE:
-               ${contentPreservationClause}
-            
-            GOAL: Create a striking artistic transformation that captures the essence while allowing creative interpretation. The result should be boldly artistic rather than strictly photographic.`.trim();
+            1. ART STYLE: Use the **${artStyles[style]}** style.
+            2. COLOR MOOD: Use a **${colorMoods[colorMood]}** color palette.
+            3. CONTENT PRESERVATION: ${contentPreservationClause}`.trim();
+
 
         // 🚨 Gemini API 호출을 위한 페이로드
         const payload = {

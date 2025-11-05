@@ -58,7 +58,7 @@ export default function Home() {
       return;
     }
 
-    const targetUrl = `/ai-comfort?initialMessage=${encodeURIComponent(inputMessage)}`;
+    const targetUrl = `/search?initialMessage=${encodeURIComponent(inputMessage)}`;
     console.log('handleSendMessage - 이동할 URL:', targetUrl);
     router.push(targetUrl);
     setInputMessage('');

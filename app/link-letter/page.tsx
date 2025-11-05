@@ -1011,13 +1011,6 @@ export default function LinkLetterPage() {
           <div className="h-20 md:h-32"></div>
         </div>
 
-        {/* AI 플로팅 버튼 */}
-        <Link
-          href="/ai-comfort"
-          className="fixed bottom-[80px] right-4 z-[40] w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group hover:scale-110"
-        >
-          <span className="text-white font-medium text-base">AI</span>
-        </Link>
       </main>
 
       {/* 편지 작성 모달 */}

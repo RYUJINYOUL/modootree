@@ -564,28 +564,13 @@ export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean
       </div>
     </main>
 
-    {/* 카카오톡 문의 플로팅 버튼 */}
-    <a
-      href="http://pf.kakao.com/_pGNPn/chat"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="fixed bottom-[125px] right-4 z-[40] w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg hover:bg-yellow-500 transition-all group"
-    >
-      <MessageSquareDashed className="w-5 h-5 fill-black stroke-[3]" />
-      <span className="absolute right-full mr-3 px-2 py-1 bg-black/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-        카카오톡 문의하기
-      </span>
-    </a>
 
     {/* AI 플로팅 버튼 */}
     <Link
-      href="/ai-comfort"
+      href="/search"
       className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
     >
       <span className="text-white font-medium text-base">AI</span>
-      <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-        모두트리 AI와 대화하기
-      </span>
     </Link>
 
     {/* 작성 모달 */}

@@ -14,6 +14,8 @@ import DayOneBook from '../template/DayOneBook';
 import DayOneCalendarTemplate from '../template/DayOneCalendarTemplate';
 
 export const ComponentLibrary: Record<string, React.FC<any>> = {
+  AI메모: DayOneBook,
+  AI캘린더: DayOneCalendarTemplate,
   제목: Title,
   설명: Description,
   구분선: Divider,
@@ -26,6 +28,4 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   달력: CalendarComponent,
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
-  AI메모: DayOneBook,
-  AI캘린더: DayOneCalendarTemplate,
 }; 
