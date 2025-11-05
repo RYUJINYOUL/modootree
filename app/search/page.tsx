@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, Suspense } from "react"
 import { Send, Bot, User as UserIcon, Loader2, Menu, ExternalLink, Save, RefreshCw, ArrowLeft, Search, User, Heart, MessageSquare, Mail, MessageCircle } from "lucide-react"
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -208,8 +208,8 @@ const SearchSourcesCard: React.FC<SearchSourcesCardProps> = ({
     )
 }
 
-// --- Chatbotpage 컴포넌트 ---
-export default function SearchChatPage() {
+// SearchParams를 사용하는 내부 컴포넌트
+function SearchChatContent() {
     const { user, loading } = useAuth()
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -999,5 +999,26 @@ const handleResearch = async (originalQuery: string) => {
                 </div>
               </div>
           </div>
+    )
+}
+
+// 로딩 컴포넌트
+function SearchPageLoading() {
+    return (
+        <div className="flex flex-col h-screen w-full bg-gradient-to-br from-gray-900 via-black to-gray-900 items-center justify-center">
+            <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                <p className="text-gray-400">검색 페이지를 불러오는 중...</p>
+            </div>
+        </div>
+    )
+}
+
+// 메인 컴포넌트 (Suspense로 감싸기)
+export default function SearchChatPage() {
+    return (
+        <Suspense fallback={<SearchPageLoading />}>
+            <SearchChatContent />
+        </Suspense>
     )
 }
