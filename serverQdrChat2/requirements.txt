@@ -12,3 +12,4 @@ youtube-search
 requests
 flask
 flask-cors
+gunicorn

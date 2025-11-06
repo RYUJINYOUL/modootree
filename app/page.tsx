@@ -31,7 +31,9 @@ export default function Home() {
   const suggestedQueries = [
     { text: "모두트리 내 페이지를 설명해줘" },
     { text: "오늘 대화 내용으로 일기 메모 건강 분석 가능해?" },
-    { text: "모투트리 문의 게시판은 어디에 있는거야?" }
+    { text: "모투트리 문의 게시판은 어디에 있는거야?" },
+    { text: "요즘 뜨는 유튜브 영상" },
+    { text: "강남 맛집 추천" }
   ];
 
 
@@ -58,7 +60,7 @@ export default function Home() {
       return;
     }
 
-    const targetUrl = `/search?initialMessage=${encodeURIComponent(inputMessage)}`;
+    const targetUrl = `/ai-comfort?initialMessage=${encodeURIComponent(inputMessage)}`;
     console.log('handleSendMessage - 이동할 URL:', targetUrl);
     router.push(targetUrl);
     setInputMessage('');

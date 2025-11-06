@@ -27,6 +27,13 @@ function SearchParamsHandler({ onInitialMessage }: { onInitialMessage: (message:
   return null;
 }
 
+// 1. intent 분기 함수 추가
+function getChatIntent(message: string): 'memo' | 'search' | 'comfort' {
+  if (/메모|일정|기록|저장/i.test(message)) return 'memo';
+  if (/검색|찾아줘|알려줘|정보|뉴스|최신|추천|유튜브/i.test(message)) return 'search';
+  return 'comfort';
+}
+
 export default function AiComfortPage() {
   const router = useRouter();
   const [comfortMessage, setComfortMessage] = useState('');
@@ -293,10 +300,10 @@ export default function AiComfortPage() {
             <h1 className="text-xl font-semibold">AI 채팅</h1>
           </div>
           <Link 
-            href="/search"
+            href="/profile"
             className="bg-[#56ab91]/80 hover:bg-[#56ab91] text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium"
           >
-            AI 지식 검색
+           내 페이지
           </Link>
         </div>
       </div>
@@ -366,16 +373,7 @@ export default function AiComfortPage() {
                           {/* 🆕 상황별 퀵 액세스 버튼들 - 텍스트 기반 매칭 */}
                           {msg.role === 'ai' && (
                             <div className="flex flex-wrap gap-1.5 mt-3">
-                              {/* 실시간 정보 관련 */}
-                              {(msg.content.includes('지식검색') || msg.content.includes('정보') || msg.content.includes('찾아줘') || msg.content.includes('최신') || msg.content.includes('맛집') || msg.content.includes('유튜브')) && (
-                                <Link 
-                                  href="/search" 
-                                  className="inline-flex items-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 px-2.5 py-1.5 rounded-md border border-blue-600/30 transition text-xs font-medium"
-                                >
-                                  <Search className="w-3 h-3" />
-                                  지식검색
-                                </Link>
-                              )}
+                             
                               
                               {/* 메모/일기 관련 */}
                               {(msg.content.includes('내 페이지')) && (
@@ -462,112 +460,62 @@ export default function AiComfortPage() {
           <form onSubmit={async (e) => {
             e.preventDefault();
             if (!comfortMessage.trim() || isComfortLoading) return;
-
             const user = auth.currentUser;
             if (!user) return;
-
-            const userMessage = comfortMessage;
+            const token = await user.getIdToken(true);
+            const intent = getChatIntent(comfortMessage);
+            const userMsg = {
+              role: 'user' as const,
+              content: comfortMessage,
+              timestamp: Timestamp.fromDate(new Date())
+            };
             setComfortMessage('');
             setIsComfortLoading(true);
-
+            setComfortConversation(prev => [...prev, userMsg, {role:'ai',content:'...',timestamp:Timestamp.fromDate(new Date()),isLoading:true}] );
+            await saveChat(user.uid, userMsg);
+            let aiMsg: ChatMessage | null = null;
             try {
-              if (!auth.currentUser) {
-                throw new Error('인증이 필요합니다.');
-              }
-              await auth.currentUser.reload();
-              const token = await auth.currentUser.getIdToken(true);
-              
-              const userMsg = {
-                role: 'user' as const,
-                content: userMessage,
-                timestamp: Timestamp.fromDate(new Date())
-              };
-              setComfortConversation(prev => [...prev, 
-                userMsg,
-                {
-                  role: 'ai' as const,
-                  content: '...',
+              if (intent === 'memo') {
+                const res = await fetch('/api/ai-save', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: userMsg.content, token })
+                });
+                const data = await res.json();
+                aiMsg = {
+                  role: 'ai',
+                  content: data.response || '메모 저장 답변을 불러오지 못했습니다.',
+                  timestamp: Timestamp.fromDate(new Date())
+                };
+              } else if (intent === 'search') {
+                const res = await fetch('https://aijob-server-712740047046.asia-northeast3.run.app/chat', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: userMsg.content, token, conversationHistory: comfortConversation })
+                });
+                const data = await res.json();
+                aiMsg = {
+                  role: 'ai',
+                  content: data.response || '검색 답변을 불러오지 못했습니다.',
                   timestamp: Timestamp.fromDate(new Date()),
-                  isLoading: true
-                }
-              ]);
-              await saveChat(auth.currentUser.uid, userMsg);
-
-              const response = await fetch('/api/ai-comfort', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  message: userMessage,
-                  token,
-                  conversationHistory: comfortConversation
-                })
-              });
-
-              const data = await response.json();
-              if (!data.success) throw new Error(data.error);
-
-              setRemainingChats(data.remainingChats);
-
-              const aiMsg = {
-                role: 'ai' as const,
-                content: data.response,
-                timestamp: Timestamp.fromDate(new Date()),
-                searchResults: data.searchResults
-              };
-              setComfortConversation(prev => 
-                prev.filter(msg => !('isLoading' in msg))
-              );
-              setComfortConversation(prev => [...prev, aiMsg]);
-              console.log('AI 답변 저장 시도 (메인):', aiMsg);
-              try {
-                await saveChat(auth.currentUser.uid, aiMsg);
-                console.log('AI 답변 저장 완료 (메인)');
-              } catch (saveError) {
-                console.error('AI 답변 저장 실패 (메인):', saveError);
-                // 저장 실패해도 UI에는 정상 응답 표시 유지
-              }
-
-            } catch (error: any) {
-              console.error('AI 상담 오류:', error);
-              
-              // 로딩 중인 메시지 제거
-              setComfortConversation(prev => 
-                prev.filter(msg => !('isLoading' in msg))
-              );
-              
-              let errorMsg;
-              if (error.message.includes('인증') || error.message.includes('로그인')) {
-                errorMsg = {
-                  role: 'ai' as const,
-                  content: '로그인이 만료되었습니다. 다시 로그인해주세요.',
-                  timestamp: Timestamp.fromDate(new Date())
+                  searchResults: data.sources || []   // <- 검색결과 연결
                 };
-                setComfortConversation(prev => [...prev, errorMsg]);
-                // 에러 메시지도 저장
-                try {
-                  if (auth.currentUser) {
-                    await saveChat(auth.currentUser.uid, errorMsg);
-                  }
-                } catch (saveError) {
-                  console.error('에러 메시지 저장 실패:', saveError);
-                }
-                router.push('/login');
               } else {
-                errorMsg = {
-                  role: 'ai' as const,
-                  content: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요. 🙏',
+                const res = await fetch('/api/ai-comfort', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: userMsg.content, token, conversationHistory: comfortConversation })
+                });
+                const data = await res.json();
+                aiMsg = {
+                  role: 'ai',
+                  content: data.response || '답변을 불러오지 못했습니다.',
                   timestamp: Timestamp.fromDate(new Date())
                 };
-                setComfortConversation(prev => [...prev, errorMsg]);
-                // 에러 메시지도 저장
-                try {
-                  if (auth.currentUser) {
-                    await saveChat(auth.currentUser.uid, errorMsg);
-                  }
-                } catch (saveError) {
-                  console.error('에러 메시지 저장 실패:', saveError);
-                }
               }
+              setComfortConversation(prev => prev.filter(msg => !('isLoading' in msg)));
+              setComfortConversation(prev => [...prev, aiMsg!]);
+              await saveChat(user.uid, aiMsg!);
+            } catch (err: any) {
+              setComfortConversation(prev => prev.filter(msg => !('isLoading' in msg)));
+              setComfortConversation(prev => [...prev, {role:'ai',content:'죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',timestamp: Timestamp.fromDate(new Date())}]);
             } finally {
               setIsComfortLoading(false);
             }

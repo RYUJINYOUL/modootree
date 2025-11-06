@@ -45,46 +45,7 @@ const cleanResponse = (text: string): string => {
   }
 };
 
-// AI Agent가 반환해야 할 새로운 JSON 스키마 정의 (다중 메모 처리)
-const AgentSchema: Schema = {
-  // 표준 JSON 스키마 타입 문자열 사용
-  type: SchemaType.OBJECT,
-  properties: {
-    action: {
-      // 표준 JSON 스키마 타입 문자열 사용
-      type: SchemaType.STRING,
-      description: "사용자가 요청한 행동 (SAVE_MEMO 또는 NONE 중 하나)",
-    },
-    userResponse: {
-      type: SchemaType.STRING,
-      description: "저장 완료 후 사용자에게 보여줄 친근하고 공감적인 응답 메시지. (예: '네, 메모가 저장되었어요!')",
-    },
-    // SAVE_MEMO 액션일 때 사용될 메모 항목의 배열
-    memoItems: {
-      // 표준 JSON 스키마 타입 문자열 사용
-      type: SchemaType.ARRAY,
-      description: "SAVE_MEMO 액션일 때 사용. 사용자 요청에서 추출된 하나 이상의 개별 메모 항목 리스트. 액션이 SAVE_MEMO가 아니면 비어있는 배열이어야 합니다.",
-      items: {
-        // 표준 JSON 스키마 타입 문자열 사용
-        type: SchemaType.OBJECT,
-        properties: {
-          content: {
-            // 표준 JSON 스키마 타입 문자열 사용
-            type: SchemaType.STRING,
-            description: "개별 메모 항목의 내용. (예: '10시 운동' 또는 '12시 점심 약속'). 간결하고 행동 지향적인 메모 형식으로 작성.",
-          },
-          isTomorrow: {
-            // 표준 JSON 스키마 타입 문자열 사용
-            type: SchemaType.BOOLEAN,
-            description: "이 메모 항목에 '내일' 키워드나 미래 날짜 언급이 포함되어 있으면 true, 아니면 false",
-          }
-        },
-        required: ['content', 'isTomorrow']
-      }
-    },
-  },
-  required: ['action', 'userResponse']
-};
+// 감정/위로 전용 - 메모 저장 기능 제거됨
 
 const systemInstruction = `당신은 모두트리의 AI 상담사입니다. 당신의 주요 역할은 사용자와 친근하고 공감적인 대화를 나누는 것입니다.
 
@@ -147,29 +108,10 @@ A: 모두트리는 내 페이지(기록 페이지)를 기반으로 유익한 커
 Q8. AI가 답변하지 못하는 질문이 있나요?
 A: 네, 현재 모두트리는 3시간마다 업데이트되어 저 또한 학습하지 못한 서비스가 있을 수 있습니다. 질문에 대한 답변을 잘 모르겠다면 열린게시판에서 글을 남기시거나 급한 업무이면 1:1채팅을 이용해주세요.
 
-[중요] JSON 응답 규칙:
-1. 이모지나 특수 문자를 사용하지 마세요
-2. 줄바꿈을 사용하지 마세요
-3. 응답은 반드시 단일 JSON 객체여야 합니다
-4. 마크다운이나 코드 블록을 사용하지 마세요
-
-[중요] 메모 작성 및 저장 규칙:
-
-1. 메모 작성 요청 키워드: "메모 작성", "메모 써줘"
-   - 메모 내용을 보여주고 "저장하시겠습니까?"라고 물어보기
-   
-2. 메모 저장 요청 키워드: "메모로 넣어줘", "메모 넣어줘", "메모로 저장", "메모 저장"
-   - 즉시 SAVE_MEMO 액션으로 저장
-
-위 키워드가 포함된 요청을 받으면:
-- 반드시 지정된 JSON 스키마로만 응답
-- 메모는 "action": "SAVE_MEMO" 사용
-- 절대로 "action": "create" 사용 금지
-- 절대로 "type" 필드 사용 금지
-- userResponse에는 이모지나 특수 문자를 사용하지 마세요
-
-일반 대화 요청인 경우:
-- 친근하고 공감적인 일반 텍스트로 응답`;
+[중요] 응답 규칙:
+- 항상 친근하고 공감적인 일반 텍스트로 응답
+- 사용자의 감정에 공감하고 위로를 제공
+- 메모 저장 요청이 있어도 "메모 저장은 메인 채팅창에서 이용해주세요"라고 안내`;
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
@@ -196,75 +138,16 @@ export async function POST(req: NextRequest): Promise<Response> {
         return NextResponse.json({ success: false, error: '일일 대화 한도(200회)를 초과했습니다. 내일 다시 시도해주세요.', remainingChats: 0 });
       }
 
-      // ----------------------------------------------------
-      // 1. AI Agent 의도 파악 및 설정
-      // ----------------------------------------------------
-      // 메모/일기 저장 키워드에 대한 허용 범위 확장
-      // 메모 작성/저장 의도 파악
-      const isWriteMemo = ['메모 작성', '메모 써줘'].some(keyword => 
-        message.toLowerCase().includes(keyword)
-      );
-      const isSaveMemo = ['메모로 넣어줘', '메모 넣어줘', '메모로 저장', '메모 저장'].some(keyword => 
-        message.toLowerCase().includes(keyword)
-      );
-
-      // 작성 또는 저장 액션 결정
-      const requiresStructuredOutput = isSaveMemo && !isWriteMemo;
-      const targetAction = isSaveMemo ? 'SAVE_MEMO' : 'NONE';
+      // 감정/위로 전용 - 단순화된 설정
       
-      let finalGenerationConfig: GenerationConfig = {
-          maxOutputTokens: 2048,
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40,
-        candidateCount: 1,
-      };
-      
-      let finalSystemInstruction = systemInstruction;
-      
-      // 요청이 저장 명령일 경우, 구조화된 JSON 응답을 강제합니다.
-      if (requiresStructuredOutput) {
-        finalGenerationConfig = {
-          ...finalGenerationConfig,
-          responseMimeType: 'application/json',
-          responseSchema: AgentSchema, // 업데이트된 스키마 사용
-        };
-        // JSON 응답이 필요할 때는 시스템 지침을 강화하여 JSON 생성을 강제
-        finalSystemInstruction = `
-          ${systemInstruction}
-          **[CRITICAL INSTRUCTION]** 당신은 지금 ${targetAction} 요청을 받았습니다.
-          **반드시** 주어진 JSON 스키마를 따라 응답해야 하며, action 필드는 "${targetAction}"로 설정해야 합니다.
-          **절대로** 일반 텍스트로 응답하지 마세요. 반드시 JSON 형식으로만 응답하세요.
-          **userResponse 필드는 필수**이며, 이모지나 특수문자를 사용하지 마세요.
-          
-          ${targetAction === 'SAVE_MEMO' ? `
-            사용자의 요청 내용을 분석하여 각 일정을 개별 항목으로 분리해주세요.
-            예시 입력: "10시 운동\\n12시 미팅\\n2시 면접"
-            예시 출력: {
-              "action": "SAVE_MEMO",
-              "userResponse": "네, 일정을 메모로 저장해드릴게요!",
-              "memoItems": [
-                { "content": "10시 운동", "isTomorrow": false }, // 오늘 일정일 경우 false
-                { "content": "내일 12시 미팅", "isTomorrow": true }, // 내일 일정일 경우 true
-                { "content": "2시 면접", "isTomorrow": false }
-              ]
-            }
-            각 메모 항목은 반드시 시간과 내용을 포함해야 하며, '내일'이나 미래 날짜가 언급된 경우 isTomorrow를 true로 설정하세요.
-          ` : ''}
-          
-          절대로 일반 텍스트로 응답하지 마십시오.
-        `;
-      }
-      
-      // 모델 설정 (업데이트된 GenerationConfig 사용)
+      // 감정/위로 전용 모델 설정
       const model = genAI.getGenerativeModel({ 
         model: 'gemini-2.5-flash',
         generationConfig: {
-          ...finalGenerationConfig,
-          temperature: 0.1,  // 더 결정적인 응답을 위해 온도 낮춤
-          maxOutputTokens: 4096,  // 토큰 수 증가
-          topP: 0.1,  // 더 집중된 응답을 위해 낮춤
-          topK: 1,  // 가장 가능성 높은 토큰만 선택
+          maxOutputTokens: 2048,
+          temperature: 0.7,  // 자연스러운 대화를 위해 적절한 온도
+          topP: 0.8,
+          topK: 40,
         },
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -279,7 +162,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         `${msg.role === 'user' ? '사용자' : 'AI'}: ${cleanResponse(msg.content)}`
       ).join('\n\n');
 
-      const prompt = `${finalSystemInstruction}\n\n이전 대화 내용:\n${recentMessages}\n\n사용자: ${message}\n\nAI:`;
+      const prompt = `${systemInstruction}\n\n이전 대화 내용:\n${recentMessages}\n\n사용자: ${message}\n\nAI:`;
 
       let responseText = '';
       let retryCount = 0;
@@ -295,101 +178,8 @@ export async function POST(req: NextRequest): Promise<Response> {
             throw new Error('응답이 생성되지 않았습니다.');
           }
 
-          let responseData;
-          if (requiresStructuredOutput) {
-            // 구조화된 JSON 응답 처리 (Agent Logic)
-            try {
-              // 응답이 JSON이므로 파싱
-              const responseTextRaw = response.text();
-              console.log('AI 응답 텍스트 (Raw):', responseTextRaw);
-              
-              if (!responseTextRaw.trim()) {
-                throw new Error("AI 응답이 비어있습니다.");
-              }
-
-              // 응답 텍스트 전처리
-              let jsonText = responseTextRaw
-                .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}]/gu, '') // 이모지 제거
-                .replace(/[^\x20-\x7E\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/g, '') // 한글과 기본 ASCII만 유지
-                .replace(/```(?:json)?\n?([\s\S]*?)\n?```/g, '$1') // 코드 블록 제거
-                .trim();
-
-              // JSON 객체 찾기
-              const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-              if (!jsonMatch) {
-                console.log('JSON 형식이 아닌 응답 받음. 일반 대화로 전환');
-                responseText = '죄송해요, 말씀하신 내용을 정확히 이해하지 못했어요. 조금 더 자세히 설명해주시겠어요?';
-                break; // while 루프 종료하고 정상 저장 프로세스로
-              }
-
-              try {
-                responseData = JSON.parse(jsonMatch[0]);
-              } catch (parseError) {
-                console.log('JSON 파싱 실패. 일반 대화로 전환');
-                responseText = '죄송해요, 요청하신 내용이 조금 복잡한 것 같아요. 다른 방식으로 설명해주시겠어요?';
-                break; // while 루프 종료하고 정상 저장 프로세스로
-              }
-              console.log('파싱된 JSON:', responseData);
-
-              // 메모 저장 요청인데 유효한 메모 항목이 없는 경우
-              if (responseData.action === 'SAVE_MEMO' && (!Array.isArray(responseData.memoItems) || responseData.memoItems.length === 0)) {
-                console.log('메모 항목이 없음. 일반 대화로 전환');
-                responseText = '메모로 저장하고 싶으신 내용을 말씀해 주시겠어요? 예를 들어 "오후 3시 회의" 처럼 구체적으로 말씀해 주시면 도움이 될 것 같아요.';
-                break; // while 루프 종료하고 정상 저장 프로세스로
-              }
-            } catch (jsonError) {
-              console.error('JSON 파싱/검증 실패. 원본 응답:', response.text());
-              throw new Error('AI가 유효한 JSON을 반환하지 않았습니다.');
-            }
-
-            // JSON에서 action, userResponse 및 데이터 추출
-            const { action, userResponse, memoItems } = responseData;
-            
-            if (action === 'SAVE_MEMO') {
-              console.log('메모 저장 시작');
-              let savedCount = 0;
-              const memoRef = db.collection('users').doc(uid).collection('private_memos');
-
-              // 메모 항목 배열을 순회하며 개별적으로 저장
-              for (const item of memoItems) {
-                const isTomorrow = item.isTomorrow === true; // 불리언 타입 체크
-                
-                let saveDate;
-                if (isTomorrow) {
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  tomorrow.setHours(9, 0, 0, 0); 
-                  saveDate = tomorrow;
-                } else {
-                  saveDate = FieldValue.serverTimestamp();
-                }
-                
-                // private_memos 구조에 맞게 저장: content, date, status, images, createdAt, updatedAt
-                await memoRef.add({
-                  content: item.content, // <<<--- 개별 메모 콘텐츠 사용
-                  date: saveDate, 
-                  status: isTomorrow ? 'todo' : 'today',
-                  images: [], // 이미지는 빈 배열로 처리
-                  createdAt: FieldValue.serverTimestamp(),
-                  updatedAt: FieldValue.serverTimestamp()
-                });
-                savedCount++;
-              }
-              
-              // 사용자에게는 저장 완료 메시지와 함께 AI 응답도 보냄
-              const successMessage = `총 ${savedCount}개의 메모가 저장되었습니다.`;
-              const aiResponse = cleanResponse(userResponse || "메모 저장이 완료되었어요!");
-              responseText = `${successMessage}\n\n${aiResponse}`;
-
-            } else {
-                 // 모든 응답에서 JSON 형식 제거
-                 responseText = cleanResponse(userResponse || "죄송합니다. 요청을 이해했지만, 저장 작업은 실행하지 못했습니다.");
-            }
-            
-          } else {
-            // 일반 텍스트 응답 처리 (Chat Logic)
-            responseText = cleanResponse(response.text());
-          }
+          // 감정/위로 전용 - 일반 텍스트 응답만 처리
+          responseText = cleanResponse(response.text());
 
           console.log('유효한 응답 생성 성공');
           break;
@@ -399,13 +189,8 @@ export async function POST(req: NextRequest): Promise<Response> {
           retryCount++;
           
           if (retryCount === maxRetries) {
-            console.log('최대 재시도 횟수 도달. 일반 대화로 전환');
-            // 메모 저장 요청이었다면 더 구체적인 안내 제공
-            if (requiresStructuredOutput && targetAction === 'SAVE_MEMO') {
-              responseText = '메모 저장 요청을 받았지만 처리 중 문제가 발생했어요. 다시 한번 "10시 회의 메모 저장" 같은 형식으로 말씀해 주시겠어요?';
-            } else {
-              responseText = '죄송해요, 지금은 제가 말씀하신 내용을 제대로 처리하기 어려운 것 같아요. 잠시 후에 다시 말씀해 주시거나, 다른 방식으로 설명해 주시면 감사하겠습니다.';
-            }
+            console.log('최대 재시도 횟수 도달');
+            responseText = '죄송해요, 지금은 제가 말씀하신 내용을 제대로 처리하기 어려운 것 같아요. 잠시 후에 다시 말씀해 주시거나, 다른 방식으로 설명해 주시면 감사하겠습니다.';
             break;
           }
           

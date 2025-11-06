@@ -222,7 +222,7 @@ function SearchChatContent() {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: "assistant",
-            content: "안녕하세요! 모두AI 검색 상담사입니다. 궁금한 것을 물어보세요!",
+            content: "안녕하세요! 모두AI 채팅 상담사입니다. 검색, 감정 상담, 메모 저장 등 무엇이든 도와드릴게요!",
             timestamp: Timestamp.fromDate(new Date())
         }
     ])
@@ -236,13 +236,17 @@ function SearchChatContent() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
 
-    const scrollToBottom = () => {
+    const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    }
+    }, [])
+
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setInput(e.target.value);
+    }, []);
 
   useEffect(() => {
         scrollToBottom()
-    }, [messages])
+    }, [messages, scrollToBottom])
 
     // 대화 내역 불러오기 (AI 위로 채팅과 동일한 로직)
     useEffect(() => {
@@ -260,10 +264,15 @@ function SearchChatContent() {
                     // ChatMessage를 Message로 변환
                     const convertedMessages = chatMessages.map(convertChatMessageToMessage);
                     
-                    // 초기 AI 인사말과 불러온 메시지를 합치되, 중복 제거
-                    const initialMessage = messages[0];
+                    // 초기 AI 인사말 생성
+                    const initialMessage = {
+                        role: "assistant" as const,
+                        content: "안녕하세요! 모두AI 채팅 상담사입니다. 검색, 감정 상담, 메모 저장 등 무엇이든 도와드릴게요!",
+                        timestamp: Timestamp.fromDate(new Date())
+                    };
+                    
                     const hasInitialMessage = convertedMessages.some(msg => 
-                        msg.role === 'assistant' && msg.content.includes('안녕하세요! 모두AI 검색 상담사입니다')
+                        msg.role === 'assistant' && msg.content.includes('안녕하세요! 모두AI 채팅 상담사입니다')
                     );
                     
                     if (hasInitialMessage) {
@@ -345,21 +354,46 @@ function SearchChatContent() {
 
             const idToken = await currentUser.getIdToken()
 
-            // 🆕 메모 키워드 감지 로직
+            // 🆕 키워드 기반 라우팅 로직
             const memoKeywords = [
                 '메모 저장', '메모로 저장', '메모저장', '메모 넣어줘', 
                 '메모로 넣어줘', '메모 추가', '일정 추가', '일정 등록',
                 '기록 추가', '기록 저장', '저장해줘', '기록해줘'
             ];
+            
+            const comfortKeywords = [
+                '힘들어', '우울해', '슬퍼', '화나', '스트레스', '걱정', '불안',
+                '외로워', '답답해', '속상해', '기분', '감정', '위로', '공감',
+                '고민', '상담', '마음', '심리', '치유', '힐링', '괜찮아',
+                '안녕', '하이', '반가워', '고마워', '감사', '미안', '사랑',
+                '힘드', '춥', '덥', '피곤', '졸', '배고', '심심', '지루'
+            ];
+            
             const isMemoRequest = memoKeywords.some(keyword => 
+                currentInput.toLowerCase().includes(keyword)
+            );
+            
+            const isComfortRequest = comfortKeywords.some(keyword => 
                 currentInput.toLowerCase().includes(keyword)
             );
 
             let response;
 
             if (isMemoRequest) {
-                // 🆕 메모 저장: ai-comfort API 사용
-                console.log("메모 저장 요청 감지 - ai-comfort API 사용");
+                // 🆕 메모 저장: ai-save API 사용
+                console.log("메모 저장 요청 감지 - ai-save API 사용");
+                
+                response = await fetch('/api/ai-save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: currentInput,
+                        token: idToken
+                    })
+                });
+            } else if (isComfortRequest) {
+                // 🆕 감정/위로: ai-comfort API 사용
+                console.log("감정/위로 요청 감지 - ai-comfort API 사용");
                 
                 const conversationHistory = messages.map(msg => ({
                     role: msg.role === "assistant" ? "ai" : msg.role,
@@ -392,7 +426,7 @@ function SearchChatContent() {
                 action
                 });
 
-                response = await fetch("https://aijob-server-2dwga2mlya-du.a.run.app/chat", {
+                response = await fetch("https://aijob-server-712740047046.asia-northeast3.run.app/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -417,8 +451,8 @@ function SearchChatContent() {
 
             let assistantMessage: Message;
 
-            if (isMemoRequest) {
-                // 🆕 ai-comfort API 응답 처리
+            if (isMemoRequest || isComfortRequest) {
+                // 🆕 ai-save 또는 ai-comfort API 응답 처리
             if (data.success) {
                     assistantMessage = {
                     role: "assistant",
@@ -433,7 +467,8 @@ function SearchChatContent() {
                         setRemainingChats(data.remainingChats);
                     }
                 } else {
-                    throw new Error(data.error || "메모 저장 중 오류가 발생했습니다.");
+                    const errorMsg = isMemoRequest ? "메모 저장 중 오류가 발생했습니다." : "AI 상담 중 오류가 발생했습니다.";
+                    throw new Error(data.error || errorMsg);
                 }
             } else {
                 // ✅ Cloud Run 서버 응답 처리 (기존 로직)
@@ -443,8 +478,8 @@ function SearchChatContent() {
                         content: data.response,
                         timestamp: Timestamp.fromDate(new Date()),
                     needsConfirmation: data.needsConfirmation || false,
-                    hasSearchResults: data.hasSearchResults || false,
-                    searchSources: data.searchSources || []
+                    hasSearchResults: data.has_search_results || false,
+                    searchSources: data.sources || []
                     };
 
                 if (data.remainingChats !== undefined) {
@@ -600,7 +635,7 @@ const handleResearch = async (originalQuery: string) => {
         const idToken = await currentUser.getIdToken()
         
         // ✅ 쿼리는 그대로, 헤더에만 플래그 추가
-        const response = await fetch("https://aijob-server-2dwga2mlya-du.a.run.app/chat", {
+        const response = await fetch("https://aijob-server-712740047046.asia-northeast3.run.app/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -628,7 +663,7 @@ const handleResearch = async (originalQuery: string) => {
                 content: data.response,
                 timestamp: Timestamp.fromDate(new Date()),
                 hasSearchResults: data.hasSearchResults || false,
-                searchSources: data.searchSources || []
+                searchSources: data.sources || []
             }
             setMessages(prev => [...prev, assistantMessage])
         }
@@ -646,16 +681,16 @@ const handleResearch = async (originalQuery: string) => {
     }
 }
 
-    const handleInitialSend = () => {
+    const handleInitialSend = useCallback(() => {
         sendMessage(undefined, input)
-    }
+    }, [input, sendMessage])
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault()
             handleInitialSend()
         }
-    }
+    }, [input, isLoading])
 
     if (loading) {
         return (
@@ -811,7 +846,7 @@ const handleResearch = async (originalQuery: string) => {
                         <Bot className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="font-bold text-xl text-white">모두AI 검색</h1>
+                        <h1 className="font-bold text-xl text-white">모두AI 채팅</h1>
                         {remainingChats !== null && (
                             <p className="text-sm text-blue-400">
                                 💬 남은 대화: {remainingChats}회
@@ -1046,9 +1081,9 @@ const handleResearch = async (originalQuery: string) => {
                         ref={inputRef}
                         type="text"
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={handleInputChange}
                         onKeyPress={handleKeyPress}
-                            placeholder="💬 검색어를 입력하세요..."
+                            placeholder="💬 무엇이든 물어보세요... (검색, 감정상담, 메모저장)"
                         disabled={isLoading}
                             className="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base border border-gray-600/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-800/50 bg-gray-800/80 text-white placeholder-gray-400 shadow-lg backdrop-blur-sm transition-all duration-200"
                     />
@@ -1062,7 +1097,7 @@ const handleResearch = async (originalQuery: string) => {
                     </button>
                     </div>
                     <p className="text-center text-xs sm:text-sm text-blue-400/80 mt-2 sm:mt-3">
-                        ✨ AI 검색은 실시간 정보를 수집하여 답변합니다
+                        ✨ 키워드에 따라 자동으로 검색/상담/저장 기능을 제공합니다
                     </p>
                 </div>
               </div>

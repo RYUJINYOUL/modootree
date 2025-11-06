@@ -45,44 +45,15 @@ class SearchCategory(Enum):
     VIDEO = "video"
     MUSIC = "music"
     GENERAL = "general"
-    CHAT = "chat"        # 일반 대화
 
 def classify_query(query: str) -> Tuple[SearchCategory, str]:
-    """쿼리 분류"""
+    """쿼리 분류 (검색 전용)"""
     # ✅ 1. 먼저 refresh 태그 제거
     clean_q = clean_query(query)
     q = clean_q.lower()
     
     if query != clean_q:
         print(f"[쿼리 정제] 원본: '{query}' → 정제됨: '{clean_q}'")
-    
-    # 🆕 일반 대화 패턴 감지 (최우선) - 확장된 감정/일상 표현
-    chat_patterns = [
-        # 인사
-        "안녕", "하이", "hello", "hi", "헬로", "반가워", "처음", "만나서",
-        
-        # 감정 표현 (확장)
-        "좋은", "나쁜", "기분", "고마워", "감사", "미안", "죄송", "사랑", "행복", 
-        "슬프", "화나", "짜증", "힘들", "우울", "외로", "불안", "걱정", "두려",
-        "무서", "기쁘", "즐거", "신나", "재밌", "지루", "답답", "속상", "서운",
-        "부러", "질투", "창피", "부끄", "당황", "놀라", "신기", "이상", "궁금",
-        
-        # 일상 대화
-        "어제", "오늘", "내일", "계획", "뭐했어", "뭐해", "심심해", "재미있어",
-        "괜찮아", "잘했어", "수고했어", "피곤해", "배고파", "졸려", "아파", "힘들어",
-        "바빠", "여유", "쉬고", "놀고", "일하고", "공부하고", "먹고", "자고",
-        
-        # 단순 표현
-        "그래", "맞아", "아니야", "몰라", "알겠어", "이해", "동감", "공감",
-        "정말", "진짜", "완전", "너무", "엄청", "되게", "많이", "조금",
-        
-        # 일상적 질문 (검색이 아닌)
-        "어떻게 생각해", "어떤 기분", "괜찮을까", "어떨까", "맞을까", "좋을까"
-    ]
-    
-    # 인사/감정/일상 대화는 CHAT으로
-    if any(pattern in q for pattern in chat_patterns):
-        return SearchCategory.CHAT, clean_q
     
     # 검색 키워드 매칭 (확장된 범위)
     keywords = {
@@ -437,7 +408,7 @@ def perform_search(query: str, genai_client, naver_id: str = None, naver_secret:
         # LLM 호출
         import google.generativeai as genai
         model = genai.GenerativeModel(
-            model_name='gemini-2.0-flash-lite',
+            model_name='gemini-2.0-flash',
             generation_config={
                 "temperature": 0.3,
                 "max_output_tokens": 600

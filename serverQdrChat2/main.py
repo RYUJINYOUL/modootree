@@ -48,7 +48,7 @@ class MemoryCache:
                     self.cache.move_to_end(key)
                     print(f"💾 캐시 히트: '{query}' (만료까지 {self.ttl - (time.time() - cached_data['timestamp']):.0f}초)")
                     return cached_data["data"]
-                else:
+            else:
                     # 만료된 캐시 삭제
                     print(f"⏰ 캐시 만료: '{query}'")
                     del self.cache[key]
@@ -201,47 +201,6 @@ async def check_and_update_chat_limit(uid: str) -> dict:
         print(f"Error checking chat limit: {e}")
         return {"canChat": False, "remainingChats": 0}
 
-# 🚨 메모 저장 로직 집중 개선 (로그 추가 및 DB 구조 명시)
-def save_memos_to_firestore(uid: str, memo_items: List[dict], db: firestore.client) -> int:
-    """
-    Agent에서 추출한 메모 항목 리스트를 받아 Firestore에 저장합니다.
-    구조: collections/users/documents/{uid}/collections/private_memos/documents/{memo_id}
-    """
-    if not db:
-        print("❌ Firestore 클라이언트가 초기화되지 않았습니다. 저장 실패.")
-        return 0
-        
-    saved_count = 0
-    
-    # AI 위로 채팅과 동일한 구조로 변경
-    user_memo_collection_ref = (
-        db.collection('users')
-        .document(uid)
-        .collection('private_memos')
-    )
-    
-    for item in memo_items:
-        try:
-            # 저장할 데이터
-            memo_data = {
-                "content": item.get("content", "내용 없음"), 
-                "created_at": datetime.now(timezone.utc),
-                "is_completed": False,
-                "is_tomorrow": item.get("isTomorrow", False) 
-            }
-            
-            # 새 문서 추가 (자동 ID 생성)
-            user_memo_collection_ref.add(memo_data)
-            
-            saved_count += 1
-            print(f"✅ UID {uid}에 메모 항목 저장 완료: {item.get('content', '')[:30]}...")
-            
-        except Exception as e:
-            # 개별 항목 저장 실패 시, 오류 로그를 남기고 다음 항목으로 이동
-            print(f"❌ 메모 저장 중 Firestore 오류 발생: {e}")
-            continue 
-            
-    return saved_count
 
 
 def save_chat_to_firestore(uid: str, message: dict, db: firestore.client) -> bool:
@@ -309,39 +268,6 @@ SYSTEM_INSTRUCTION_PERSONA = """
 - 사연 투표, 링크편지 등 특별한 소통 기능도 있습니다.
 """
 
-SYSTEM_INSTRUCTION_MEMO_AGENT = """
-**[CRITICAL INSTRUCTION]** 당신은 지금 SAVE_MEMO 요청을 받았습니다.
-**반드시** 주어진 JSON 스키마를 따라 응답해야 하며, action 필드는 "SAVE_MEMO"로 설정해야 합니다.
-**절대로** 일반 텍스트로 응답하지 마세요. 반드시 JSON 형식으로만 응답하세요.
-
-userResponse 필드는 사용자에게 따뜻하고 친근한 확인 메시지를 전달해야 합니다.
-예: "메모에 저장했어요! 📝 잊지 않고 챙기실 수 있도록 도와드릴게요 😊"
-
-사용자의 요청 내용을 분석하여 각 일정을 개별 항목으로 분리해주세요.
-각 메모 항목은 반드시 시간과 내용을 포함해야 하며, '내일'이나 미래 날짜가 언급된 경우 isTomorrow를 true로 설정하세요.
-"""
-
-
-AGENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "action": {"type": "string", "description": "사용자가 요청한 행동 (SAVE_MEMO 또는 NONE 중 하나)"},
-        "userResponse": {"type": "string", "description": "저장 완료 후 사용자에게 보여줄 친근하고 공감적인 응답 메시지."},
-        "memoItems": {
-            "type": "array",
-            "description": "SAVE_MEMO 액션일 때 사용. 사용자 요청에서 추출된 하나 이상의 개별 메모 항목 리스트.",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "content": {"type": "string", "description": "개별 메모 항목의 내용."},
-                    "isTomorrow": {"type": "boolean", "description": "'내일' 키워드나 미래 날짜 언급이 포함되어 있으면 true"}
-                },
-                "required": ['content', 'isTomorrow']
-            }
-        },
-    },
-    "required": ['action', 'userResponse']
-}
 
 # ✅ FAQ 키워드 개선 (공백 제거 버전 추가)
 FAQ_KEYWORD_MAP = {
@@ -374,274 +300,114 @@ class GraphState(TypedDict):
     uid: str
     message: str
     conversation_history: List[dict]
-    intent: Literal["faq_check", "confirm_save_memo", "save_memo_execute", "general_chat"]
+    intent: Literal["faq_check", "search_only"]
     final_response: str
     search_sources: Optional[List[dict]]
     has_search_results: bool
 
 def determine_intent(state: GraphState) -> GraphState:
-    """사용자 의도 파악 (개선 버전 - 포괄적 대화 지원)"""
+    """검색 전용 의도 파악 (단순화)"""
     try:
         message = state["message"].lower().strip()
         
-        # 1️⃣ 메모 저장 키워드 체크 (최우선)
-        memo_keywords = [
-            '메모로 넣어줘', '메모 넣어줘', '메모로 저장', '메모 저장', 
-            '메모 추가', '메모저장', '일정 추가', '일정 등록', 
-            '기록 추가', '기록 저장', '저장해줘', '기록해줘'
-        ]
-        
-        if any(keyword in message for keyword in memo_keywords):
-            state["intent"] = "save_memo_execute"
-            print(f"[의도 파악] 메모 저장 요청 감지 - 바로 실행")
-            return state
-
-        # 2️⃣ FAQ 매칭
+        # FAQ 매칭만 유지
         found_answer = None
-        matched_keywords = []
-        
         for keyword, answer in FAQ_KEYWORD_MAP.items():
             if keyword in message:
                 found_answer = answer
-                matched_keywords.append(keyword)
-                break  # 첫 번째 매칭만 사용
+                break
         
         if found_answer:
             state["final_response"] = found_answer
             state["intent"] = "faq_check"
-            print(f"[의도 파악] FAQ 매칭 완료: {matched_keywords}")
+            print(f"[의도 파악] ❓ FAQ 매칭 완료")
             return state
 
-        # 3️⃣ 명확한 검색 의도 키워드 체크 (구체적인 검색 요청만)
-        explicit_search_keywords = [
-            '검색해줘', '찾아줘', '알아봐줘', '검색', '찾아서', '알아봐서',
-            '어디서', '어디에서', '어떤 곳', '추천해줘', '추천', '리스트',
-            '정보', '자료', '데이터', '뉴스', '기사', '최신', '업데이트'
-        ]
-        
-        # 명확한 검색 키워드가 있는 경우에만 검색으로 분류
-        has_explicit_search = any(kw in message for kw in explicit_search_keywords)
-        
-        if has_explicit_search:
-            print(f"[의도 파악] 명확한 검색 요청 감지 → general_chat (검색 모드)")
-        else:
-            print(f"[의도 파악] 일반 대화/감정 표현 → general_chat (대화 모드)")
-        
-        # 4️⃣ 모든 경우를 일반 대화로 처리 (검색/대화 구분은 call_general_chat_llm에서)
-        state["intent"] = "general_chat"
+        # 🎯 나머지 모든 요청을 검색으로 처리
+        state["intent"] = "search_only"
+        print(f"[의도 파악] 🔍 검색 전용 모드")
         return state
     
     except Exception as e:
-        print(f"[의도 파악] ❌ 오류 발생: {e}")
-        traceback.print_exc()
-        # 오류 시 안전하게 일반 대화로 분류
-        state["intent"] = "general_chat"
+        print(f"[의도 파악] ❌ 오류: {e}")
+        state["intent"] = "search_only"  # 오류 시 검색으로
         return state
 
-def confirm_save_memo_agent(state: GraphState) -> GraphState:
-    """메모 저장 확인 메시지 반환 (개선 버전)"""
-    state["final_response"] = (
-        "말씀하신 내용을 메모로 저장할까요? 📝\n"
-        "저장하시려면 '네' 또는 '저장해줘'라고 말씀해 주세요!\n"
-        "다른 질문이 있으시면 편하게 물어봐 주세요 😊"
-    )
-    print("[메모 확인] 저장 확인 요청 전송")
-    return state
 
-# 🚨 메모 저장 실행 노드 개선 (로깅 및 에러 응답 분리)
-def execute_memo_agent(state: GraphState, uid) -> GraphState:
-    """메모 저장 실행 (개선 버전)"""
-    print("[메모 실행] 📝 메모 에이전트 호출")
-    
-    try:
-        model = genai.GenerativeModel(
-            model_name='gemini-2.0-flash-lite',
-            generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": AGENT_SCHEMA,
-                "temperature": 0.1,
-            },
-            system_instruction=SYSTEM_INSTRUCTION_MEMO_AGENT
-        )
-        
-        # 대화 이력 포함
-        contents = [
-            {"role": msg.get("role", "user"), "parts": [{"text": msg.get("content", "")}]} 
-            for msg in state["conversation_history"]
-        ]
-        contents.append({"role": "user", "parts": [{"text": state["message"]}]})
-
-        response = model.generate_content(contents) 
-        raw_text = response.text
-        
-        json_match = re.search(r'\{[\s\S]*\}', raw_text)
-        if not json_match:
-            raise ValueError("AI가 유효한 JSON을 반환하지 않았습니다.")
-            
-        response_data = json.loads(json_match.group(0))
-        print(f"[메모 실행] LLM 응답: {json.dumps(response_data, ensure_ascii=False, indent=2)}") 
-        
-        if db and response_data.get("action") == "SAVE_MEMO":
-            memo_items = response_data.get("memoItems", [])
-            
-            if not memo_items:
-                print("[메모 실행] ⚠️ 저장할 메모 내용이 없습니다.")
-                state["final_response"] = (
-                    "죄송해요, 대화 내용에서 메모로 저장할 구체적인 내용을 찾을 수 없었어요. 😥\n"
-                    "예를 들어 '내일 오후 3시 병원 예약 메모 저장'처럼 시간과 내용을 함께 말씀해 주시겠어요?"
-                )
-            else:
-                saved_count = save_memos_to_firestore(uid, memo_items, db)
-            
-                if saved_count == 0:
-                    print("[메모 실행] ❌ DB 저장 실패")
-                    state["final_response"] = (
-                        "앗, 죄송합니다! 😓 데이터베이스 오류로 메모 저장에 실패했어요. "
-                        "다시 한 번 시도해 주시겠어요?"
-                    )
-                else:
-                    print(f"[메모 실행] ✅ {saved_count}개 저장 완료")
-                    # LLM이 생성한 친근한 응답 사용
-                    default_response = f"메모 {saved_count}개를 저장했어요! 📝 잊지 않고 챙기실 수 있도록 도와드릴게요 😊"
-                    state["final_response"] = response_data.get("userResponse", default_response)
-        else:
-            state["final_response"] = response_data.get("userResponse", "메모가 저장되었어요! 😊")
-        
-    except Exception as e:
-        print(f"[메모 실행] ❌ 오류: {e}")
-        traceback.print_exc()
-        state["final_response"] = (
-            "죄송해요, 메모 저장 중 문제가 발생했어요. 😥\n"
-            "잠시 후 다시 시도해 주시겠어요?"
-        )
-        
-    return state
 
 
 def call_general_chat_llm(state: GraphState) -> GraphState:
-    """일반 대화 LLM 호출 (검색 통합, 공감 강화)"""
-    print("[일반 대화] 💬 LLM 호출 시작")
+    """검색 전용 LLM 호출"""
+    print("[검색] 🔍 검색 LLM 호출 시작")
     
     try:
-        # 1. 카테고리 분류 (안전한 임포트)
+        # 카테고리 분류 (안전한 임포트)
         try:
             from search_api import classify_query, SearchCategory, perform_search
             category, clean_query = classify_query(state["message"])
+            print(f"[검색] 📂 카테고리: {category.value}")
         except ImportError as e:
-            print(f"[일반 대화] ⚠️ search_api 임포트 실패: {e}")
-            # 검색 기능 없이 대화만 진행
+            print(f"[검색] ⚠️ search_api 임포트 실패: {e}")
             category = None
             clean_query = state["message"]
         except Exception as e:
-            print(f"[일반 대화] ⚠️ 카테고리 분류 실패: {e}")
+            print(f"[검색] ⚠️ 카테고리 분류 실패: {e}")
             category = None
             clean_query = state["message"]
         
-        # 2. CHAT vs SEARCH 분기
-        if category is None or (hasattr(category, 'value') and category.value == 'chat'):
-            print("[일반 대화] 💭 대화 모드 (공감 우선)")
-            
-            model = genai.GenerativeModel(
-                model_name='gemini-2.0-flash-lite',
-                system_instruction=SYSTEM_INSTRUCTION_PERSONA
+        # 검색 실행 (모든 요청을 검색으로 처리)
+        if 'perform_search' in locals():
+            naver_id = os.environ.get("NAVER_CLIENT_ID")
+            naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
+            serper_key = os.environ.get("SERPER_KEY")
+                
+            search_result = perform_search(
+                state["message"], 
+                genai,
+                naver_id=naver_id,
+                naver_secret=naver_secret,
+                serper_key=serper_key
             )
-            
-            # 최근 대화 이력 포함 (문맥 유지) - 안전한 처리
-            history = []
-            for msg in state.get("conversation_history", [])[-5:]:  # 최근 5개
-                try:
-                    role = msg.get("role", "user")
-                    
-                    # 여러 형식 지원
-                    if "parts" in msg:
-                        content = msg["parts"][0].get("text", "") if msg["parts"] else ""
-                    elif "content" in msg:
-                        content = msg["content"]
-                    else:
-                        content = ""
-                    
-                    if content and isinstance(content, str):
-                        history.append({
-                            "role": role,
-                            "parts": [{"text": content}]
-                        })
-                except Exception as e:
-                    print(f"[일반 대화] ⚠️ 대화 이력 파싱 실패: {e}")
-                    continue
-            
-            # 대화 시작
-            chat = model.start_chat(history=history)
-            response = chat.send_message(state["message"])
-            state["final_response"] = response.text
-            state["has_search_results"] = False
-            print(f"[일반 대화] ✅ 대화 완료: {len(response.text)}자")
-            
-        else:
-            # 검색 모드
-            print(f"[일반 대화] 🔍 검색 모드 ({category.value if hasattr(category, 'value') else 'unknown'})")
-            
-            # search_api가 정상 임포트된 경우에만 검색 수행
-            if 'perform_search' in locals():
-                naver_id = os.environ.get("NAVER_CLIENT_ID")
-                naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
-                serper_key = os.environ.get("SERPER_KEY")
-                    
-                search_result = perform_search(
-                    state["message"], 
-                    genai,
-                    naver_id=naver_id,
-                    naver_secret=naver_secret,
-                    serper_key=serper_key
-                )
-                    
-                if search_result.get("success"):
-                    state["final_response"] = search_result.get("summary", "")
-                    state["search_sources"] = search_result.get("sources", [])
-                    state["has_search_results"] = True
-                    print(f"[일반 대화] ✅ 검색 완료: {len(state.get('search_sources', []))}개 출처")
-                else:
-                    print(f"[일반 대화] ⚠️ 검색 실패")
-                    state["final_response"] = (
-                        "죄송해요, 현재 검색 서비스에 일시적인 문제가 있어요. 😥\n"
-                        "잠시 후 다시 시도해 주시거나, 다른 질문을 해주시겠어요?"
-                    )
-                    state["has_search_results"] = False
+                
+            if search_result.get("success"):
+                state["final_response"] = search_result.get("summary", "")
+                state["search_sources"] = search_result.get("sources", [])
+                state["has_search_results"] = True
+                print(f"[검색] ✅ 검색 완료: {len(state.get('search_sources', []))}개 출처")
             else:
-                # 검색 기능 비활성화 시 일반 대화로 폴백
-                print(f"[일반 대화] ⚠️ 검색 기능 비활성화, 대화 모드로 전환")
-                model = genai.GenerativeModel(
-                    model_name='gemini-2.0-flash-lite',
-                    system_instruction=SYSTEM_INSTRUCTION_PERSONA
+                print(f"[검색] ⚠️ 검색 실패")
+                state["final_response"] = (
+                    "죄송해요, 현재 검색 서비스에 일시적인 문제가 있어요. 😥\n"
+                    "잠시 후 다시 시도해 주시거나, 다른 질문을 해주시겠어요?"
                 )
-                response = model.generate_content(state["message"])
-                state["final_response"] = response.text
                 state["has_search_results"] = False
+        else:
+            # 검색 기능 비활성화 시 기본 응답
+            print(f"[검색] ⚠️ 검색 기능 비활성화")
+            state["final_response"] = "검색 기능이 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
+            state["has_search_results"] = False
         
     except Exception as e:
-        print(f"[일반 대화] ❌ 오류: {e}")
+        print(f"[검색] ❌ 오류: {e}")
         traceback.print_exc()
         state["final_response"] = (
-            "죄송해요, 일시적인 오류가 발생했어요. 😓\n"
-            "다시 한 번 말씀해 주시겠어요?"
+            "죄송해요, 검색 중 일시적인 오류가 발생했어요. 😓\n"
+            "다시 한 번 검색해 주시겠어요?"
         )
         state["has_search_results"] = False
     
     return state
 
-def route_intent(state: GraphState) -> Literal["faq_check", "save_memo_execute", "general_chat"]:
-    """의도에 따른 라우팅"""
+def route_intent(state: GraphState) -> Literal["faq_check", "search_only"]:
+    """의도에 따른 라우팅 (검색 전용)"""
     if state["intent"] == "faq_check":
         return "faq_check"
-    if state["intent"] == "save_memo_execute":
-        return "save_memo_execute"
-    return "general_chat"
+    return "search_only"  # 기본값은 검색
 
-# --- LangGraph 그래프 빌드 ---
+# --- LangGraph 그래프 빌드 (검색 전용) ---
 workflow = StateGraph(GraphState)
 workflow.add_node("determine_intent", determine_intent)
-workflow.add_node("confirm_save_memo", confirm_save_memo_agent)
-workflow.add_node("execute_memo_agent", execute_memo_agent)
-workflow.add_node("call_general_chat_llm", call_general_chat_llm)
+workflow.add_node("call_general_chat_llm", call_general_chat_llm)  # 검색 처리
 
 workflow.set_entry_point("determine_intent")
 
@@ -650,13 +416,10 @@ workflow.add_conditional_edges(
     route_intent,
     {
         "faq_check": END,
-        "save_memo_execute": "execute_memo_agent",
-        "general_chat": "call_general_chat_llm"
+        "search_only": "call_general_chat_llm"  # 검색만
     }
 )
 
-workflow.add_edge("confirm_save_memo", END)
-workflow.add_edge("execute_memo_agent", END)
 workflow.add_edge("call_general_chat_llm", END)
 
 memory_saver = MemorySaver()
@@ -678,7 +441,7 @@ class ChatRequest(BaseModel):
     message: str
     token: str
     conversationHistory: List[dict]
-    action: Optional[Literal["EXECUTE_MEMO", "GENERAL_CHAT"]] = None
+    action: Optional[Literal["GENERAL_CHAT"]] = None
 
 class StreamRequest(BaseModel):
     query: str
@@ -687,7 +450,7 @@ class StreamRequest(BaseModel):
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
-    """메인 채팅 엔드포인트"""
+    """검색 전용 채팅 엔드포인트"""
     try:
         decoded_token = verify_firebase_token(request.token)
         uid = decoded_token["uid"]
@@ -701,66 +464,47 @@ async def chat_endpoint(request: ChatRequest):
             "remainingChats": 0
         }
 
-    # ✅ 먼저 intent 파악 (한도 차감 없이)
-    needs_limit_check = False  # 기본값 설정
-    remaining_chats = DAILY_CHAT_LIMIT
-    
+    print(f"[채팅] 🔍 검색 전용 요청: {request.message[:50]}...")
+
     try:
-        # 1. intent 파악을 위한 임시 state
+        # 기본 상태 설정
         temp_state = GraphState(
             uid=uid,
             message=request.message,
             conversation_history=request.conversationHistory,
-            intent="general_chat",
+            intent="search_only",  # 기본값 검색
             final_response="",
             search_sources=[],
             has_search_results=False
         )
-        
-        # 2. action에 따른 intent 설정
-        if request.action == "EXECUTE_MEMO":
-            temp_state["intent"] = "save_memo_execute"
-            needs_limit_check = False
-        elif request.action == "GENERAL_CHAT":
-            temp_state["intent"] = "general_chat"
-            needs_limit_check = True
-        else:
-            # 일반 워크플로우: intent 파악
-            intent_result = determine_intent(temp_state)
-            needs_limit_check = intent_result["intent"] == "general_chat"
-        
-        # 3. 한도 체크 (일반 대화/검색만)
-        if needs_limit_check:
-            print(f"[한도] 🏦 일반 대화/검색 - 한도 체크 실행")
-            try:
-                limit_status = await check_and_update_chat_limit(uid)
-                remaining_chats = limit_status["remainingChats"]
 
-                if not limit_status["canChat"]:
-                    return {
-                        "success": False,
-                        "response": "일일 대화 한도(200회)를 초과했습니다.",
-                        "remainingChats": 0
-                    }
-            except Exception as e:
-                print(f"❌ 한도 체크 오류: {e}")
-        else:
-            print(f"[한도] 🆓 무료 기능 (FAQ/메모) - 한도 체크 생략")
+        # FAQ 체크
+        intent_result = determine_intent(temp_state)
+        
+        # 한도 체크 (검색만 해당)
+        if intent_result["intent"] == "search_only":
+            limit_status = await check_and_update_chat_limit(uid)
+            if not limit_status["canChat"]:
+                return {
+                    "success": False,
+                    "response": "일일 검색 한도를 초과했습니다. 내일 다시 이용해주세요.",
+                    "remainingChats": 0
+                }
 
-        # 4. 사용자 메시지 저장
+        # 사용자 메시지 저장
         user_message = {
             "role": "user",
             "content": request.message,
             "timestamp": datetime.now(timezone.utc)
         }
         save_chat_to_firestore(uid, user_message, db)
-        
-        # 5. 실제 처리 수행
+
+        # 검색 실행
         graph_input = GraphState(
             uid=uid,
             message=request.message,
             conversation_history=request.conversationHistory,
-            intent="general_chat",
+            intent=intent_result["intent"],
             final_response="",
             search_sources=[],
             has_search_results=False
@@ -768,55 +512,34 @@ async def chat_endpoint(request: ChatRequest):
         
         config = {"configurable": {"thread_id": uid}}
         
-        # ✅ action에 따라 다른 노드 실행
-        if request.action == "EXECUTE_MEMO":
-            # execute_memo_agent 노드만 실행
-            graph_input["intent"] = "save_memo_execute"
-            final_state = execute_memo_agent(graph_input, uid)
-        elif request.action == "GENERAL_CHAT":
-            # general_chat 노드만 실행
-            final_state = call_general_chat_llm(graph_input)
+        if intent_result["intent"] == "faq_check":
+            final_state = intent_result
         else:
-            # 정상 워크플로우 실행
-            final_state = app_graph.invoke(graph_input, config=config)
+            # 검색 처리
+            final_state = call_general_chat_llm(graph_input)
         
-        # 6. AI 응답 저장
+        # AI 응답 저장
         ai_message = {
             "role": "assistant", 
             "content": final_state["final_response"],
-            "timestamp": datetime.now(timezone.utc),
-            "hasSearchResults": final_state.get("has_search_results", False),
-            "searchSources": final_state.get("search_sources", [])
+            "timestamp": datetime.now(timezone.utc)
         }
         save_chat_to_firestore(uid, ai_message, db)
-        
+
         return {
             "success": True,
             "response": final_state["final_response"],
-            "remainingChats": remaining_chats,
-            "needsConfirmation": False,  # 더 이상 확인 단계 없음
-            "hasSearchResults": final_state.get("has_search_results", False),
-            "searchSources": final_state.get("search_sources", [])
+            "sources": final_state.get("search_sources", []),
+            "has_search_results": final_state.get("has_search_results", False),
+            "remainingChats": limit_status.get("remainingChats", 0) if intent_result["intent"] == "search_only" else None
         }
 
     except Exception as e:
-        print(f"❌ LangGraph 오류: {e}")
-        
-        # 오류 시 한도 복원 (한도가 차감된 경우에만)
-        if needs_limit_check and remaining_chats < DAILY_CHAT_LIMIT:
-            try:
-                today = date.today().isoformat()
-                limit_ref = db.collection('users').document(uid).collection('limits').document(today)
-                limit_ref.update({'count': firestore.Increment(-1)})
-                remaining_chats += 1
-                print(f"[한도] 🔄 오류로 인한 한도 복원")
-            except Exception as restore_error:
-                print(f"❌ 한도 복원 실패: {restore_error}")
-
+        print(f"[채팅] ❌ 오류: {e}")
         return {
             "success": False,
-            "response": "죄송합니다. 일시적인 오류가 발생했습니다.",
-            "remainingChats": remaining_chats
+            "response": "검색 중 오류가 발생했습니다. 다시 시도해주세요.",
+            "sources": []
         }
 
 @app.get("/")
@@ -897,64 +620,27 @@ async def stream_endpoint(request: StreamRequest):
                 "message": f"📂 카테고리: {category.value}"
             })
 
-            # ===== 2️⃣ CHAT vs SEARCH 분기 =====
-            if category == SearchCategory.CHAT:
-                yield sse_format({
-                    "stage": "chat",
-                    "status": "started",
-                    "message": "💬 일반 대화 모드"
-                })
+            # ===== 검색 모드 (모든 요청을 검색으로 처리) =====
+            yield sse_format({
+                "stage": "search",
+                "status": "started", 
+                "message": f"🔍 {category.value} 검색 중...",
+                "progress": 10
+            })
+            
+            naver_id = os.environ.get("NAVER_CLIENT_ID")
+            naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
+            serper_key = os.environ.get("SERPER_KEY")
+            
+            search_result = perform_search(
+                user_input, 
+                genai,
+                naver_id=naver_id,
+                naver_secret=naver_secret,
+                serper_key=serper_key
+            )
                 
-                # Gemini 대화
-                model = genai.GenerativeModel(
-                    model_name='gemini-2.0-flash-lite',
-                    system_instruction=SYSTEM_INSTRUCTION_PERSONA
-                )
-                
-                response = model.generate_content(user_input)
-                final_answer = response.text
-                
-                yield sse_format({
-                    "stage": "complete",
-                    "status": "finished",
-                    "category": category.value,
-                    "duration_sec": round(time.time() - start, 2),
-                    "answer_summary": final_answer,
-                    "sources": [],
-                    "message": f"✅ 일반 대화 완료"
-                })
-                
-                # 캐시에 저장 (대화는 짧은 TTL)
-                cache_data = {
-                    "summary": final_answer,
-                    "sources": [],
-                    "category": category.value
-                }
-                memory_cache.set(cleaned_query, cache_data)
-                return
-                
-            else:
-                # ===== 검색 모드 =====
-                yield sse_format({
-                    "stage": "search",
-                    "status": "started", 
-                    "message": f"🔍 {category.value} 검색 중...",
-                    "progress": 10
-                })
-                
-                naver_id = os.environ.get("NAVER_CLIENT_ID")
-                naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
-                serper_key = os.environ.get("SERPER_KEY")
-                
-                search_result = perform_search(
-                    user_input, 
-                    genai,
-                    naver_id=naver_id,
-                    naver_secret=naver_secret,
-                    serper_key=serper_key
-                )
-                
-                if search_result.get("success"):
+            if search_result.get("success"):
                     yield sse_format({
                         "stage": "complete",
                         "status": "finished",
@@ -967,7 +653,7 @@ async def stream_endpoint(request: StreamRequest):
                     
                     # 캐시에 저장
                     memory_cache.set(cleaned_query, search_result)
-                else:
+            else:
                     # 🔥 검색 실패 시 간단한 에러 메시지만 (Gemini 사용 안 함)
                     yield sse_format({
                         "stage": "complete",
@@ -1000,7 +686,23 @@ async def stream_endpoint(request: StreamRequest):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "service": "검색 전용 서버",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "cache": memory_cache.get_stats()
+    }
+
+@app.post("/cache/clear")
+async def clear_cache_api():
+    """캐시 수동 삭제 (관리자용)"""
+    memory_cache.clear()
+    return {"message": "캐시가 삭제되었습니다"}
+
+@app.get("/cache/stats")
+async def cache_stats_api():
+    """캐시 통계"""
+    return memory_cache.get_stats()
 
 # ===== Flask 앱 (SSE 스트리밍용) =====
 flask_app = Flask(__name__)
@@ -1102,64 +804,27 @@ def stream_search():
                 "message": f"📂 카테고리: {category.value}"
             })
 
-            # ===== 2️⃣ CHAT vs SEARCH 분기 =====
-            if category == SearchCategory.CHAT:
-                yield sse_format({
-                    "stage": "chat",
-                    "status": "started",
-                    "message": "💬 일반 대화 모드"
-                })
+            # ===== 검색 모드 (모든 요청을 검색으로 처리) =====
+            yield sse_format({
+                "stage": "search",
+                "status": "started", 
+                "message": f"🔍 {category.value} 검색 중...",
+                "progress": 10
+            })
+            
+            naver_id = os.environ.get("NAVER_CLIENT_ID")
+            naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
+            serper_key = os.environ.get("SERPER_KEY")
+            
+            search_result = perform_search(
+                user_input, 
+                genai,
+                naver_id=naver_id,
+                naver_secret=naver_secret,
+                serper_key=serper_key
+            )
                 
-                # Gemini 대화
-                model = genai.GenerativeModel(
-                    model_name='gemini-2.0-flash-lite',
-                    system_instruction=SYSTEM_INSTRUCTION_PERSONA
-                )
-                
-                response = model.generate_content(user_input)
-                final_answer = response.text
-                
-                yield sse_format({
-                    "stage": "complete",
-                    "status": "finished",
-                    "category": category.value,
-                    "duration_sec": round(time.time() - start, 2),
-                    "answer_summary": final_answer,
-                    "sources": [],
-                    "message": f"✅ 일반 대화 완료"
-                })
-                
-                # 캐시에 저장 (대화는 짧은 TTL)
-                cache_data = {
-                    "summary": final_answer,
-                    "sources": [],
-                    "category": category.value
-                }
-                memory_cache.set(cleaned_query, cache_data)
-                return
-                
-            else:
-                # ===== 검색 모드 =====
-                yield sse_format({
-                    "stage": "search",
-                    "status": "started", 
-                    "message": f"🔍 {category.value} 검색 중...",
-                    "progress": 10
-                })
-                
-                naver_id = os.environ.get("NAVER_CLIENT_ID")
-                naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
-                serper_key = os.environ.get("SERPER_KEY")
-                
-                search_result = perform_search(
-                    user_input, 
-                    genai,
-                    naver_id=naver_id,
-                    naver_secret=naver_secret,
-                    serper_key=serper_key
-                )
-                
-                if search_result.get("success"):
+            if search_result.get("success"):
                     yield sse_format({
                         "stage": "complete",
                         "status": "finished",
@@ -1172,7 +837,7 @@ def stream_search():
                     
                     # 캐시에 저장
                     memory_cache.set(cleaned_query, search_result)
-                else:
+            else:
                     yield sse_format({
                         "stage": "error",
                         "error": "검색 결과가 없습니다."
@@ -1226,11 +891,14 @@ def cache_stats():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     
-    # 개발 환경에서는 Flask 실행 (SSE 지원)
-    if os.environ.get("FLASK_ENV") == "development":
-        print("🚀 Flask 개발 서버로 실행 (SSE 스트리밍 지원)...")
-        flask_app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
-    else:
-        # 프로덕션에서는 FastAPI 실행 (기본 채팅)
-        print("🚀 FastAPI 프로덕션 서버로 실행...")
+    # 로컬 개발용 - FastAPI 서버 실행
+    print("🚀 검색 전용 FastAPI 서버 실행 중 (로컬 개발용)...")
+    print(f"포트: {port}")
+    
+    try:
+        import uvicorn
         uvicorn.run(app, host="0.0.0.0", port=port)
+    except Exception as e:
+        print(f"❌ 서버 시작 실패: {e}")
+        import traceback
+        traceback.print_exc()

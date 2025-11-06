@@ -17,6 +17,6 @@ COPY . .
 # Cloud Run은 기본적으로 8080 포트를 사용
 ENV PORT=8080
 
-# uvicorn으로 FastAPI 앱 실행
-CMD ["python", "main.py"]
+# Gunicorn으로 FastAPI 앱 실행 (Flask 엔드포인트도 포함)
+CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8080", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker"]
 

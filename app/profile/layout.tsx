@@ -2,7 +2,7 @@
 
 import { useSelector } from 'react-redux';
 import { useState, useCallback, useEffect } from 'react';
-import { Menu, Home, Notebook, Book, MessageSquare, ClipboardPlus, Atom, X, Maximize2, Minimize2, ArrowLeft, Download, Link as LinkIcon, Banana, Rocket } from 'lucide-react';
+import { Menu, Home, Notebook, Book, MessageSquare, ClipboardPlus, Atom, X, Maximize2, Minimize2, ArrowLeft, Download, Link as LinkIcon, Banana, Rocket, Edit3 } from 'lucide-react';
 import { useState as useModalState } from 'react';
 import ProfileSettingsButton from '@/components/ui/ProfileSettingsButton';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -389,7 +389,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
                 onClick={() => setIsSidebarOpen(false)}
                 className="text-gray-400 hover:text-white p-2 rounded-lg active:bg-white/10"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -442,6 +442,22 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         >
           <Menu className="w-6 h-6" />
         </button>
+
+        {/* 모바일 작성 버튼 */}
+        <Link 
+          href="/profile/freememo"
+          className="md:hidden fixed top-2 right-2 z-40 text-gray-300 hover:text-white p-2 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 active:bg-[#2A4D45] transition-colors"
+        >
+          <Edit3 className="w-5 h-5" />
+        </Link>
+
+        {/* 데스크톱 작성 버튼 */}
+        <Link 
+          href="/profile/freememo"
+          className="hidden md:block fixed top-2 right-5 z-40 text-gray-300 hover:text-white p-1 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 hover:bg-[#2A4D45] transition-colors shadow-lg"
+        >
+          <Edit3 className="w-5 h-5" />
+        </Link>
 
         {/* 자식 컴포넌트 렌더링 */}
         <div className="flex-1 md:p-6 py-6 overflow-auto relative">
@@ -522,7 +538,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           {/* 채팅 영역 */}
           <div className="flex-1 p-4 overflow-y-auto">
             <iframe
-              src="/search"
+              src="/ai-comfort"
               className="w-full h-full border-0 bg-transparent"
               title="AI Chat"
             />
@@ -568,7 +584,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           {/* 채팅 영역 */}
           <div className="flex-1 p-4 overflow-y-auto">
             <iframe
-              src="/search"
+              src="/ai-comfort"
               className="w-full h-full border-0 bg-transparent"
               title="AI Chat"
             />
