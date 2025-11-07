@@ -18,7 +18,7 @@ export default function AIChatSimplePage() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    router.push(`/search?initialMessage=${encodeURIComponent(inputMessage)}`);
+    router.push(`/ai-comfort?initialMessage=${encodeURIComponent(inputMessage)}`);
     setInputMessage('');
   };
 

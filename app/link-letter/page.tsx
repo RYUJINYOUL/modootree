@@ -839,60 +839,24 @@ export default function LinkLetterPage() {
         <LoginOutButton />
       </div>
 
-      <main className="min-h-screen bg-slate-950 text-white/90 relative overflow-hidden pt-[80px]">
+      <main className="min-h-screen bg-slate-950 text-white/90 relative overflow-hidden pt-[70px]">
         {/* 파티클 배경 효과 */}
         <div className="absolute inset-0 z-0">
           <ParticlesComponent />
         </div>
         
-        <div className="container mx-auto px-4 py-8 pb-32 relative z-10">
+        <div className="container mx-auto px-4 py-7 pb-32 relative z-10">
           
           {/* 페이지 헤더 */}
-          <div className="text-center mb-10">
-             <div className="inline-flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg overflow-hidden">
-                <img 
-                  src="/logos/m1.png" 
-                  alt="링크 편지 로고" 
-                  className="w-8 h-8 object-contain"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-4xl font-bold text-white">
-                  링크 편지
-                </h1>
-                <div className="flex items-center gap-2">
-                  <Link href="/link-letter/background?return=/link-letter">
-                    <button
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
-                      title="배경 설정"
-                    >
-                      <Settings className="w-5 h-5" />
-                    </button>
-                  </Link>
-                  <button
-                    onClick={() => setShowDescription(!showDescription)}
-                    className="p-2 text-gray-400 hover:text-white transition-colors"
-                    title="더 보기"
-                  >
-                    <Info className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* 토글 가능한 설명 */}
-            {showDescription && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-2xl mx-auto mb-4 animate-in slide-in-from-top-2 duration-300">
-                <p className="text-lg text-gray-300 leading-relaxed">
-                  <span className="text-blue-300 font-semibold">링크 편지 :</span> 퀴즈를 풀어야 볼 수 있는 특별한 편지입니다.<br />
-              
-                  <span className="text-blue-300">사용법 :</span> 편지를 작성하고 링크를 복사해서 소중한 사람에게 보내보세요!<br />
-                  <span className="text-blue-300">특징 :</span> 다양한 카테고리의 편지를 작성할 수 있어요.
-                </p>
-              </div>
-            )}
-          </div>
+          
+          <div className="text-center">
+  <div className="inline-flex items-center gap-2 mb-6">
+    <div className="flex flex-col"> 
+      <h1 className="text-2xl font-bold text-white mb-2">모두트리 링크편지</h1> 
+      <p className="text-sm text-gray-400">퀴즈를 풀어야만 볼 수 있는 편지</p>
+    </div>
+  </div>
+</div>
 
           {/* 카테고리 필터 */}
           <div className="mb-8">

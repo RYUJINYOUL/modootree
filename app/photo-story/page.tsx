@@ -567,7 +567,7 @@ export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean
 
     {/* AI 플로팅 버튼 */}
     <Link
-      href="/search"
+      href="/ai-comfort"
       className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
     >
       <span className="text-white font-medium text-base">AI</span>
