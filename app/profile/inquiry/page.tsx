@@ -161,7 +161,7 @@ export default function InquiryPage() {
 
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto">
-      <div className="px-2 md:px-0 space-y-6">
+      <div className="px-2 md:px-0 space-y-6 mt-2">
         {/* 헤더 */}
         <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6">

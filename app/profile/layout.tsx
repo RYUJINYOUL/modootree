@@ -440,7 +440,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           onClick={() => setIsSidebarOpen(true)} 
           className="md:hidden fixed top-2 left-2 z-40 text-gray-300 hover:text-white p-2 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 active:bg-[#2A4D45] transition-colors"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5" />
         </button>
 
         {/* 모바일 작성 버튼 */}
@@ -454,9 +454,9 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         {/* 데스크톱 작성 버튼 */}
         <Link 
           href="/profile/freememo"
-          className="hidden md:block fixed top-2 right-5 z-40 text-gray-300 hover:text-white p-1 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 hover:bg-[#2A4D45] transition-colors shadow-lg"
+          className="hidden md:block fixed top-3 right-6 z-40 text-gray-300 hover:text-white p-1 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 hover:bg-[#2A4D45] transition-colors shadow-lg"
         >
-          <Edit3 className="w-5 h-5" />
+          <Edit3 className="w-6 h-6" />
         </Link>
 
         {/* 자식 컴포넌트 렌더링 */}

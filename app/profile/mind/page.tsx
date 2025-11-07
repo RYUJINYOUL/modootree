@@ -170,7 +170,7 @@ export default function AnalysisPage() {
 
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto">
-      <div className="px-2 md:px-0">
+      <div className="px-2 md:px-0 mt-1">
         {/* 입력 영역 */}
         <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl mb-6">
           {/* 헤더 - 접기/펼치기 버튼 */}

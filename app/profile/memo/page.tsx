@@ -354,7 +354,7 @@ export default function MemoPage() {
     <div className="flex-1 md:p-6 py-6 overflow-auto w-full">
       <div className="w-full space-y-6">
         {/* 탭 & 작성 버튼 */}
-        <div className="flex items-center gap-2 px-2 md:px-0">
+        <div className="flex items-center gap-2 px-2 md:px-0 mt-1">
           <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as TabType)} className="flex-1">
               <TabsList className="grid w-full grid-cols-3 bg-[#2A4D45]/50 backdrop-blur-sm border border-[#358f80]/30 p-2 rounded-2xl">
                 <TabsTrigger 

@@ -165,7 +165,7 @@ export default function HealthPage() {
 
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto w-full">
-      <div className="w-full space-y-6">
+      <div className="w-full space-y-6 mt-1">
         <div className="flex justify-between items-center px-2 md:px-0">
           <select
             value={selectedFilter}

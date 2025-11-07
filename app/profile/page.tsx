@@ -304,24 +304,27 @@ export default function ProfilePage() {
 
     if (hour >= 0 && hour <= 5) {
         // 심야: 00:00 - 05:59
-        return '잠 못 이루는 새벽이세요?';
-    } else if (hour >= 6 && hour <= 9) {
+        return '잠 못 이루는 새벽 이세요?';
+    } else if (hour >= 6 && hour <= 8) {
         // 아침 시작: 06:00 - 09:59
         return '어제 잠은 잘 주무셨나요?';
-    } else if (hour >= 10 && hour <= 11) {
+    } else if (hour >= 9 && hour <= 11) {
         // 오전 활동: 10:00 - 11:59
         return '오늘 아침 식사는 하셨나요?';
     } else if (hour >= 12 && hour <= 13) {
         // 점심: 12:00 - 13:59
         return '오늘 맛있는 점심식사 하셨나요?';
-    } else if (hour >= 14 && hour <= 17) {
+    } else if (hour >= 14 && hour <= 16) {
         // 오후 활동/피곤: 14:00 - 17:59
         return '오늘 저녁 약속은 있으세요?';
-    } else if (hour >= 18 && hour <= 20) {
+    } else if (hour >= 17 && hour <= 18) {
         // 저녁: 18:00 - 20:59
-        return '오늘 저녁 식사 후 산책 또는 운동하셨나요?';
+        return '오늘 산책 또는 운동하셨나요?';
+      } else if (hour >= 19 && hour <= 20) {
+        // 저녁: 18:00 - 20:59
+        return '오늘 산책 또는 운동 하셨나요?';
     } else { // 21:00 - 23:59 (밤/취침 전)
-        return '오늘은 어떠셨나요?';
+        return '오늘은 하루는 어떻게 보내셨나요?';
     }
 };
 
@@ -524,7 +527,7 @@ export default function ProfilePage() {
       <div className="flex-1 md:p-6 py-6 overflow-auto">
       <div className="px-2 md:px-0 space-y-6">
         {/* 환영 메시지 및 시간 */}
-        <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6">
+        <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6 mt-1">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

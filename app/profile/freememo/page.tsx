@@ -77,6 +77,8 @@ export default function MemoPage() {
   const [savingItem, setSavingItem] = useState<{id: string, type: string, text: string} | null>(null);
   const [saveDate, setSaveDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  // 기존 calendarOpen 외에 추가
+const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
   
   // 링크 저장 로딩 상태
   const [savingLinkIds, setSavingLinkIds] = useState<Set<string>>(new Set());
@@ -100,15 +102,18 @@ export default function MemoPage() {
     }
   }, [currentUser?.uid, STORAGE_KEY]);
 
-  // 텍스트 변경 핸들러 (로컬 스토리지 자동 저장)
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newText = e.target.value;
+  // 텍스트 업데이트 헬퍼 함수 (로컬 스토리지 자동 저장 포함)
+  const updateFreeText = (newText: string) => {
     setFreeText(newText);
-    
-    // 로컬 스토리지에 즉시 저장
     if (currentUser?.uid) {
       localStorage.setItem(STORAGE_KEY, newText);
     }
+  };
+
+  // 텍스트 변경 핸들러 (로컬 스토리지 자동 저장)
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    updateFreeText(newText);
   };
 
   // 새로고침 (삭제) 기능
@@ -117,13 +122,8 @@ export default function MemoPage() {
       return;
     }
     
-    setFreeText('');
+    updateFreeText('');
     setAnalysisResult(null);
-    
-    // 로컬 스토리지에서도 삭제
-    if (currentUser?.uid) {
-      localStorage.removeItem(STORAGE_KEY);
-    }
   };
 
   // 이미지 업로드 처리
@@ -171,11 +171,10 @@ export default function MemoPage() {
         const result = await response.json();
         const extractedText = result.text || '';
         
-        // OCR 결과를 기존 텍스트에 추가
-        setFreeText(prev => {
-          const separator = prev.trim() ? '\n\n' : '';
-          return prev + separator + `📷 이미지에서 추출된 텍스트:\n${extractedText}`;
-        });
+        // OCR 결과를 기존 텍스트에 추가 (로컬 스토리지 자동 저장)
+        const separator = freeText.trim() ? '\n\n' : '';
+        const newText = freeText + separator + `📷 이미지에서 추출된 텍스트:\n${extractedText}`;
+        updateFreeText(newText);
         
         // 상세 결과 표시
         const successCount = result.extractedCount || 0;
@@ -556,7 +555,7 @@ export default function MemoPage() {
 
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto w-full">
-      <div className="px-2 md:px-0 space-y-6">
+      <div className="px-2 md:px-0 space-y-6 mt-1">
 
         {/* 자유 입력 영역 */}
         <div className="bg-[#2A4D45]/50 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-4 sm:p-6 space-y-4">
@@ -564,8 +563,8 @@ export default function MemoPage() {
             <textarea
               value={freeText}
               onChange={handleTextChange}
-              placeholder="오늘 있었던 일, 해야 할 일, 링크, 생각 등을 자유롭게 작성해보세요...&#10;&#10;예시:&#10;- 오늘 친구랑 카페 갔는데 기분이 좋았다&#10;- 내일 회의 준비해야 함&#10;- https://example.com 나중에 읽어보기&#10;- 요즘 좀 피곤한 것 같다"
-              className="w-full min-h-[250px] sm:min-h-[300px] bg-[#358f80]/10 border border-[#358f80]/40 rounded-lg px-3 sm:px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#56ab91] resize-none text-sm sm:text-base"
+              placeholder="오늘 있었던 일, 해야 할 일, 링크, 생각 등을 자유롭게 작성해보세요"
+              className="w-full min-h-[250px] sm:min-h-[300px] bg-[#358f80]/10 border border-[#358f80]/40 rounded-lg px-3 sm:px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#56ab91] resize-y text-sm sm:text-base"
               style={{ fontFamily: 'inherit' }}
             />
           </div>
@@ -641,15 +640,6 @@ export default function MemoPage() {
 
           {/* 버튼 그룹 */}
           <div className="flex flex-col sm:flex-row justify-center gap-3">
-            {/* 새로고침 (삭제) 버튼 */}
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-red-500/20 hover:border-red-500/40 px-6 py-3 flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              새로고침
-            </Button>
             
             {/* AI 분석 버튼 */}
             <Button
@@ -665,9 +655,18 @@ export default function MemoPage() {
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  {analysisResult ? '다시 분석하기' : '메모 & 링크 정리'}
+                  {analysisResult ? '다시 분석하기' : '메모 링크 분석'}
                 </>
               )}
+            </Button>
+            {/* 새로고침 (삭제) 버튼 */}
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              className="bg-[#2A4D45]/40 border-[#358f80]/20 text-white hover:bg-red-500/20 hover:border-red-500/40 px-6 py-3 flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              새로고침
             </Button>
             
           </div>
@@ -1351,34 +1350,35 @@ export default function MemoPage() {
                 </div>
               )}
               
-               <div className="space-y-2">
-                 <label className="text-sm font-medium text-white">저장 날짜 선택</label>
-                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                   <PopoverTrigger asChild>
-                     <Button
-                       variant="outline"
-                       className="w-full justify-start text-left font-normal bg-[#358f80]/20 border-[#358f80]/40 text-white hover:bg-[#358f80]/30"
-                     >
-                       <CalendarIcon className="mr-2 h-4 w-4" />
-                       {format(saveDate, 'PPP', { locale: ko })}
-                     </Button>
-                   </PopoverTrigger>
-                   <PopoverContent className="w-auto p-0" align="start">
-                     <CalendarComponent
-                       mode="single"
-                       selected={saveDate}
-                       onSelect={(date) => {
-                         if (date) {
-                           setSaveDate(date);
-                           setCalendarOpen(false); // 날짜 선택 후 달력 닫기
-                         }
-                       }}
-                       initialFocus
-                       locale={ko}
-                     />
-                   </PopoverContent>
-                 </Popover>
-               </div>
+              <div className="space-y-2">
+  <label className="text-sm font-medium text-white">저장 날짜 선택</label>
+  
+  <Button
+    variant="outline"
+    onClick={() => setCalendarOpen(!calendarOpen)}
+    className="w-full justify-start text-left font-normal bg-[#358f80]/20 border-[#358f80]/40 text-white hover:bg-[#358f80]/30"
+  >
+    <CalendarIcon className="mr-2 h-4 w-4" />
+    {format(saveDate, 'PPP', { locale: ko })}
+  </Button>
+  
+  {calendarOpen && (
+    <div className="mt-2 p-3 bg-[#2A4D45]/60 rounded-lg border border-[#358f80]/30">
+      <CalendarComponent
+        mode="single"
+        selected={saveDate}
+        onSelect={(date) => {
+          if (date) {
+            setSaveDate(date);
+            setCalendarOpen(false);
+          }
+        }}
+        locale={ko}
+        className="rounded-md"
+      />
+    </div>
+  )}
+</div>
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button

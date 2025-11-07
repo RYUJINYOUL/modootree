@@ -381,17 +381,16 @@ export default function LinksPage() {
 
   return (
     <div className="flex-1 py-6 overflow-auto">
-      <div className="px-1 md:px-6 space-y-6">
+      <div className="px-1 md:px-6 space-y-4 mt-3">
 
         {/* 상단 헤더 - 링크 추가 버튼 */}
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">링크 관리</h1>
           <Button 
-            className="bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white border border-[#56ab91]/30 flex items-center gap-2"
+            className="bg-[#56ab91]/60 hover:bg-[#56ab91]/80 text-white border border-[#56ab91]/30 flex items-center gap-2 w-full"
             onClick={() => setIsAddModalOpen(true)}
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">링크 추가</span>
+            <span className="sm:inline">링크 추가</span>
           </Button>
         </div>
 

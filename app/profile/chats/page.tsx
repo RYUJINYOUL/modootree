@@ -290,7 +290,7 @@ export default function ChatsPage() {
   if (loading) {
     return (
       <div className="flex-1 md:p-6 py-6 overflow-auto w-full">
-        <div className="w-full space-y-6">
+        <div className="w-full space-y-6 mt-1">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-2 md:px-0">
             {/* 스켈레톤 로딩 */}
             {[...Array(6)].map((_, i) => (
