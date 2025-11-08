@@ -1644,7 +1644,7 @@ export default function LinkLetterPage() {
                   disabled={isSubmitting}
                   className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? '저장 중...' : '편지 보내기'}
+                  {isSubmitting ? '저장 중...' : '편지 등록'}
                 </Button>
               )}
             </div>
