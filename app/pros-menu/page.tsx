@@ -167,7 +167,7 @@ export default function ProsMenu() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EF3340] overflow-y-auto cursor-penc relative">
+    <div className="min-h-screen bg-[#d05b63] overflow-y-auto cursor-penc relative">
       {/* 파티클 배경 효과 */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <ParticlesComponent />
@@ -200,7 +200,7 @@ export default function ProsMenu() {
       <div className="relative w-full h-screen flex items-center justify-center z-10">
         {/* Organic Blob Shape - More Distorted */}
         <svg
-          className="absolute w-[90%] sm:w-[90%] md:w-[70%] h-[80%]"
+          className="absolute w-[90%] sm:w-[80%] md:w-[70%] h-[80%]"
           viewBox="0 0 800 900"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
