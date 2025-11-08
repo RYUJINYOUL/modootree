@@ -734,7 +734,7 @@ export default function ProfilePage() {
               </div>
             </Link>
 
-            <Link href="/link-letter" className="group bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6 hover:bg-[#2A4D45]/80 transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer block">
+            <Link href="/pros-menu" className="group bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-6 hover:bg-[#2A4D45]/80 transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer block">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-orange-500/20 border-orange-400/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Rocket className="w-6 h-6 text-orange-400" />

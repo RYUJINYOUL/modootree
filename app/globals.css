@@ -29,6 +29,22 @@
     animation: float 3s ease-in-out infinite;
   }
 
+  /* 커스텀 커서 */
+  .cursor-penc {
+    cursor: url('/logos/penc.png') 16 16, auto;
+  }
+  
+  .cursor-penc-hover {
+    cursor: url('/logos/penc.png') 16 16, pointer;
+  }
+
+  /* 링크편지 페이지 전체 버튼 커서 */
+  .cursor-penc button,
+  .cursor-penc [role="button"],
+  .cursor-penc a {
+    cursor: url('/logos/penc.png') 16 16, pointer;
+  }
+
   /* 스크롤바 숨김 (스크롤은 가능) */
   .scrollbar-hide {
     -ms-overflow-style: none;  /* IE and Edge */

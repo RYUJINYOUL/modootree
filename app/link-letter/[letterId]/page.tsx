@@ -35,8 +35,10 @@ interface LinkLetter {
   quiz: {
     questions?: {
       question: string;
+      type?: 'multiple' | 'short'; // 문제 유형 (객관식/주관식)
       options: string[];
       correctAnswer: number;
+      shortAnswer?: string; // 주관식 정답
       hint: string;
     }[];
     // 기존 단일 퀴즈 호환성
@@ -183,6 +185,7 @@ export default function LinkLetterDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showQuiz, setShowQuiz] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [shortAnswer, setShortAnswer] = useState<string>(''); // 주관식 답안
   const [quizPassed, setQuizPassed] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [showHint, setShowHint] = useState(false);
@@ -410,7 +413,19 @@ export default function LinkLetterDetailPage() {
   const handleQuizSubmit = () => {
     if (!currentQuiz) return;
     
-    if (selectedAnswer === currentQuiz.correctAnswer) {
+    let isCorrect = false;
+    
+    if (currentQuiz.type === 'short') {
+      // 주관식 검사 (대소문자 구분 없이)
+      const userAnswer = shortAnswer.trim().toLowerCase();
+      const correctAnswer = (currentQuiz.shortAnswer || '').trim().toLowerCase();
+      isCorrect = userAnswer === correctAnswer;
+    } else {
+      // 객관식 검사
+      isCorrect = selectedAnswer === currentQuiz.correctAnswer;
+    }
+    
+    if (isCorrect) {
       // 현재 퀴즈를 완료된 목록에 추가
       setCompletedQuizzes(prev => [...prev, currentQuizIndex]);
       
@@ -423,6 +438,7 @@ export default function LinkLetterDetailPage() {
         // 다음 퀴즈로 이동
         setCurrentQuizIndex(prev => prev + 1);
         setSelectedAnswer(null);
+        setShortAnswer('');
         setAttempts(0);
         setShowHint(false);
         
@@ -437,6 +453,7 @@ export default function LinkLetterDetailPage() {
       } else {
         alert(`틀렸습니다! ${maxAttempts - attempts - 1}번의 기회가 남았습니다.`);
         setSelectedAnswer(null);
+        setShortAnswer('');
       }
     }
   };
@@ -823,32 +840,51 @@ export default function LinkLetterDetailPage() {
                       <p className="text-lg text-white font-medium">{currentQuiz.question}</p>
                     </div>
                     
-                    <div className="space-y-3">
-                      {currentQuiz.options.map((option, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedAnswer(index)}
-                          className={`w-full p-4 rounded-lg text-left transition-all ${
-                            selectedAnswer === index 
-                              ? 'bg-pink-500/30 border-2 border-pink-400 text-white' 
-                              : 'bg-white/5 hover:bg-white/10 border border-white/20 text-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    {/* 주관식 또는 객관식 UI */}
+                    {currentQuiz.type === 'short' ? (
+                      /* 주관식 답안 입력 */
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={shortAnswer}
+                          onChange={(e) => setShortAnswer(e.target.value)}
+                          placeholder="정답을 입력하세요"
+                          className="w-full p-4 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-400"
+                          maxLength={100}
+                        />
+                        <p className="text-xs text-gray-400">
+                          * 대소문자 구분 없이 정확히 입력해주세요
+                        </p>
+                      </div>
+                    ) : (
+                      /* 객관식 선택지 */
+                      <div className="space-y-3">
+                        {currentQuiz.options.map((option, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedAnswer(index)}
+                            className={`w-full p-4 rounded-lg text-left transition-all ${
                               selectedAnswer === index 
-                                ? 'border-pink-400 bg-pink-500' 
-                                : 'border-gray-400'
-                            }`}>
-                              {selectedAnswer === index && (
-                                <CheckCircle className="w-4 h-4 text-white" />
-                              )}
+                                ? 'bg-pink-500/30 border-2 border-pink-400 text-white' 
+                                : 'bg-white/5 hover:bg-white/10 border border-white/20 text-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                selectedAnswer === index 
+                                  ? 'border-pink-400 bg-pink-500' 
+                                  : 'border-gray-400'
+                              }`}>
+                                {selectedAnswer === index && (
+                                  <CheckCircle className="w-4 h-4 text-white" />
+                                )}
+                              </div>
+                              <span className="font-medium">{option}</span>
                             </div>
-                            <span className="font-medium">{option}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   {/* 힌트 */}
@@ -871,12 +907,16 @@ export default function LinkLetterDetailPage() {
                   
                   <Button
                     onClick={handleQuizSubmit}
-                    disabled={selectedAnswer === null}
+                    disabled={
+                      currentQuiz?.type === 'short' 
+                        ? !shortAnswer.trim() 
+                        : selectedAnswer === null
+                    }
                     className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {selectedAnswer !== null 
+                    {(currentQuiz?.type === 'short' ? shortAnswer.trim() : selectedAnswer !== null)
                       ? (isLastQuiz ? '편지 확인하기' : '다음 퀴즈로') 
-                      : '답을 선택해주세요'
+                      : (currentQuiz?.type === 'short' ? '정답을 입력해주세요' : '답을 선택해주세요')
                     }
                   </Button>
                   

@@ -224,7 +224,7 @@ export default function Home() {
           <div className="flex flex-row overflow-x-auto gap-4 py-2 scrollbar-hide">
             {[ 
               // { icon: "/logos/feed.png", path: "/feed" }, // AI와 함께 이야기 - 비공개
-              { icon: "/logos/ai5.png", path: "/link-letter" },
+              { icon: "/logos/ai5.png", path: "/pros-menu" },
               { icon: "/logos/news.png", path: "/news-vote" },
               // { icon: "/logos/ai5.png", path: "/art-generation" }, // 사진 예술 작품 - 비공개
               { icon: "/logos/m1.png", path: "/profile" },

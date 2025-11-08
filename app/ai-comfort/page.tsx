@@ -411,7 +411,7 @@ export default function AiComfortPage() {
                               {/* 링크편지 관련 */}
                             {msg.content.includes('링크편지') && (
                                <Link 
-                                 href="/link-letter" 
+                                 href="/pros-menu" 
                                  className="inline-flex items-center gap-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-2.5 py-1.5 rounded-md border border-yellow-600/30 transition text-xs font-medium"
                                >
                                  <Mail className="w-3 h-3" />

@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Heart, Gift, Users, Baby, MessageCircle, Plus, Eye, Share2, Upload, X, ImageIcon, Trash2, ChevronLeft, ChevronRight, Info, Settings } from 'lucide-react';
 import Link from 'next/link';
-import LoginOutButton from '@/components/ui/LoginOutButton';
 import { useSelector } from 'react-redux';
 import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -67,8 +66,10 @@ interface LetterForm {
   quiz: {
     questions: {
       question: string;
+      type?: 'multiple' | 'short'; // 문제 유형 (객관식/주관식)
       options: string[];
       correctAnswer: number;
+      shortAnswer?: string; // 주관식 정답
       hint: string;
     }[];
   };
@@ -95,7 +96,7 @@ const ParticlesComponent = () => {
         fpsLimit: 120,
         particles: {
           color: {
-            value: ["#ff6b9d", "#c44569", "#f8b500", "#6c5ce7", "#a29bfe", "#fd79a8"]
+            value: ["#FFB6C1", "#FF69B4", "#FF1493", "#DC143C", "#FFF", "#FFD700", "#FF6347"]
           },
           collisions: {
             enable: false
@@ -107,7 +108,7 @@ const ParticlesComponent = () => {
               default: "out"
             },
             random: true,
-            speed: 0.3,
+            speed: { min: 0.5, max: 2 },
             straight: false,
             attract: {
               enable: true,
@@ -118,32 +119,59 @@ const ParticlesComponent = () => {
           number: {
             density: {
               enable: true,
-              area: 800
+              area: 1000
             },
-            value: 80
+            value: 60
           },
           opacity: {
             animation: {
               enable: true,
-              minimumValue: 0.1,
-              speed: 1,
+              minimumValue: 0.2,
+              speed: 1.5,
               sync: false
             },
             random: true,
-            value: { min: 0.1, max: 0.4 }
+            value: { min: 0.3, max: 0.8 }
           },
           shape: {
-            type: ["circle", "triangle", "polygon"]
+            type: ["heart", "star", "circle", "triangle"],
+            options: {
+              heart: {
+                particles: {
+                  size: {
+                    value: { min: 8, max: 16 }
+                  }
+                }
+              },
+              star: {
+                sides: 5,
+                particles: {
+                  size: {
+                    value: { min: 6, max: 12 }
+                  }
+                }
+              }
+            }
           },
           size: {
             animation: {
               enable: true,
-              minimumValue: 0.1,
-              speed: 2,
+              minimumValue: 2,
+              speed: 3,
               sync: false
             },
             random: true,
-            value: { min: 1, max: 3 }
+            value: { min: 3, max: 8 }
+          },
+          rotate: {
+            animation: {
+              enable: true,
+              speed: 2,
+              sync: false
+            },
+            direction: "random",
+            random: true,
+            value: { min: 0, max: 360 }
           }
         },
         detectRetina: true,
@@ -152,14 +180,21 @@ const ParticlesComponent = () => {
             onHover: {
               enable: true,
               mode: "bubble"
+            },
+            onClick: {
+              enable: true,
+              mode: "push"
             }
           },
           modes: {
             bubble: {
-              distance: 200,
+              distance: 150,
               duration: 2,
-              opacity: 0.6,
-              size: 5
+              opacity: 1,
+              size: 12
+            },
+            push: {
+              quantity: 3
             }
           }
         }
@@ -169,12 +204,12 @@ const ParticlesComponent = () => {
 };
 
 const letterCategories = [
-  { id: 'confession', name: '고백', icon: Heart, color: 'bg-gradient-to-br from-pink-500 to-rose-600', image: '/tabs/love.png' },
-  { id: 'gratitude', name: '감사', icon: Gift, color: 'bg-gradient-to-br from-green-500 to-emerald-600', image: '/tabs/congrats.png' },
-  { id: 'friendship', name: '우정', icon: Users, color: 'bg-gradient-to-br from-blue-500 to-cyan-600', image: '/tabs/friend.png' },
-  { id: 'filial', name: '효도', icon: Baby, color: 'bg-gradient-to-br from-purple-500 to-violet-600', image: '/tabs/family.png' },
-  { id: 'apology', name: '사과', icon: MessageCircle, color: 'bg-gradient-to-br from-orange-500 to-amber-600', image: '/tabs/sorry.png' },
-  { id: 'celebration', name: '축하', icon: Plus, color: 'bg-gradient-to-br from-yellow-500 to-orange-500', image: '/tabs/cong.png' }
+  { id: 'confession', name: '고백', icon: Heart, color: 'bg-gradient-to-br from-red-400 to-red-600', image: '/tabs/love.png' },
+  { id: 'gratitude', name: '감사', icon: Gift, color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', image: '/tabs/congrats.png' },
+  { id: 'friendship', name: '우정', icon: Users, color: 'bg-gradient-to-br from-blue-400 to-blue-600', image: '/tabs/friend.png' },
+  { id: 'filial', name: '효도', icon: Baby, color: 'bg-gradient-to-br from-purple-400 to-purple-600', image: '/tabs/family.png' },
+  { id: 'apology', name: '사과', icon: MessageCircle, color: 'bg-gradient-to-br from-orange-400 to-orange-600', image: '/tabs/sorry.png' },
+  { id: 'celebration', name: '축하', icon: Plus, color: 'bg-gradient-to-br from-yellow-400 to-yellow-600', image: '/tabs/cong.png' }
 ];
 
 export default function LinkLetterPage() {
@@ -199,8 +234,10 @@ export default function LinkLetterPage() {
     quiz: {
       questions: [{
         question: '',
+        type: 'multiple', // 기본값은 객관식
         options: ['', ''],
         correctAnswer: 0,
+        shortAnswer: '',
         hint: ''
       }]
     },
@@ -301,8 +338,10 @@ export default function LinkLetterPage() {
         quiz: {
           questions: [...prev.quiz.questions, {
             question: '',
+            type: 'multiple', // 기본값은 객관식
             options: ['', ''],
             correctAnswer: 0,
+            shortAnswer: '',
             hint: ''
           }]
         }
@@ -495,9 +534,23 @@ export default function LinkLetterPage() {
         alert(`${i + 1}번째 퀴즈 질문을 입력해주세요.`);
         return;
       }
-      if (question.options.some(option => !option.trim())) {
-        alert(`${i + 1}번째 퀴즈의 모든 선택지를 입력해주세요.`);
-        return;
+      
+      if (question.type === 'short') {
+        // 주관식 검사
+        if (!question.shortAnswer?.trim()) {
+          alert(`${i + 1}번째 주관식 퀴즈의 정답을 입력해주세요.`);
+          return;
+        }
+      } else {
+        // 객관식 검사
+        if (question.options.some(option => !option.trim())) {
+          alert(`${i + 1}번째 퀴즈의 모든 선택지를 입력해주세요.`);
+          return;
+        }
+        if (question.correctAnswer < 0 || question.correctAnswer >= question.options.length) {
+          alert(`${i + 1}번째 퀴즈의 정답을 선택해주세요.`);
+          return;
+        }
       }
     }
     if (!letterForm.content.trim()) {
@@ -671,7 +724,7 @@ export default function LinkLetterPage() {
           {currentUser?.uid && (
             <Button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-pink-500 hover:bg-pink-600 text-white"
+              className="bg-pink-500 hover:bg-pink-600 text-white cursor-penc-hover"
             >
               <Plus className="w-4 h-4 mr-2" />
               편지 쓰기
@@ -691,7 +744,7 @@ export default function LinkLetterPage() {
           return (
             <div 
               key={letter.id}
-              className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden hover:bg-white/20 transition-all duration-300 cursor-pointer group hover:scale-105 hover:shadow-xl"
+              className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden hover:bg-white/20 transition-all duration-300 cursor-penc-hover group hover:scale-105 hover:shadow-xl"
               onClick={() => router.push(`/link-letter/${letter.id}`)}
             >
               {/* 이미지 캐로셀 또는 카테고리 헤더 */}
@@ -835,11 +888,9 @@ export default function LinkLetterPage() {
   return (
     <>
       {/* 헤더 */}
-      <div className="fixed top-0 left-0 right-0 z-20 w-full">
-        <LoginOutButton />
-      </div>
+    
 
-      <main className="min-h-screen bg-slate-950 text-white/90 relative overflow-hidden pt-[70px]">
+      <main className="min-h-screen bg-gradient-to-br from-rose-300 via-pink-300 to-fuchsia-300 text-white/90 relative overflow-hidden pt-[30px] cursor-penc">
         {/* 파티클 배경 효과 */}
         <div className="absolute inset-0 z-0">
           <ParticlesComponent />
@@ -853,7 +904,7 @@ export default function LinkLetterPage() {
   <div className="inline-flex items-center gap-2 mb-6">
     <div className="flex flex-col"> 
       <h1 className="text-2xl font-bold text-white mb-2">모두트리 링크편지</h1> 
-      <p className="text-sm text-gray-400">퀴즈를 풀어야만 볼 수 있는 편지</p>
+      <p className="text-sm text-white">퀴즈를 풀어야만 볼 수 있는 편지</p>
     </div>
   </div>
 </div>
@@ -865,10 +916,10 @@ export default function LinkLetterPage() {
               <Button
                 variant={selectedCategory === 'all' ? 'default' : 'outline'}
                 onClick={() => setSelectedCategory('all')}
-                className={`text-sm transition-all ${
+                className={`text-sm transition-all cursor-penc-hover ${
                   selectedCategory === 'all' 
-                    ? 'bg-blue-500/30 hover:bg-blue-500/40 text-white shadow-lg backdrop-blur-sm border-blue-400/50' 
-                    : 'border-white/20 text-gray-300 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/30'
+                    ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
+                    : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
                 }`}
               >
                 전체 ({letters.length})
@@ -882,8 +933,8 @@ export default function LinkLetterPage() {
                     onClick={() => setSelectedCategory(category.id)}
                     className={`text-sm transition-all flex items-center gap-2 ${
                       selectedCategory === category.id 
-                        ? 'bg-blue-500/30 hover:bg-blue-500/40 text-white shadow-lg backdrop-blur-sm border-blue-400/50' 
-                        : 'border-white/20 text-gray-300 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/30'
+                        ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
+                        : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
                     }`}
                   >
                     <img 
@@ -905,8 +956,8 @@ export default function LinkLetterPage() {
                   onClick={() => setSelectedCategory('all')}
                   className={`text-sm transition-all flex-shrink-0 ${
                     selectedCategory === 'all' 
-                      ? 'bg-blue-500/30 hover:bg-blue-500/40 text-white shadow-lg backdrop-blur-sm border-blue-400/50' 
-                      : 'border-white/20 text-gray-300 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/30'
+                      ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
+                      : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
                   }`}
                 >
                   전체 ({letters.length})
@@ -920,8 +971,8 @@ export default function LinkLetterPage() {
                       onClick={() => setSelectedCategory(category.id)}
                       className={`text-sm transition-all flex-shrink-0 flex items-center gap-2 ${
                         selectedCategory === category.id 
-                          ? 'bg-blue-500/30 hover:bg-blue-500/40 text-white shadow-lg backdrop-blur-sm border-blue-400/50' 
-                          : 'border-white/20 text-gray-300 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/30'
+                          ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
+                          : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
                       }`}
                     >
                       <img 
@@ -945,8 +996,8 @@ export default function LinkLetterPage() {
                 onClick={() => setShowMyLetters(!showMyLetters)}
                 className={`text-sm transition-all ${
                   showMyLetters 
-                    ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-                    : 'border-white/20 text-gray-300 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/30'
+                    ? 'bg-white/90 hover:bg-white text-black shadow-lg' 
+                    : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
                 }`}
               >
                 {showMyLetters ? '📝 내 편지' : '🌍 전체 편지'}
@@ -993,14 +1044,14 @@ export default function LinkLetterPage() {
                   <div key={step} className="flex items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
                       currentStep >= step 
-                        ? 'bg-blue-500 text-white shadow-lg' 
+                        ? 'bg-white text-black shadow-lg' 
                         : 'bg-white/20 text-white/60 backdrop-blur-sm'
                     }`}>
                       {step}
                     </div>
                     {step < 5 && (
                       <div className={`w-8 h-1 transition-all ${
-                        currentStep > step ? 'bg-blue-500' : 'bg-white/20'
+                        currentStep > step ? 'bg-white' : 'bg-white/20'
                       }`} />
                     )}
                   </div>
@@ -1070,8 +1121,9 @@ export default function LinkLetterPage() {
                   <p className="text-sm text-white">
                     <strong>퀴즈 만들기 가이드:</strong><br />
                     • 최소 1개, 최대 10개까지 퀴즈 질문 생성 가능<br />
-                    • 각 질문마다 최소 2개, 최대 10개 선택지<br />
-                    • 각 질문의 정답을 반드시 선택해주세요
+                    • <strong>객관식:</strong> 최소 2개, 최대 10개 선택지 + 정답 선택<br />
+                    • <strong>주관식:</strong> 정확한 정답 입력 (대소문자 구분 없음)<br />
+                    • 각 질문의 정답을 반드시 설정해주세요
                   </p>
                 </div>
 
@@ -1108,81 +1160,131 @@ export default function LinkLetterPage() {
                           />
                         </div>
 
-                        {/* 선택지 */}
+                        {/* 문제 유형 선택 */}
                         <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <Label className="text-white">선택지 * (최대 10개)</Label>
-                            <span className="text-xs text-white/70">
-                              {question.options.length}/10 개
-                            </span>
+                          <Label className="text-white">문제 유형 *</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateQuizQuestion(questionIndex, 'type', 'multiple')}
+                              className={`${
+                                question.type === 'multiple' || !question.type
+                                  ? 'bg-white/90 text-black border-white/70' 
+                                  : 'border-white/40 text-white/90 hover:bg-white/20'
+                              }`}
+                            >
+                              객관식
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateQuizQuestion(questionIndex, 'type', 'short')}
+                              className={`${
+                                question.type === 'short'
+                                  ? 'bg-white/90 text-black border-white/70' 
+                                  : 'border-white/40 text-white/90 hover:bg-white/20'
+                              }`}
+                            >
+                              주관식
+                            </Button>
                           </div>
-                          <div className="space-y-2">
-                            {question.options.map((option, optionIndex) => (
-                              <div key={optionIndex} className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 flex-1">
-                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
-                                    question.correctAnswer === optionIndex 
-                                      ? 'border-green-400 bg-green-500 text-white' 
-                                      : 'border-white/50 text-white'
-                                  }`}>
-                                    {optionIndex + 1}
+                        </div>
+
+                        {/* 객관식 선택지 또는 주관식 정답 */}
+                        {question.type === 'short' ? (
+                          /* 주관식 정답 입력 */
+                          <div>
+                            <Label className="text-white">정답 *</Label>
+                            <Input
+                              value={question.shortAnswer || ''}
+                              onChange={(e) => updateQuizQuestion(questionIndex, 'shortAnswer', e.target.value)}
+                              placeholder="주관식 문제의 정답을 입력하세요"
+                              className="mt-1"
+                            />
+                            <p className="text-xs text-white/70 mt-1">
+                              * 대소문자 구분 없이 정확히 일치해야 정답으로 인정됩니다
+                            </p>
+                          </div>
+                        ) : (
+                          /* 객관식 선택지 */
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-white">선택지 * (최대 10개)</Label>
+                              <span className="text-xs text-white/70">
+                                {question.options.length}/10 개
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              {question.options.map((option, optionIndex) => (
+                                <div key={optionIndex} className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
+                                      question.correctAnswer === optionIndex 
+                                        ? 'border-green-400 bg-green-500 text-white' 
+                                        : 'border-white/50 text-white'
+                                    }`}>
+                                      {optionIndex + 1}
+                                    </div>
+                                    <Input
+                                      value={option}
+                                      onChange={(e) => updateQuizOption(questionIndex, optionIndex, e.target.value)}
+                                      placeholder={`선택지 ${optionIndex + 1}`}
+                                      className="flex-1"
+                                    />
                                   </div>
-                                  <Input
-                                    value={option}
-                                    onChange={(e) => updateQuizOption(questionIndex, optionIndex, e.target.value)}
-                                    placeholder={`선택지 ${optionIndex + 1}`}
-                                    className="flex-1"
-                                  />
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCorrectAnswer(questionIndex, optionIndex)}
-                                  className={`border-white/30 text-white hover:bg-white/10 ${
-                                    question.correctAnswer === optionIndex ? 'bg-green-500/30 border-green-400/50' : ''
-                                  }`}
-                                >
-                                  정답
-                                </Button>
-                                {question.options.length > 2 && (
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => removeQuizOption(questionIndex, optionIndex)}
-                                    className="border-red-400/50 text-red-300 hover:text-red-200 hover:bg-red-500/20"
-                                    title="선택지 삭제"
+                                    onClick={() => setCorrectAnswer(questionIndex, optionIndex)}
+                                    className={`border-white/30 text-white hover:bg-white/10 ${
+                                      question.correctAnswer === optionIndex ? 'bg-green-500/30 border-green-400/50' : ''
+                                    }`}
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    정답
                                   </Button>
-                                )}
-                              </div>
-                            ))}
+                                  {question.options.length > 2 && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => removeQuizOption(questionIndex, optionIndex)}
+                                      className="border-red-400/50 text-red-300 hover:text-red-200 hover:bg-red-500/20"
+                                      title="선택지 삭제"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* 선택지 추가 버튼 */}
+                            <div className="mt-2">
+                              {question.options.length < 10 ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => addQuizOption(questionIndex)}
+                                  className="w-full border-white/30 text-white hover:bg-white/10"
+                                  size="sm"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  선택지 추가 ({question.options.length}/10)
+                                </Button>
+                              ) : (
+                                <div className="w-full p-2 bg-green-500/20 border border-green-400/30 rounded text-center backdrop-blur-sm">
+                                  <span className="text-xs text-white">
+                                    ✅ 최대 10개 선택지 완료
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          
-                          {/* 선택지 추가 버튼 */}
-                          <div className="mt-2">
-                            {question.options.length < 10 ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => addQuizOption(questionIndex)}
-                                className="w-full border-white/30 text-white hover:bg-white/10"
-                                size="sm"
-                              >
-                                <Plus className="w-4 h-4 mr-2" />
-                                선택지 추가 ({question.options.length}/10)
-                              </Button>
-                            ) : (
-                              <div className="w-full p-2 bg-green-500/20 border border-green-400/30 rounded text-center backdrop-blur-sm">
-                                <span className="text-xs text-white">
-                                  ✅ 최대 10개 선택지 완료
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        )}
 
                         {/* 힌트 */}
                         <div>
@@ -1310,7 +1412,10 @@ export default function LinkLetterPage() {
                     <p><strong>제목:</strong> {letterForm.title || '제목 없음'}</p>
                     <p><strong>카테고리:</strong> {letterCategories.find(cat => cat.id === letterForm.category)?.name || '선택 안함'}</p>
                     <p><strong>작성자:</strong> {letterForm.author || '작성자 없음'}</p>
-                    <p><strong>퀴즈:</strong> {letterForm.quiz.questions.length}개 질문</p>
+                    <p><strong>퀴즈:</strong> {letterForm.quiz.questions.length}개 질문 
+                      ({letterForm.quiz.questions.filter(q => q.type === 'short').length}개 주관식, 
+                      {letterForm.quiz.questions.filter(q => q.type !== 'short').length}개 객관식)
+                    </p>
                     <p><strong>사진:</strong> {letterForm.images.length}장</p>
                     <div className="mt-2 p-2 bg-white/10 rounded border border-white/20 max-h-20 overflow-y-auto backdrop-blur-sm">
                       <span className="text-white/80">{letterForm.content || '내용 없음'}</span>

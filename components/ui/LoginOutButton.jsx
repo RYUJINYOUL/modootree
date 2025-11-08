@@ -100,7 +100,7 @@ export default function LoginOutButton() {
                     title: "링크 편지",
                     description: "퀴즈를 풀어야만 읽을 수 있는 링크 편지",
                     icon: "/logos/ai5.png",
-                    path: "/link-letter"
+                    path: "/pros-menu"
                   },
                   {
                     title: "AI 건강 기록",
