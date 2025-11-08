@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, ChevronRight, Menu, Phone } from 'lucide-react';
+import { X, ChevronRight, Menu, Phone, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
@@ -131,12 +131,39 @@ const ParticlesComponent = () => {
 
 export default function ProsMenu() {
   const [isOpen, setIsOpen] = useState(true);
+  const [linkCopied, setLinkCopied] = useState(false);
   const router = useRouter();
 
   if (!isOpen) return null;
 
   const handleNavigateToLinkLetter = () => {
     router.push('/link-letter');
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      
+      // 3초 후 상태 초기화
+      setTimeout(() => {
+        setLinkCopied(false);
+      }, 3000);
+    } catch (error) {
+      console.error('링크 복사 실패:', error);
+      // 폴백: 텍스트 선택으로 복사 안내
+      const textArea = document.createElement('textarea');
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      setLinkCopied(true);
+      setTimeout(() => {
+        setLinkCopied(false);
+      }, 3000);
+    }
   };
 
   return (
@@ -160,20 +187,20 @@ export default function ProsMenu() {
             <span className="font-bold">모두트리</span>
             <X className="w-6 h-6" />
           </button>
-        <div className="flex items-center gap-8">
+        <div className="flex flex-col items-end gap-2">
           <p className="text-white text-sm">
             퀴즈를 풀어야 볼 수 있는{' '}
             <span className="font-bold">링크편지</span>
           </p>
+          
         </div>
       </header>
-
 
       {/* Main Menu Container */}
       <div className="relative w-full h-screen flex items-center justify-center z-10">
         {/* Organic Blob Shape - More Distorted */}
         <svg
-          className="absolute w-[90%] sm:w-[80%] md:w-[70%] h-[80%]"
+          className="absolute w-[90%] sm:w-[90%] md:w-[70%] h-[80%]"
           viewBox="0 0 800 900"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -210,6 +237,31 @@ export default function ProsMenu() {
              <MenuItem text="모두트리" active={false} />
              <MenuItem text="링크편지" active={true} />
            </ul>
+
+           {/* 링크 복사 버튼 */}
+           <div className="flex justify-center mt-6">
+             <button
+               type="button"
+               onClick={handleCopyLink}
+               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 cursor-penc-hover ${
+                 linkCopied
+                   ? 'bg-green-500 border border-green-600 text-white shadow-lg'
+                   : 'bg-black border border-gray-800 text-white hover:bg-gray-800 hover:border-gray-700'
+               } backdrop-blur-sm shadow-lg`}
+             >
+               {linkCopied ? (
+                 <>
+                   <Check className="w-4 h-4" />
+                   <span className="text-sm font-medium">복사 완료!</span>
+                 </>
+               ) : (
+                 <>
+                   <Copy className="w-4 h-4" />
+                   <span className="text-sm font-medium">링크 복사</span>
+                 </>
+               )}
+             </button>
+           </div>
          </nav>
 
          {/* Speech Bubbles - Bottom */}
@@ -235,7 +287,10 @@ export default function ProsMenu() {
             <PencLogo />
           </button>
         </div>
+
+        
       </div>
+      
 
       {/* 링크편지 설명 섹션 */}
       <div className="relative z-20 px-6 pt-2 pb-12">
