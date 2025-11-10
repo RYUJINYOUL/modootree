@@ -16,6 +16,7 @@ import { useSelector } from 'react-redux';
 import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebase';
+import imageCompression from 'browser-image-compression';
 
 interface LinkLetter {
   id: string;
@@ -460,126 +461,99 @@ export default function LinkLetterPage() {
     }));
   };
 
-  // HEIC/HEIF 포맷 감지 함수
-  const isHEICFormat = (file: File): boolean => {
-    const heicExtensions = ['.heic', '.heif'];
-    const fileName = file.name.toLowerCase();
-    return heicExtensions.some(ext => fileName.endsWith(ext)) || 
-           file.type === 'image/heic' || 
-           file.type === 'image/heif';
-  };
-
-  // HEIC를 JPEG로 변환하는 함수
-  const convertHEICToJPEG = async (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      // HEIC 파일인 경우 변환 시도
-      if (isHEICFormat(file)) {
-        try {
-          // FileReader로 파일 읽기
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const arrayBuffer = e.target?.result as ArrayBuffer;
-            
-            // Blob을 이용해 새로운 File 객체 생성 (JPEG로 강제 변환)
-            const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
-            const convertedFile = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
-              type: 'image/jpeg',
-              lastModified: file.lastModified
-            });
-            
-            resolve(convertedFile);
-          };
-          reader.onerror = () => reject(new Error('HEIC 파일 읽기 실패'));
-          reader.readAsArrayBuffer(file);
-        } catch (error) {
-          console.warn('HEIC 변환 실패, 원본 파일 사용:', error);
-          resolve(file);
-        }
-      } else {
-        resolve(file);
-      }
+  // 안정적인 이미지 압축 함수 (browser-image-compression 사용, 타임아웃 보호)
+  const compressImageWithLibrary = async (file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> => {
+    // 타임아웃 Promise 생성 (30초)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('이미지 압축 시간 초과 (30초)'));
+      }, 30000);
     });
-  };
 
-  // 이미지 압축 함수 (HEIC 지원 포함)
-  const compressImage = async (file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<Blob> => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // 1단계: HEIC 파일이면 JPEG로 변환
-        const processedFile = await convertHEICToJPEG(file);
-        
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!;
-        const img = new Image();
-        
-        img.onload = () => {
-          try {
-            // 비율 유지하며 리사이징
-            const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-            canvas.width = img.width * ratio;
-            canvas.height = img.height * ratio;
-            
-            // 이미지 그리기
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            
-            // Blob으로 변환 (압축 적용)
-            canvas.toBlob((blob) => {
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error('이미지 압축 실패'));
-              }
-            }, 'image/jpeg', quality);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        
-        img.onerror = () => {
-          console.error('이미지 로드 실패, 원본 파일 사용');
-          // 이미지 로드 실패 시 원본 파일을 Blob으로 반환
-          resolve(new Blob([processedFile], { type: 'image/jpeg' }));
-        };
-        
-        // 이미지 로드 시작
-        img.src = URL.createObjectURL(processedFile);
-      } catch (error) {
-        console.error('이미지 처리 실패:', error);
-        // 모든 처리 실패 시 원본 파일을 Blob으로 반환
-        resolve(new Blob([file], { type: file.type }));
-      }
-    });
-  };
-
-  // Firebase Storage에 편지 이미지 업로드 함수 (압축 적용)
-  const uploadImageToStorage = async (file: File): Promise<string> => {
     try {
-      console.log(`이미지 처리 시작: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`이미지 압축 시작: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       
-      // HEIC 포맷 감지 및 로깅
-      if (isHEICFormat(file)) {
-        console.log('🔄 HEIC/HEIF 포맷 감지됨, JPEG로 변환 중...');
+      // 파일 크기 체크 (50MB 이상이면 거부)
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('파일 크기가 너무 큽니다. 50MB 이하의 이미지를 선택해주세요.');
       }
       
-      // 이미지 압축 (1920px, 품질 80%)
-      const compressedBlob = await compressImage(file, 1920, 0.8);
+      // HEIC/HEIF 파일 감지
+      const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || 
+                     file.name.toLowerCase().endsWith('.heic') || 
+                     file.name.toLowerCase().endsWith('.heif');
       
-      // 파일명 생성 (중복 방지, HEIC는 jpg로 변경)
+      if (isHEIC) {
+        console.log('🔄 HEIC/HEIF 포맷 감지됨, 자동 변환 및 압축 중...');
+      }
+      
+      // browser-image-compression 옵션 설정
+      const options = {
+        maxSizeMB: Math.min(2, file.size / (1024 * 1024) * 0.7), // 원본 크기의 70% 또는 2MB 중 작은 값
+        maxWidthOrHeight: maxWidth, // 최대 너비/높이
+        useWebWorker: true, // 웹 워커 사용으로 UI 블로킹 방지
+        fileType: 'image/jpeg', // JPEG로 변환 (HEIC 포함)
+        initialQuality: quality, // 초기 품질 설정
+        alwaysKeepResolution: false, // 해상도 조정 허용
+        exifOrientation: 1 // EXIF 회전 정보 정규화
+      };
+      
+      // 타임아웃과 함께 이미지 압축 실행
+      const compressionPromise = imageCompression(file, options);
+      const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
+      
+      // 파일명 처리 (HEIC는 jpg로 변경)
       let fileName = file.name;
-      if (isHEICFormat(file)) {
+      if (isHEIC) {
         fileName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
       }
-      const storageFileName = `link-letters/${Date.now()}_${Math.random().toString(36).substring(7)}_${fileName}`;
+      
+      // 새로운 File 객체 생성
+      const finalFile = new File([compressedFile], fileName, {
+        type: 'image/jpeg',
+        lastModified: Date.now()
+      });
+      
+      const compressionRate = ((file.size - finalFile.size) / file.size * 100).toFixed(1);
+      console.log(`✅ 이미지 압축 완료: ${compressionRate}% 압축 (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(finalFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      return finalFile;
+    } catch (error) {
+      console.error('❌ 이미지 압축 실패:', error);
+      
+      // 에러 메시지에 따른 처리
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      
+      if (errorMessage.includes('시간 초과')) {
+        console.log('⏰ 이미지 압축 시간 초과, 원본 파일 사용');
+        throw new Error('이미지 처리 시간이 너무 오래 걸립니다. 더 작은 이미지를 선택해주세요.');
+      } else if (errorMessage.includes('파일 크기')) {
+        throw error; // 파일 크기 오류는 그대로 전달
+      } else {
+        console.log('⚠️ 압축 실패, 원본 파일 사용');
+        return file; // 기타 오류는 원본 파일 반환
+      }
+    }
+  };
+
+  // Firebase Storage에 편지 이미지 업로드 함수 (안정적인 압축 적용)
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    try {
+      console.log(`편지 이미지 처리 시작: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      // 안정적인 이미지 압축 (1920px, 품질 80%)
+      const compressedFile = await compressImageWithLibrary(file, 1920, 0.8);
+      
+      // 파일명 생성 (중복 방지)
+      const storageFileName = `link-letters/${Date.now()}_${Math.random().toString(36).substring(7)}_${compressedFile.name}`;
       const storageRef = ref(storage, storageFileName);
       
-      // Firebase Storage에 업로드 (압축된 이미지)
-      const snapshot = await uploadBytes(storageRef, compressedBlob);
+      // Firebase Storage에 업로드
+      const snapshot = await uploadBytes(storageRef, compressedFile);
       
       // 다운로드 URL 반환
       const downloadURL = await getDownloadURL(snapshot.ref);
-      const compressionRate = ((file.size - compressedBlob.size) / file.size * 100).toFixed(1);
       console.log(`✅ 편지 이미지 업로드 완료: ${downloadURL}`);
-      console.log(`📊 압축률: ${compressionRate}% (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedBlob.size / 1024 / 1024).toFixed(2)}MB)`);
       
       return downloadURL;
     } catch (error) {
@@ -593,30 +567,19 @@ export default function LinkLetterPage() {
     try {
       console.log(`배경 이미지 처리 시작: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       
-      // HEIC 포맷 감지 및 로깅
-      if (isHEICFormat(file)) {
-        console.log('🔄 배경 이미지 HEIC/HEIF 포맷 감지됨, JPEG로 변환 중...');
-      }
-      
       // 배경 이미지는 고해상도 유지 (2560px, 품질 90%)
-      const compressedBlob = await compressImage(file, 2560, 0.9);
+      const compressedFile = await compressImageWithLibrary(file, 2560, 0.9);
       
-      // 파일명 생성 (중복 방지, HEIC는 jpg로 변경)
-      let fileName = file.name;
-      if (isHEICFormat(file)) {
-        fileName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
-      }
-      const storageFileName = `link-letter-backgrounds/${Date.now()}_${Math.random().toString(36).substring(7)}_${fileName}`;
+      // 파일명 생성 (중복 방지)
+      const storageFileName = `link-letter-backgrounds/${Date.now()}_${Math.random().toString(36).substring(7)}_${compressedFile.name}`;
       const storageRef = ref(storage, storageFileName);
       
-      // Firebase Storage에 업로드 (압축된 배경 이미지)
-      const snapshot = await uploadBytes(storageRef, compressedBlob);
+      // Firebase Storage에 업로드
+      const snapshot = await uploadBytes(storageRef, compressedFile);
       
       // 다운로드 URL 반환
       const downloadURL = await getDownloadURL(snapshot.ref);
-      const compressionRate = ((file.size - compressedBlob.size) / file.size * 100).toFixed(1);
       console.log(`✅ 배경 이미지 업로드 완료: ${downloadURL}`);
-      console.log(`📊 압축률: ${compressionRate}% (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedBlob.size / 1024 / 1024).toFixed(2)}MB)`);
       
       return downloadURL;
     } catch (error) {
@@ -685,15 +648,20 @@ export default function LinkLetterPage() {
     try {
       console.log('이미지 업로드 시작, 이미지 개수:', letterForm.images.length);
       
-      // Firebase Storage에 이미지들 업로드 (병렬 처리로 속도 향상)
+      // Firebase Storage에 이미지들 업로드 (병렬 처리로 속도 향상, 각 이미지별 에러 처리)
       const imageUploadPromises = letterForm.images.map(async (img, index) => {
-        console.log(`이미지 ${index + 1}/${letterForm.images.length} 업로드 시작 (크기: ${(img.size / 1024 / 1024).toFixed(2)}MB)`);
-        const url = await uploadImageToStorage(img);
-        console.log(`이미지 ${index + 1}/${letterForm.images.length} 업로드 완료`);
-        return url;
+        try {
+          console.log(`이미지 ${index + 1}/${letterForm.images.length} 업로드 시작 (크기: ${(img.size / 1024 / 1024).toFixed(2)}MB)`);
+          const url = await uploadImageToStorage(img);
+          console.log(`이미지 ${index + 1}/${letterForm.images.length} 업로드 완료`);
+          return url;
+        } catch (error) {
+          console.error(`이미지 ${index + 1} 업로드 실패:`, error);
+          throw new Error(`이미지 "${img.name}" 업로드 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+        }
       });
-      const imageUrls = await Promise.all(imageUploadPromises);
       
+      const imageUrls = await Promise.all(imageUploadPromises);
       console.log('이미지 업로드 완료, URL 개수:', imageUrls.length);
 
       // Firebase에 편지 저장 (URL 배열로 저장)
@@ -743,7 +711,19 @@ export default function LinkLetterPage() {
       
     } catch (error) {
       console.error('편지 저장 실패:', error);
-      alert('편지 저장 중 오류가 발생했습니다.');
+      
+      // 구체적인 오류 메시지 제공
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      
+      if (errorMessage.includes('이미지 처리 시간이 너무 오래')) {
+        alert('이미지 처리 시간이 너무 오래 걸립니다.\n더 작은 크기의 이미지를 선택해주세요.');
+      } else if (errorMessage.includes('파일 크기가 너무 큽니다')) {
+        alert('선택한 이미지 파일이 너무 큽니다.\n50MB 이하의 이미지를 선택해주세요.');
+      } else if (errorMessage.includes('이미지') && errorMessage.includes('업로드')) {
+        alert(`이미지 업로드 중 오류가 발생했습니다:\n${errorMessage}\n\n다시 시도하거나 다른 이미지를 선택해주세요.`);
+      } else {
+        alert(`편지 저장 중 오류가 발생했습니다:\n${errorMessage}\n\n잠시 후 다시 시도해주세요.`);
+      }
     } finally {
       setIsSubmitting(false);
     }

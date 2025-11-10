@@ -16,6 +16,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import imageCompression from 'browser-image-compression';
 
 interface MemoItem {
   id: string;
@@ -80,92 +81,85 @@ export default function MemoPage() {
     date: new Date()
   });
 
-  // 이미지 최적화 함수 (신형 기종 호환성 개선)
-  const optimizeImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      // 파일이 이미 작으면 최적화 건너뛰기 (1MB 미만)
-      if (file.size < 1024 * 1024) {
-        console.log('파일 크기가 작아 최적화 건너뛰기:', file.size);
-        resolve(file);
-        return;
-      }
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = document.createElement('img') as HTMLImageElement; // ✅ TypeScript 호환 표준 방법
-      
-      // 전체 프로세스 타임아웃 (신형 기종의 지연 대응)
-      const mainTimeout = setTimeout(() => {
-        console.warn('이미지 최적화 타임아웃 - 원본 파일 사용');
-        URL.revokeObjectURL(img.src);
-        resolve(file);
-      }, 15000); // 15초 타임아웃
-      
-      img.onload = () => {
-        try {
-          // 메모리 해제
-          URL.revokeObjectURL(img.src);
-          
-          // 비율 유지하면서 리사이징
-          const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-          const newWidth = img.width * ratio;
-          const newHeight = img.height * ratio;
-          
-          canvas.width = newWidth;
-          canvas.height = newHeight;
-          
-          // 이미지 그리기
-          ctx?.drawImage(img, 0, 0, newWidth, newHeight);
-          
-          let blobCallbackCalled = false;
-          
-          // Blob으로 변환
-          canvas.toBlob((blob) => {
-            if (blobCallbackCalled) return; // 중복 호출 방지
-            blobCallbackCalled = true;
-            clearTimeout(mainTimeout);
-            
-            if (blob) {
-              const optimizedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-              });
-              console.log('이미지 최적화 성공:', file.size, '→', blob.size);
-              resolve(optimizedFile);
-            } else {
-              console.warn('Canvas toBlob 실패 - 원본 파일 사용');
-              resolve(file);
-            }
-          }, 'image/jpeg', quality);
-          
-          // toBlob 콜백이 호출되지 않는 경우를 대비한 추가 타임아웃
-          setTimeout(() => {
-            if (!blobCallbackCalled) {
-              blobCallbackCalled = true;
-              clearTimeout(mainTimeout);
-              console.warn('toBlob 콜백 지연 - 원본 파일 사용');
-              resolve(file);
-            }
-          }, 8000); // 8초 후 강제 해제
-          
-        } catch (error) {
-          clearTimeout(mainTimeout);
-          console.error('이미지 최적화 오류:', error);
-          resolve(file);
-        }
-      };
-      
-      img.onerror = () => {
-        clearTimeout(mainTimeout);
-        URL.revokeObjectURL(img.src);
-        console.error('이미지 로드 실패');
-        resolve(file);
-      };
-      
-      // CORS 문제 방지
-      img.crossOrigin = 'anonymous';
-      img.src = URL.createObjectURL(file);
+  // 안정적인 이미지 압축 함수 (browser-image-compression 사용, HEIC/HEIF 지원)
+  const optimizeImageWithLibrary = async (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<File> => {
+    // 타임아웃 Promise 생성 (30초)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('메모 이미지 압축 시간 초과 (30초)'));
+      }, 30000);
     });
+
+    try {
+      console.log(`메모 이미지 압축 시작: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      // 파일 크기 체크 (30MB 이상이면 거부)
+      if (file.size > 30 * 1024 * 1024) {
+        throw new Error('파일 크기가 너무 큽니다. 30MB 이하의 이미지를 선택해주세요.');
+      }
+      
+      // 파일이 이미 작으면 최적화 건너뛰기 (500KB 미만)
+      if (file.size < 500 * 1024) {
+        console.log('파일 크기가 작아 최적화 건너뛰기:', (file.size / 1024).toFixed(1) + 'KB');
+        return file;
+      }
+      
+      // HEIC/HEIF 파일 감지
+      const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || 
+                     file.name.toLowerCase().endsWith('.heic') || 
+                     file.name.toLowerCase().endsWith('.heif');
+      
+      if (isHEIC) {
+        console.log('🔄 HEIC/HEIF 포맷 감지됨, 자동 변환 및 압축 중...');
+      }
+      
+      // browser-image-compression 옵션 설정
+      const options = {
+        maxSizeMB: Math.min(1.5, file.size / (1024 * 1024) * 0.6), // 원본 크기의 60% 또는 1.5MB 중 작은 값
+        maxWidthOrHeight: maxWidth, // 최대 너비/높이
+        useWebWorker: true, // 웹 워커 사용으로 UI 블로킹 방지
+        fileType: 'image/jpeg', // JPEG로 변환 (HEIC 포함)
+        initialQuality: quality, // 초기 품질 설정
+        alwaysKeepResolution: false, // 해상도 조정 허용
+        exifOrientation: 1 // EXIF 회전 정보 정규화
+      };
+      
+      // 타임아웃과 함께 이미지 압축 실행
+      const compressionPromise = imageCompression(file, options);
+      const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
+      
+      // 파일명 처리 (HEIC는 jpg로 변경)
+      let fileName = file.name;
+      if (isHEIC) {
+        fileName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
+      }
+      
+      // 새로운 File 객체 생성
+      const finalFile = new File([compressedFile], fileName, {
+        type: 'image/jpeg',
+        lastModified: Date.now()
+      });
+      
+      const compressionRate = ((file.size - finalFile.size) / file.size * 100).toFixed(1);
+      console.log(`✅ 메모 이미지 압축 완료: ${compressionRate}% 압축 (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(finalFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      
+      return finalFile;
+    } catch (error) {
+      console.error('❌ 메모 이미지 압축 실패:', error);
+      
+      // 에러 메시지에 따른 처리
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      
+      if (errorMessage.includes('시간 초과')) {
+        console.log('⏰ 메모 이미지 압축 시간 초과, 원본 파일 사용');
+        throw new Error('이미지 처리 시간이 너무 오래 걸립니다. 더 작은 이미지를 선택해주세요.');
+      } else if (errorMessage.includes('파일 크기')) {
+        throw error; // 파일 크기 오류는 그대로 전달
+      } else {
+        console.log('⚠️ 압축 실패, 원본 파일 사용');
+        return file; // 기타 오류는 원본 파일 반환
+      }
+    }
   };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -221,14 +215,16 @@ export default function MemoPage() {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // 새로 추가된 이미지만 업로드 (최적화 포함)
+      // 새로 추가된 이미지만 업로드 (안정적인 압축 포함)
       const uploadedUrls = await Promise.all(
         writeForm.pendingImages.map(async (file, index) => {
           try {
-            // 이미지 최적화
-            const optimizedFile = await optimizeImage(file);
+            console.log(`메모 이미지 ${index + 1}/${writeForm.pendingImages.length} 처리 시작 (크기: ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
             
-            const fileRef = ref(storage, `private_memos/${currentUser.uid}/${Date.now()}_${optimizedFile.name}`);
+            // 안정적인 이미지 압축 (HEIC/HEIF 지원)
+            const optimizedFile = await optimizeImageWithLibrary(file);
+            
+            const fileRef = ref(storage, `private_memos/${currentUser.uid}/${Date.now()}_${Math.random().toString(36).substring(7)}_${optimizedFile.name}`);
             await uploadBytes(fileRef, optimizedFile);
             const url = await getDownloadURL(fileRef);
             
@@ -236,10 +232,12 @@ export default function MemoPage() {
             const progress = ((index + 1) / writeForm.pendingImages.length) * 100;
             setUploadProgress(progress);
             
+            console.log(`메모 이미지 ${index + 1}/${writeForm.pendingImages.length} 업로드 완료`);
             return url;
           } catch (error) {
-            console.error(`이미지 ${index + 1} 업로드 실패:`, error);
-            return null;
+            console.error(`메모 이미지 ${index + 1} 업로드 실패:`, error);
+            const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+            throw new Error(`이미지 "${file.name}" 처리 중 오류가 발생했습니다: ${errorMessage}`);
           }
         })
       );
@@ -291,7 +289,19 @@ export default function MemoPage() {
       setIsWriting(false);
     } catch (error) {
       console.error(editingMemo ? '메모 수정 실패:' : '메모 추가 실패:', error);
-      alert('메모 저장 중 오류가 발생했습니다.');
+      
+      // 구체적인 오류 메시지 제공
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      
+      if (errorMessage.includes('이미지 처리 시간이 너무 오래')) {
+        alert('이미지 처리 시간이 너무 오래 걸립니다.\n더 작은 크기의 이미지를 선택해주세요.');
+      } else if (errorMessage.includes('파일 크기가 너무 큽니다')) {
+        alert('선택한 이미지 파일이 너무 큽니다.\n30MB 이하의 이미지를 선택해주세요.');
+      } else if (errorMessage.includes('이미지') && errorMessage.includes('처리 중 오류')) {
+        alert(`이미지 업로드 중 오류가 발생했습니다:\n${errorMessage}\n\n다시 시도하거나 다른 이미지를 선택해주세요.`);
+      } else {
+        alert(`메모 저장 중 오류가 발생했습니다:\n${errorMessage}\n\n잠시 후 다시 시도해주세요.`);
+      }
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -666,7 +676,7 @@ export default function MemoPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     multiple
                     onChange={async (e) => {
                       const files = Array.from(e.target.files || []);
