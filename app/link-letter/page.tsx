@@ -1156,538 +1156,536 @@ export default function LinkLetterPage() {
 
       </main>
 
-      {/* 편지 작성 모달 */}
-      <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
-        setIsCreateModalOpen(open);
-        if (!open) resetForm();
-      }}>
-        <DialogContent className="w-full h-full sm:max-w-[600px] sm:max-h-[90vh] sm:h-auto flex flex-col bg-white sm:rounded-lg rounded-none">
-          <DialogHeader>
-            <DialogTitle className="text-center text-gray-900">
-              링크 편지 쓰기
-            </DialogTitle>
-            <div className="flex justify-center mt-4">
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((step) => (
-                  <div key={step} className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                      currentStep >= step 
-                        ? 'bg-blue-500 text-white shadow-lg' 
-                        : 'bg-gray-200 text-gray-500'
-                    }`}>
-                      {step}
+   {/* 편지 작성 모달 - 색상 수정 버전 */}
+<Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+  setIsCreateModalOpen(open);
+  if (!open) resetForm();
+}}>
+  <DialogContent className="w-full h-[95vh] sm:max-w-[600px] sm:max-h-[90vh] sm:h-auto flex flex-col bg-white sm:rounded-lg rounded-none">
+    <DialogHeader>
+      <DialogTitle className="text-center text-gray-900">
+        링크 편지 쓰기
+      </DialogTitle>
+      <div className="flex justify-center mt-4">
+        <div className="flex items-center gap-2">
+          {[1, 2, 3, 4, 5].map((step) => (
+            <div key={step} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                currentStep >= step 
+                  ? 'bg-blue-500 text-white shadow-lg' 
+                  : 'bg-gray-200 text-gray-500'
+              }`}>
+                {step}
+              </div>
+              {step < 5 && (
+                <div className={`w-8 h-1 transition-all ${
+                  currentStep > step ? 'bg-blue-500' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="text-center text-sm text-gray-600 mt-2">
+        {currentStep === 1 && '기본 정보'}
+        {currentStep === 2 && '퀴즈 만들기'}
+        {currentStep === 3 && '사진 업로드'}
+        {currentStep === 4 && '편지 내용'}
+        {currentStep === 5 && '배경 선택'}
+      </div>
+    </DialogHeader>
+    
+    <div className="flex-1 overflow-y-auto px-0 sm:px-1">
+      {/* Step 1: 기본 정보 */}
+      {currentStep === 1 && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="title" className="text-gray-900 font-semibold">편지 제목 *</Label>
+            <Input
+              id="title"
+              value={letterForm.title}
+              onChange={(e) => setLetterForm(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="편지 제목을 입력하세요"
+              className="mt-1 bg-white text-gray-900 border-gray-300 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="category" className="text-gray-900 font-semibold">카테고리 *</Label>
+            <Select value={letterForm.category} onValueChange={(value) => setLetterForm(prev => ({ ...prev, category: value }))}>
+              <SelectTrigger className="mt-1 bg-white text-gray-900 border-gray-300">
+                <SelectValue placeholder="카테고리를 선택하세요" />
+              </SelectTrigger>
+              <SelectContent>
+                {letterCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="author" className="text-gray-900 font-semibold">작성자 *</Label>
+            <Input
+              id="author"
+              value={letterForm.author}
+              onChange={(e) => setLetterForm(prev => ({ ...prev, author: e.target.value }))}
+              placeholder="작성자 이름을 입력하세요"
+              className="mt-1 bg-white text-gray-900 border-gray-300 focus:border-blue-500"
+            />
+            <p className="text-xs text-gray-600 mt-1">
+              편지를 받는 사람이 볼 작성자 이름입니다
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: 퀴즈 만들기 */}
+      {currentStep === 2 && (
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-gray-700">
+              • 최대 10개 퀴즈 질문 생성 가능<br />
+              • <strong>객관식:</strong> 최대 10개 선택지<br />
+              • <strong>주관식:</strong> 정확한 정답 입력<br />
+              • 각 질문의 정답을 반드시 설정
+            </p>
+          </div>
+
+          {/* 퀴즈 질문 목록 */}
+          <div className="space-y-6">
+            {letterForm.quiz.questions.map((question, questionIndex) => (
+              <div key={questionIndex} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">
+                    퀴즈 {questionIndex + 1}
+                  </h4>
+                  {letterForm.quiz.questions.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeQuizQuestion(questionIndex)}
+                      className="border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {/* 질문 입력 */}
+                  <div>
+                    <Label className="text-gray-900 font-semibold">질문 *</Label>
+                    <Input
+                      value={question.question}
+                      onChange={(e) => updateQuizQuestion(questionIndex, 'question', e.target.value)}
+                      placeholder={`${questionIndex + 1}번째 퀴즈 질문을 입력하세요`}
+                      className="mt-1 bg-white text-gray-900 border-gray-300"
+                    />
+                  </div>
+
+                  {/* 문제 유형 선택 */}
+                  <div>
+                    <Label className="text-gray-900 font-semibold">문제 유형 *</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuizQuestion(questionIndex, 'type', 'multiple')}
+                        className={`${
+                          question.type === 'multiple' || !question.type
+                            ? 'bg-blue-500 text-white border-blue-500' 
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        객관식
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuizQuestion(questionIndex, 'type', 'short')}
+                        className={`${
+                          question.type === 'short'
+                            ? 'bg-blue-500 text-white border-blue-500' 
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        주관식
+                      </Button>
                     </div>
-                    {step < 5 && (
-                      <div className={`w-8 h-1 transition-all ${
-                        currentStep > step ? 'bg-blue-500' : 'bg-gray-200'
-                      }`} />
-                    )}
+                  </div>
+
+                  {/* 객관식 선택지 또는 주관식 정답 */}
+                  {question.type === 'short' ? (
+                    /* 주관식 정답 입력 */
+                    <div>
+                      <Label className="text-gray-900 font-semibold">정답 *</Label>
+                      <Input
+                        value={question.shortAnswer || ''}
+                        onChange={(e) => updateQuizQuestion(questionIndex, 'shortAnswer', e.target.value)}
+                        placeholder="주관식 문제의 정답을 입력하세요"
+                        className="mt-1 bg-white text-gray-900 border-gray-300"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">
+                        * 대소문자 구분 없이 정확히 일치해야 정답으로 인정됩니다
+                      </p>
+                    </div>
+                  ) : (
+                    /* 객관식 선택지 */
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-gray-900 font-semibold">선택지 * (최대 10개)</Label>
+                        <span className="text-xs text-gray-600">
+                          {question.options.length}/10 개
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {question.options.map((option, optionIndex) => (
+                          <div key={optionIndex} className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
+                                question.correctAnswer === optionIndex 
+                                  ? 'border-green-500 bg-green-500 text-white' 
+                                  : 'border-gray-300 text-gray-600'
+                              }`}>
+                                {optionIndex + 1}
+                              </div>
+                              <Input
+                                value={option}
+                                onChange={(e) => updateQuizOption(questionIndex, optionIndex, e.target.value)}
+                                placeholder={`선택지 ${optionIndex + 1}`}
+                                className="flex-1 bg-white text-gray-900 border-gray-300"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCorrectAnswer(questionIndex, optionIndex)}
+                              className={`bg-white border-gray-300 text-gray-700 hover:bg-gray-50 ${
+                                question.correctAnswer === optionIndex ? 'bg-green-50 border-green-300 text-green-700' : ''
+                              }`}
+                            >
+                              정답
+                            </Button>
+                            {question.options.length > 2 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeQuizOption(questionIndex, optionIndex)}
+                                className="bg-white border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="선택지 삭제"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* 선택지 추가 버튼 */}
+                      <div className="mt-2">
+                        {question.options.length < 10 ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => addQuizOption(questionIndex)}
+                            className="w-full bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                            size="sm"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            선택지 추가 ({question.options.length}/10)
+                          </Button>
+                        ) : (
+                          <div className="w-full p-2 bg-green-50 border border-green-200 rounded text-center">
+                            <span className="text-xs text-green-700">
+                              ✅ 최대 10개 선택지 완료
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 힌트 */}
+                  <div>
+                    <Label className="text-gray-900 font-semibold">힌트 (선택)</Label>
+                    <Input
+                      value={question.hint}
+                      onChange={(e) => updateQuizQuestion(questionIndex, 'hint', e.target.value)}
+                      placeholder="퀴즈가 어려울 때 보여줄 힌트"
+                      className="mt-1 bg-white text-gray-900 border-gray-300"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 퀴즈 질문 추가 버튼 */}
+          <div className="mt-4">
+            {letterForm.quiz.questions.length < 10 ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addQuizQuestion}
+                className="w-full bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                퀴즈 질문 추가 ({letterForm.quiz.questions.length}/10)
+              </Button>
+            ) : (
+              <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                <span className="text-sm text-gray-700">
+                  ✅ 최대 10개 퀴즈 질문이 모두 추가되었습니다
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: 사진 업로드 */}
+      {currentStep === 3 && (
+        <div className="space-y-4">
+          <div>
+            <Label className="text-gray-900 font-semibold">편지 사진 (최대 5장)</Label>
+            <div className="mt-2">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,.heic,.heif"
+                  onChange={(e) => handleImageUpload(e.target.files)}
+                  className="hidden"
+                  id="imageUpload"
+                  disabled={letterForm.images.length >= 5}
+                />
+                <label
+                  htmlFor="imageUpload"
+                  className={`cursor-pointer ${letterForm.images.length >= 5 ? 'cursor-not-allowed opacity-50' : ''}`}
+                >
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-700">
+                    {letterForm.images.length >= 5 
+                      ? '최대 5장까지 업로드 가능합니다' 
+                      : '클릭하여 사진을 업로드하세요'
+                    }
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    * 이미지는 캡쳐 사진 사용 권장
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {letterForm.images.length}/5 장 업로드됨
+                  </p>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {letterForm.images.length > 0 && (
+            <div>
+              <Label className="text-gray-900 font-semibold">업로드된 사진</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                {letterForm.images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={URL.createObjectURL(image)}
+                      alt={`업로드된 이미지 ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="text-center text-sm text-gray-600 mt-2">
-              {currentStep === 1 && '기본 정보'}
-              {currentStep === 2 && '퀴즈 만들기'}
-              {currentStep === 3 && '사진 업로드'}
-              {currentStep === 4 && '편지 내용'}
-              {currentStep === 5 && '배경 선택'}
-            </div>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-y-auto px-4 sm:px-1">
-            {/* Step 1: 기본 정보 */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title" className="text-gray-700">편지 제목 *</Label>
-                  <Input
-                    id="title"
-                    value={letterForm.title}
-                    onChange={(e) => setLetterForm(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="편지 제목을 입력하세요"
-                    className="mt-1"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="category" className="text-gray-700">카테고리 *</Label>
-                  <Select value={letterForm.category} onValueChange={(value) => setLetterForm(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="카테고리를 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {letterCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="author" className="text-gray-700">작성자 *</Label>
-                  <Input
-                    id="author"
-                    value={letterForm.author}
-                    onChange={(e) => setLetterForm(prev => ({ ...prev, author: e.target.value }))}
-                    placeholder="작성자 이름을 입력하세요"
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    편지를 받는 사람이 볼 작성자 이름입니다
-                  </p>
-                </div>
-              </div>
-            )}
+          )}
+        </div>
+      )}
 
-            {/* Step 2: 퀴즈 만들기 */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-gray-700">
-                    • 최대 10개 퀴즈 질문 생성 가능<br />
-                    • <strong>객관식:</strong> 최대 10개 선택지<br />
-                    • <strong>주관식:</strong> 정확한 정답 입력<br />
-                    • 각 질문의 정답을 반드시 설정
-                  </p>
-                </div>
-
-                {/* 퀴즈 질문 목록 */}
-                <div className="space-y-6">
-                  {letterForm.quiz.questions.map((question, questionIndex) => (
-                    <div key={questionIndex} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900">
-                          퀴즈 {questionIndex + 1}
-                        </h4>
-                        {letterForm.quiz.questions.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeQuizQuestion(questionIndex)}
-                            className="border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        {/* 질문 입력 */}
-                        <div>
-                          <Label className="text-gray-700">질문 *</Label>
-                          <Input
-                            value={question.question}
-                            onChange={(e) => updateQuizQuestion(questionIndex, 'question', e.target.value)}
-                            placeholder={`${questionIndex + 1}번째 퀴즈 질문을 입력하세요`}
-                            className="mt-1"
-                          />
-                        </div>
-
-                        {/* 문제 유형 선택 */}
-                        <div>
-                          <Label className="text-gray-700">문제 유형 *</Label>
-                          <div className="flex gap-2 mt-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuizQuestion(questionIndex, 'type', 'multiple')}
-                              className={`${
-                                question.type === 'multiple' || !question.type
-                                  ? 'bg-blue-500 text-white border-blue-500' 
-                                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              객관식
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuizQuestion(questionIndex, 'type', 'short')}
-                              className={`${
-                                question.type === 'short'
-                                  ? 'bg-blue-500 text-white border-blue-500' 
-                                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              주관식
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* 객관식 선택지 또는 주관식 정답 */}
-                        {question.type === 'short' ? (
-                          /* 주관식 정답 입력 */
-                          <div>
-                            <Label className="text-gray-700">정답 *</Label>
-                            <Input
-                              value={question.shortAnswer || ''}
-                              onChange={(e) => updateQuizQuestion(questionIndex, 'shortAnswer', e.target.value)}
-                              placeholder="주관식 문제의 정답을 입력하세요"
-                              className="mt-1"
-                            />
-                            <p className="text-xs text-gray-600 mt-1">
-                              * 대소문자 구분 없이 정확히 일치해야 정답으로 인정됩니다
-                            </p>
-                          </div>
-                        ) : (
-                          /* 객관식 선택지 */
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <Label className="text-gray-700">선택지 * (최대 10개)</Label>
-                              <span className="text-xs text-gray-600">
-                                {question.options.length}/10 개
-                              </span>
-                            </div>
-                            <div className="space-y-2">
-                              {question.options.map((option, optionIndex) => (
-                                <div key={optionIndex} className="flex items-center gap-2">
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
-                                      question.correctAnswer === optionIndex 
-                                        ? 'border-green-500 bg-green-500 text-white' 
-                                        : 'border-gray-300 text-gray-600'
-                                    }`}>
-                                      {optionIndex + 1}
-                                    </div>
-                                    <Input
-                                      value={option}
-                                      onChange={(e) => updateQuizOption(questionIndex, optionIndex, e.target.value)}
-                                      placeholder={`선택지 ${optionIndex + 1}`}
-                                      className="flex-1"
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCorrectAnswer(questionIndex, optionIndex)}
-                                    className={`border-gray-300 text-gray-700 hover:bg-gray-50 ${
-                                      question.correctAnswer === optionIndex ? 'bg-green-50 border-green-300 text-green-700' : ''
-                                    }`}
-                                  >
-                                    정답
-                                  </Button>
-                                  {question.options.length > 2 && (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => removeQuizOption(questionIndex, optionIndex)}
-                                      className="border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      title="선택지 삭제"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                            
-                            {/* 선택지 추가 버튼 */}
-                            <div className="mt-2">
-                              {question.options.length < 10 ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => addQuizOption(questionIndex)}
-                                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
-                                  size="sm"
-                                >
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  선택지 추가 ({question.options.length}/10)
-                                </Button>
-                              ) : (
-                                <div className="w-full p-2 bg-green-50 border border-green-200 rounded text-center">
-                                  <span className="text-xs text-green-700">
-                                    ✅ 최대 10개 선택지 완료
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 힌트 */}
-                        <div>
-                          <Label className="text-gray-700">힌트 (선택)</Label>
-                          <Input
-                            value={question.hint}
-                            onChange={(e) => updateQuizQuestion(questionIndex, 'hint', e.target.value)}
-                            placeholder="퀴즈가 어려울 때 보여줄 힌트"
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 퀴즈 질문 추가 버튼 */}
-                <div className="mt-4">
-                  {letterForm.quiz.questions.length < 10 ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addQuizQuestion}
-                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      퀴즈 질문 추가 ({letterForm.quiz.questions.length}/10)
-                    </Button>
-                  ) : (
-                    <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                      <span className="text-sm text-gray-700">
-                        ✅ 최대 10개 퀴즈 질문이 모두 추가되었습니다
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: 사진 업로드 */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-gray-700">편지 사진 (최대 5장)</Label>
-                  <div className="mt-2">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*,.heic,.heif"
-                        onChange={(e) => handleImageUpload(e.target.files)}
-                        className="hidden"
-                        id="imageUpload"
-                        disabled={letterForm.images.length >= 5}
-                      />
-                      <label
-                        htmlFor="imageUpload"
-                        className={`cursor-pointer ${letterForm.images.length >= 5 ? 'cursor-not-allowed opacity-50' : ''}`}
-                      >
-                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-700">
-                          {letterForm.images.length >= 5 
-                            ? '최대 5장까지 업로드 가능합니다' 
-                            : '클릭하여 사진을 업로드하세요'
-                          }
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          * 이미지는 캡쳐 사진 사용 권장
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {letterForm.images.length}/5 장 업로드됨
-                        </p>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {letterForm.images.length > 0 && (
-                  <div>
-                    <Label className="text-gray-700">업로드된 사진</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
-                      {letterForm.images.map((image, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={URL.createObjectURL(image)}
-                            alt={`업로드된 이미지 ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 4: 편지 내용 */}
-            {currentStep === 4 && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="content" className="text-gray-700">편지 내용 *</Label>
-                  <Textarea
-                    id="content"
-                    value={letterForm.content}
-                    onChange={(e) => setLetterForm(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="마음을 담은 편지를 작성해주세요..."
-                    className="mt-1 min-h-[200px]"
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    {letterForm.content.length} 글자
-                  </p>
-                </div>
-
-                {/* 미리보기 */}
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-2 text-gray-900">편지 미리보기</h4>
-                  <div className="text-sm text-gray-700">
-                    <p><strong>제목:</strong> {letterForm.title || '제목 없음'}</p>
-                    <p><strong>카테고리:</strong> {letterCategories.find(cat => cat.id === letterForm.category)?.name || '선택 안함'}</p>
-                    <p><strong>작성자:</strong> {letterForm.author || '작성자 없음'}</p>
-                    <p><strong>퀴즈:</strong> {letterForm.quiz.questions.length}개 질문 
-                      ({letterForm.quiz.questions.filter(q => q.type === 'short').length}개 주관식, 
-                      {letterForm.quiz.questions.filter(q => q.type !== 'short').length}개 객관식)
-                    </p>
-                    <p><strong>사진:</strong> {letterForm.images.length}장</p>
-                    <div className="mt-2 p-2 bg-gray-100 rounded border border-gray-200 max-h-20 overflow-y-auto">
-                      <span className="text-gray-700">{letterForm.content || '내용 없음'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 5: 배경 선택 */}
-            {currentStep === 5 && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">편지 배경 선택</h3>
-                  <p className="text-sm text-gray-600 mb-4">편지를 받는 사람이 볼 배경을 선택해주세요</p>
-                  
-                  
-                  {/* 배경 이미지 업로드 */}
-                  <div className="space-y-2">
-                    <label className="text-gray-700 text-sm">배경 이미지 업로드</label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*,.heic,.heif"
-                        id="backgroundImageUpload"
-                         onChange={async (e) => {
-                           const file = e.target.files?.[0];
-                           if (file) {
-                             // 파일 크기 체크 (20MB 제한으로 축소 - 압축 후 더 빨라짐)
-                             if (file.size > 20 * 1024 * 1024) {
-                               alert('이미지 크기는 20MB 이하로 선택해주세요.');
-                               return;
-                             }
-                             try {
-                               const imageUrl = await uploadBackgroundImageToStorage(file);
-                               setLetterForm(prev => ({
-                                 ...prev,
-                                 background: { type: 'image', value: imageUrl }
-                               }));
-                             } catch (error) {
-                               console.error('배경 이미지 업로드 실패:', error);
-                               alert('배경 이미지 업로드 중 오류가 발생했습니다.');
-                             }
-                           }
-                         }}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => document.getElementById('backgroundImageUpload')?.click()}
-                        className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-700 text-center"
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="w-6 h-6 text-gray-400" />
-                          <span className="text-sm">이미지 선택하기</span>
-                          <span className="text-xs text-gray-600">고품질 이미지 지원 (최대 20MB)</span>
-                        </div>
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 20MB)
-                    </p>
-                  </div>
-                </div>
-
-                {/* 배경 미리보기 */}
-                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-2 text-gray-900">선택된 배경</h4>
-                  <div 
-                    className="w-full h-32 sm:h-40 rounded-lg border border-gray-300 overflow-hidden relative bg-gray-100"
-                  >
-                    {letterForm.background.type === 'image' && letterForm.background.value ? (
-                      <>
-                        <img 
-                          src={letterForm.background.value} 
-                          alt="배경 미리보기" 
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/30" />
-                        <button
-                          type="button"
-                          onClick={() => setLetterForm(prev => ({
-                            ...prev,
-                            background: { type: 'default' }
-                          }))}
-                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm transition-colors"
-                          title="배경 이미지 제거"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <div className="text-center">
-                          <Upload className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm">배경 이미지를 선택해주세요</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+      {/* Step 4: 편지 내용 */}
+      {currentStep === 4 && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="content" className="text-gray-900 font-semibold">편지 내용 *</Label>
+            <Textarea
+              id="content"
+              value={letterForm.content}
+              onChange={(e) => setLetterForm(prev => ({ ...prev, content: e.target.value }))}
+              placeholder="마음을 담은 편지를 작성해주세요..."
+              className="mt-1 min-h-[200px] bg-white text-gray-900 border-gray-300"
+            />
+            <p className="text-xs text-gray-600 mt-1">
+              {letterForm.content.length} 글자
+            </p>
           </div>
 
-          {/* 버튼들 */}
-          <div className="flex justify-between pt-4 px-4 sm:px-0 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="border-gray-300 text-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px]"
-            >
-              이전
-            </Button>
+          {/* 미리보기 */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <h4 className="font-medium mb-2 text-gray-900">편지 미리보기</h4>
+            <div className="text-sm text-gray-700">
+              <p><strong>제목:</strong> {letterForm.title || '제목 없음'}</p>
+              <p><strong>카테고리:</strong> {letterCategories.find(cat => cat.id === letterForm.category)?.name || '선택 안함'}</p>
+              <p><strong>작성자:</strong> {letterForm.author || '작성자 없음'}</p>
+              <p><strong>퀴즈:</strong> {letterForm.quiz.questions.length}개 질문 
+                ({letterForm.quiz.questions.filter(q => q.type === 'short').length}개 주관식, 
+                {letterForm.quiz.questions.filter(q => q.type !== 'short').length}개 객관식)
+              </p>
+              <p><strong>사진:</strong> {letterForm.images.length}장</p>
+              <div className="mt-2 p-2 bg-white rounded border border-gray-200 max-h-20 overflow-y-auto">
+                <span className="text-gray-700">{letterForm.content || '내용 없음'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: 배경 선택 */}
+      {currentStep === 5 && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">편지 배경 선택</h3>
+            <p className="text-sm text-gray-600 mb-4">편지를 받는 사람이 볼 배경을 선택해주세요</p>
             
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="border-gray-300 text-white hover:bg-gray-50 min-w-[80px]"
-              >
-                취소
-              </Button>
-              
-              {currentStep < 5 ? (
-                <Button
-                  onClick={nextStep}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white min-w-[80px]"
+            {/* 배경 이미지 업로드 */}
+            <div className="space-y-2">
+              <label className="text-gray-900 text-sm font-semibold">배경 이미지 업로드</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  id="backgroundImageUpload"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 20 * 1024 * 1024) {
+                        alert('이미지 크기는 20MB 이하로 선택해주세요.');
+                        return;
+                      }
+                      try {
+                        const imageUrl = await uploadBackgroundImageToStorage(file);
+                        setLetterForm(prev => ({
+                          ...prev,
+                          background: { type: 'image', value: imageUrl }
+                        }));
+                      } catch (error) {
+                        console.error('배경 이미지 업로드 실패:', error);
+                        alert('배경 이미지 업로드 중 오류가 발생했습니다.');
+                      }
+                    }
+                  }}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('backgroundImageUpload')?.click()}
+                  className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-700 text-center"
                 >
-                  다음
-                </Button>
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-6 h-6 text-gray-400" />
+                    <span className="text-sm">이미지 선택하기</span>
+                    <span className="text-xs text-gray-600">고품질 이미지 지원 (최대 20MB)</span>
+                  </div>
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">
+                편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 20MB)
+              </p>
+            </div>
+          </div>
+
+          {/* 배경 미리보기 */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <h4 className="font-medium mb-2 text-gray-900">선택된 배경</h4>
+            <div 
+              className="w-full h-32 sm:h-40 rounded-lg border border-gray-300 overflow-hidden relative bg-gray-100"
+            >
+              {letterForm.background.type === 'image' && letterForm.background.value ? (
+                <>
+                  <img 
+                    src={letterForm.background.value} 
+                    alt="배경 미리보기" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/30" />
+                  <button
+                    type="button"
+                    onClick={() => setLetterForm(prev => ({
+                      ...prev,
+                      background: { type: 'default' }
+                    }))}
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm transition-colors"
+                    title="배경 이미지 제거"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
               ) : (
-                <Button
-                  onClick={handleSubmitLetter}
-                  disabled={isSubmitting}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
-                >
-                  {isSubmitting ? '저장 중...' : '편지 등록'}
-                </Button>
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <Upload className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm">배경 이미지를 선택해주세요</p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+    </div>
+
+    {/* 버튼들 */}
+    <div className="flex justify-between pt-4 px-4 sm:px-0 border-t border-gray-200">
+      <Button
+        variant="outline"
+        onClick={prevStep}
+        disabled={currentStep === 1}
+        className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px]"
+      >
+        이전
+      </Button>
+      
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setIsCreateModalOpen(false)}
+          className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 min-w-[80px]"
+        >
+          취소
+        </Button>
+        
+        {currentStep < 5 ? (
+          <Button
+            onClick={nextStep}
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white min-w-[80px]"
+          >
+            다음
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSubmitLetter}
+            disabled={isSubmitting}
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
+          >
+            {isSubmitting ? '저장 중...' : '편지 등록'}
+          </Button>
+        )}
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
     </>
   );
 }
