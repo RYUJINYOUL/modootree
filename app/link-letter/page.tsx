@@ -460,19 +460,48 @@ export default function LinkLetterPage() {
     }));
   };
 
-  // Firebase Storage에 편지 이미지 업로드 함수
+  // 이미지 압축 함수
+  const compressImage = async (file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        // 비율 유지하며 리사이징
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        // 이미지 그리기
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Blob으로 변환 (압축 적용)
+        canvas.toBlob((blob) => {
+          resolve(blob!);
+        }, 'image/jpeg', quality);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Firebase Storage에 편지 이미지 업로드 함수 (압축 적용)
   const uploadImageToStorage = async (file: File): Promise<string> => {
     try {
+      // 이미지 압축 (1920px, 품질 80%)
+      const compressedBlob = await compressImage(file, 1920, 0.8);
+      
       // 파일명 생성 (중복 방지)
       const fileName = `link-letters/${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name}`;
       const storageRef = ref(storage, fileName);
       
-      // Firebase Storage에 업로드 (원본 품질 유지)
-      const snapshot = await uploadBytes(storageRef, file);
+      // Firebase Storage에 업로드 (압축된 이미지)
+      const snapshot = await uploadBytes(storageRef, compressedBlob);
       
       // 다운로드 URL 반환
       const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log('편지 이미지 업로드 완료:', downloadURL);
+      console.log('편지 이미지 업로드 완료:', downloadURL, `압축률: ${((file.size - compressedBlob.size) / file.size * 100).toFixed(1)}%`);
       
       return downloadURL;
     } catch (error) {
@@ -481,19 +510,22 @@ export default function LinkLetterPage() {
     }
   };
 
-  // Firebase Storage에 배경 이미지 업로드 함수
+  // Firebase Storage에 배경 이미지 업로드 함수 (고품질 압축)
   const uploadBackgroundImageToStorage = async (file: File): Promise<string> => {
     try {
+      // 배경 이미지는 고해상도 유지 (2560px, 품질 90%)
+      const compressedBlob = await compressImage(file, 2560, 0.9);
+      
       // 파일명 생성 (중복 방지)
       const fileName = `link-letter-backgrounds/${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name}`;
       const storageRef = ref(storage, fileName);
       
-      // Firebase Storage에 업로드 (원본 품질 유지)
-      const snapshot = await uploadBytes(storageRef, file);
+      // Firebase Storage에 업로드 (압축된 배경 이미지)
+      const snapshot = await uploadBytes(storageRef, compressedBlob);
       
       // 다운로드 URL 반환
       const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log('배경 이미지 업로드 완료:', downloadURL);
+      console.log('배경 이미지 업로드 완료:', downloadURL, `압축률: ${((file.size - compressedBlob.size) / file.size * 100).toFixed(1)}%`);
       
       return downloadURL;
     } catch (error) {
@@ -562,8 +594,13 @@ export default function LinkLetterPage() {
     try {
       console.log('이미지 업로드 시작, 이미지 개수:', letterForm.images.length);
       
-      // Firebase Storage에 이미지들 업로드
-      const imageUploadPromises = letterForm.images.map(img => uploadImageToStorage(img));
+      // Firebase Storage에 이미지들 업로드 (병렬 처리로 속도 향상)
+      const imageUploadPromises = letterForm.images.map(async (img, index) => {
+        console.log(`이미지 ${index + 1}/${letterForm.images.length} 업로드 시작 (크기: ${(img.size / 1024 / 1024).toFixed(2)}MB)`);
+        const url = await uploadImageToStorage(img);
+        console.log(`이미지 ${index + 1}/${letterForm.images.length} 업로드 완료`);
+        return url;
+      });
       const imageUrls = await Promise.all(imageUploadPromises);
       
       console.log('이미지 업로드 완료, URL 개수:', imageUrls.length);
@@ -1033,9 +1070,9 @@ export default function LinkLetterPage() {
         setIsCreateModalOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+        <DialogContent className="w-full h-full sm:max-w-[600px] sm:max-h-[90vh] sm:h-auto flex flex-col bg-white sm:rounded-lg rounded-none">
           <DialogHeader>
-            <DialogTitle className="text-center text-white">
+            <DialogTitle className="text-center text-gray-900">
               링크 편지 쓰기
             </DialogTitle>
             <div className="flex justify-center mt-4">
@@ -1044,21 +1081,21 @@ export default function LinkLetterPage() {
                   <div key={step} className="flex items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
                       currentStep >= step 
-                        ? 'bg-white text-black shadow-lg' 
-                        : 'bg-white/20 text-white/60 backdrop-blur-sm'
+                        ? 'bg-blue-500 text-white shadow-lg' 
+                        : 'bg-gray-200 text-gray-500'
                     }`}>
                       {step}
                     </div>
                     {step < 5 && (
                       <div className={`w-8 h-1 transition-all ${
-                        currentStep > step ? 'bg-white' : 'bg-white/20'
+                        currentStep > step ? 'bg-blue-500' : 'bg-gray-200'
                       }`} />
                     )}
                   </div>
                 ))}
               </div>
             </div>
-            <div className="text-center text-sm text-white/70 mt-2">
+            <div className="text-center text-sm text-gray-600 mt-2">
               {currentStep === 1 && '기본 정보'}
               {currentStep === 2 && '퀴즈 만들기'}
               {currentStep === 3 && '사진 업로드'}
@@ -1067,12 +1104,12 @@ export default function LinkLetterPage() {
             </div>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto px-1">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-1">
             {/* Step 1: 기본 정보 */}
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="title" className="text-white">편지 제목 *</Label>
+                  <Label htmlFor="title" className="text-gray-700">편지 제목 *</Label>
                   <Input
                     id="title"
                     value={letterForm.title}
@@ -1083,7 +1120,7 @@ export default function LinkLetterPage() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="category" className="text-white">카테고리 *</Label>
+                  <Label htmlFor="category" className="text-gray-700">카테고리 *</Label>
                   <Select value={letterForm.category} onValueChange={(value) => setLetterForm(prev => ({ ...prev, category: value }))}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="카테고리를 선택하세요" />
@@ -1099,7 +1136,7 @@ export default function LinkLetterPage() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="author" className="text-white">작성자 *</Label>
+                  <Label htmlFor="author" className="text-gray-700">작성자 *</Label>
                   <Input
                     id="author"
                     value={letterForm.author}
@@ -1107,7 +1144,7 @@ export default function LinkLetterPage() {
                     placeholder="작성자 이름을 입력하세요"
                     className="mt-1"
                   />
-                  <p className="text-xs text-white/70 mt-1">
+                  <p className="text-xs text-gray-600 mt-1">
                     편지를 받는 사람이 볼 작성자 이름입니다
                   </p>
                 </div>
@@ -1117,22 +1154,21 @@ export default function LinkLetterPage() {
             {/* Step 2: 퀴즈 만들기 */}
             {currentStep === 2 && (
               <div className="space-y-4">
-                <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg p-3 backdrop-blur-sm">
-                  <p className="text-sm text-white">
-                    <strong>퀴즈 만들기 가이드:</strong><br />
-                    • 최소 1개, 최대 10개까지 퀴즈 질문 생성 가능<br />
-                    • <strong>객관식:</strong> 최소 2개, 최대 10개 선택지 + 정답 선택<br />
-                    • <strong>주관식:</strong> 정확한 정답 입력 (대소문자 구분 없음)<br />
-                    • 각 질문의 정답을 반드시 설정해주세요
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-gray-700">
+                    • 최대 10개 퀴즈 질문 생성 가능<br />
+                    • <strong>객관식:</strong> 최대 10개 선택지<br />
+                    • <strong>주관식:</strong> 정확한 정답 입력<br />
+                    • 각 질문의 정답을 반드시 설정
                   </p>
                 </div>
 
                 {/* 퀴즈 질문 목록 */}
                 <div className="space-y-6">
                   {letterForm.quiz.questions.map((question, questionIndex) => (
-                    <div key={questionIndex} className="border border-blue-400/30 rounded-lg p-4 bg-blue-500/20 backdrop-blur-sm">
+                    <div key={questionIndex} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-white">
+                        <h4 className="font-medium text-gray-900">
                           퀴즈 {questionIndex + 1}
                         </h4>
                         {letterForm.quiz.questions.length > 1 && (
@@ -1141,7 +1177,7 @@ export default function LinkLetterPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => removeQuizQuestion(questionIndex)}
-                            className="border-red-400/50 text-red-300 hover:text-red-200 hover:bg-red-500/20"
+                            className="border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1151,7 +1187,7 @@ export default function LinkLetterPage() {
                       <div className="space-y-3">
                         {/* 질문 입력 */}
                         <div>
-                          <Label className="text-white">질문 *</Label>
+                          <Label className="text-gray-700">질문 *</Label>
                           <Input
                             value={question.question}
                             onChange={(e) => updateQuizQuestion(questionIndex, 'question', e.target.value)}
@@ -1162,7 +1198,7 @@ export default function LinkLetterPage() {
 
                         {/* 문제 유형 선택 */}
                         <div>
-                          <Label className="text-white">문제 유형 *</Label>
+                          <Label className="text-gray-700">문제 유형 *</Label>
                           <div className="flex gap-2 mt-1">
                             <Button
                               type="button"
@@ -1171,8 +1207,8 @@ export default function LinkLetterPage() {
                               onClick={() => updateQuizQuestion(questionIndex, 'type', 'multiple')}
                               className={`${
                                 question.type === 'multiple' || !question.type
-                                  ? 'bg-white/90 text-black border-white/70' 
-                                  : 'border-white/40 text-white/90 hover:bg-white/20'
+                                  ? 'bg-blue-500 text-white border-blue-500' 
+                                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                               }`}
                             >
                               객관식
@@ -1184,8 +1220,8 @@ export default function LinkLetterPage() {
                               onClick={() => updateQuizQuestion(questionIndex, 'type', 'short')}
                               className={`${
                                 question.type === 'short'
-                                  ? 'bg-white/90 text-black border-white/70' 
-                                  : 'border-white/40 text-white/90 hover:bg-white/20'
+                                  ? 'bg-blue-500 text-white border-blue-500' 
+                                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                               }`}
                             >
                               주관식
@@ -1197,14 +1233,14 @@ export default function LinkLetterPage() {
                         {question.type === 'short' ? (
                           /* 주관식 정답 입력 */
                           <div>
-                            <Label className="text-white">정답 *</Label>
+                            <Label className="text-gray-700">정답 *</Label>
                             <Input
                               value={question.shortAnswer || ''}
                               onChange={(e) => updateQuizQuestion(questionIndex, 'shortAnswer', e.target.value)}
                               placeholder="주관식 문제의 정답을 입력하세요"
                               className="mt-1"
                             />
-                            <p className="text-xs text-white/70 mt-1">
+                            <p className="text-xs text-gray-600 mt-1">
                               * 대소문자 구분 없이 정확히 일치해야 정답으로 인정됩니다
                             </p>
                           </div>
@@ -1212,8 +1248,8 @@ export default function LinkLetterPage() {
                           /* 객관식 선택지 */
                           <div>
                             <div className="flex items-center justify-between mb-2">
-                              <Label className="text-white">선택지 * (최대 10개)</Label>
-                              <span className="text-xs text-white/70">
+                              <Label className="text-gray-700">선택지 * (최대 10개)</Label>
+                              <span className="text-xs text-gray-600">
                                 {question.options.length}/10 개
                               </span>
                             </div>
@@ -1223,8 +1259,8 @@ export default function LinkLetterPage() {
                                   <div className="flex items-center gap-2 flex-1">
                                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
                                       question.correctAnswer === optionIndex 
-                                        ? 'border-green-400 bg-green-500 text-white' 
-                                        : 'border-white/50 text-white'
+                                        ? 'border-green-500 bg-green-500 text-white' 
+                                        : 'border-gray-300 text-gray-600'
                                     }`}>
                                       {optionIndex + 1}
                                     </div>
@@ -1240,8 +1276,8 @@ export default function LinkLetterPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setCorrectAnswer(questionIndex, optionIndex)}
-                                    className={`border-white/30 text-white hover:bg-white/10 ${
-                                      question.correctAnswer === optionIndex ? 'bg-green-500/30 border-green-400/50' : ''
+                                    className={`border-gray-300 text-gray-700 hover:bg-gray-50 ${
+                                      question.correctAnswer === optionIndex ? 'bg-green-50 border-green-300 text-green-700' : ''
                                     }`}
                                   >
                                     정답
@@ -1252,7 +1288,7 @@ export default function LinkLetterPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => removeQuizOption(questionIndex, optionIndex)}
-                                      className="border-red-400/50 text-red-300 hover:text-red-200 hover:bg-red-500/20"
+                                      className="border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50"
                                       title="선택지 삭제"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -1269,15 +1305,15 @@ export default function LinkLetterPage() {
                                   type="button"
                                   variant="outline"
                                   onClick={() => addQuizOption(questionIndex)}
-                                  className="w-full border-white/30 text-white hover:bg-white/10"
+                                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                                   size="sm"
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
                                   선택지 추가 ({question.options.length}/10)
                                 </Button>
                               ) : (
-                                <div className="w-full p-2 bg-green-500/20 border border-green-400/30 rounded text-center backdrop-blur-sm">
-                                  <span className="text-xs text-white">
+                                <div className="w-full p-2 bg-green-50 border border-green-200 rounded text-center">
+                                  <span className="text-xs text-green-700">
                                     ✅ 최대 10개 선택지 완료
                                   </span>
                                 </div>
@@ -1288,7 +1324,7 @@ export default function LinkLetterPage() {
 
                         {/* 힌트 */}
                         <div>
-                          <Label className="text-white">힌트 (선택)</Label>
+                          <Label className="text-gray-700">힌트 (선택)</Label>
                           <Input
                             value={question.hint}
                             onChange={(e) => updateQuizQuestion(questionIndex, 'hint', e.target.value)}
@@ -1308,14 +1344,14 @@ export default function LinkLetterPage() {
                       type="button"
                       variant="outline"
                       onClick={addQuizQuestion}
-                      className="w-full border-white/30 text-white hover:bg-white/10"
+                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       퀴즈 질문 추가 ({letterForm.quiz.questions.length}/10)
                     </Button>
                   ) : (
-                    <div className="w-full p-3 bg-blue-500/20 border border-blue-400/30 rounded-lg text-center backdrop-blur-sm">
-                      <span className="text-sm text-white">
+                    <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                      <span className="text-sm text-gray-700">
                         ✅ 최대 10개 퀴즈 질문이 모두 추가되었습니다
                       </span>
                     </div>
@@ -1328,9 +1364,9 @@ export default function LinkLetterPage() {
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div>
-                  <Label className="text-white">편지 사진 (최대 5장)</Label>
+                  <Label className="text-gray-700">편지 사진 (최대 5장)</Label>
                   <div className="mt-2">
-                    <div className="border-2 border-dashed border-white/30 rounded-lg p-6 text-center bg-blue-500/10 backdrop-blur-sm">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
                       <input
                         type="file"
                         multiple
@@ -1344,17 +1380,17 @@ export default function LinkLetterPage() {
                         htmlFor="imageUpload"
                         className={`cursor-pointer ${letterForm.images.length >= 5 ? 'cursor-not-allowed opacity-50' : ''}`}
                       >
-                        <Upload className="w-12 h-12 text-white/60 mx-auto mb-2" />
-                        <p className="text-white/80">
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-700">
                           {letterForm.images.length >= 5 
                             ? '최대 5장까지 업로드 가능합니다' 
                             : '클릭하여 사진을 업로드하세요'
                           }
                         </p>
-                        <p className="text-xs text-white/60 mt-1">
+                        <p className="text-xs text-gray-600 mt-1">
                           * 이미지는 캡쳐 사진 사용 권장
                         </p>
-                        <p className="text-xs text-white/60 mt-1">
+                        <p className="text-xs text-gray-600 mt-1">
                           {letterForm.images.length}/5 장 업로드됨
                         </p>
                       </label>
@@ -1364,7 +1400,7 @@ export default function LinkLetterPage() {
 
                 {letterForm.images.length > 0 && (
                   <div>
-                    <Label className="text-white">업로드된 사진</Label>
+                    <Label className="text-gray-700">업로드된 사진</Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
                       {letterForm.images.map((image, index) => (
                         <div key={index} className="relative group">
@@ -1376,7 +1412,7 @@ export default function LinkLetterPage() {
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                            className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1392,7 +1428,7 @@ export default function LinkLetterPage() {
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="content" className="text-white">편지 내용 *</Label>
+                  <Label htmlFor="content" className="text-gray-700">편지 내용 *</Label>
                   <Textarea
                     id="content"
                     value={letterForm.content}
@@ -1400,15 +1436,15 @@ export default function LinkLetterPage() {
                     placeholder="마음을 담은 편지를 작성해주세요..."
                     className="mt-1 min-h-[200px]"
                   />
-                  <p className="text-xs text-white/70 mt-1">
+                  <p className="text-xs text-gray-600 mt-1">
                     {letterForm.content.length} 글자
                   </p>
                 </div>
 
                 {/* 미리보기 */}
-                <div className="border border-blue-400/30 rounded-lg p-4 bg-blue-500/20 backdrop-blur-sm">
-                  <h4 className="font-medium mb-2 text-white">편지 미리보기</h4>
-                  <div className="text-sm text-white/90">
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h4 className="font-medium mb-2 text-gray-900">편지 미리보기</h4>
+                  <div className="text-sm text-gray-700">
                     <p><strong>제목:</strong> {letterForm.title || '제목 없음'}</p>
                     <p><strong>카테고리:</strong> {letterCategories.find(cat => cat.id === letterForm.category)?.name || '선택 안함'}</p>
                     <p><strong>작성자:</strong> {letterForm.author || '작성자 없음'}</p>
@@ -1417,8 +1453,8 @@ export default function LinkLetterPage() {
                       {letterForm.quiz.questions.filter(q => q.type !== 'short').length}개 객관식)
                     </p>
                     <p><strong>사진:</strong> {letterForm.images.length}장</p>
-                    <div className="mt-2 p-2 bg-white/10 rounded border border-white/20 max-h-20 overflow-y-auto backdrop-blur-sm">
-                      <span className="text-white/80">{letterForm.content || '내용 없음'}</span>
+                    <div className="mt-2 p-2 bg-gray-100 rounded border border-gray-200 max-h-20 overflow-y-auto">
+                      <span className="text-gray-700">{letterForm.content || '내용 없음'}</span>
                     </div>
                   </div>
                 </div>
@@ -1429,105 +1465,13 @@ export default function LinkLetterPage() {
             {currentStep === 5 && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">편지 배경 선택</h3>
-                  <p className="text-sm text-white/70 mb-4">편지를 받는 사람이 볼 배경을 선택해주세요</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">편지 배경 선택</h3>
+                  <p className="text-sm text-gray-600 mb-4">편지를 받는 사람이 볼 배경을 선택해주세요</p>
                   
-                  {/* 배경 옵션들 */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {/* 기본 배경 */}
-                    <button
-                      onClick={() => setLetterForm(prev => ({
-                        ...prev,
-                        background: { type: 'default' }
-                      }))}
-                      className={`aspect-video bg-slate-950 rounded-lg border-2 transition-all ${
-                        letterForm.background.type === 'default' 
-                          ? 'border-blue-500 ring-2 ring-blue-500/30' 
-                          : 'border-white/20 hover:border-blue-400/50'
-                      }`}
-                    >
-                      <div className="h-full flex items-center justify-center text-white/70 text-sm">
-                        기본
-                      </div>
-                    </button>
-                    
-                    {/* 로맨틱 그라데이션 */}
-                    <button
-                      onClick={() => setLetterForm(prev => ({
-                        ...prev,
-                        background: { 
-                          type: 'gradient', 
-                          value: 'linear-gradient(to bottom, #ec4899, #8b5cf6)' 
-                        }
-                      }))}
-                      className={`aspect-video bg-gradient-to-b from-pink-500 to-purple-600 rounded-lg border-2 transition-all ${
-                        letterForm.background.value === 'linear-gradient(to bottom, #ec4899, #8b5cf6)' 
-                          ? 'border-blue-500 ring-2 ring-blue-500/30' 
-                          : 'border-white/20 hover:border-blue-400/50'
-                      }`}
-                    >
-                      <div className="h-full flex items-center justify-center text-white text-sm font-medium">
-                        로맨틱
-                      </div>
-                    </button>
-                    
-                    {/* 자연 그라데이션 */}
-                    <button
-                      onClick={() => setLetterForm(prev => ({
-                        ...prev,
-                        background: { 
-                          type: 'gradient', 
-                          value: 'linear-gradient(to bottom, #10b981, #3b82f6)' 
-                        }
-                      }))}
-                      className={`aspect-video bg-gradient-to-b from-green-500 to-blue-500 rounded-lg border-2 transition-all ${
-                        letterForm.background.value === 'linear-gradient(to bottom, #10b981, #3b82f6)' 
-                          ? 'border-blue-500 ring-2 ring-blue-500/30' 
-                          : 'border-white/20 hover:border-blue-400/50'
-                      }`}
-                    >
-                      <div className="h-full flex items-center justify-center text-white text-sm font-medium">
-                        자연
-                      </div>
-                    </button>
-                    
-                    {/* 따뜻함 그라데이션 */}
-                    <button
-                      onClick={() => setLetterForm(prev => ({
-                        ...prev,
-                        background: { 
-                          type: 'gradient', 
-                          value: 'linear-gradient(to bottom, #f59e0b, #ef4444)' 
-                        }
-                      }))}
-                      className={`aspect-video bg-gradient-to-b from-yellow-500 to-red-500 rounded-lg border-2 transition-all ${
-                        letterForm.background.value === 'linear-gradient(to bottom, #f59e0b, #ef4444)' 
-                          ? 'border-blue-500 ring-2 ring-blue-500/30' 
-                          : 'border-white/20 hover:border-blue-400/50'
-                      }`}
-                    >
-                      <div className="h-full flex items-center justify-center text-white text-sm font-medium">
-                        따뜻함
-                      </div>
-                    </button>
-                  </div>
-                  
-                  {/* 커스텀 색상 */}
-                  <div className="space-y-2">
-                    <label className="text-white text-sm">커스텀 색상</label>
-                    <input
-                      type="color"
-                      onChange={(e) => setLetterForm(prev => ({
-                        ...prev,
-                        background: { type: 'color', value: e.target.value }
-                      }))}
-                      className="w-full h-12 rounded-lg border border-white/20"
-                    />
-                  </div>
                   
                   {/* 배경 이미지 업로드 */}
                   <div className="space-y-2">
-                    <label className="text-white text-sm">배경 이미지 업로드</label>
+                    <label className="text-gray-700 text-sm">배경 이미지 업로드</label>
                     <div className="relative">
                       <input
                         type="file"
@@ -1536,9 +1480,9 @@ export default function LinkLetterPage() {
                          onChange={async (e) => {
                            const file = e.target.files?.[0];
                            if (file) {
-                             // 파일 크기 체크 (50MB 제한 - Storage는 더 큰 파일 지원)
-                             if (file.size > 50 * 1024 * 1024) {
-                               alert('이미지 크기는 50MB 이하로 선택해주세요.');
+                             // 파일 크기 체크 (20MB 제한으로 축소 - 압축 후 더 빨라짐)
+                             if (file.size > 20 * 1024 * 1024) {
+                               alert('이미지 크기는 20MB 이하로 선택해주세요.');
                                return;
                              }
                              try {
@@ -1558,33 +1502,28 @@ export default function LinkLetterPage() {
                       <button
                         type="button"
                         onClick={() => document.getElementById('backgroundImageUpload')?.click()}
-                        className="w-full p-4 border-2 border-dashed border-white/30 rounded-lg bg-white/5 hover:bg-white/10 hover:border-white/50 transition-all text-white text-center"
+                        className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-700 text-center"
                       >
                         <div className="flex flex-col items-center gap-2">
-                          <Upload className="w-6 h-6 text-white/70" />
+                          <Upload className="w-6 h-6 text-gray-400" />
                           <span className="text-sm">이미지 선택하기</span>
-                          <span className="text-xs text-white/60">고품질 이미지 지원 (최대 50MB)</span>
+                          <span className="text-xs text-gray-600">고품질 이미지 지원 (최대 20MB)</span>
                         </div>
                       </button>
                     </div>
-                    <p className="text-xs text-white/60">
-                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 50MB)
+                    <p className="text-xs text-gray-600">
+                      편지 배경으로 사용할 이미지를 선택해주세요 (권장: 16:9 비율, 최대 20MB)
                     </p>
                   </div>
                 </div>
 
                 {/* 배경 미리보기 */}
-                <div className="border border-blue-400/30 rounded-lg p-4 bg-blue-500/20 backdrop-blur-sm">
-                  <h4 className="font-medium mb-2 text-white">선택된 배경</h4>
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h4 className="font-medium mb-2 text-gray-900">선택된 배경</h4>
                   <div 
-                    className="w-full h-20 rounded-lg border border-white/20 overflow-hidden relative"
-                    style={{
-                      backgroundColor: letterForm.background.type === 'color' ? letterForm.background.value : undefined,
-                      background: letterForm.background.type === 'gradient' ? letterForm.background.value : 
-                                letterForm.background.type === 'default' ? '#0f172a' : undefined
-                    }}
+                    className="w-full h-32 sm:h-40 rounded-lg border border-gray-300 overflow-hidden relative bg-gray-100"
                   >
-                    {letterForm.background.type === 'image' && letterForm.background.value && (
+                    {letterForm.background.type === 'image' && letterForm.background.value ? (
                       <>
                         <img 
                           src={letterForm.background.value} 
@@ -1598,12 +1537,19 @@ export default function LinkLetterPage() {
                             ...prev,
                             background: { type: 'default' }
                           }))}
-                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs transition-colors"
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm transition-colors"
                           title="배경 이미지 제거"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-4 h-4" />
                         </button>
                       </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="text-center">
+                          <Upload className="w-8 h-8 mx-auto mb-2" />
+                          <p className="text-sm">배경 이미지를 선택해주세요</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1612,12 +1558,12 @@ export default function LinkLetterPage() {
           </div>
 
           {/* 버튼들 */}
-          <div className="flex justify-between pt-4 border-t border-white/20">
+          <div className="flex justify-between pt-4 px-4 sm:px-0 border-t border-gray-200">
             <Button
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="border-white/30 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px]"
             >
               이전
             </Button>
@@ -1626,7 +1572,7 @@ export default function LinkLetterPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="border-white/30 text-white hover:bg-white/10"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 min-w-[80px]"
               >
                 취소
               </Button>
@@ -1634,7 +1580,7 @@ export default function LinkLetterPage() {
               {currentStep < 5 ? (
                 <Button
                   onClick={nextStep}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white min-w-[80px]"
                 >
                   다음
                 </Button>
@@ -1642,7 +1588,7 @@ export default function LinkLetterPage() {
                 <Button
                   onClick={handleSubmitLetter}
                   disabled={isSubmitting}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
                 >
                   {isSubmitting ? '저장 중...' : '편지 등록'}
                 </Button>
