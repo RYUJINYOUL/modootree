@@ -242,11 +242,20 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
             >
               투표 링크 공유
             </button>
-            <Link href="/news-vote">
-              <button className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-colors text-sm">
-                리스트로 이동
-              </button>
-            </Link>
+            <button 
+              onClick={() => {
+                // 뒤로 가기 (브라우저 히스토리 사용)
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  // 히스토리가 없으면 직접 이동
+                  window.location.href = '/news-vote';
+                }
+              }}
+              className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-colors text-sm"
+            >
+              리스트로 돌아가기
+            </button>
           </div>
 
           <div className="space-y-3 mt-4">

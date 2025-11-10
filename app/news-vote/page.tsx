@@ -27,20 +27,106 @@ export default function NewsVotePage({ isActive = true }: { isActive?: boolean }
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null); // 마지막 문서 상태 추가
   const [hasMore, setHasMore] = useState(true); // 더 많은 데이터가 있는지 여부 상태 추가
   const [selectedTab, setSelectedTab] = useState('news-vote'); // 탭 상태 추가
+  const [prevCategory, setPrevCategory] = useState(selectedCategory); // 이전 카테고리 상태 추가
+  const [prevSortBy, setPrevSortBy] = useState(sortBy); // 이전 정렬 상태 추가
 
   const { user } = useAuth(); // useAuth 훅 사용
   const router = useRouter(); // useRouter 훅 사용
 
+  // 페이지 로드 시 저장된 상태 복원
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('newsVoteState');
+    const savedScrollPosition = sessionStorage.getItem('newsVoteScrollPosition');
+    
+    if (savedState) {
+      try {
+        const { newsList: savedNewsList, selectedCategory: savedCategory, sortBy: savedSortBy, lastVisible: savedLastVisible, hasMore: savedHasMore } = JSON.parse(savedState);
+        if (savedNewsList && savedNewsList.length > 0) {
+          setNewsList(savedNewsList);
+          setSelectedCategory(savedCategory);
+          setSortBy(savedSortBy);
+          setPrevCategory(savedCategory);
+          setPrevSortBy(savedSortBy);
+          setHasMore(savedHasMore);
+          setLoading(false);
+          
+          // 스크롤 위치 복원
+          if (savedScrollPosition) {
+            setTimeout(() => {
+              window.scrollTo(0, parseInt(savedScrollPosition));
+            }, 100);
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('저장된 상태 복원 실패:', error);
+      }
+    }
+  }, []);
+
+  // 뒤로 가기 감지 및 스크롤 위치 저장
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (newsList.length > 0) {
+        sessionStorage.setItem('newsVoteScrollPosition', window.scrollY.toString());
+      }
+    };
+
+    const handlePopState = () => {
+      const savedScrollPosition = sessionStorage.getItem('newsVoteScrollPosition');
+      if (savedScrollPosition) {
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition));
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [newsList]);
+
   useEffect(() => {
     if (isActive && selectedTab === 'news-vote') { // isActive가 true이고 news-vote 탭이 활성화될 때만 데이터 로드
-      setNewsList([]); // 카테고리/정렬 변경 시 목록 초기화
-      setLastVisible(null); // 마지막 문서 초기화
-      setHasMore(true); // 더보기 가능 상태 초기화
-      fetchNews(true); // 처음부터 데이터 가져오기
+      const categoryChanged = prevCategory !== selectedCategory;
+      const sortChanged = prevSortBy !== sortBy;
+      
+      if (categoryChanged || sortChanged) {
+        // 실제로 카테고리나 정렬이 변경된 경우에만 초기화
+        setNewsList([]); // 카테고리/정렬 변경 시 목록 초기화
+        setLastVisible(null); // 마지막 문서 초기화
+        setHasMore(true); // 더보기 가능 상태 초기화
+        fetchNews(true); // 처음부터 데이터 가져오기
+        setPrevCategory(selectedCategory);
+        setPrevSortBy(sortBy);
+        // 변경 시에는 저장된 상태 클리어
+        sessionStorage.removeItem('newsVoteState');
+        sessionStorage.removeItem('newsVoteScrollPosition');
+      } else if (newsList.length === 0) {
+        // 처음 로드시에만 데이터 가져오기
+        fetchNews(true);
+      }
     } else if (!isActive) {
       setLoading(false); // 탭이 활성화되지 않으면 로딩 상태 해제
     }
   }, [selectedCategory, sortBy, selectedTab, isActive]); // isActive를 의존성 배열에 추가
+
+  // 상태 변경 시 sessionStorage에 저장
+  useEffect(() => {
+    if (newsList.length > 0 && !loading) {
+      const stateToSave = {
+        newsList,
+        selectedCategory,
+        sortBy,
+        hasMore
+      };
+      sessionStorage.setItem('newsVoteState', JSON.stringify(stateToSave));
+    }
+  }, [newsList, selectedCategory, sortBy, hasMore, loading]);
 
   const fetchNews = async (reset: boolean) => {
     setLoading(true);

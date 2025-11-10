@@ -245,7 +245,13 @@ export default function ModooVoteDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <p className="text-red-500">{error}</p>
-        <Button onClick={() => router.push('/modoo-vote')} className="ml-4">목록으로 돌아가기</Button>
+        <Button onClick={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            router.push('/modoo-vote');
+          }
+        }} className="ml-4">목록으로 돌아가기</Button>
       </div>
     );
   }
@@ -254,7 +260,13 @@ export default function ModooVoteDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <p>투표 정보를 찾을 수 없습니다.</p>
-        <Button onClick={() => router.push('/modoo-vote')} className="ml-4">목록으로 돌아가기</Button>
+        <Button onClick={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            router.push('/modoo-vote');
+          }
+        }} className="ml-4">목록으로 돌아가기</Button>
       </div>
     );
   }
@@ -329,7 +341,13 @@ export default function ModooVoteDetailPage() {
 
         {/* 버튼 영역 */}
         <div className="mt-8 flex justify-center gap-3">
-          <Button onClick={() => router.push('/modoo-vote')} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              router.push('/modoo-vote');
+            }
+          }} className="bg-blue-600 hover:bg-blue-700">
             목록으로 돌아가기
           </Button>
           <Button
@@ -409,7 +427,13 @@ export default function ModooVoteDetailPage() {
         
 
         <div className="mt-8 flex justify-center gap-3">
-          <Button onClick={() => router.push('/modoo-vote')} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              router.push('/modoo-vote');
+            }
+          }} className="bg-blue-600 hover:bg-blue-700">
             목록으로 돌아가기
           </Button>
           <Button

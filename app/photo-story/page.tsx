@@ -153,9 +153,78 @@ export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean
   const [deleting, setDeleting] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isAdmin = currentUser?.uid === 'vW1OuC6qMweyOqu73N0558pv4b03';
+
+  // 페이지 로드 시 저장된 상태 복원
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('photoStoryState');
+    const savedScrollPosition = sessionStorage.getItem('photoStoryScrollPosition');
+    
+    if (savedState) {
+      try {
+        const { stories: savedStories } = JSON.parse(savedState);
+        if (savedStories && savedStories.length > 0) {
+          setStories(savedStories);
+          setLoading(false);
+          
+          // 스크롤 위치 복원
+          if (savedScrollPosition) {
+            setTimeout(() => {
+              window.scrollTo(0, parseInt(savedScrollPosition));
+            }, 100);
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('저장된 상태 복원 실패:', error);
+      }
+    }
+  }, []);
+
+  // 뒤로 가기 감지 및 스크롤 위치 저장
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (stories.length > 0) {
+        sessionStorage.setItem('photoStoryScrollPosition', window.scrollY.toString());
+      }
+    };
+
+    const handlePopState = () => {
+      const savedScrollPosition = sessionStorage.getItem('photoStoryScrollPosition');
+      if (savedScrollPosition) {
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition));
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [stories]);
+
+  // 상태 변경 시 sessionStorage에 저장
+  useEffect(() => {
+    if (stories.length > 0 && !loading) {
+      const stateToSave = {
+        stories
+      };
+      sessionStorage.setItem('photoStoryState', JSON.stringify(stateToSave));
+    }
+  }, [stories, loading]);
+
   const fetchStories = useCallback(async () => {
     if (!isActive) {
       setLoading(false);
+      return;
+    }
+    
+    // 이미 저장된 상태가 있다면 fetch하지 않음
+    const savedState = sessionStorage.getItem('photoStoryState');
+    if (savedState && stories.length > 0) {
       return;
     }
     try {

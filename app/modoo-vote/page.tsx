@@ -31,20 +31,106 @@ export default function ModooVotePage() {
   const [selectedTab, setSelectedTab] = useState('modoo-vote');
   const [isActive] = useState(true);
   const [isFromFeed] = useState(false);
+  const [prevCategory, setPrevCategory] = useState(selectedCategory); // 이전 카테고리 상태 추가
+  const [prevSortBy, setPrevSortBy] = useState(sortBy); // 이전 정렬 상태 추가
 
   const { user } = useAuth();
   const router = useRouter();
 
+  // 페이지 로드 시 저장된 상태 복원
   useEffect(() => {
-    setModooList([]);
-    setLastVisible(null);
-    setHasMore(true);
+    const savedState = sessionStorage.getItem('modooVoteState');
+    const savedScrollPosition = sessionStorage.getItem('modooVoteScrollPosition');
+    
+    if (savedState) {
+      try {
+        const { modooList: savedModooList, selectedCategory: savedCategory, sortBy: savedSortBy, hasMore: savedHasMore } = JSON.parse(savedState);
+        if (savedModooList && savedModooList.length > 0) {
+          setModooList(savedModooList);
+          setSelectedCategory(savedCategory);
+          setSortBy(savedSortBy);
+          setPrevCategory(savedCategory);
+          setPrevSortBy(savedSortBy);
+          setHasMore(savedHasMore);
+          setLoading(false);
+          
+          // 스크롤 위치 복원
+          if (savedScrollPosition) {
+            setTimeout(() => {
+              window.scrollTo(0, parseInt(savedScrollPosition));
+            }, 100);
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('저장된 상태 복원 실패:', error);
+      }
+    }
+  }, []);
+
+  // 뒤로 가기 감지 및 스크롤 위치 저장
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (modooList.length > 0) {
+        sessionStorage.setItem('modooVoteScrollPosition', window.scrollY.toString());
+      }
+    };
+
+    const handlePopState = () => {
+      const savedScrollPosition = sessionStorage.getItem('modooVoteScrollPosition');
+      if (savedScrollPosition) {
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition));
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [modooList]);
+
+  useEffect(() => {
     if (isActive && selectedTab === 'modoo-vote') {
-      fetchModooVotes(true);
+      const categoryChanged = prevCategory !== selectedCategory;
+      const sortChanged = prevSortBy !== sortBy;
+      
+      if (categoryChanged || sortChanged) {
+        // 실제로 카테고리나 정렬이 변경된 경우에만 초기화
+        setModooList([]);
+        setLastVisible(null);
+        setHasMore(true);
+        fetchModooVotes(true);
+        setPrevCategory(selectedCategory);
+        setPrevSortBy(sortBy);
+        // 변경 시에는 저장된 상태 클리어
+        sessionStorage.removeItem('modooVoteState');
+        sessionStorage.removeItem('modooVoteScrollPosition');
+      } else if (modooList.length === 0) {
+        // 처음 로드시에만 데이터 가져오기
+        fetchModooVotes(true);
+      }
     } else if (!isActive) {
       setLoading(false);
     }
   }, [selectedCategory, sortBy, selectedTab, isActive]);
+
+  // 상태 변경 시 sessionStorage에 저장
+  useEffect(() => {
+    if (modooList.length > 0 && !loading) {
+      const stateToSave = {
+        modooList,
+        selectedCategory,
+        sortBy,
+        hasMore
+      };
+      sessionStorage.setItem('modooVoteState', JSON.stringify(stateToSave));
+    }
+  }, [modooList, selectedCategory, sortBy, hasMore, loading]);
 
   const fetchModooVotes = async (reset: boolean) => {
     setLoading(true);

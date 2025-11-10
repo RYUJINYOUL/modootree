@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, ChevronRight, Menu, Phone, Copy, Check } from 'lucide-react';
+import { Home, ChevronRight, Menu, Phone, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
@@ -140,32 +140,6 @@ export default function ProsMenu() {
     router.push('/link-letter');
   };
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setLinkCopied(true);
-      
-      // 3초 후 상태 초기화
-      setTimeout(() => {
-        setLinkCopied(false);
-      }, 3000);
-    } catch (error) {
-      console.error('링크 복사 실패:', error);
-      // 폴백: 텍스트 선택으로 복사 안내
-      const textArea = document.createElement('textarea');
-      textArea.value = window.location.href;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      setLinkCopied(true);
-      setTimeout(() => {
-        setLinkCopied(false);
-      }, 3000);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#e93e4a] overflow-y-auto cursor-penc relative">
       {/* 파티클 배경 효과 */}
@@ -184,8 +158,8 @@ export default function ProsMenu() {
             }}
             className="text-white hover:opacity-80 transition flex items-center gap-2 cursor-penc-hover relative z-50 pointer-events-auto"
           >
+            <Home className="w-4 h-4" />
             <span className="font-bold">모두트리</span>
-            <X className="w-6 h-6" />
           </button>
         <div className="flex flex-col items-end gap-2">
           <p className="text-white text-sm">
@@ -238,30 +212,6 @@ export default function ProsMenu() {
              <MenuItem text="링크편지" active={true} />
            </ul>
 
-           {/* 링크 복사 버튼 */}
-           <div className="flex justify-center mt-6">
-             <button
-               type="button"
-               onClick={handleCopyLink}
-               className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 cursor-penc-hover ${
-                 linkCopied
-                   ? 'bg-green-500 border border-green-600 text-white shadow-lg'
-                   : 'bg-black border border-gray-800 text-white hover:bg-gray-800 hover:border-gray-700'
-               } backdrop-blur-sm shadow-lg`}
-             >
-               {linkCopied ? (
-                 <>
-                   <Check className="w-4 h-4" />
-                   <span className="text-sm font-medium">복사 완료!</span>
-                 </>
-               ) : (
-                 <>
-                   <Copy className="w-4 h-4" />
-                   <span className="text-sm font-medium">링크 복사</span>
-                 </>
-               )}
-             </button>
-           </div>
          </nav>
 
          {/* Speech Bubbles - Bottom */}

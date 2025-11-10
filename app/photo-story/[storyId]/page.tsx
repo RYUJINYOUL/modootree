@@ -149,7 +149,12 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
       try {
         const storyDoc = await getDoc(doc(db, 'photo-stories', resolvedParams.storyId));
         if (!storyDoc.exists()) {
-          router.push('/photo-story');
+          // 뒤로 가기 (브라우저 히스토리 사용)
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            router.push('/photo-story');
+          }
           return;
         }
 
@@ -302,7 +307,15 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
           <div className="mb-6">
             <Button
               variant="ghost"
-              onClick={() => router.push('/photo-story')}
+              onClick={() => {
+                // 뒤로 가기 (브라우저 히스토리 사용)
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  // 히스토리가 없으면 직접 이동
+                  router.push('/photo-story');
+                }
+              }}
               className="text-white/70 hover:text-white"
             >
               <ChevronLeft className="w-5 h-5 mr-1" />
