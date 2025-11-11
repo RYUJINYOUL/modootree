@@ -30,6 +30,7 @@ export default function Home() {
 
   const suggestedQueries = [
     { text: "모두트리 내 페이지를 설명해줘" },
+    { text: "링크편지 설명해줘" },
     { text: "오늘 대화 내용으로 일기 메모 건강 분석 가능해?" },
     { text: "모투트리 문의 게시판은 어디에 있는거야?" },
   ];

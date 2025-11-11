@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import Link from 'next/link';
-import { ArrowLeft, MessageCircle, Clock, Users, Trash2 } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Clock, Users, Trash2, Heart } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/firebase';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -92,6 +92,69 @@ export default function GreetingResponsesPage() {
     }
   };
 
+  // 새 함수: 좋아요 처리 (중복 클릭 허용, 사용자 기록 X)
+  const handleSimpleLike = async (responseToLike: any) => {
+    const currentUserId = currentUser?.uid || localUser?.uid;
+    // 사용자가 로그인되어 있지 않으면 좋아요 불가능
+    if (!currentUserId) {
+      alert('로그인 후 좋아요를 누를 수 있습니다.');
+      return;
+    }
+    
+    try {
+      const dateStr = responseToLike.dateStr;
+      const publicDocRef = doc(db, 'greetingResponses', dateStr);
+      const docSnapshot = await getDoc(publicDocRef);
+  
+      if (!docSnapshot.exists()) return;
+      const data = docSnapshot.data();
+      let responses = data.responses || [];
+  
+      // 해당 응답을 responses 배열 내에서 찾습니다.
+      // 여기서는 userName과 response 내용을 고유 식별자로 사용합니다.
+      const targetIndex = responses.findIndex((resp: any) => 
+        resp.userName === responseToLike.userName && 
+        resp.greeting === responseToLike.greeting &&
+        // resp.timestamp?.isEqual(responseToLike.timestamp) // Firebase Timestamp 비교 시 사용 (현재는 Date 객체로 변환되어 있으므로 content 비교로 대체)
+        resp.response === responseToLike.response
+      );
+      
+      if (targetIndex > -1) {
+        // 1. 좋아요 수 증가
+        const currentLikes = responses[targetIndex].likesCount || 0;
+        responses[targetIndex].likesCount = currentLikes + 1;
+        
+        // 2. 공용 저장소 업데이트 (배열 전체 덮어쓰기)
+        await updateDoc(publicDocRef, { responses: responses });
+  
+        // 3. UI 즉시 업데이트
+        setAllGreetingResponses(prevResponses => 
+          prevResponses.map(resp => {
+            if (resp.userName === responseToLike.userName && resp.dateStr === dateStr && resp.response === responseToLike.response) {
+              return { ...resp, likesCount: currentLikes + 1 };
+            }
+            return resp;
+          }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()) // 시간순 재정렬
+        );
+  
+        // 내 답변 탭도 업데이트 (선택 사항: 내 답변이 공용 저장소의 데이터와 일치할 때만)
+        if (responseToLike.userId === currentUserId) {
+          setMyGreetingResponses(prevResponses => 
+            prevResponses.map(resp => {
+              if (resp.userName === responseToLike.userName && resp.dateStr === dateStr && resp.response === responseToLike.response) {
+                return { ...resp, likesCount: currentLikes + 1 };
+              }
+              return resp;
+            }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+          );
+        }
+      }
+    } catch (error) {
+      console.error('좋아요 업데이트 실패:', error);
+      alert('좋아요 처리 중 오류가 발생했습니다.');
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -115,46 +178,62 @@ export default function GreetingResponsesPage() {
     // 오늘과 어제 개인 답변 가져오기
     const fetchMyResponses = async () => {
       try {
-        let allMyResponses: any[] = [];
-        
-        // 오늘 데이터
-        const todayDocRef = doc(db, `users/${userId}/greetingResponses`, dateStr);
-        const todayDoc = await getDoc(todayDocRef);
-        
-        if (todayDoc.exists()) {
-          const todayData = todayDoc.data();
-          if (todayData.responses) {
-            const todayResponses = todayData.responses.map((response: any, index: number) => ({
-              id: `today-${index}`,
-              ...response,
-              userId: userId, // 유저 ID 추가
-              dateStr: dateStr, // 날짜 문자열 추가
-              timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
-            }));
-            allMyResponses = [...allMyResponses, ...todayResponses];
-          }
-        }
-        
-        // 어제 데이터
+        const userId = currentUser?.uid || localUser?.uid;
+        if (!userId) return;
+
+        const today = new Date();
+        const todayStr = new Date(today.getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = new Date(yesterday.getTime() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
-        const yesterdayDocRef = doc(db, `users/${userId}/greetingResponses`, yesterdayStr);
-        const yesterdayDoc = await getDoc(yesterdayDocRef);
+
+        // 1. 공용 저장소에서 '좋아요' 수 미리 가져오기
+        const likesMap = new Map<string, number>();
         
-        if (yesterdayDoc.exists()) {
-          const yesterdayData = yesterdayDoc.data();
-          if (yesterdayData.responses) {
-            const yesterdayResponses = yesterdayData.responses.map((response: any, index: number) => ({
-              id: `yesterday-${index}`,
-              ...response,
-              userId: userId, // 유저 ID 추가
-              dateStr: yesterdayStr, // 어제 날짜 문자열 추가
-              timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
-            }));
-            allMyResponses = [...allMyResponses, ...yesterdayResponses];
-          }
+        const publicTodayDoc = await getDoc(doc(db, 'greetingResponses', todayStr));
+        if (publicTodayDoc.exists()) {
+          publicTodayDoc.data().responses?.forEach((resp: any) => {
+            const key = `${resp.userName}-${resp.response}`; // 사용자명과 답변 내용으로 고유 키 생성
+            likesMap.set(key, resp.likesCount || 0);
+          });
         }
+        
+        const publicYesterdayDoc = await getDoc(doc(db, 'greetingResponses', yesterdayStr));
+        if (publicYesterdayDoc.exists()) {
+          publicYesterdayDoc.data().responses?.forEach((resp: any) => {
+            const key = `${resp.userName}-${resp.response}`;
+            likesMap.set(key, resp.likesCount || 0);
+          });
+        }
+
+        // 2. 개인 답변 가져와서 '좋아요' 수 병합
+        let allMyResponses: any[] = [];
+        
+        const processUserResponses = (docSnap: any, dateStr: string) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.responses) {
+              return data.responses.map((response: any, index: number) => {
+                const key = `${response.userName}-${response.response}`;
+                return {
+                  id: `${dateStr}-${index}`,
+                  ...response,
+                  userId: userId,
+                  dateStr: dateStr,
+                  likesCount: likesMap.get(key) || 0, // 맵에서 '좋아요' 수 가져오기
+                  timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
+                };
+              });
+            }
+          }
+          return [];
+        };
+
+        const todayDoc = await getDoc(doc(db, `users/${userId}/greetingResponses`, todayStr));
+        allMyResponses = [...allMyResponses, ...processUserResponses(todayDoc, todayStr)];
+        
+        const yesterdayDoc = await getDoc(doc(db, `users/${userId}/greetingResponses`, yesterdayStr));
+        allMyResponses = [...allMyResponses, ...processUserResponses(yesterdayDoc, yesterdayStr)];
         
         // 시간순 정렬
         allMyResponses.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -190,6 +269,7 @@ export default function GreetingResponsesPage() {
             const todayResponses = todayData.responses.map((response: any, index: number) => ({
               id: `today-${index}`,
               ...response,
+              likesCount: response.likesCount || 0, // 좋아요 수 추가
               dateStr: dateStr, // 날짜 문자열 추가
               timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
             }));
@@ -210,6 +290,7 @@ export default function GreetingResponsesPage() {
             const yesterdayResponses = yesterdayData.responses.map((response: any, index: number) => ({
               id: `yesterday-${index}`,
               ...response,
+              likesCount: response.likesCount || 0, // 좋아요 수 추가
               dateStr: yesterdayStr, // 어제 날짜 문자열 추가
               timestamp: response.timestamp?.toDate ? response.timestamp.toDate() : new Date(response.timestamp) || new Date()
             }));
@@ -244,46 +325,62 @@ export default function GreetingResponsesPage() {
     });
   };
 
-  const ResponseCard = ({ response, showUser = false }: { response: any; showUser?: boolean }) => (
-    <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-4 mb-3">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-full bg-[#56ab91]/20 flex items-center justify-center flex-shrink-0">
-          <span className="text-sm text-[#56ab91] font-medium">
-            {showUser ? response.userName.charAt(0).toUpperCase() : '나'}
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {showUser && (
-                <span className="font-medium text-[#56ab91] text-sm">{response.userName}</span>
+  const ResponseCard = ({ response, showUser = false, handleLike }: { response: any; showUser?: boolean; handleLike: (response: any) => Promise<void> }) => {
+    // 좋아요를 누른 횟수를 안전하게 가져옵니다.
+    const likesCount = response.likesCount || 0;
+
+    return (
+      <div className="bg-[#2A4D45]/60 backdrop-blur-sm border border-[#358f80]/30 rounded-xl p-4 mb-3">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#56ab91]/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-sm text-[#56ab91] font-medium">
+              {showUser ? response.userName.charAt(0).toUpperCase() : '나'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {showUser && (
+                  <span className="font-medium text-[#56ab91] text-sm">{response.userName}</span>
+                )}
+                <span className="text-xs text-gray-400">
+                  {formatTime(response.timestamp)}
+                </span>
+              </div>
+              
+              {/* 관리자 삭제 버튼 (모든 답변 탭에서만 표시) */}
+              {isAdmin && activeTab === 'all' && (
+                <button
+                  onClick={() => handleDeleteUserResponse(response.dateStr, response.userId || '', response.userName)}
+                  className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all"
+                  title={`${response.userName}님의 ${response.dateStr} 답변 삭제 (관리자)`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               )}
-              <span className="text-xs text-gray-400">
-                {formatTime(response.timestamp)}
-              </span>
             </div>
-            
-            {/* 관리자 삭제 버튼 (모든 답변 탭에서만 표시) */}
-            {isAdmin && activeTab === 'all' && (
-              <button
-                onClick={() => handleDeleteUserResponse(response.dateStr, response.userId || '', response.userName)}
-                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all"
-                title={`${response.userName}님의 ${response.dateStr} 답변 삭제 (관리자)`}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+            <div className="text-gray-300 text-sm leading-relaxed mb-3">
+              <div className="text-xs text-gray-400 mb-1">질문:</div>
+              <div className="text-[#56ab91] mb-2">{response.greeting}</div>
+              <div className="text-xs text-gray-400 mb-1">답변:</div>
+              <div>{response.response}</div>
+            </div>
           </div>
-          <div className="text-gray-300 text-sm leading-relaxed mb-3">
-            <div className="text-xs text-gray-400 mb-1">질문:</div>
-            <div className="text-[#56ab91] mb-2">{response.greeting}</div>
-            <div className="text-xs text-gray-400 mb-1">답변:</div>
-            <div>{response.response}</div>
-          </div>
+        </div>
+        {/* ⬇️ 이 부분부터 새로 추가됩니다 ⬇️ */}
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={() => handleLike(response)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full transition-colors bg-red-600/10 hover:bg-red-600/20 text-red-400"
+            title="좋아요 (중복 가능)"
+          >
+            <Heart className="w-4 h-4 fill-red-400" /> {/* 좋아요를 누르면 붉게 채워진 하트 */}
+            <span className="font-medium">{likesCount}</span>
+          </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -345,7 +442,12 @@ export default function GreetingResponsesPage() {
           {activeTab === 'my' ? (
             myGreetingResponses.length > 0 ? (
               myGreetingResponses.map((response) => (
-                <ResponseCard key={response.id} response={response} showUser={false} />
+                <ResponseCard 
+                  key={response.id} 
+                  response={response} 
+                  showUser={false} 
+                  handleLike={handleSimpleLike}
+                />
               ))
             ) : (
               <div className="text-center py-12">
@@ -357,7 +459,12 @@ export default function GreetingResponsesPage() {
           ) : (
             allGreetingResponses.length > 0 ? (
               allGreetingResponses.map((response) => (
-                <ResponseCard key={response.id} response={response} showUser={true} />
+                <ResponseCard 
+                  key={response.id} 
+                  response={response} 
+                  showUser={true} 
+                  handleLike={handleSimpleLike}
+                />
               ))
             ) : (
               <div className="text-center py-12">
