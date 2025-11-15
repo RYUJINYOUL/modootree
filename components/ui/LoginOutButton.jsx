@@ -99,7 +99,7 @@ export default function LoginOutButton() {
                   {
                     title: "링크 편지",
                     description: "퀴즈를 풀어야만 읽을 수 있는 링크 편지",
-                    icon: "/logos/ai5.png",
+                    icon: "/logos/m12.png",
                     path: "/pros-menu"
                   },
                   {

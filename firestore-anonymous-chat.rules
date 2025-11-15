@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Rules for the anonymous chat feature
+    match /anonymous_rooms/{roomId} {
+      // Anyone who is logged in can see the list of rooms and read room data.
+      allow list, get: if request.auth != null;
+
+      // A logged-in user can create a room if the creatorId matches their own UID.
+      allow create: if request.auth != null && request.resource.data.creatorId == request.auth.uid;
+
+      // Only the creator of the room can update or delete it.
+      allow update, delete: if request.auth != null && resource.data.creatorId == request.auth.uid;
+
+      // --- Participants Subcollection ---
+      // This subcollection stores the mapping of a user's real UID to their anonymous nickname for this room.
+      match /participants/{userId} {
+        // A user can only read their own participant document.
+        allow get: if request.auth != null && request.auth.uid == userId;
+        
+        // A user can only create a participant document for themselves.
+        // This is used by the getOrAssignNickname transaction.
+        allow create: if request.auth != null && request.auth.uid == userId;
+
+        // Nobody can list all participants, update, or delete them to protect privacy and nickname integrity.
+        allow list, update, delete: if false;
+      }
+
+      // --- Messages Subcollection ---
+      // This subcollection stores the actual chat messages.
+      match /messages/{messageId} {
+        // A user can read messages only if they have been assigned a nickname in the room.
+        allow get, list: if request.auth != null && exists(/databases/$(database)/documents/anonymous_rooms/$(roomId)/participants/$(request.auth.uid));
+
+        // A user can create a message if:
+        // 1. They are logged in.
+        // 2. Their UID in the message document matches their auth UID.
+        // 3. The nickname in the message document matches their assigned nickname.
+        // 4. The message text is a string and not empty.
+        allow create: if request.auth != null
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.nickname == get(/databases/$(database)/documents/anonymous_rooms/$(roomId)/participants/$(request.auth.uid)).data.nickname
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0;
+
+        // Nobody can update or delete messages.
+        allow update, delete: if false;
+      }
+    }
+  }
+}
