@@ -674,35 +674,11 @@ export default function LinkLetterDetailPage() {
             <ParticlesComponent />
           </div>
         )}
-        {/* 헤더 버튼들 */}
-        <div className="container mx-auto px-4 py-4 relative z-10">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => router.back()}
-              className="text-gray-300 hover:text-white hover:bg-white/10"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              뒤로가기
-            </Button>
-            
-            {/* 배경 설정 버튼 */}
-            <Link href={`/link-letter/background?return=${encodeURIComponent(`/link-letter/${letterId}`)}`}>
-              <Button
-                variant="ghost"
-                className="text-gray-300 hover:text-white hover:bg-white/10"
-                title="배경 설정"
-              >
-                <Settings className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">배경 설정</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
+       
 
         {showQuiz ? (
           /* 퀴즈 화면 */
-          <div className="container mx-auto px-4 py-8 pb-32 relative z-10">
+          <div className="container mx-auto px-4 py-6 pb-20 relative z-10">
             <div className="max-w-md mx-auto">
               {/* 편지 미리보기 카드 */}
               <div className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden mb-8">
@@ -950,16 +926,10 @@ export default function LinkLetterDetailPage() {
           /* 편지 내용 화면 */
           <div className="container mx-auto px-4 py-8 pb-32 relative z-10">
             <div className="max-w-2xl mx-auto">
-              {/* 편지 헤더 */}
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-3 mb-4">
-                  <div className={`p-3 ${category?.color} rounded-2xl`}>
-                    <IconComponent className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white mb-1">{letter.title}</h1>
-                    <span className="text-sm text-gray-400">{category?.name}</span>
-                  </div>
+                 {/* 편지 헤더 */}
+                 <div className="text-center mb-8">
+                <div className="mb-4">
+                  <h1 className="text-3xl font-bold text-white mb-1">{letter.title}</h1>
                 </div>
                 
                 <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
@@ -977,7 +947,6 @@ export default function LinkLetterDetailPage() {
               {/* 편지 이미지 갤러리 */}
               {letter.images && letter.images.length > 0 && (
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
-                  <h3 className="text-lg font-semibold text-white mb-4 text-center">📸 편지 속 사진들</h3>
                   <div className="relative">
                     <img
                       src={letter.images[currentImageIndex]}
@@ -1111,7 +1080,7 @@ export default function LinkLetterDetailPage() {
               )}
 
               {/* 액션 버튼들 */}
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
                 <Button
                   onClick={handleLike}
                   disabled={isLiking}

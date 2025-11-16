@@ -75,17 +75,17 @@ const sampleUsers: Sample[] = [
   },
   {
     id: 6,
-    username: '내 사이트를 SNS 명함 공유 나만의 게시판을 만들 수 있습니다',
-    thumbnail: '/samples/s6.png',
-    description: '응원게시판',
-    bgColor: 'bg-[#469d89]'
+    username: '회원가입 만으로 내 페이지는 자동 생성 됩니다, 내 페이지를 방문해 보세요',
+    thumbnail: '/samples/s7.png',
+    description: '자동 생성',
+    bgColor: 'bg-[#56ab91]'
   },
   {
     id: 7,
-    username: '단 두번 클릭으로 내 사이트를 만들 수 있습니다',
-    thumbnail: '/samples/s7.png',
-    description: '드래그드롭',
-    bgColor: 'bg-[#56ab91]'
+    username: '커플 일기, 응원게시판, 작은 커뮤니티, 작은 일정표 등의 공유 페이지',
+    thumbnail: '/samples/s6.png',
+    description: '공유페이지 - 준비중',
+    bgColor: 'bg-[#469d89]'
   },
 ];
 

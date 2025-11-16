@@ -39,32 +39,32 @@ export default function Home() {
       answer: '네, 모두트리의 모든 기능은 모두 무료로 제공됩니다.'
     },
     {
-      question: '내 사이트는 몇 개까지 만들 수 있나요?',
-      answer: '계정당 1개의 페이지를 만들 수 있습니다.'
+      question: '모두트리 내 페이지는 어떤 의미 인가요?',
+      answer: '나만의 기록 페이지로 메모 · 일기 · 건강 · 링크 등 나의 기록을 저장하는 공간입니다.'
+    },
+    {
+      question: '내 기록 페이지에는 어떤 기능이 있나요?',
+      answer: 'AI 기능들이 적절하게 적용되어 있습니다. \nOCR스캔 · 링크 자동분류 저장 · 메모 자동 정리 · 건강 분석 및 일기 작성 등 여러 기능들이 탑재 되어 있습니다'
     },
     {
       question: '모든 투표 생성은 익명으로 가능한가요?',
       answer: '네 모두트리 모든 투표는 익명 필수 조건입니다, 하지만 투표나 게시물의 답글은 일부 익명은 아닙니다'
     },
     {
-      question: '다른 사람의 사이트를 수정할 수 있나요?',
-      answer: '일부 컴포넌트에서 사이트 소유자가 초대한 경우에만 수정 가능합니다.'
-    },
-    {
-      question: '사이트 주소를 변경할 수 있나요?',
-      answer: '아니요, 현재는 한 번 설정한 페이지 주소는 변경할 수 없습니다. 신중하게 설정해주세요.'
+      question: '나의 기록 페이지를 공유할 수 있나요?',
+      answer: '아니요 나의 기록페이지는 나만의 공간으로 공유할 수 없습니다.'
     },
     {
       question: '추가 개선하고 싶은 기능은 있나요?',
       answer: '열린게시판에 글 남겨주시면 최대한 반영하겠습니다.'
     },
     {
-      question: 'AI 기능은 어떤 컴포넌트에서 가능한가요?',
-      answer: '현재는 일부 컴포넌트에서만 가능한데 추후 전체 컴포넌트에 적용될 예정입니다'
+      question: '공유 페이지는 "준비 중" 공지인데 어떤 내용인가요?',
+      answer: '내 기록 페이지에서 공유할 수 있는 내용만 별도로 담을 수 있는 페이지를 준비 중에 있습니다, \n커플 일기 · 작은 공유 일정표 · 응원게시판 등으로 사용할 수 있습니다'
     },
     {
-      question: '제작하는 방법을 잘 모르겠습니다?',
-      answer: '카카오톡 채널 실시간 문의 주세요, 열린 게시판 내 카톡 문의 버튼 클릭'
+      question: '링크 편지는 누구나 만들 수 있나요?',
+      answer: '회원가입 하시면 누구나 만들 수 있습니다, \n퀴즈는 주관식 · 객관식으로 설정할 수 있으며 최대 10개 질문 · 10개의 선택지로 구성되어 있습니다'
     }
   ];
 
@@ -202,18 +202,34 @@ export default function Home() {
       />
 
       {/* LoginOutButton을 고정된 헤더로 추가 */}
-      <div className="fixed top-0 left-0 right-0 z-20 w-full">
+      <div className="fixed top-0 left-0 right-0 z-50 w-full">
         <LoginOutButton />
       </div>
 
-      {/* 로고 이미지 */}
-      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[20vh]"> {/* 상단에서 30% 위치로 조정 */}
-        <Link href="/profile" className="transform hover:scale-105 transition-transform">
-          <img src="/logos/logohole.png" alt="Logo" className="w-32 h-32 object-contain" />
-        </Link>
 
+      {/* 로고 이미지 섹션 수정 */}
+      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[18vh]"> 
+        
+        {/* === START: 링크편지 말풍선 컨테이너 추가 === */}
+        <div className="relative flex items-center justify-center">
+            {/* 1. 로고 이미지 */}
+            <Link href="/profile" className="transform hover:scale-105 transition-transform">
+                <img src="/logos/logohole.png" alt="Logo" className="w-32 h-32 object-contain" />
+            </Link>
 
-        <div className="text-center mb-1">
+            {/* 2. 말풍선 및 CTA 버튼 */}
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-48 md:w-60 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-pink-500/50 shadow-lg text-white before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:w-0 before:h-0 before:border-l-[10px] before:border-r-[10px] before:border-t-[10px] before:border-t-pink-500/50 before:border-transparent">
+                <Link href="/pros-menu"> {/* 실제 링크 편지 생성 페이지 경로로 변경 */}
+                    <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white text-xs md:text-sm h-8 md:h-9">
+                    링크 편지 작성하러 오셨나요?
+                    </Button>
+                </Link>
+            </div>
+        </div>
+        {/* === END: 링크편지 말풍선 컨테이너 추가 === */}
+        
+
+        <div className="text-center mt-[-1.7rem] mb-1">
           <p className="text-2xl text-gray-400 md:block hidden">모두트리 AI로 기록하는 나만의 페이지</p>
           <div className="md:hidden block">
             <p className="text-[20px] text-gray-300">모두트리 AI로 기록, 나만의 페이지</p>
@@ -296,10 +312,10 @@ export default function Home() {
         <div className="w-full bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 rounded-3xl relative overflow-hidden">
           <div className="relative z-20 py-8 px-4">
             <div className="max-w-[1500px] mx-auto">
-              <Tabs defaultValue="features" className="w-full custom-home-tabs">
+              <Tabs defaultValue="examples" className="w-full custom-home-tabs">
                 <TabsList className="w-full justify-center mb-4 mt-10 bg-transparent border-none gap-2 custom-homeTabslist">
                   <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">커뮤니티</TabsTrigger>
-                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내 사이트</TabsTrigger>
+                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내 페이지</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="features">
@@ -307,10 +323,10 @@ export default function Home() {
                     <div className="relative z-10 py-4">
                       <div className="flex flex-col items-center justify-center text-center">
                         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 Ai 대화 하루를 정리하세요.<br /> AI가 하루를 분석해 일기 메모 건강 분석까지 내사이트에 자동으로 저장해 드립니다 
+                          나만의 기록 페이지로 하루를 정리하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 등 내 페이지에 자동 저장 합니다 
                         </h2>
                         <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 AI 대화로 하루를 정리 하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 내 사이트 자동 저장  
+                          모두트리 기록 페이지로 하루를 정리 하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 등 내 페이지 자동 저장  
                         </h2>
                       </div>
                       <UserSampleCarousel2 />
@@ -323,10 +339,10 @@ export default function Home() {
                     <div className="relative z-10 py-4">
                       <div className="flex flex-col items-center justify-center text-center">
                         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          즐거운 모두트리 커뮤니티에 초대합니다<br /> 뉴스투표 · 사연투표 · 사진투표 ·건강분석 · 사진변환 · 열린게시판
+                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
                         </h2>
                         <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                          즐거운 모두트리 커뮤니티에 초대합니다<br /> 뉴스투표 · 사연투표 · 사진투표 ·건강분석 · 사진변환 · 열린게시판
+                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
                         </h2>
                       </div>
                       <UserSampleCarousel3 />
@@ -365,7 +381,9 @@ export default function Home() {
                   </button>
                   {openFaqIndex === index && (
                     <div className="px-6 py-4 border-t border-white/10">
-                      <p className="text-white/70 text-sm">{faq.answer}</p>
+                      <p className="text-white/70 text-sm whitespace-pre-line">
+                        {faq.answer}
+                      </p>
                     </div>
                   )}
                 </div>
