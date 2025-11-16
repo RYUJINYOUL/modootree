@@ -553,6 +553,27 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
     }
   };
 
+  // 임시: 즉시 저장 함수
+  const saveToFirestore = async (content: string) => {
+    if (!currentUser?.uid) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    try {
+      setIsSaving(true);
+      await setDoc(doc(db, `users/${currentUser.uid}/drafts`, 'freememo'), {
+        content,
+        updatedAt: serverTimestamp()
+      });
+      alert('즉시 저장되었습니다!');
+    } catch (error) {
+      console.error('즉시 저장 오류:', error);
+      alert('즉시 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto w-full">
       <div className="px-2 md:px-0 space-y-6 mt-1">
@@ -667,6 +688,35 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
             >
               <RefreshCw className="w-4 h-4" />
               새로고침
+            </Button>
+
+            {/* 임시: 즉시 저장 버튼 */}
+            <Button
+              onClick={() => saveToFirestore(freeText)}
+              disabled={isSaving}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              즉시 저장
+            </Button>
+
+            {/* 임시: 최신 내용 불러오기 버튼 */}
+            <Button
+              onClick={async () => {
+                if (!currentUser?.uid) return;
+                const docSnap = await getDoc(doc(db, `users/${currentUser.uid}/drafts`, 'freememo'));
+                if (docSnap.exists()) {
+                  const content = docSnap.data().content || '';
+                  setFreeText(content);
+                  alert('최신 내용이 성공적으로 불러와졌습니다!');
+                } else {
+                  alert('저장된 내용이 없습니다.');
+                }
+              }}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              최신 내용 불러오기
             </Button>
             
           </div>

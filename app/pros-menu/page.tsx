@@ -187,7 +187,7 @@ export default function ProsMenu() {
 
          {/* Speech Bubbles - Top */}
          <SpeechBubble 
-           title="고백" 
+           title="사랑" 
            description="마음 먼저 링크편지" 
            position="top-left"
            initialPosition={{ x: 0, y: 30 }}
@@ -296,7 +296,7 @@ export default function ProsMenu() {
                     다양한 테마
                   </h3>
                   <p className="text-white/80 text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    고백, 감사, 가족, 우정 등 다양한 테마로 상황에 맞는 링크편지를 작성하세요.
+                    사랑, 감사, 가족, 우정 등 다양한 테마로 상황에 맞는 링크편지를 작성하세요.
                   </p>
                 </div>
               </div>

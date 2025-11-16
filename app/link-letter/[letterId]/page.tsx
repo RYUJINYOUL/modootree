@@ -167,10 +167,10 @@ const ParticlesComponent = () => {
 };
 
 const letterCategories = [
-  { id: 'confession', name: '고백', icon: Heart, color: 'bg-gradient-to-br from-pink-500 to-rose-600', image: '/tabs/love.png' },
+  { id: 'confession', name: '사랑', icon: Heart, color: 'bg-gradient-to-br from-pink-500 to-rose-600', image: '/tabs/love.png' },
   { id: 'gratitude', name: '감사', icon: Gift, color: 'bg-gradient-to-br from-green-500 to-emerald-600', image: '/tabs/congrats.png' },
   { id: 'friendship', name: '우정', icon: Users, color: 'bg-gradient-to-br from-blue-500 to-cyan-600', image: '/tabs/friend.png' },
-  { id: 'filial', name: '효도', icon: Baby, color: 'bg-gradient-to-br from-purple-500 to-violet-600', image: '/tabs/family.png' },
+  { id: 'filial', name: '가족', icon: Baby, color: 'bg-gradient-to-br from-purple-500 to-violet-600', image: '/tabs/family.png' },
   { id: 'apology', name: '사과', icon: MessageCircle, color: 'bg-gradient-to-br from-orange-500 to-amber-600', image: '/tabs/sorry.png' },
   { id: 'celebration', name: '축하', icon: Plus, color: 'bg-gradient-to-br from-yellow-500 to-orange-500', image: '/tabs/cong.png' }
 ];
