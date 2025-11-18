@@ -60,9 +60,11 @@ export default function MemoPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pc' | 'mobile'>('pc'); // New state for active tab
   
   // 로컬 스토리지 키
-  const STORAGE_KEY = `freememo_draft_${currentUser?.uid}`;
+  const STORAGE_KEY_PREFIX = `freememo_draft_${currentUser?.uid}`; // Prefix for storage key
+  const getStorageKey = (tab: 'pc' | 'mobile') => `${STORAGE_KEY_PREFIX}_${tab}`; // Function to get storage key
   
   // 이미지 관련 상태
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -95,18 +97,20 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
   // 컴포넌트 마운트 시 로컬 스토리지에서 내용 불러오기
   useEffect(() => {
     if (currentUser?.uid) {
-      const savedContent = localStorage.getItem(STORAGE_KEY);
+      const savedContent = localStorage.getItem(getStorageKey(activeTab)); // Use getStorageKey
       if (savedContent) {
         setFreeText(savedContent);
+      } else {
+        setFreeText(''); // Clear text if no saved content for the active tab
       }
     }
-  }, [currentUser?.uid, STORAGE_KEY]);
+  }, [currentUser?.uid, activeTab]); // Add activeTab to dependencies
 
   // 텍스트 업데이트 헬퍼 함수 (로컬 스토리지 자동 저장 포함)
   const updateFreeText = (newText: string) => {
     setFreeText(newText);
     if (currentUser?.uid) {
-      localStorage.setItem(STORAGE_KEY, newText);
+      localStorage.setItem(getStorageKey(activeTab), newText); // Use getStorageKey
     }
   };
 
@@ -124,6 +128,7 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
     
     updateFreeText('');
     setAnalysisResult(null);
+    localStorage.removeItem(getStorageKey(activeTab)); // Remove item from local storage for active tab
   };
 
   // 이미지 업로드 처리
@@ -553,27 +558,6 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
     }
   };
 
-  // 임시: 즉시 저장 함수
-  const saveToFirestore = async (content: string) => {
-    if (!currentUser?.uid) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
-    try {
-      setIsSaving(true);
-      await setDoc(doc(db, `users/${currentUser.uid}/drafts`, 'freememo'), {
-        content,
-        updatedAt: serverTimestamp()
-      });
-      alert('즉시 저장되었습니다!');
-    } catch (error) {
-      console.error('즉시 저장 오류:', error);
-      alert('즉시 저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div className="flex-1 md:p-6 py-6 overflow-auto w-full">
       <div className="px-2 md:px-0 space-y-6 mt-1">
@@ -590,6 +574,30 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
             />
           </div>
         
+
+          {/* Tab buttons for PC/Mobile */}
+          <div className="flex justify-center mb-4">
+            <Button
+              onClick={() => setActiveTab('pc')}
+              className={`px-4 py-2 rounded-l-lg text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'pc'
+                  ? 'bg-[#56ab91] text-white'
+                  : 'bg-[#2A4D45]/60 text-gray-300 hover:bg-[#2A4D45]/80'
+              }`}
+            >
+              PC
+            </Button>
+            <Button
+              onClick={() => setActiveTab('mobile')}
+              className={`px-4 py-2 rounded-r-lg text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'mobile'
+                  ? 'bg-[#56ab91] text-white'
+                  : 'bg-[#2A4D45]/60 text-gray-300 hover:bg-[#2A4D45]/80'
+              }`}
+            >
+              모바일
+            </Button>
+          </div>
 
           {/* 이미지 업로드 섹션 */}
           <div className="border-t border-[#358f80]/30 pt-4">
@@ -688,35 +696,6 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
             >
               <RefreshCw className="w-4 h-4" />
               새로고침
-            </Button>
-
-            {/* 임시: 즉시 저장 버튼 */}
-            <Button
-              onClick={() => saveToFirestore(freeText)}
-              disabled={isSaving}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              즉시 저장
-            </Button>
-
-            {/* 임시: 최신 내용 불러오기 버튼 */}
-            <Button
-              onClick={async () => {
-                if (!currentUser?.uid) return;
-                const docSnap = await getDoc(doc(db, `users/${currentUser.uid}/drafts`, 'freememo'));
-                if (docSnap.exists()) {
-                  const content = docSnap.data().content || '';
-                  setFreeText(content);
-                  alert('최신 내용이 성공적으로 불러와졌습니다!');
-                } else {
-                  alert('저장된 내용이 없습니다.');
-                }
-              }}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              최신 내용 불러오기
             </Button>
             
           </div>

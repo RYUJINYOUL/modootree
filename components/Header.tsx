@@ -203,12 +203,6 @@ export default function Header() {
           <div className={`absolute ${isMobile ? 'left-0 right-0 mx-4' : 'left-0'} mt-2 w-48 bg-white/30 backdrop-blur-sm rounded-lg shadow-md py-1 text-sm text-white`}>
             {/* 기본 메뉴 - 피드와 문의하기만 표시 */}
             <button
-              onClick={() => handleNavigation('/feed')}
-              className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
-            >
-              피드
-            </button>
-            <button
               onClick={handleInquiry}
               className="w-full text-left px-4 py-2 hover:bg-white/10 transition-colors duration-200"
             >
