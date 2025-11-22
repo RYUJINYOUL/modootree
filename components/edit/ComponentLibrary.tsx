@@ -12,6 +12,7 @@ import QuestBook2 from '../template/QuestBook2';
 import SkillProgress from '../template/SkillProgress';
 import DayOneBook from '../template/DayOneBook';
 import DayOneCalendarTemplate from '../template/DayOneCalendarTemplate';
+import PersonaFeed from '../template/PersonaFeed';
 
 export const ComponentLibrary: Record<string, React.FC<any>> = {
   AI메모: DayOneBook,
@@ -28,4 +29,5 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   달력: CalendarComponent,
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
+  페르소나: PersonaFeed,
 }; 

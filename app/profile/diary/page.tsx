@@ -5,7 +5,7 @@ import './styles.css';
 import { useSelector } from 'react-redux';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { doc, collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,37 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { PenSquare, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
+interface EmotionAnalysis {
+  emotion: string;
+  intensity: number;
+  keywords: string[];
+  summary: string;
+  color: string;
+  image: string;
+}
+
 interface DiaryItem {
   id: string;
   title: string;
   content: string;
   date: Date;
   images?: string[];
+  emotion?: EmotionAnalysis; // emotion 필드 추가
+  isPersonaGenerated?: boolean; // 페르소나 생성 여부 플래그 추가
+}
+
+interface PersonaEntry {
+  id: string;
+  date: Date;
+  originalDiaryContent: string;
+  emotionAnalysis?: EmotionAnalysis;
+  uploadedImageUrl?: string | null; // Allow null
+  personaImageUrl?: string | null;  // Allow null
+  likesCount?: number;
+  commentsCount?: number;
+  createdAt: Date;
+  updatedAt?: Date;
+  diaryRef?: string; // private_diary 문서 참조 ID 추가
 }
 
 export default function DiaryPage() {
@@ -175,7 +200,9 @@ export default function DiaryPage() {
         title: doc.data().title || '',
         content: doc.data().content || '',
         date: doc.data().date?.toDate() || new Date(),
-        images: doc.data().images || []
+        images: doc.data().images || [],
+        emotion: doc.data().emotion, // emotion 필드 추가
+        isPersonaGenerated: doc.data().isPersonaGenerated // isPersonaGenerated 필드 추가
       }));
       setDiaries(loadedDiaries);
       setLoading(false);
@@ -225,16 +252,34 @@ export default function DiaryPage() {
       // 기존 이미지와 새로 업로드된 이미지 합치기
       const allImages = [...writeForm.existingImages, ...successfulUploads];
 
+      // private_diary 컬렉션에 일기 저장
       const diaryData = {
         title: writeForm.title,
         content: writeForm.content,
         date: writeForm.date,
         images: allImages,
+        emotion: null, // undefined 대신 null 사용
+        isPersonaGenerated: false, // 페르소나 생성 여부 플래그 초기화
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
 
       await addDoc(collection(db, `users/${currentUser.uid}/private_diary`), diaryData);
+
+      // persona_entries 컬렉션에 기본 데이터 저장 (이미지 제외)
+      const personaEntryData = {
+        date: writeForm.date,
+        originalDiaryContent: writeForm.content,
+        emotion: null, // 감정 분석 없음
+        uploadedImageUrl: null, // 이미지 제외
+        personaImageUrl: null,
+        likesCount: 0,
+        commentsCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, `users/${currentUser.uid}/persona_entries`), personaEntryData);
 
       setWriteForm({
         title: '',
@@ -245,6 +290,8 @@ export default function DiaryPage() {
         date: new Date()
       });
       setIsWriting(false);
+      alert('일기가 성공적으로 저장되었습니다. 페르소나 피드에서 생성 버튼을 눌러보세요.');
+
     } catch (error) {
       console.error('일기 추가 실패:', error);
       
@@ -271,7 +318,19 @@ export default function DiaryPage() {
     if (!currentUser?.uid) return;
     
     try {
+      // 1. private_diary에서 일기 삭제
       await deleteDoc(doc(db, `users/${currentUser.uid}/private_diary`, diaryId));
+
+      // 2. persona_entries에서도 해당 일기 참조하는 문서 삭제
+      const personaQuery = query(
+        collection(db, `users/${currentUser.uid}/persona_entries`),
+        where('diaryRef', '==', diaryId)
+      );
+      const snapshot = await getDocs(personaQuery);
+      snapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref);
+      });
+
     } catch (error) {
       console.error('일기 삭제 실패:', error);
     }
@@ -712,13 +771,22 @@ export default function DiaryPage() {
                     // 기존 이미지와 새로 업로드된 이미지 합치기
                     const allImages = [...writeForm.existingImages, ...successfulUploads];
 
+                    // private_diary 컬렉션의 일기 업데이트
                     await updateDoc(doc(db, `users/${currentUser.uid}/private_diary`, editingDiary.id), {
                       title: writeForm.title,
                       content: writeForm.content,
                       date: writeForm.date,
                       images: allImages,
+                      emotion: null, // undefined 대신 null 사용
+                      isPersonaGenerated: false, // 페르소나 생성 여부 플래그 업데이트
                       updatedAt: serverTimestamp()
                     });
+
+                    // persona_entries 컬렉션 관련 로직 제거
+                    // const personaQuery = query( ... );
+                    // const snapshot = await getDocs(personaQuery);
+                    // const personaEntryUpdateData = { ... };
+                    // if (!snapshot.empty) { ... } else { ... }
 
                     setWriteForm({
                       title: '',
@@ -730,6 +798,8 @@ export default function DiaryPage() {
                     });
                     setIsWriting(false);
                     setEditingDiary(null);
+                    alert('일기가 성공적으로 수정되었습니다. 페르소나 피드에서 다시 생성 버튼을 눌러보세요.');
+
                   } catch (error) {
                     console.error('일기 수정 실패:', error);
                     

@@ -1,3 +1,4 @@
+// app/api/analyze-emotion/route.ts - OpenAI 버전으로 완전히 교체
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
@@ -12,14 +13,15 @@ const openai = new OpenAI({
 });
 
 interface EmotionAnalysis {
-  emotion: string;  // 주요 감정 (기쁨, 슬픔, 분노, 불안, 중립 등)
-  intensity: number;  // 감정 강도 (0-1)
-  keywords: string[];  // 감정과 관련된 주요 키워드
-  summary: string;  // 간단한 감정 분석 요약
-  color: string;  // 감정을 나타내는 색상 코드
-  image: string;  // 감정을 나타내는 이미지 경로
+  emotion: string;
+  intensity: number;
+  keywords: string[];
+  summary: string;
+  color: string;
+  image: string;
 }
 
+// app/api/analyze-emotion/route.ts - systemPrompt 수정
 const systemPrompt = `당신은 심리학자이자 감정 분석 전문가입니다. 
 사용자의 텍스트에서 감정을 세밀하게 분석하여 정확하고 공감적인 피드백을 제공해야 합니다.
 
@@ -74,14 +76,13 @@ const systemPrompt = `당신은 심리학자이자 감정 분석 전문가입니
 - 문맥을 충분히 고려하여 감정을 판단할 것
 - 부정적 감정도 있는 그대로 인정하고 공감할 것
 - 판단이나 평가는 피하고, 이해와 지지를 표현할 것
-- 응답은 반드시 지정된 JSON 형식을 따를 것`;
+- 응답은 반드시 지정된 JSON 형식을 따를 것
+- JSON 외에 다른 텍스트는 절대 포함하지 말 것`;
 
 export async function POST(req: Request) {
   try {
     const { text } = await req.json();
 
-    console.log('분석할 텍스트:', text);
-    
     if (!text || text.trim().length < 2) {
       return NextResponse.json(
         { error: '분석할 텍스트가 너무 짧습니다.' },
@@ -90,92 +91,58 @@ export async function POST(req: Request) {
     }
 
     if (!OPENAI_API_KEY) {
-      console.error('OpenAI API 키가 설정되지 않았습니다.');
       return NextResponse.json(
         { error: 'OpenAI API 설정이 필요합니다.' },
         { status: 500 }
       );
     }
 
-    try {
-      // API 키 유효성 검사
-      if (!OPENAI_API_KEY.startsWith('sk-')) {
-        console.error('잘못된 OpenAI API 키 형식');
-        return NextResponse.json(
-          { error: 'OpenAI API 키가 올바르지 않습니다.' },
-          { status: 500 }
-        );
-      }
-
-      console.log('OpenAI API 호출 시작...');
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // gpt-4 대신 gpt-3.5-turbo 사용
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text }
-        ],
-        temperature: 0.3,
-        max_tokens: 500
-      });
-    
-    console.log('OpenAI 응답:', completion.choices[0].message.content);
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: text }
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    });
 
     const response = completion.choices[0].message.content;
     if (!response) {
-      console.error('AI 응답이 비어있습니다.');
       return NextResponse.json(
         { error: 'AI 응답이 비어있습니다.' },
         { status: 500 }
       );
     }
 
-    try {
-      const analysis = JSON.parse(response) as EmotionAnalysis;
-      
-      // 필수 필드 검증
-      if (!analysis.emotion || !analysis.intensity || !analysis.keywords || 
-          !analysis.summary || !analysis.color || !analysis.image) {
-        console.error('AI 응답에 필수 필드가 누락되었습니다:', analysis);
-        return NextResponse.json(
-          { error: 'AI 응답 형식이 올바르지 않습니다.' },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json(analysis);
-    } catch (parseError) {
-      console.error('AI 응답 파싱 실패:', response);
+    const analysis = JSON.parse(response) as EmotionAnalysis;
+    
+    if (!analysis.emotion || !analysis.intensity || !analysis.keywords || 
+        !analysis.summary || !analysis.color || !analysis.image) {
       return NextResponse.json(
-        { error: 'AI 응답을 파싱할 수 없습니다.' },
+        { error: 'AI 응답 형식이 올바르지 않습니다.' },
         { status: 500 }
       );
     }
-  } catch (openaiError: any) {
-    console.error('OpenAI API 호출 실패:', openaiError);
+
+    return NextResponse.json(analysis);
     
-    // OpenAI API 에러 상세 메시지 처리
-    let errorMessage = 'OpenAI API 호출에 실패했습니다.';
-    if (openaiError.status === 401) {
+  } catch (error: any) {
+    console.error('감정 분석 중 오류 발생:', error);
+    
+    let errorMessage = '감정 분석 중 오류가 발생했습니다.';
+    if (error.status === 401) {
       errorMessage = 'OpenAI API 키가 유효하지 않습니다.';
-    } else if (openaiError.status === 429) {
+    } else if (error.status === 429) {
       errorMessage = 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.';
-    } else if (openaiError.status === 500) {
-      errorMessage = 'OpenAI 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
     }
 
     return NextResponse.json(
       { 
         error: errorMessage,
-        details: openaiError.message || '알 수 없는 오류'
+        details: error.message || '알 수 없는 오류'
       },
-      { status: openaiError.status || 500 }
+      { status: error.status || 500 }
     );
   }
-} catch (error) {
-  console.error('감정 분석 중 오류 발생:', error);
-  return NextResponse.json(
-    { error: '감정 분석 중 오류가 발생했습니다.' },
-    { status: 500 }
-  );
-}
 }

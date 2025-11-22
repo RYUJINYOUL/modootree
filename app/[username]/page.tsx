@@ -708,7 +708,7 @@ export default function UserPublicPage() {
           <ParticlesComponent />
         )}
         <div className="flex-grow flex flex-col items-center w-full z-10 relative">
-          <div className="md:w-[1000px] w-full md:px-[10px] relative">   
+        <div className="w-full md:px-[10px] relative">   
             {components.map((component, index) => (
               <ComponentRenderer
                 key={index}
@@ -730,6 +730,17 @@ export default function UserPublicPage() {
           />
           
           {/* 하단 버튼 */}
+          {/* 프로필 플로팅 버튼 */}
+          <Link
+            href="/profile"
+            className="fixed bottom-[65px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50"
+          >
+            <img src="/logos/m1.png" alt="Profile" className="w-6 h-6 object-contain" />
+            <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              내 페이지
+            </span>
+          </Link>
+
           {/* AI 플로팅 버튼 (사용자 페이지 전용) */}
           <Link
             href="/ai-comfort"

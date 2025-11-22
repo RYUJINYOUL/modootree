@@ -12,6 +12,7 @@ const firebaseAdminConfig = {
       .toString('utf8')
       .replace(/\\n/g, '\n'),
   }),
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'mtree-e0249.firebasestorage.app',
 };
 
 // 앱이 이미 초기화되어 있지 않은 경우에만 초기화

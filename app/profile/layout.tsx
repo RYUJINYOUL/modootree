@@ -2,17 +2,18 @@
 
 import { useSelector } from 'react-redux';
 import { useState, useCallback, useEffect } from 'react';
-import { Menu, Home, Notebook, Book, MessageSquare, ClipboardPlus, Atom, X, Maximize2, Minimize2, ArrowLeft, Download, Link as LinkIcon, Banana, Rocket, Edit3 } from 'lucide-react';
+import { Menu, Home, Notebook, Book, MessageSquare, ClipboardPlus, Atom, X, Maximize2, Minimize2, ArrowLeft, Download, Link as LinkIcon, Banana, Rocket, Edit3, Glasses } from 'lucide-react';
 import { useState as useModalState } from 'react';
 import ProfileSettingsButton from '@/components/ui/ProfileSettingsButton';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
+import { Dialog } from '@headlessui/react';
 
 interface Background {
   type: 'color' | 'gradient' | 'image' | 'video' | 'none';
@@ -22,8 +23,14 @@ interface Background {
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   const { currentUser } = useSelector((state: any) => state.user);
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [localUser, setLocalUser] = useState<any>(null);
   const [background, setBackground] = useState<Background | null>(null);
   const [isAIChatOpen, setIsAIChatOpen] = useState<boolean>(false);
@@ -38,6 +45,21 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     setIsAIChatOpen(false);
     setIsFullScreen(false);
   }, [pathname]);
+
+  // 사용자 데이터 로드
+  useEffect(() => {
+    if (currentUser) {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const unsubscribeUserData = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
+        } else {
+          setUserData(null);
+        }
+      });
+      return () => unsubscribeUserData();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -156,6 +178,49 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     // 컴포넌트 언마운트 시 리스너 해제
     return () => unsubscribe();
   }, [currentUser?.uid]);
+
+  const handleSaveUsername = async () => {
+    if (!username.trim()) {
+      setError('ID를 입력해주세요.');
+      return;
+    }
+    if (username.length < 3 || username.length > 15) {
+      setError('ID는 3자 이상 15자 이하로 입력해주세요.');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError('ID는 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const usernameDocRef = doc(db, 'usernames', username.toLowerCase());
+      const usernameDoc = await getDoc(usernameDocRef);
+
+      if (usernameDoc.exists()) {
+        setError('이미 사용 중인 ID입니다.');
+        return;
+      }
+
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await setDoc(userDocRef, { username: username.toLowerCase() }, { merge: true });
+
+      await setDoc(usernameDocRef, { userId: currentUser.uid });
+
+      setUserData(prev => ({ ...prev, username: username.toLowerCase() }));
+      setIsOpen(false);
+      router.push(`/${username.toLowerCase()}/glasses`);
+
+    } catch (err) {
+      console.error('Error setting username:', err);
+      setError('ID 설정 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const particlesInit = useCallback(async (engine: any) => {
     await loadFull(engine);
@@ -443,6 +508,46 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           <Menu className="w-5 h-5" />
         </button>
 
+        {/* Glasses 버튼 */}
+        <Link 
+          href={`/${userData?.username || ''}`}
+          className="md:hidden fixed top-2 left-12 z-40 text-gray-300 hover:text-white p-2 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 active:bg-[#2A4D45] transition-colors"
+          onClick={(e) => {
+            if (!currentUser?.uid) {
+              e.preventDefault();
+              router.push('/login');
+              return;
+            }
+            if (!userData?.username) {
+              e.preventDefault();
+              setIsOpen(true);
+              return;
+            }
+          }}
+        >
+          <Glasses className="w-5 h-5" />
+        </Link>
+
+        {/* 데스크톱 Glasses 버튼 */}
+        <Link 
+          href={`/${userData?.username || ''}`}
+          className="hidden md:block fixed top-3 right-16 z-40 text-gray-300 hover:text-white p-1 rounded-lg bg-[#2A4D45]/80 backdrop-blur-sm border border-[#358f80]/30 hover:bg-[#2A4D45] transition-colors shadow-lg"
+          onClick={(e) => {
+            if (!currentUser?.uid) {
+              e.preventDefault();
+              router.push('/login');
+              return;
+            }
+            if (!userData?.username) {
+              e.preventDefault();
+              setIsOpen(true);
+              return;
+            }
+          }}
+        >
+          <Glasses className="w-6 h-6" />
+        </Link>
+
         {/* 모바일 작성 버튼 */}
         <Link 
           href="/profile/freememo"
@@ -473,6 +578,65 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
       </div>
+
+      {/* 모달 (ID 설정) */}
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
+
+        <Dialog.Panel className="bg-blue-900/90 p-8 rounded-2xl shadow-lg z-50 max-w-sm w-full relative border border-blue-500/30 backdrop-blur-lg">
+          <button
+            onClick={() => setIsOpen(false)}
+            className="absolute top-4 right-4 text-blue-200 hover:text-white text-xl transition-colors"
+            aria-label="닫기"
+          >
+            &times;
+          </button>
+
+          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">공유 페이지 만들기</h2>
+          
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex items-center bg-blue-950/50 rounded-xl shadow-inner p-4 border border-blue-400/20 focus-within:border-blue-400 transition-all w-full">
+              <span className="text-blue-200 text-lg mr-1">modootree.com/</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.trim());
+                  setError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveUsername();
+                  }
+                }}
+                placeholder="ID"
+                className="flex-grow text-blue-200 text-lg outline-none bg-transparent placeholder-blue-300/30"
+                disabled={isLoading}
+              />
+            </div>
+
+            <p className="text-blue-200/80 text-sm">
+              ID 입력 후 Enter를 눌러주세요
+            </p>
+          </div>
+
+          {error && (
+            <p className="text-red-300 text-sm mt-4 text-center animate-pulse">
+              {error}
+            </p>
+          )}
+
+          {isLoading && (
+            <div className="flex justify-center mt-4">
+              <svg className="animate-spin h-5 w-5 text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          )}
+        </Dialog.Panel>
+      </Dialog>
 
       {/* 모바일 사이드바 오버레이 */}
       {isSidebarOpen && (
