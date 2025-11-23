@@ -22,7 +22,7 @@ import UserSampleCarousel from '@/components/UserSampleCarousel';
 import UserSampleCarousel2 from '@/components/UserSampleCarousel2.tsx';
 import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, X, Plus, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Plus, Download, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import MainHeader from '@/components/MainHeader';
 import { loadSlim } from "tsparticles-slim";
@@ -92,6 +92,7 @@ export default function Page() {
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
   const [allowedSites, setAllowedSites] = useState([]);
   const [showAllowedSites, setShowAllowedSites] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -177,10 +178,13 @@ export default function Page() {
       return;
     }
 
+    setIsLoading(true); // 로딩 시작
+
     const usernameRef = doc(db, 'usernames', username);
     const existing = await getDoc(usernameRef);
     if (existing.exists()) {
       setError('이미 사용 중인 닉네임입니다.');
+      setIsLoading(false); // 로딩 종료
       return;
     }
 
@@ -190,7 +194,7 @@ export default function Page() {
       });
 
       await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
-        components: ["Gallery3", "DayOneCalendarTemplate", "DayOneBook", "QuestBook"],
+        components: ["프로필카드", "페르소나"],
         type: "community"
       });
       
@@ -202,6 +206,8 @@ export default function Page() {
       push(`/editor/${username}`);
     } catch (err) {
       setError('저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false); // 로딩 종료
     }
   };
 
@@ -472,7 +478,7 @@ export default function Page() {
             &times;
           </button>
 
-          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">페이지 만들기</h2>
+          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">나만의 공유 페이지 만들기</h2>
           
           <div className="flex flex-col items-center space-y-4">
             <div className="flex items-center bg-blue-950/50 rounded-xl shadow-inner p-4 border border-blue-400/20 focus-within:border-blue-400 transition-all w-full">
@@ -492,7 +498,9 @@ export default function Page() {
                 }}
                 placeholder="ID"
                 className="flex-grow text-blue-200 text-lg outline-none bg-transparent placeholder-blue-300/30"
+                disabled={isLoading} // 로딩 중일 때 비활성화
               />
+              {isLoading && <Loader2 className="w-5 h-5 animate-spin text-blue-300 ml-2" />} {/* 스피너 추가 */}
             </div>
 
             <p className="text-blue-200/80 text-sm">
@@ -504,6 +512,11 @@ export default function Page() {
             <p className="text-red-300 text-sm mt-4 text-center animate-pulse">
               {error}
             </p>
+          )}
+          {isLoading && (
+            <div className="flex justify-center mt-4">
+              <Loader2 className="w-6 h-6 text-blue-200 animate-spin" />
+            </div>
           )}
         </Dialog.Panel>
       </Dialog>

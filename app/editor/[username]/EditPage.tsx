@@ -32,18 +32,20 @@ import QuestBook from '@/components/template/QuestBook';
 const db = getFirestore(app);
 
 // 사이트 타입 정의
-type SiteType = "diary" | "links";
+type SiteType = "diary" | "links" | "persona";
 
 // 사이트 타입별 기본 컴포넌트 설정
 const DEFAULT_COMPONENTS: Record<SiteType, ComponentKey[]> = {
   diary: ["프로필카드", "AI캘린더", "AI메모", "게스트북"],
-  links: ["프로필카드", "링크카드", "사진첩", "게스트북"]
+  links: ["프로필카드", "링크카드", "사진첩", "게스트북"],
+  persona: ["프로필카드", "페르소나"]
 } as const;
 
 // 사이트 타입 한글명
 const TYPE_LABELS: Record<SiteType, string> = {
   diary: "다이어리 (AI 지원)",
-  links: "링크모음"
+  links: "링크모음",
+  persona: "페르소나",
 };
 
 interface AllowedUser {
@@ -93,7 +95,7 @@ export default function EditPage({ username }: { username: string }) {
 
           // 기본 템플릿으로 시작
           await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
-            components: ["Gallery3", "DayOneCalendarTemplate", "DayOneBook", "QuestBook"],
+            components: ["프로필카드", "페르소나"],
             type: "community"
           });
 

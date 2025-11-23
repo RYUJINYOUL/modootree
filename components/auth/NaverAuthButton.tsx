@@ -52,7 +52,7 @@ export default function NaverAuthButton() {
 
         // 기본 템플릿으로 시작
         await setDoc(doc(db, "users", user.uid, "links", "page"), {
-          components: ["Gallery3", "DayOneCalendarTemplate", "DayOneBook", "QuestBook"],
+          components: ["프로필카드", "페르소나"],
           type: "community"
         });
       }

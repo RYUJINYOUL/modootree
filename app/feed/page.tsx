@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Image from 'next/image';
-import { Heart, MessageCircle } from 'lucide-react';
+import { Heart, MessageCircle, Gift, Users, Baby, Plus, Eye } from 'lucide-react';
+import { LinkLetter, letterCategories } from '../link-letter/page';
 import { useRouter } from 'next/navigation';
 import CategoryCarousel from '../../components/CategoryCarousel';
 import { loadSlim } from "tsparticles-slim";
@@ -40,24 +41,13 @@ const EMOTION_ICONS = {
   default: '/logos/m1.png'   // 기본
 };
 
-interface FeedItem {
+interface FeedItem extends Partial<LinkLetter> {
   id: string;
-  type: 'likes' | 'joy' | 'modoo-ai' | 'health' | 'news';  // news 타입 추가
+  type: 'link-letter' | 'joy' | 'modoo-ai' | 'health' | 'news';
   displayType: string;
-  title?: string;
-  content?: string;
-  description?: string;
-  images?: string[];
-  emotionIcon?: string;
-  emotion?: string;
-  createdAt: any;
-  stats?: {
-    likeCount?: number;
-    participantCount?: number;
-  };
-  likes?: number;
-  comments?: number;
-  username?: string;
+  // LinkLetter에서 이미 정의된 속성들은 Partial로 확장하여 중복을 피하고 선택적으로 사용
+  // 추가적으로 필요한 FeedItem만의 속성을 여기에 정의
+  previewContent?: string; // 미리보기 콘텐츠 (optional)
 }
 
 export default function FeedPage() {
@@ -81,7 +71,7 @@ export default function FeedPage() {
     try {
       console.log('피드 데이터 로딩 시작...');
       console.log('데이터 로딩 시작...');
-      const [newsData, likesData, photoStoryData, modooVoteData, healthData] = await Promise.all([
+      const [newsData, linkLetterData, photoStoryData, modooVoteData, healthData] = await Promise.all([
         fetchFromCollection('articles', 10).then(data => {
           console.log('뉴스 투표 데이터 로드:', {
             collectionName: 'articles',
@@ -90,8 +80,8 @@ export default function FeedPage() {
           });
           return data;
         }),
-        fetchFromCollection('likes', 10).then(data => {
-          console.log('공감 데이터:', data.length);
+        fetchFromCollection('linkLetters', 10).then(data => {
+          console.log('링크편지 데이터:', data.length);
           return data;
         }),
         fetchFromCollection('photo-stories', 10).then(data => {
@@ -109,7 +99,7 @@ export default function FeedPage() {
       ]);
 
       console.log('데이터 포맷팅 시작...');
-      const [formattedNews, formattedLikes, formattedPhotoStory, formattedModooVote, formattedHealth] = await Promise.all([
+      const [formattedNews, formattedLinkLetter, formattedPhotoStory, formattedModooVote, formattedHealth] = await Promise.all([
         formatData(newsData, 'news').then(data => {
           console.log('뉴스 데이터 포맷팅:', {
             originalLength: newsData.length,
@@ -118,8 +108,8 @@ export default function FeedPage() {
           });
           return data;
         }),
-        formatData(likesData, 'likes').then(data => {
-          console.log('공감 데이터 포맷팅 완료:', data.length);
+        formatData(linkLetterData, 'link-letter').then(data => {
+          console.log('링크편지 데이터 포맷팅 완료:', data.length);
           return data;
         }),
         formatData(photoStoryData, 'photo-story').then(data => {
@@ -139,7 +129,7 @@ export default function FeedPage() {
       console.log('데이터 병합 시작...');
       const combinedData = [
         ...formattedNews,
-        ...formattedLikes,
+        ...formattedLinkLetter,
         ...formattedPhotoStory,
         ...formattedModooVote,
         ...formattedHealth
@@ -167,8 +157,12 @@ export default function FeedPage() {
     try {
       console.log(`${collectionName} 컬렉션에서 데이터 가져오기 시작...`);
       
-      // 뉴스 데이터의 경우 created_at 필드를 사용
-      const orderByField = collectionName === 'articles' ? 'created_at' : 'createdAt';
+      let orderByField = 'createdAt';
+      if (collectionName === 'articles') {
+        orderByField = 'created_at';
+      } else if (collectionName === 'linkLetters') {
+        orderByField = 'createdAt'; // linkLetters 컬렉션의 정렬 기준은 createdAt
+      }
       
       const q = query(
         collection(db, collectionName),
@@ -209,7 +203,7 @@ export default function FeedPage() {
 
   const formatData = async (data: any[], type: string): Promise<FeedItem[]> => {
     const formattedData = await Promise.all(data.map(async (item) => {
-      // 댓글 수 가져오기
+      // 댓글 수 가져오기 (링크편지는 댓글 기능 없음)
       let commentCount = 0;
       if (type === 'photo-story') {
         const commentsQuery = query(
@@ -225,38 +219,37 @@ export default function FeedPage() {
         const commentsSnapshot = await getDocs(commentsQuery);
         commentCount = commentsSnapshot.size;
       } else if (type === 'health') {
-        // 건강 기록은 댓글 기능이 없으므로 0으로 설정
         commentCount = 0;
-      } else {
+      } else if (type === 'modoo-ai') {
         const commentsQuery = query(
-          collection(db, type === 'likes' ? 'comments' : 'modoo-ai-comments'),
-          where(type === 'likes' ? 'likeId' : 'testId', '==', item.id)
+          collection(db, 'modoo-ai-comments'),
+          where('testId', '==', item.id)
         );
         const commentsSnapshot = await getDocs(commentsQuery);
         commentCount = commentsSnapshot.size;
       }
 
-      // 좋아요 수 가져오기
+      // 좋아요 수 가져오기 (링크편지는 좋아요 기능 없음)
       let likeCount = 0;
       if (type === 'news') {
-        // 뉴스는 total_votes를 사용
         likeCount = item.total_votes || 0;
       } else if (type === 'modoo-ai') {
-        // modoo-ai는 stats.likeCount를 직접 사용
         likeCount = item.stats?.likeCount || 0;
       } else if (type === 'photo-story') {
-        // photo-story는 likeCount를 직접 사용
         likeCount = item.likeCount || 0;
       } else if (type === 'health') {
-        // 건강 기록은 좋아요 기능이 없으므로 0으로 설정
         likeCount = 0;
+      } else if (type === 'link-letter') { // 링크편지 좋아요 수 처리 추가
+        likeCount = item.likeCount || 0; // LinkLetter 인터페이스에 likeCount가 존재
       } else {
-        const likesQuery = query(
-          collection(db, 'likesReactions'),
-          where('likeId', '==', item.id)
-        );
-        const likesSnapshot = await getDocs(likesQuery);
-        likeCount = likesSnapshot.size;
+        // 그 외 기본 좋아요 처리 (현재는 필요 없으므로 제거 또는 주석 처리)
+        // const likesQuery = query(
+        //   collection(db, 'likesReactions'),
+        //   where('likeId', '==', item.id)
+        // );
+        // const likesSnapshot = await getDocs(likesQuery);
+        // likeCount = likesSnapshot.size;
+        likeCount = 0; // 기본값 0으로 설정
       }
 
       let formattedItem;
@@ -276,12 +269,28 @@ export default function FeedPage() {
           comments: commentCount,
           likes: likeCount
         };
+      } else if (type === 'link-letter') {
+        formattedItem = {
+          id: item.id,
+          type,
+          displayType: '링크 편지',
+          title: item.title || '',
+          content: item.content || '',
+          images: item.images || [],
+          category: item.category || '',
+          author: item.author || { uid: '', displayName: '익명', email: '' },
+          viewCount: item.viewCount || 0,
+          likeCount: item.likeCount || 0,
+          createdAt: item.createdAt,
+          comments: commentCount, // 링크편지는 댓글 기능이 없지만 FeedItem 형식에 맞춤
+          likes: likeCount // FeedItem 형식에 맞춤
+        };
       } else {
         formattedItem = {
           ...item,
           type,
           displayType: 
-            type === 'likes' ? '공감 한조각' :
+            type === 'link-letter' ? '링크 편지' :
             type === 'photo-story' ? 'AI 사진 스토리' :
             type === 'health' ? 'AI 건강기록' :
             type === 'modoo-vote-articles' ? '사연 투표' :
@@ -318,7 +327,7 @@ export default function FeedPage() {
   const FILTERS = [
     { id: 'all', label: '전체' },
     { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' },
-    { id: 'likes', label: '공감', path: '/likes/all', fullLabel: '공감 한조각' },
+    { id: 'link-letter', label: '편지', path: '/link-letter', fullLabel: '링크 편지' },
     { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
     { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' },
     { id: 'health', label: '건강', path: '/health', fullLabel: 'AI 건강기록' }
@@ -436,7 +445,7 @@ export default function FeedPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
               {feedItems
-                .filter(item => activeFilter === 'all' || item.type === activeFilter)
+                .filter(item => (activeFilter === 'all' && item.type !== 'news') || item.type === activeFilter)
                 .slice(0, displayCount)
                 .map((item: any) => (
                 <div 
@@ -450,8 +459,10 @@ export default function FeedPage() {
                       router.push(`/photo-story/${item.id}`);
                     } else if (item.type === 'health') {
                       router.push(`/health/results/${item.id}`);
+                    } else if (item.type === 'link-letter') {
+                      router.push(`/link-letter/${item.id}`);
                     } else {
-                      router.push(`/likes/all`);
+                      router.push(`/link-letter`);
                     }
                     // 페이지 이동 후 스크롤 위치 초기화
                     window.scrollTo(0, 0);
@@ -510,6 +521,33 @@ export default function FeedPage() {
                           투표
                         </div>
                       </div>
+                    ) : item.type === 'link-letter' ? (
+                      // 링크편지인 경우
+                      <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-purple-500/20">
+                        <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-purple-500/50 backdrop-blur-sm text-white text-sm font-medium z-10">
+                          {letterCategories.find(cat => cat.id === item.category)?.name || '편지'}
+                        </div>
+                        {item.images && item.images.length > 0 ? (
+                          <Image
+                            src={item.images[0]}
+                            alt="링크 편지 이미지"
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <Image
+                            src="/samples/linklett.png"
+                            alt="기본 링크 편지 이미지"
+                            fill
+                            className="object-cover opacity-70"
+                          />
+                        )}
+                        <div className="text-center absolute bottom-4 w-full px-4">
+                          <h3 className="text-sm font-medium text-white line-clamp-2">
+                            {item.title || '링크 편지'}
+                          </h3>
+                        </div>
+                      </div>
                     ) : (
                       // 이미지가 있는 경우 또는 기본 이미지
                       <Image
@@ -533,6 +571,8 @@ export default function FeedPage() {
                         item.title
                       ) : item.type === 'modoo-vote-articles' ? (
                         item.title
+                      ) : item.type === 'link-letter' ? (
+                        item.title || item.content || '링크 편지'
                       ) :
                        item.type === 'photo-story' ? 
                          (Array.isArray(item.aiStories) 
@@ -545,14 +585,29 @@ export default function FeedPage() {
 
                     <div className="flex items-center justify-between text-gray-400">
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-4 h-4" />
-                          {item.likes || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="w-4 h-4" />
-                          {item.comments || 0}
-                        </span>
+                        {item.type === 'link-letter' ? (
+                          <>
+                            <span className="flex items-center gap-1">
+                              <Heart className="w-4 h-4" />
+                              {item.likeCount || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Eye className="w-4 h-4" />
+                              {item.viewCount || 0}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-1">
+                              <Heart className="w-4 h-4" />
+                              {item.likes || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="w-4 h-4" />
+                              {item.comments || 0}
+                            </span>
+                          </>
+                        )}
                       </div>
                       
                       {/* 사연 한조각인 경우 참여자 수 표시 */}

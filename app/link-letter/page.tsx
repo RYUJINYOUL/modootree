@@ -18,7 +18,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebase';
 import imageCompression from 'browser-image-compression';
 
-interface LinkLetter {
+export interface LinkLetter {
   id: string;
   title: string;
   category: 'confession' | 'gratitude' | 'friendship' | 'filial' | 'apology' | 'celebration';
@@ -204,7 +204,7 @@ const ParticlesComponent = () => {
   );
 };
 
-const letterCategories = [
+export const letterCategories = [
   { id: 'confession', name: '사랑', icon: Heart, color: 'bg-gradient-to-br from-red-400 to-red-600', image: '/tabs/love.png' },
   { id: 'gratitude', name: '감사', icon: Gift, color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', image: '/tabs/congrats.png' },
   { id: 'friendship', name: '우정', icon: Users, color: 'bg-gradient-to-br from-blue-400 to-blue-600', image: '/tabs/friend.png' },

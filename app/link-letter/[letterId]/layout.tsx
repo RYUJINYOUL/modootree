@@ -21,10 +21,10 @@ interface LinkLetter {
 }
 
 const letterCategories = [
-  { id: 'confession', name: '고백' },
+  { id: 'confession', name: '사랑' },
   { id: 'gratitude', name: '감사' },
   { id: 'friendship', name: '우정' },
-  { id: 'filial', name: '효도' },
+  { id: 'filial', name: '가족' },
   { id: 'apology', name: '사과' },
   { id: 'celebration', name: '축하' }
 ];

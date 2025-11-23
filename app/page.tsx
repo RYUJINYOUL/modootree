@@ -315,7 +315,9 @@ export default function Home() {
               <Tabs defaultValue="examples" className="w-full custom-home-tabs">
                 <TabsList className="w-full justify-center mb-4 mt-10 bg-transparent border-none gap-2 custom-homeTabslist">
                   <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">커뮤니티</TabsTrigger>
-                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내 페이지</TabsTrigger>
+                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내페이지</TabsTrigger>
+                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내매거진</TabsTrigger>
+                  
                 </TabsList>
 
                 <TabsContent value="features">

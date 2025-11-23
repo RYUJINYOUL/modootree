@@ -20,7 +20,8 @@ import Image from 'next/image';
 import { X, Bell, Menu, ArrowRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import MyInfoDrawer from '@/components/ui/MyInfoDrawer';
-import TrendSection, { TrendDay } from '@/components/trend/TrendSection';
+import TrendSection from '@/components/trend/TrendSection';
+import FeedPage from '@/app/feed/page'; // FeedPage 컴포넌트 import
 import { useCallback } from 'react';
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
@@ -202,8 +203,6 @@ export default function UserPublicPage() {
   const [isMyInfoOpen, setIsMyInfoOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [trendReport, setTrendReport] = useState<TrendDay[] | null>(null);
-  const [isLoadingTrend, setIsLoadingTrend] = useState(false);
 
   // 알림 개수 초기화 함수
   const resetUnreadCount = useCallback(() => {
@@ -230,60 +229,6 @@ export default function UserPublicPage() {
       console.error('배경 설정 저장 중 오류 발생:', error);
     }
   };
-
-  // 페이지 로드 시 트렌드 데이터 가져오기
-  useEffect(() => {
-    async function fetchTrendData() {
-      console.log('트렌드 데이터 요청:', {
-        currentUser,
-        hasToken: !!currentUser?.token
-      });
-
-      // 임시 토큰 사용 (테스트용)
-      const testToken = 'valid_token';
-      console.log('테스트 토큰 사용:', testToken);
-
-      console.log('트렌드 데이터 요청 시작');
-
-      setIsLoadingTrend(true);
-      try {
-        const response = await fetch('/api/ai-trend');
-
-        console.log('API 응답 상태:', response.status);
-        const data = await response.json();
-        console.log('API 응답 데이터:', data);
-
-        console.log('받은 데이터:', data);
-        if (data.success && data.data) {
-          // 각 날짜별 데이터를 카테고리별로 구조화
-          const structuredData = data.data.map((dayData: TrendData) => ({
-            date: dayData.date,
-            trends: dayData.trends
-          }));
-
-          console.log('구조화된 트렌드 데이터:', structuredData);
-          setTrendReport(structuredData);
-        } else if (data.success) {
-          console.error('응답은 성공이지만 trends가 없음:', data);
-          setTrendReport(null);
-        } else {
-          console.error('트렌드 데이터 가져오기 실패:', {
-            success: data.success,
-            error: data.error,
-            hasTrends: !!data.data?.trends
-          });
-          setTrendReport(null);
-        }
-      } catch (error) {
-        console.error('트렌드 요청 중 오류:', error);
-        setTrendReport(null);
-      } finally {
-        setIsLoadingTrend(false);
-      }
-    }
-
-    fetchTrendData();
-  }, [isMenuOpen, currentUser?.token]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -634,24 +579,24 @@ export default function UserPublicPage() {
                   <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8">
                     <div className="grid grid-cols-5 gap-4">
                     <Link 
-                      href="/feed"
+                      href="/"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <div className="w-8 h-8 flex items-center justify-center">
                           <img src="/logos/feed.png" alt="피드" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <span className="text-xs text-white/70 group-hover:text-white/90">피드</span>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">홈</span>
                     </Link>
                     <Link 
-                      href="/likes/all"
+                      href="/link-letter"
                         className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-white/[0.06] transition-all group"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <div className="w-8 h-8 flex items-center justify-center">
                           <img src="/logos/ai1.png" alt="공감" className="w-6 h-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <span className="text-xs text-white/70 group-hover:text-white/90">공감</span>
+                        <span className="text-xs text-white/70 group-hover:text-white/90">편지</span>
                     </Link>
                     <Link 
                       href="/photo-story"
@@ -687,7 +632,7 @@ export default function UserPublicPage() {
                   </div>
 
                   {/* AI 트렌드 리포트 섹션 */}
-                  <TrendSection data={trendReport} isLoading={isLoadingTrend} />
+                  <FeedPage />
                 </div>
               </div>
             </div>
@@ -729,18 +674,17 @@ export default function UserPublicPage() {
             userEmail={userData.email}  // 이메일 추가
           />
           
-          {/* 하단 버튼 */}          
-          {/* 프로필 플로팅 버튼 */}          
-          <Link            href="/profile"            
-          className="fixed bottom-[60px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50"          >            
-          <img src="/logos/m1.png" alt="Profile" className="w-6 h-6 object-contain" />            
-          <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">              내 페이지            </span>          
+          {/* 하단 버튼 */}
+          {/* 프로필 플로팅 버튼 */}
+          <Link href="/profile"
+          className="fixed bottom-[60px] right-4 z-[40] w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50">
+          <img src="/logos/m1.png" alt="Profile" className="w-6 h-6 object-contain" /> 
           </Link>
 
-                    {/* AI 플로팅 버튼 (사용자 페이지 전용) */}          
-          <Link            href="/ai-comfort"            
-          className="fixed bottom-[15px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"          >            
-          <span className="text-white font-medium text-base">AI</span>            <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">              AI 대화로 나의 오늘을 기록하세요            </span>          
+          {/* AI 플로팅 버튼 (사용자 페이지 전용) */}
+          <Link href="/ai-comfort"
+          className="fixed bottom-[15px] right-4 z-[40] w-10 h-10 bg-yellow-200 rounded-full flex items-center justify-center shadow-lg hover:bg-yellow-300 transition-all group">
+            <img src="/logos/ai1.png" alt="Profile" className="w-6 h-6 object-contain" />       
           </Link>
 
           {showBottomButton && (

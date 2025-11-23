@@ -13,11 +13,12 @@ import QuestBook2 from '../template/QuestBook2';
 import SkillProgress from '../template/SkillProgress';
 import DayOneBook from '../template/DayOneBook';
 import DayOneCalendarTemplate from '../template/DayOneCalendarTemplate';
+import PersonaFeed from '../template/PersonaFeed';
 
 export type ComponentKey = 
   'AI메모'
-  | 'AI캘린더'| 
-  '제목'
+  | 'AI캘린더'
+  | '제목'
   | '설명'
   | '구분선'
   | '프로필카드'
@@ -28,7 +29,8 @@ export type ComponentKey =
   | '자유게시판'
   | '달력'
   | '오늘일기'
-  | '포트폴리오';
+  | '포트폴리오'
+  | '페르소나';
 
 export const ComponentLibrary: Record<ComponentKey, React.FC<any>> = {
   AI메모: DayOneBook,
@@ -45,4 +47,5 @@ export const ComponentLibrary: Record<ComponentKey, React.FC<any>> = {
   달력: CalendarComponent,
   오늘일기: TodayDiary,
   포트폴리오: SkillProgress,
+  페르소나: PersonaFeed,
 }; 

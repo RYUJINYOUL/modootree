@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, MessageCircle, ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, ImageIcon, Upload, Loader2, Edit, Trash2 } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, auth } from '@/firebase';
 import imageCompression from 'browser-image-compression';
@@ -298,7 +298,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
             const likeData = doc.data();
             if (likeData.userId !== currentUser.uid) { // 본인 좋아요 제외
               allActivities.push({
-                id: `like_${doc.id}`,
+                id: `like_${entry.id}_${doc.id}`,
                 type: 'like',
                 userId: likeData.userId,
                 userName: likeData.userName || '익명 사용자',
@@ -321,7 +321,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
             const commentData = doc.data();
             if (commentData.userId !== currentUser.uid) { // 본인 답글 제외
               allActivities.push({
-                id: `comment_${doc.id}`,
+                id: `comment_${entry.id}_${doc.id}`,
                 type: 'comment',
                 userId: commentData.userId,
                 userName: commentData.userName || '익명 사용자',
@@ -903,18 +903,20 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-green-700 border-green-300 hover:bg-green-50"
+                    className="bg-white text-green-700 border-green-300 hover:bg-green-50 p-2"
                     onClick={() => handleEditEntry(selectedEntry)}
+                    title="수정"
                   >
-                    수정
+                    <Edit className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-red-600 border-red-300 hover:bg-red-50"
+                    className="bg-white text-red-600 border-red-300 hover:bg-red-50 p-2"
                     onClick={() => handleDeleteEntry(selectedEntry)}
+                    title="삭제"
                   >
-                    삭제
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               )}
@@ -1456,7 +1458,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                  className="bg-white text-blue-600 border-blue-300 hover:bg-blue-50"
                   onClick={() => editFileInputRef.current?.click()}
                   disabled={isUploadingImageForEdit}
                 >
@@ -1467,7 +1469,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-red-600 border-red-300 hover:bg-red-50"
+                    className="bg-white text-red-600 border-red-300 hover:bg-red-50"
                     onClick={() => setEditingUploadedImageUrl(undefined)}
                   >
                     사진 삭제
@@ -1485,7 +1487,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
             <div className="flex justify-end gap-3 mt-4">
               <Button
                 variant="outline"
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                className="bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
                 onClick={handleCancelEdit}
               >
                 취소
@@ -1536,7 +1538,7 @@ const renderListView = () => {
                       target.style.display = 'none';
                       const parent = target.parentElement;
                       if (parent) {
-                        parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z"></path></svg></div>';
+                        parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
                       }
                     }
                   }}
@@ -1551,7 +1553,7 @@ const renderListView = () => {
                     target.style.display = 'none';
                     const parent = target.parentElement;
                     if (parent) {
-                      parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z"></path></svg></div>';
+                      parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
                     }
                   }}
                 />
@@ -1602,13 +1604,13 @@ const renderListView = () => {
                 {/* 상호작용 정보 */}
                 <div className="flex items-center gap-3 text-sm flex-shrink-0" style={{ color: styleSettings.textColor }}>
                   <button
-                    className="flex items-center gap-1 hover:scale-105 transition-transform"
+                    className="flex items-center gap-1 hover:scale-105 transition-transform bg-white px-2 py-1 rounded-md border border-gray-200"
                     onClick={(e) => handleLike(e, entry)}
                   >
                     <Heart className="w-4 h-4" fill={likedEntries[entry.id] ? '#EF4444' : 'none'} />
                     <span>{entry.likesCount || 0}</span>
                   </button>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-gray-200">
                     <MessageCircle className="w-4 h-4" />
                     <span>{entry.commentsCount || 0}</span>
                   </div>
@@ -1631,7 +1633,6 @@ const renderPopularView = () => {
       
       {activities.length === 0 ? (
         <div className="text-center py-12 backdrop-blur-sm rounded-lg" style={getCardStyle()}>
-          <Heart className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h4 className="text-lg font-medium mb-2" style={{ color: styleSettings.textColor }}>
             아직 활동이 없습니다
           </h4>
