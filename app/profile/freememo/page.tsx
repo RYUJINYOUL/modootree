@@ -60,11 +60,11 @@ export default function MemoPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pc' | 'mobile'>('pc'); // New state for active tab
+  // const [activeTab, setActiveTab] = useState<'pc' | 'mobile'>('pc'); // New state for active tab - Removed
   
   // 로컬 스토리지 키
-  const STORAGE_KEY_PREFIX = `freememo_draft_${currentUser?.uid}`; // Prefix for storage key
-  const getStorageKey = (tab: 'pc' | 'mobile') => `${STORAGE_KEY_PREFIX}_${tab}`; // Function to get storage key
+  const STORAGE_KEY_PREFIX = `freememo_draft_${currentUser?.uid}`;
+  const getStorageKey = () => `${STORAGE_KEY_PREFIX}`;
   
   // 이미지 관련 상태
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -97,20 +97,20 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
   // 컴포넌트 마운트 시 로컬 스토리지에서 내용 불러오기
   useEffect(() => {
     if (currentUser?.uid) {
-      const savedContent = localStorage.getItem(getStorageKey(activeTab)); // Use getStorageKey
+      const savedContent = localStorage.getItem(getStorageKey()); // Use getStorageKey without activeTab
       if (savedContent) {
         setFreeText(savedContent);
       } else {
         setFreeText(''); // Clear text if no saved content for the active tab
       }
     }
-  }, [currentUser?.uid, activeTab]); // Add activeTab to dependencies
+  }, [currentUser?.uid]); // activeTab removed from dependencies
 
   // 텍스트 업데이트 헬퍼 함수 (로컬 스토리지 자동 저장 포함)
   const updateFreeText = (newText: string) => {
     setFreeText(newText);
     if (currentUser?.uid) {
-      localStorage.setItem(getStorageKey(activeTab), newText); // Use getStorageKey
+      localStorage.setItem(getStorageKey(), newText); // Use getStorageKey
     }
   };
 
@@ -128,7 +128,7 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
     
     updateFreeText('');
     setAnalysisResult(null);
-    localStorage.removeItem(getStorageKey(activeTab)); // Remove item from local storage for active tab
+    localStorage.removeItem(getStorageKey()); // Remove item from local storage for active tab
   };
 
   // 이미지 업로드 처리
@@ -235,7 +235,7 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
       if (totalItems === 0) {
         alert('분석할 수 있는 내용이 발견되지 않았습니다. 더 구체적인 내용을 작성해보세요.');
       } else {
-        console.log(`✅ AI 분석 완료: 총 ${totalItems}개 항목 추출`);
+        // console.log(`✅ AI 분석 완료: 총 ${totalItems}개 항목 추출`); // Removed console log
       }
       
     } catch (error) {
@@ -575,29 +575,7 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
           </div>
         
 
-          {/* Tab buttons for PC/Mobile */}
-          <div className="flex justify-center mb-4">
-            <Button
-              onClick={() => setActiveTab('pc')}
-              className={`px-4 py-2 rounded-l-lg text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'pc'
-                  ? 'bg-[#56ab91] text-white'
-                  : 'bg-[#2A4D45]/60 text-gray-300 hover:bg-[#2A4D45]/80'
-              }`}
-            >
-              PC
-            </Button>
-            <Button
-              onClick={() => setActiveTab('mobile')}
-              className={`px-4 py-2 rounded-r-lg text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'mobile'
-                  ? 'bg-[#56ab91] text-white'
-                  : 'bg-[#2A4D45]/60 text-gray-300 hover:bg-[#2A4D45]/80'
-              }`}
-            >
-              모바일
-            </Button>
-          </div>
+         
 
           {/* 이미지 업로드 섹션 */}
           <div className="border-t border-[#358f80]/30 pt-4">

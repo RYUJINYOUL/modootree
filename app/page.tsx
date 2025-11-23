@@ -19,6 +19,7 @@ import LoginOutButton from '@/components/ui/LoginOutButton'; // LoginOutButton �
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
 import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
+import UserSampleCarousel from '@/components/UserSampleCarousel';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function Home() {
@@ -316,7 +317,7 @@ export default function Home() {
                 <TabsList className="w-full justify-center mb-4 mt-10 bg-transparent border-none gap-2 custom-homeTabslist">
                   <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">커뮤니티</TabsTrigger>
                   <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내페이지</TabsTrigger>
-                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내매거진</TabsTrigger>
+                  <TabsTrigger className="px-6 py-3 text-[15px]" value="magazine">내매거진</TabsTrigger>
                   
                 </TabsList>
 
@@ -351,6 +352,23 @@ export default function Home() {
                     </div>
                   </div>
                 </TabsContent>
+
+                <TabsContent value="magazine">
+                  <div className="relative rounded-2xl py-4 overflow-hidden">
+                    <div className="relative z-10 py-4">
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
+                        </h2>
+                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
+                        </h2>
+                      </div>
+                      <UserSampleCarousel />
+                    </div>
+                  </div>
+                </TabsContent>
+
               </Tabs>
             </div>
           </div>

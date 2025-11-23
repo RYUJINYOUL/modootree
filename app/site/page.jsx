@@ -35,48 +35,57 @@ const ParticlesComponent = () => {
 
   return (
     <Particles
-      className="absolute inset-0"
+      className="absolute inset-0 z-[1]"
       init={particlesInit}
       options={{
-        fpsLimit: 120,
+        background: {
+          opacity: 0
+        },
         particles: {
           color: {
-            value: "#ffffff",
+            value: ["#64B5F6", "#81C784", "#9575CD", "#4FC3F7", "#4DB6AC", "#7986CB"]
+          },
+          move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+              default: "bounce"
+            },
+            random: false,
+            speed: 2,
+            straight: false
+          },
+          number: {
+            density: {
+              enable: true,
+              area: 800
+            },
+            value: 30
+          },
+          opacity: {
+            value: 0.4,
+            animation: {
+              enable: true,
+              speed: 1,
+              minimumValue: 0.1
+            }
+          },
+          size: {
+            value: { min: 5, max: 10 },
+            animation: {
+              enable: true,
+              speed: 2,
+              minimumValue: 3
+            }
           },
           links: {
             color: "#ffffff",
             distance: 150,
             enable: true,
             opacity: 0.2,
-            width: 1,
-          },
-          move: {
-            enable: true,
-            outModes: {
-              default: "bounce",
-            },
-            random: false,
-            speed: 1,
-            straight: false,
-          },
-          number: {
-            density: {
-              enable: true,
-              area: 800,
-            },
-            value: 80,
-          },
-          opacity: {
-            value: 0.2,
-          },
-          shape: {
-            type: "circle",
-          },
-          size: {
-            value: { min: 1, max: 3 },
-          },
-        },
-        detectRetina: true,
+            width: 1
+          }
+        }
       }}
     />
   );
@@ -213,7 +222,7 @@ export default function Page() {
 
   const renderViewSiteButton = () => {
     const className = 'bg-blue-600 hover:bg-blue-700';
-    const label = '클릭 2번으로 무료 사이트 만들기';
+    const label = '클릭 2번, 내 매거진 만들기';
 
     if (userData?.username) {
       return (
@@ -325,18 +334,12 @@ export default function Page() {
                 </div>
               </SheetContent>
             </Sheet>
-            <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리</h1>
-              <p className="text-lg text-white/80 mb-2">나만의 특별한 한페이지를 만들어 보세요</p>
-              <p className="text-lg text-white/80 mb-10">모두트리 AI 대화 만으로 하루가 정리 됩니다</p>
+            <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리 매거진</h1>
+              <p className="text-lg text-white/80 mb-10">나만의 특별한 매거진을 만들어 보세요</p>
 
             <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-8">
               {renderViewSiteButton('main')}
-              <Link
-                href="/farmtoolceo"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
-              >
-                모두트리 사이트 샘플 확인하세요
-              </Link>
+             
               <Link
                 href={`/${userData?.username || ''}`}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
@@ -353,7 +356,7 @@ export default function Page() {
                   }
                 }}
               >
-                내 사이트로 이동합니다
+                내 매거진으로 이동합니다
               </Link>
             </div>
           </div>
@@ -419,52 +422,6 @@ export default function Page() {
       </section>
 
 
-      {/* 문의하기 섹션 */}
-      <div className="w-full bg-[#415a77] backdrop-blur-sm rounded-3xl mb-12 relative overflow-hidden">
-        <ParticlesComponent />
-        <div className="max-w-[2000px] mx-auto px-4 py-16 relative z-10">
-          <div className="flex flex-col items-center justify-center text-center">
-            <h2 className="text-2xl font-bold text-white mb-6">
-              자주 묻는 질문
-            </h2>
-            <div className="w-full max-w-[800px] space-y-2 mb-12">
-              {faqs.map((faq, index) => (
-                <div
-                  key={index}
-                  className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden"
-                >
-                  <button
-                    onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                    className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
-                  >
-                    <h3 className="text-white font-medium">{faq.question}</h3>
-                    {openFaqIndex === index ? (
-                      <ChevronUp className="w-5 h-5 text-white flex-shrink-0 ml-4" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-white flex-shrink-0 ml-4" />
-                    )}
-                  </button>
-                  {openFaqIndex === index && (
-                    <div className="px-6 py-4 border-t border-white/10">
-                      <p className="text-white/70 text-sm">{faq.answer}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <p className="text-white/80 mb-6">
-              저희 모두트리에게 하실 말씀 있으신가요?
-            </p>
-            <Link
-              href="/inquiry"
-              className="inline-flex items-center px-6 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-white font-medium rounded-xl transition-colors border-2 border-blue-500/50 hover:border-blue-500/70"
-            >
-              의견 작성하기
-            </Link>
-          </div>
-        </div>
-      </div>
-
       {/* 모달 */}
       <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
@@ -478,7 +435,7 @@ export default function Page() {
             &times;
           </button>
 
-          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">나만의 공유 페이지 만들기</h2>
+          <h2 className="text-blue-100 text-xl font-bold mb-6 text-center">매거진 만들기</h2>
           
           <div className="flex flex-col items-center space-y-4">
             <div className="flex items-center bg-blue-950/50 rounded-xl shadow-inner p-4 border border-blue-400/20 focus-within:border-blue-400 transition-all w-full">
