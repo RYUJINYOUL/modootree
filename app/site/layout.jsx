@@ -8,7 +8,7 @@ const layout = ({ children }) => {
         <div>
        <LoginOutButton />
        </div>
-        <div className="px-4 py-8">
+        <div className="px-0 py-0">
           {children}
         </div>
       </div>

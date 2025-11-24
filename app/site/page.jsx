@@ -107,6 +107,12 @@ export default function Page() {
   const [showDropdown, setShowDropdown] = useState(false);
   const { push } = useRouter();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [bgColorIndex, setBgColorIndex] = useState(0);
+  const bgColors = ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
+
+  const changeBackgroundColor = () => {
+    setBgColorIndex((prevIndex) => (prevIndex + 1) % bgColors.length);
+  };
 
   // Firebase 인증 상태 변경 감지
   useEffect(() => {
@@ -222,7 +228,7 @@ export default function Page() {
 
   const renderViewSiteButton = () => {
     const className = 'bg-blue-600 hover:bg-blue-700';
-    const label = '클릭 2번, 내 매거진 만들기';
+    const label = '클릭 2번, 매거진 만들기';
 
     if (userData?.username) {
       return (
@@ -265,7 +271,7 @@ export default function Page() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen" style={{ backgroundColor: bgColors[bgColorIndex] }}>
       <MainHeader />
       {/* 첫 번째 섹션 - 소개 및 버튼 */}
       <div className="w-full zinc-900 rounded-3xl">
@@ -356,7 +362,7 @@ export default function Page() {
                   }
                 }}
               >
-                내 매거진으로 이동합니다
+                매거진으로 이동합니다
               </Link>
             </div>
           </div>
@@ -365,12 +371,20 @@ export default function Page() {
 
       {/* 모두트리 소개 섹션 */}
       <section className="w-full py-8 md:py-12 my-8">
-        <div className="w-full bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 rounded-3xl relative overflow-hidden">
+        <div className="w-full rounded-3xl relative overflow-hidden bg-white/10 backdrop-blur-sm">
           <div className="absolute inset-0 z-0">
             <ParticlesComponent />
           </div>
           <div className="relative z-20 py-8 px-4">
           <div className="max-w-[1500px] mx-auto">
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={changeBackgroundColor}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg backdrop-blur-sm transition-colors"
+              >
+                color
+              </button>
+            </div>
              <Tabs defaultValue="features" className="w-full custom-home-tabs">
              <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
                <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내 사이트</TabsTrigger>
@@ -480,38 +494,3 @@ export default function Page() {
     </div>
   );
 }
-
-const faqs = [
-  {
-    question: '모두트리는 무료인가요?',
-    answer: '네, 모두트리의 모든 기능은 모두 무료로 제공됩니다.'
-  },
-  {
-    question: '내 사이트는 몇 개까지 만들 수 있나요?',
-    answer: '계정당 1개의 페이지를 만들 수 있습니다.'
-  },
-  {
-    question: '모든 투표 생성은 익명으로 가능한가요?',
-    answer: '네 모두트리 모든 투표는 익명 필수 조건입니다, 하지만 투표나 게시물의 답글은 일부 익명은 아닙니다'
-  },
-  {
-    question: '다른 사람의 사이트를 수정할 수 있나요?',
-    answer: '일부 컴포넌트에서 사이트 소유자가 초대한 경우에만 수정 가능합니다.'
-  },
-  {
-    question: '사이트 주소를 변경할 수 있나요?',
-    answer: '아니요, 현재는 한 번 설정한 페이지 주소는 변경할 수 없습니다. 신중하게 설정해주세요.'
-  },
-  {
-    question: '추가 개선하고 싶은 기능은 있나요?',
-    answer: '열린게시판에 글 남겨주시면 최대한 반영하겠습니다.'
-  },
-  {
-    question: 'AI 기능은 어떤 컴포넌트에서 가능한가요?',
-    answer: '현재는 일부 컴포넌트에서만 가능한데 추후 전체 컴포넌트에 적용될 예정입니다'
-  },
-  {
-    question: '제작하는 방법을 잘 모르겠습니다?',
-    answer: '카카오톡 채널 실시간 문의 주세요, 열린 게시판 내 카톡 문의 버튼 클릭'
-  }
-];
