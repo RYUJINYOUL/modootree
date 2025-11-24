@@ -80,6 +80,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null); // 수정 중인 답글 ID
   const [editingCommentContent, setEditingCommentContent] = useState(''); // 수정 중인 답글 내용
   const [activities, setActivities] = useState<any[]>([]); // 활동 피드 데이터
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false); // 활동 피드 로딩 상태
   
   // 스타일 설정 상태
   const [styleSettings, setStyleSettings] = useState({
@@ -281,71 +282,85 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
       return;
     }
 
-    const collectActivities = async () => {
-      const allActivities: any[] = [];
+    if (personaEntries.length === 0) {
+      setActivities([]);
+      return;
+    }
 
-      // 내 게시물들에 대한 좋아요와 답글 수집
-      for (const entry of personaEntries) {
-        try {
-          // 좋아요 수집
-          const likesQuery = query(
+    const collectActivities = async () => {
+      setIsLoadingActivities(true); // 로딩 시작
+      
+      try {
+        // 🟢 모든 쿼리를 병렬로 생성
+        const likesPromises = personaEntries.map(entry =>
+          getDocs(query(
             collection(db, `users/${userId}/persona_entries/${entry.id}/likes`),
             orderBy('createdAt', 'desc')
-          );
-          const likesSnapshot = await getDocs(likesQuery);
-          
-          likesSnapshot.docs.forEach(doc => {
-            const likeData = doc.data();
-            if (likeData.userId !== currentUser.uid) { // 본인 좋아요 제외
-              allActivities.push({
-                id: `like_${entry.id}_${doc.id}`,
-                type: 'like',
-                userId: likeData.userId,
-                userName: likeData.userName || '익명 사용자',
-                entryId: entry.id,
-                entryContent: entry.originalDiaryContent,
-                entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
-                createdAt: likeData.createdAt?.toDate() || new Date(),
-              });
-            }
-          });
+          )).then(snapshot => ({ entry, type: 'likes', snapshot }))
+        );
 
-          // 답글 수집
-          const commentsQuery = query(
+        const commentsPromises = personaEntries.map(entry =>
+          getDocs(query(
             collection(db, `users/${userId}/persona_entries/${entry.id}/comments`),
             orderBy('createdAt', 'desc')
-          );
-          const commentsSnapshot = await getDocs(commentsQuery);
-          
-          commentsSnapshot.docs.forEach(doc => {
-            const commentData = doc.data();
-            if (commentData.userId !== currentUser.uid) { // 본인 답글 제외
-              allActivities.push({
-                id: `comment_${entry.id}_${doc.id}`,
-                type: 'comment',
-                userId: commentData.userId,
-                userName: commentData.userName || '익명 사용자',
-                entryId: entry.id,
-                entryContent: entry.originalDiaryContent,
-                entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
-                commentContent: commentData.content,
-                createdAt: commentData.createdAt?.toDate() || new Date(),
-              });
-            }
-          });
-        } catch (error) {
-          console.error('활동 수집 실패:', error);
-        }
-      }
+          )).then(snapshot => ({ entry, type: 'comments', snapshot }))
+        );
 
-      // 시간순으로 정렬
-      allActivities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      setActivities(allActivities);
+        // 🟢 모든 쿼리를 동시에 실행
+        const results = await Promise.all([...likesPromises, ...commentsPromises]);
+
+        const allActivities: any[] = [];
+
+        // 결과 처리
+        results.forEach(({ entry, type, snapshot }) => {
+          if (type === 'likes') {
+            snapshot.docs.forEach(doc => {
+              const likeData = doc.data();
+              if (likeData.userId !== currentUser.uid) {
+                allActivities.push({
+                  id: `like_${entry.id}_${doc.id}`,
+                  type: 'like',
+                  userId: likeData.userId,
+                  userName: likeData.userName || '익명 사용자',
+                  entryId: entry.id,
+                  entryContent: entry.originalDiaryContent,
+                  entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
+                  createdAt: likeData.createdAt?.toDate() || new Date(),
+                });
+              }
+            });
+          } else if (type === 'comments') {
+            snapshot.docs.forEach(doc => {
+              const commentData = doc.data();
+              if (commentData.userId !== currentUser.uid) {
+                allActivities.push({
+                  id: `comment_${entry.id}_${doc.id}`,
+                  type: 'comment',
+                  userId: commentData.userId,
+                  userName: commentData.userName || '익명 사용자',
+                  entryId: entry.id,
+                  entryContent: entry.originalDiaryContent,
+                  entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
+                  commentContent: commentData.content,
+                  createdAt: commentData.createdAt?.toDate() || new Date(),
+                });
+              }
+            });
+          }
+        });
+
+        // 시간순 정렬
+        allActivities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setActivities(allActivities);
+      } catch (error) {
+        console.error('활동 수집 실패:', error);
+        setActivities([]);
+      } finally {
+        setIsLoadingActivities(false); // 로딩 종료
+      }
     };
 
-    if (personaEntries.length > 0) {
-      collectActivities();
-    }
+    collectActivities();
   }, [personaEntries, currentUser?.uid, activeTab, userId]);
 
   // 안정적인 이미지 압축 함수 (browser-image-compression 사용, HEIC/HEIF 지원)
@@ -1628,10 +1643,14 @@ const renderListView = () => {
 const renderPopularView = () => {
   return (
     <div className="space-y-4 px-2 md:px-0">
-      <div className="text-center mb-6">
-      </div>
-      
-      {activities.length === 0 ? (
+      {isLoadingActivities ? (
+        <div className="text-center py-12 backdrop-blur-sm rounded-lg" style={getCardStyle()}>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[#56ab91]" />
+          <p className="text-sm" style={{ color: styleSettings.textColor }}>
+            활동 피드 불러오는 중...
+          </p>
+        </div>
+      ) : activities.length === 0 ? (
         <div className="text-center py-12 backdrop-blur-sm rounded-lg" style={getCardStyle()}>
           <h4 className="text-lg font-medium mb-2" style={{ color: styleSettings.textColor }}>
             아직 활동이 없습니다

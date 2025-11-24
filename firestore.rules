@@ -255,6 +255,11 @@ match /photo-stories/{document} {
       }
     }
 
+    // 임시 메모 (freeMemoDraft) 컬렉션에 대한 규칙 추가
+    match /users/{userId}/drafts/{documentId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // 나머지 모든 컬렉션에 대한 기본 규칙
     match /{document=**} {
       allow read: if true;  // 모든 문서 읽기 허용

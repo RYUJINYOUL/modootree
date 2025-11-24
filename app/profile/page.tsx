@@ -243,6 +243,15 @@ export default function ProfilePage() {
       key: 'diary' as keyof CategoryCounts
     },
     { 
+      icon: LinkIcon, 
+      label: '링크', 
+      href: '/profile/links',
+      description: '저장된 링크와 북마크',
+      color: 'bg-cyan-500/20 border-cyan-400/30',
+      iconColor: 'text-cyan-400',
+      key: 'links' as keyof CategoryCounts
+    },
+    { 
       icon: ClipboardPlus, 
       label: '건강', 
       href: '/profile/health',
@@ -268,15 +277,6 @@ export default function ProfilePage() {
       color: 'bg-pink-500/20 border-pink-400/30',
       iconColor: 'text-pink-400',
       key: 'chats' as keyof CategoryCounts
-    },
-    { 
-      icon: LinkIcon, 
-      label: '링크', 
-      href: '/profile/links',
-      description: '저장된 링크와 북마크',
-      color: 'bg-cyan-500/20 border-cyan-400/30',
-      iconColor: 'text-cyan-400',
-      key: 'links' as keyof CategoryCounts
     }
   ];
 

@@ -8,47 +8,47 @@ import useEmblaCarousel from 'embla-carousel-react';
 const sampleUsers = [
   {
     id: 1,
-    username: '퀴즈를 풀어야 볼 수 있는 편지를 만들어 소중한 사람에게 링크 편지를 보내 보세요, 다양한 테마를 지원합니다',
-    thumbnail: '/samples/34.png',
-    description: '링크편지',
-    bgColor: 'bg-[#E06B80]',
-    path: '/link-letter'
+    username: '"오늘, 떨리는 목소리로 나랑 결혼해줄래? 세상이 멈춘 듯 꿈결 같았다. 내 대답은 당연히 Yes!',
+    thumbnail: '/face/t1.png',
+    description: '25년 10월 10일 · 기쁨',
+    bgColor: 'bg-[#ffbe0b]',
+    path: '/site'
   },
   {
     id: 2,
-    username: 'AI가 분석 간추린 뉴스를 읽고 투표 해보세요 또한 주요 뉴스로 투표를 만들 수도 있으며 공유도 가능합니다',
-    thumbnail: '/samples/31.png',
-    description: '뉴스 투표',
-    bgColor: 'bg-[#2a6f97]',
-    path: '/news-vote'
+    username: '오래된 노래를 들으며 따뜻한 차 한 잔. 복잡했던 마음이 고요해지는 오후, 작은 것에 만족하는 지금',
+    thumbnail: '/face/t2.png',
+    description: '25년 10월 11일 · 평온',
+    bgColor: 'bg-[#fb5607]',
+    path: '/site'
   },
   {
     id: 3,
-    username: '모두트리 AI 대화 내용으로 사연 투표를 AI가 만들어 드립니다, 익명 등록 공유 가능합니다',
-    thumbnail: '/samples/32.png',
-    description: '사연 투표',
-    bgColor: 'bg-[#2a6f97]',
-    path: '/modoo-vote'
+    username: '신상 선물! 가슴이 벅차올라. 어떤 선물일까? 설레어 잠들기 어렵다. 이제 시작, 달려보자',
+    thumbnail: '/face/t3.png',
+    description: '25년 10월 12일 · 기대',
+    bgColor: 'bg-[#ff006e]',
+    path: '/site'
   },
   {
     id: 4,
-    username: '아침 점심 저녁 야식 운동을 작성 해주세요, 오늘 건강을 AI가 분석해 드립니다',
-    thumbnail: '/samples/33.png',
-    description: '건강 분석',
-    bgColor: 'bg-[#2a6f97]',
-    path: '/health'
+    username: '오늘 하루 완벽했어. 미팅도, 계획도, 마음 배려 또한.. 잔잔한 미소로 나 자신을 칭찬한 오늘',
+    thumbnail: '/face/t4.png',
+    description: '25년 10월 13일 · 만족',
+    bgColor: 'bg-[#8338ec]',
+    path: '/site'
   },
   {
     id: 5,
-    username: '열린 자유 게시판입니다, 언제든 수정 개선사항에 대해 이야기 해주세요 1:1 채팅 문의도 가능합니다',
-    thumbnail: '/samples/35.png',
-    description: '열린게시판',
-    bgColor: 'bg-[#2a6f97]',
-    path: '/inquiry'
+    username: '내일 내 인생 처음이자 마지막 상견례, 떨린다, 정치 얘기는 나오지 않기를 불편 불편 불편 양보 양보 양보',
+    thumbnail: '/face/t6.png',
+    description: '25년 10월 14일 · 불안',
+    bgColor: 'bg-[#3a86ff]',
+    path: '/site'
   }
 ];
 
-export default function UserSampleCarousel3() {
+export default function UserSampleCarousel5() {
   const [isMobile, setIsMobile] = useState(false);
 
   const options = {
@@ -87,19 +87,18 @@ export default function UserSampleCarousel3() {
       <div className="mx-2">
         <Link href={sample.path} className="block">
           <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200`}>
-            <div className="absolute inset-0 flex flex-col p-1">
-              {/* 이미지 컨테이너 - 중앙 정렬 */}
-              <div className="w-[250px] h-[250px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
+            <div className="absolute inset-0 flex flex-col">
+              {/* 이미지 컨테이너 - 전체 공간 사용 */}
+              <div className="w-full h-[260px] rounded-t-3xl overflow-hidden relative">
                 <Image
                   src={sample.thumbnail}
                   alt={sample.description}
-                  width={100}
-                  height={100}
-                  className="object-contain"
+                  fill
+                  className="object-cover"
                 />
               </div>
               {/* 설명 부분 */}
-              <div className="flex-1 p-4">
+              <div className="flex-1 p-4 pt-2">
                 <h3 className="text-lg font-semibold mb-1 text-white">{sample.description}</h3>
                 <p className="text-sm text-white/70">{sample.username}</p>
               </div>

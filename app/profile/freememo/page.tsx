@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface MemoItem {
   id: string;
@@ -56,15 +57,14 @@ export default function MemoPage() {
 
   // 새로운 상태들
   const [freeText, setFreeText] = useState('');
+  const debouncedFreeText = useDebounce(freeText, 2000); // 2초 디바운스
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false); // 초기 로딩 완료 상태
+  const [hasUserInput, setHasUserInput] = useState(false); // 사용자 입력 여부 추적
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isSaving, setIsSaving] = useState(false);
   // const [activeTab, setActiveTab] = useState<'pc' | 'mobile'>('pc'); // New state for active tab - Removed
-  
-  // 로컬 스토리지 키
-  const STORAGE_KEY_PREFIX = `freememo_draft_${currentUser?.uid}`;
-  const getStorageKey = () => `${STORAGE_KEY_PREFIX}`;
   
   // 이미지 관련 상태
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -94,41 +94,80 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
     return `${year}-${month}-${day}`;
   };
 
-  // 컴포넌트 마운트 시 로컬 스토리지에서 내용 불러오기
+  // 컴포넌트 마운트 시 Firestore에서 내용 불러오기
   useEffect(() => {
+    console.log('Loading memo - currentUser?.uid:', currentUser?.uid);
     if (currentUser?.uid) {
-      const savedContent = localStorage.getItem(getStorageKey()); // Use getStorageKey without activeTab
-      if (savedContent) {
-        setFreeText(savedContent);
-      } else {
-        setFreeText(''); // Clear text if no saved content for the active tab
-      }
+      const memoDocRef = doc(db, 'users', currentUser.uid, 'drafts', 'freeMemoDraft');
+      console.log('Fetching from path:', `users/${currentUser.uid}/drafts/freeMemoDraft`);
+      getDoc(memoDocRef)
+        .then((docSnap) => {
+          console.log('Document exists:', docSnap.exists());
+          if (docSnap.exists()) {
+            const content = docSnap.data().content || '';
+            console.log('Loaded content:', content);
+            setFreeText(content);
+          } else {
+            console.log('No document found, setting empty text');
+            setFreeText('');
+          }
+          setIsInitialLoadComplete(true); // 초기 로딩 완료 표시
+        })
+        .catch((error) => {
+          console.error('Error fetching free memo draft:', error);
+          setFreeText(''); // 오류 발생 시 초기화
+          setIsInitialLoadComplete(true); // 오류가 발생해도 로딩 완료 표시
+        });
+    } else {
+      console.log('No currentUser, skipping load');
+      setIsInitialLoadComplete(true); // currentUser가 없어도 로딩 완료 표시
     }
-  }, [currentUser?.uid]); // activeTab removed from dependencies
+  }, [currentUser?.uid]);
 
-  // 텍스트 업데이트 헬퍼 함수 (로컬 스토리지 자동 저장 포함)
-  const updateFreeText = (newText: string) => {
-    setFreeText(newText);
-    if (currentUser?.uid) {
-      localStorage.setItem(getStorageKey(), newText); // Use getStorageKey
+  // Firestore에 freeText 자동 저장 로직
+  useEffect(() => {
+    // 초기 로딩이 완료되고 사용자 입력이 있었을 때만 자동 저장 실행
+    if (currentUser?.uid && debouncedFreeText !== null && debouncedFreeText !== undefined && isInitialLoadComplete && hasUserInput) {
+      console.log('Auto-save conditions met. Saving to Firestore:', debouncedFreeText);
+      const memoDocRef = doc(db, 'users', currentUser.uid, 'drafts', 'freeMemoDraft');
+      setDoc(memoDocRef, {
+        content: debouncedFreeText,
+        updatedAt: serverTimestamp(),
+      }, { merge: true })
+      .then(() => {
+        console.log('Free memo draft saved to Firestore. Content length:', debouncedFreeText.length);
+      })
+      .catch((error) => {
+        console.error('Error saving free memo draft:', error);
+      });
+    } else {
+      console.log('Auto-save skipped. Conditions:', {
+        hasCurrentUser: !!currentUser?.uid,
+        debouncedFreeTextNotNull: debouncedFreeText !== null,
+        debouncedFreeTextNotUndefined: debouncedFreeText !== undefined,
+        isInitialLoadComplete: isInitialLoadComplete,
+        hasUserInput: hasUserInput
+      });
     }
-  };
+  }, [currentUser?.uid, debouncedFreeText, isInitialLoadComplete, hasUserInput]);
 
-  // 텍스트 변경 핸들러 (로컬 스토리지 자동 저장)
+  // 텍스트 변경 핸들러 (로컬 스토리지 자동 저장) - 수정
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
-    updateFreeText(newText);
+    setFreeText(newText);
+    setHasUserInput(true); // 사용자 입력이 있었음을 표시
   };
 
-  // 새로고침 (삭제) 기능
+  // 새로고침 (삭제) 기능 - 수정
   const handleRefresh = () => {
     if (freeText.trim() && !window.confirm('작성 중인 내용이 모두 삭제됩니다. 계속하시겠습니까?')) {
       return;
     }
     
-    updateFreeText('');
+    setFreeText('');
     setAnalysisResult(null);
-    localStorage.removeItem(getStorageKey()); // Remove item from local storage for active tab
+    setHasUserInput(false); // 새로고침 시 사용자 입력 상태 초기화
+    // localStorage.removeItem(getStorageKey()); // Remove item from local storage for active tab - 제거
   };
 
   // 이미지 업로드 처리
@@ -179,7 +218,7 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
         // OCR 결과를 기존 텍스트에 추가 (로컬 스토리지 자동 저장)
         const separator = freeText.trim() ? '\n\n' : '';
         const newText = freeText + separator + `📷 이미지에서 추출된 텍스트:\n${extractedText}`;
-        updateFreeText(newText);
+        setFreeText(newText);
         
         // 상세 결과 표시
         const successCount = result.extractedCount || 0;
@@ -662,7 +701,7 @@ const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  {analysisResult ? '다시 분석하기' : '메모 링크 분석'}
+                  {analysisResult ? '다시 분석하기' : '메모 · 링크 분석'}
                 </>
               )}
             </Button>

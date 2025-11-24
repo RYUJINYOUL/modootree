@@ -19,6 +19,7 @@ import LoginOutButton from '@/components/ui/LoginOutButton'; // LoginOutButton �
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
 import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
+import UserSampleCarousel5 from '@/components/UserSampleCarousel5';
 import UserSampleCarousel from '@/components/UserSampleCarousel';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -326,10 +327,10 @@ export default function Home() {
                     <div className="relative z-10 py-4">
                       <div className="flex flex-col items-center justify-center text-center">
                         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          나만의 기록 페이지로 하루를 정리하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 등 내 페이지에 자동 저장 합니다 
+                          나만의 기록 페이지로 하루를 정리하세요.<br /> AI가 하루 분석 · 일기 메모 건강 상태 등 내 페이지에 자동 저장 합니다 
                         </h2>
                         <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 기록 페이지로 하루를 정리 하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 등 내 페이지 자동 저장  
+                          모두트리 기록 페이지로 하루를 정리 하세요.<br /> AI가 하루 분석 · 일기 메모 건강 상태 등 내 페이지 자동 저장  
                         </h2>
                       </div>
                       <UserSampleCarousel2 />
@@ -358,13 +359,13 @@ export default function Home() {
                     <div className="relative z-10 py-4">
                       <div className="flex flex-col items-center justify-center text-center">
                         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
+                         모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
                         </h2>
                         <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
+                        모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
                         </h2>
                       </div>
-                      <UserSampleCarousel />
+                      <UserSampleCarousel5 />
                     </div>
                   </div>
                 </TabsContent>
