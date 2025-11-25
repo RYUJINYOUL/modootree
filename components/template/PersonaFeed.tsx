@@ -110,6 +110,29 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
     }
   };
 
+  // 색상을 진하게 만드는 유틸리티 함수
+  const darkenColor = (color: string, amount: number = 0.3): string => {
+    // hex 색상을 RGB로 변환
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // 각 색상 채널을 어둡게 만들기
+    const darkenedR = Math.max(0, Math.floor(r * (1 - amount)));
+    const darkenedG = Math.max(0, Math.floor(g * (1 - amount)));
+    const darkenedB = Math.max(0, Math.floor(b * (1 - amount)));
+    
+    // 다시 hex로 변환
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(darkenedR)}${toHex(darkenedG)}${toHex(darkenedB)}`;
+  };
+
+  // 스타일 설정 기반 진한 배경색 생성
+  const getDarkerBgColor = () => {
+    return darkenColor(styleSettings.bgColor || '#ffffff', 0.2);
+  };
+
   // 스타일 설정 불러오기
   useEffect(() => {
     const loadStyleSettings = async () => {
@@ -1619,13 +1642,23 @@ const renderListView = () => {
                 {/* 상호작용 정보 */}
                 <div className="flex items-center gap-3 text-sm flex-shrink-0" style={{ color: styleSettings.textColor }}>
                   <button
-                    className="flex items-center gap-1 hover:scale-105 transition-transform bg-white px-2 py-1 rounded-md border border-gray-200"
+                    className="flex items-center gap-1 hover:scale-105 transition-transform px-2 py-1 rounded-md border"
+                    style={{ 
+                      backgroundColor: getDarkerBgColor(),
+                      borderColor: darkenColor(styleSettings.bgColor || '#ffffff', 0.4)
+                    }}
                     onClick={(e) => handleLike(e, entry)}
                   >
                     <Heart className="w-4 h-4" fill={likedEntries[entry.id] ? '#EF4444' : 'none'} />
                     <span>{entry.likesCount || 0}</span>
                   </button>
-                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-gray-200">
+                  <div 
+                    className="flex items-center gap-1 px-2 py-1 rounded-md border"
+                    style={{ 
+                      backgroundColor: getDarkerBgColor(),
+                      borderColor: darkenColor(styleSettings.bgColor || '#ffffff', 0.4)
+                    }}
+                  >
                     <MessageCircle className="w-4 h-4" />
                     <span>{entry.commentsCount || 0}</span>
                   </div>
