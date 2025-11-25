@@ -96,6 +96,16 @@ export default function UserSampleCarousel5() {
                   fill
                   className="object-cover"
                 />
+                {/* 감정 아이콘 */}
+                <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                  <span className="text-xs font-medium text-black">
+                    {sample.id === 1 && '기쁨'}
+                    {sample.id === 2 && '평온'}
+                    {sample.id === 3 && '기대'}
+                    {sample.id === 4 && '만족'}
+                    {sample.id === 5 && '불안'}
+                  </span>
+                </div>
               </div>
               {/* 설명 부분 */}
               <div className="flex-1 p-4 pt-2">

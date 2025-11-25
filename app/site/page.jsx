@@ -18,11 +18,10 @@ import Link from 'next/link';
 import { Dialog } from '@headlessui/react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser, clearUser } from '../../store/userSlice';
-import UserSampleCarousel from '@/components/UserSampleCarousel';
-import UserSampleCarousel2 from '@/components/UserSampleCarousel2.tsx';
-import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
+import UserSampleCarousel6 from '@/components/UserSampleCarousel6';
+import UserSampleCarousel5 from '@/components/UserSampleCarousel5';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, X, Plus, Download, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Plus, Download, Loader2, Palette } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import MainHeader from '@/components/MainHeader';
 import { loadSlim } from "tsparticles-slim";
@@ -273,101 +272,40 @@ export default function Page() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColors[bgColorIndex] }}>
       <MainHeader />
-      {/* 첫 번째 섹션 - 소개 및 버튼 */}
-      <div className="w-full zinc-900 rounded-3xl">
-        <div className="max-w-[2000px] mx-auto px-4">
-          <div className="flex flex-col items-center justify-center pt-6 pb-6 md:py-10 text-center mb-8">
-            <Sheet>
-              <SheetTrigger asChild>
-                <div className="animate-swing mb-4 relative cursor-pointer">
-                  <Image
-                    src="/Image/logo.png"
-                    alt="모두트리 로고"
-                    width={300}
-                    height={300}
-                    priority
-                    className="w-24 h-24 md:w-32 md:h-32"
-                  />
-                  <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1.5 shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
-                    <Plus className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-              </SheetTrigger>
-              <SheetContent side="right" className="bg-gray-900/95 border-gray-800 overflow-y-auto">
-                <SheetHeader>
-                  <SheetTitle className="text-white">모두트리 로고</SheetTitle>
-                  <p className="text-gray-400 text-sm">모두트리 로고를 다운로드 하세요.</p>
-                </SheetHeader>
-                <div className="mt-8 grid grid-cols-2 gap-4">
-                  {[
-                    { name: '웃음 모두트리', path: '/logos/m1.png', type: 'png' },
-                    { name: '건방 모두트리', path: '/logos/m2.png', type: 'png' },
-                    { name: '놀람 모두트리', path: '/logos/m3.png', type: 'png' },
-                    { name: '부끄 모두트리', path: '/logos/m4.png', type: 'png' },
-                    { name: '건달 모두트리', path: '/logos/m5.png', type: 'png' },
-                    { name: '울음 모두트리', path: '/logos/m6.png', type: 'png' },
-                    { name: '흘림 모두트리', path: '/logos/m7.png', type: 'png' },
-                    { name: '어머 모두트리', path: '/logos/m8.png', type: 'png' },
-                    { name: '화남 모두트리', path: '/logos/m9.png', type: 'png' },
-                    { name: '뽀뽀 모두트리', path: '/logos/m10.png', type: 'png' },
-                    { name: '방긋 모두트리', path: '/logos/m11.png', type: 'png' },
-                    { name: '산타 모두트리', path: '/logos/m12.png', type: 'png' },
-                    { name: '심슨 모두트리', path: '/logos/m13.png', type: 'png' },
-                    { name: '괴물 모두트리', path: '/logos/m14.png', type: 'png' },
-                  ].map((logo, index) => (
-                    <div key={index} className="bg-gray-800/50 rounded-xl p-3 hover:bg-gray-800/70 transition-colors group">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-white text-sm font-medium truncate pr-2">{logo.name}</h3>
-                        <a 
-                          href={logo.path} 
-                          download 
-                          className="text-blue-400 hover:text-blue-300 transition-colors p-1.5 hover:bg-blue-500/10 rounded-full"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                      </div>
-                      <div className="relative aspect-square w-full bg-black/20 rounded-lg overflow-hidden">
-                        <Image
-                          src={logo.path}
-                          alt={logo.name}
-                          fill
-                          className="object-contain p-3"
-                        />
-                      </div>
-                      <p className="text-gray-500 text-xs mt-1 text-right">{logo.type.toUpperCase()}</p>
-                    </div>
-                  ))}
-                </div>
-              </SheetContent>
-            </Sheet>
-            <h1 className="text-3xl font-bold text-white/90 mb-3">모두트리 매거진</h1>
-              <p className="text-lg text-white/80 mb-10">나만의 특별한 매거진을 만들어 보세요</p>
+  {/* 첫 번째 섹션 - 소개 및 버튼 */}
+<div className="w-full zinc-900 rounded-3xl">
+  <div className="max-w-[2000px] mx-auto px-4">
+    <div className="flex flex-col items-center justify-center pt-6 pb-0 md:py-4 text-center mb-0">
+      {/* 1. 상단 여백 pt-10을 pt-20으로 수정 */}
+      <h1 className="text-3xl pt-15 font-bold text-white/90 mb-3">모두트리 매거진</h1>
+      <p className="text-lg text-white/80 mb-10">나만의 특별한 매거진을 만들어 보세요</p>
 
-            <div className="grid gap-3 w-full md:max-w-sm mx-auto mb-8">
-              {renderViewSiteButton('main')}
-             
-              <Link
-                href={`/${userData?.username || ''}`}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
-                onClick={(e) => {
-                  if (!currentUser?.uid) {
-                    e.preventDefault();
-                    push('/login');
-                    return;
-                  }
-                  if (!userData?.username) {
-                    e.preventDefault();
-                    setIsOpen(true);
-                    return;
-                  }
-                }}
-              >
-                매거진으로 이동합니다
-              </Link>
-            </div>
-          </div>
-        </div>
+      {/* 2. 하단 여백 mb-8을 mb-4로 수정 */}
+      <div className="grid gap-3 w-full md:max-w-sm mx-auto">
+        {renderViewSiteButton('main')}
+        
+        <Link
+          href={`/${userData?.username || ''}`}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
+          onClick={(e) => {
+            if (!currentUser?.uid) {
+              e.preventDefault();
+              push('/login');
+              return;
+            }
+            if (!userData?.username) {
+              e.preventDefault();
+              setIsOpen(true);
+              return;
+            }
+          }}
+        >
+          매거진으로 이동합니다
+        </Link>
       </div>
+    </div>
+  </div>
+</div>
 
       {/* 모두트리 소개 섹션 */}
       <section className="w-full py-8 md:py-12 my-8">
@@ -385,10 +323,10 @@ export default function Page() {
                 color
               </button>
             </div>
-             <Tabs defaultValue="features" className="w-full custom-home-tabs">
+             <Tabs defaultValue="examples" className="w-full custom-home-tabs">
              <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내 사이트</TabsTrigger>
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">커뮤니티</TabsTrigger>
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">샘플</TabsTrigger>
+               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내용</TabsTrigger>
              </TabsList>
 
 
@@ -399,14 +337,14 @@ export default function Page() {
                       </div>
                       <div className="relative z-10 py-4">
                         <div className="flex flex-col items-center justify-center text-center">
-                          <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 Ai 대화 하루를 정리하세요.<br /> AI가 하루를 분석해 일기 메모 건강 분석까지 내사이트에 자동으로 저장해 드립니다 
-                          </h2>
-                          <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                            모두트리 AI 대화로 하루를 정리 하세요.<br /> AI가 하루 분석, 일기 메모 건강 상태 내 사이트 자동 저장  
-                          </h2>
+                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
+                         모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                        </h2>
+                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
+                        모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                        </h2>
                         </div>
-                        <UserSampleCarousel2 />
+                        <UserSampleCarousel5 />
                       </div>
                     </div>
                   </TabsContent>
@@ -419,13 +357,13 @@ export default function Page() {
               <div className="relative z-10 py-4">
                 <div className="flex flex-col items-center justify-center text-center">
                   <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                    즐거운 모두트리 커뮤니티에 초대합니다<br /> 뉴스투표 · 사연투표 · 사진투표 ·건강분석 · 사진변환 · 열린게시판
+                    매거진 샘플을 방문 해보세요<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
                   </h2>
                   <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                  즐거운 모두트리 커뮤니티에 초대합니다<br /> 뉴스투표 · 사연투표 · 사진투표 ·건강분석 · 사진변환 · 열린게시판
+                  매거진 샘플을 방문 해보세요<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
                   </h2>
                 </div>
-                <UserSampleCarousel3 />
+                <UserSampleCarousel6 />
               </div>
             </div>
           </TabsContent>
