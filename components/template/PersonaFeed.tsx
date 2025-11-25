@@ -41,7 +41,7 @@ interface PersonaEntry {
   createdAt: Date;
   updatedAt?: Date; // Add this line
   diaryRef?: string;
-  hasGeneratedPersonaImage?: boolean; // 페르소나 이미지 생성 여부 추적
+  hasGeneratedPersonaImage?: boolean; // 매거진 이미지 생성 여부 추적
   authorId?: string; // 게시물 작성자 ID 추가
 }
 
@@ -95,7 +95,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
   const [showStyleSettings, setShowStyleSettings] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [isGeneratingPersonaImage, setIsGeneratingPersonaImage] = useState<{ [key: string]: boolean }>({}); // 카드별 페르소나 이미지 생성 상태
+  const [isGeneratingPersonaImage, setIsGeneratingPersonaImage] = useState<{ [key: string]: boolean }>({}); // 카드별 매거진 이미지 생성 상태
   const [isAnalyzingEmotion, setIsAnalyzingEmotion] = useState<{ [key: string]: boolean }>({}); // 카드별 감정 분석 상태
   const [likedEntries, setLikedEntries] = useState<{ [key: string]: boolean }>({}); // 좋아요 상태를 추적
 
@@ -454,10 +454,10 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
         updatedAt: new Date(),
       });
 
-      alert('페르소나 이미지를 위한 사진이 업로드되었습니다!');
+      alert('매거진 이미지를 위한 사진이 업로드되었습니다!');
       setIsUploadDialogForPersonaOpen(false); // 다이얼로그 닫기
     } catch (error) {
-      console.error('페르소나 이미지 업로드 실패:', error);
+      console.error('매거진 이미지 업로드 실패:', error);
       alert(`사진 업로드 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsUploadingImage(prev => ({ ...prev, [entryId]: false }));
@@ -465,14 +465,14 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
     }
   };
 
-  // 페르소나 이미지 생성 함수 (수정 다이얼로그 전용)
+  // 매거진 이미지 생성 함수 (수정 다이얼로그 전용)
   const handleGeneratePersonaImageInEdit = async (entry: PersonaEntry) => {
     if (!currentUser?.uid) {
       alert('로그인이 필요합니다.');
       return;
     }
     if (!editingUploadedImageUrl) {
-      alert('페르소나 이미지 생성을 위해 먼저 사진을 업로드해주세요.');
+      alert('매거진 이미지 생성을 위해 먼저 사진을 업로드해주세요.');
       return;
     }
     if (!entry.emotionAnalysis) {
@@ -519,7 +519,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
 
       if (!response.ok) {
         console.error('❌ API 오류:', data);
-        throw new Error(data.error || '페르소나 이미지 생성에 실패했습니다.');
+        throw new Error(data.error || '매거진 이미지 생성에 실패했습니다.');
       }
 
       // 이미지 URL 처리
@@ -532,20 +532,20 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
 
         setEditingPersonaImageUrl(data.imageUrl); // Update local state, not Firestore directly
 
-        alert(`페르소나 이미지가 성공적으로 생성되었습니다!\n감정: ${data.emotion}\n적용된 스타일: ${data.appliedStyle}\n저장 버튼을 눌러 변경사항을 확정하세요.`);
+        alert(`매거진 이미지가 성공적으로 생성되었습니다!\n감정: ${data.emotion}\n적용된 스타일: ${data.appliedStyle}\n저장 버튼을 눌러 변경사항을 확정하세요.`);
       } else {
         console.error('❌ 이미지 생성 실패:', data);
         throw new Error(data.error || '이미지 생성에 실패했습니다.');
       }
     } catch (error) {
-      console.error('페르소나 이미지 생성 실패 (수정 중):', error);
-      alert(`페르소나 이미지 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      console.error('매거진 이미지 생성 실패 (수정 중):', error);
+      alert(`매거진 이미지 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsGeneratingPersonaImage(prev => ({ ...prev, [entry.id]: false }));
     }
   };
 
-  // 페르소나 이미지 생성 함수
+  // 매거진 이미지 생성 함수
   const handleGeneratePersonaImage = async (entry: PersonaEntry) => {
     if (!currentUser?.uid) {
       alert('로그인이 필요합니다.');
@@ -555,7 +555,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
     const imageUrlToUse = isEditing ? editingUploadedImageUrl : entry.uploadedImageUrl;
 
     if (!imageUrlToUse) {
-      alert('페르소나 이미지 생성을 위해 먼저 사진을 업로드해주세요.');
+      alert('매거진 이미지 생성을 위해 먼저 사진을 업로드해주세요.');
       return;
     }
     if (!entry.emotionAnalysis) {
@@ -602,7 +602,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
 
       if (!response.ok) {
         console.error('❌ API 오류:', data);
-        throw new Error(data.error || '페르소나 이미지 생성에 실패했습니다.');
+        throw new Error(data.error || '매거진 이미지 생성에 실패했습니다.');
       }
 
       // 이미지 URL 처리
@@ -615,21 +615,21 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
 
         const updateData = {
           personaImageUrl: data.imageUrl,
-          hasGeneratedPersonaImage: true, // 페르소나 이미지 생성 플래그 설정
+          hasGeneratedPersonaImage: true, // 매거진 이미지 생성 플래그 설정
           updatedAt: new Date(),
         };
 
         const entryRef = doc(db, `users/${currentUser.uid}/persona_entries`, entry.id);
         await updateDoc(entryRef, updateData);
 
-        alert(`페르소나 이미지가 성공적으로 생성되었습니다!\n감정: ${data.emotion}\n적용된 스타일: ${data.appliedStyle}`);
+        alert(`매거진 이미지가 성공적으로 생성되었습니다!\n감정: ${data.emotion}\n적용된 스타일: ${data.appliedStyle}`);
       } else {
         console.error('❌ 이미지 생성 실패:', data);
         throw new Error(data.error || '이미지 생성에 실패했습니다.');
       }
     } catch (error) {
-      console.error('페르소나 이미지 생성 실패:', error);
-      alert(`페르소나 이미지 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      console.error('매거진 이미지 생성 실패:', error);
+      alert(`매거진 이미지 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsGeneratingPersonaImage(prev => ({ ...prev, [entry.id]: false }));
     }
@@ -652,7 +652,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
 
       // 새로운 사진을 업로드하면 기존 personaImageUrl을 제거하고 uploadedImageUrl로 설정
       setEditingUploadedImageUrl(downloadURL);
-      setEditingPersonaImageUrl(undefined); // 기존 페르소나 이미지 제거
+      setEditingPersonaImageUrl(undefined); // 기존 매거진 이미지 제거
       alert('새로운 사진이 성공적으로 업로드되었습니다. 저장 버튼을 눌러 변경사항을 확정하세요.');
     } catch (error) {
       console.error('사진 업로드 실패 (수정 중): ', error);
@@ -691,7 +691,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
       <div className="min-h-[200px] bg-gray-900 text-white flex items-center justify-center rounded-lg p-4">
         <div className="text-center space-y-2">
           <h2 className="text-xl font-bold">로그인이 필요한 서비스입니다</h2>
-          <p className="text-gray-400">페르소나 피드를 보려면 로그인해주세요.</p>
+          <p className="text-gray-400">매거진 피드를 보려면 로그인해주세요.</p>
           <Button onClick={() => window.location.href = '/login'} className="bg-blue-600 hover:bg-blue-700">로그인</Button>
         </div>
       </div>
@@ -712,7 +712,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
             color: styleSettings.textColor
           }}
         >
-          페르소나 피드 스타일 설정 {showStyleSettings ? '닫기' : '열기'}
+          매거진 피드 스타일 설정 {showStyleSettings ? '닫기' : '열기'}
         </button>
 
         {showStyleSettings && (
@@ -894,7 +894,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
     return (
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto bg-white">
-          <DialogTitle className="sr-only">페르소나 엔트리 상세보기</DialogTitle>
+          <DialogTitle className="sr-only">매거진 엔트리 상세보기</DialogTitle>
           {/* 다이얼로그 내용 - 선택된 엔트리의 상세 정보 */}
           <div className="flex flex-col gap-6">
             {/* 헤더 - 날짜와 감정 평가 및 수정/삭제 버튼 */}
@@ -1192,7 +1192,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
             const oldPersonaImageRef = ref(storage, selectedEntry.personaImageUrl);
             await deleteObject(oldPersonaImageRef);
           } catch (error) {
-            console.log('기존 페르소나 이미지 삭제 실패 (이미 삭제되었거나 존재하지 않음):', error);
+            console.log('기존 매거진 이미지 삭제 실패 (이미 삭제되었거나 존재하지 않음):', error);
             // 오류를 무시하고 계속 진행
           }
         }
@@ -1527,7 +1527,7 @@ const renderListView = () => {
     <div className="space-y-4 px-2 md:px-0">
       {filteredEntries.length === 0 ? (
         <div className="col-span-full p-6 text-center backdrop-blur-sm rounded-lg" style={getCardStyle()}>
-          <p style={{ color: styleSettings.textColor }}>아직 생성된 페르소나 엔트리가 없습니다.</p>
+          <p style={{ color: styleSettings.textColor }}>내 페이지에서 일기를 작성하세요, 자동 생성됩니다</p>
         </div>
       ) : (
         filteredEntries.map(entry => (
@@ -1723,7 +1723,7 @@ const renderPopularView = () => {
   );
 };
 
-  // 페르소나 이미지 업로드 다이얼로그 렌더링 함수
+  // 매거진 이미지 업로드 다이얼로그 렌더링 함수
   const renderPersonaUploadDialog = () => {
     if (!isUploadDialogForPersonaOpen || !selectedEntryForUpload) return null;
 
@@ -1934,7 +1934,7 @@ const renderPopularView = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 px-2 md:px-0">
             {filteredEntries.length === 0 ? (
               <div className="col-span-full p-6 text-center backdrop-blur-sm rounded-lg" style={getCardStyle()}>
-                <p style={{ color: styleSettings.textColor }}>아직 생성된 페르소나 엔트리가 없습니다.</p>
+                <p style={{ color: styleSettings.textColor }}>내 페이지에서 일기를 작성하세요, 자동 생성됩니다</p>
               </div>
             ) : (
               filteredEntries.map(entry => (
@@ -1954,7 +1954,7 @@ const renderPopularView = () => {
                   )}
                 </div>
 
-                {/* 페르소나 이미지 (또는 업로드 이미지) */}
+                {/* 매거진 이미지 (또는 업로드 이미지) */}
                 <div className="relative w-full aspect-square bg-gray-800 flex items-center justify-center">
                   {entry.personaImageUrl ? (
                     <img 
@@ -2045,7 +2045,7 @@ const renderPopularView = () => {
                   </div>
                 )}
 
-                {/* 페르소나 이미지 생성 버튼 */}
+                {/* 매거진 이미지 생성 버튼 */}
                 {userId === currentUser?.uid && entry.uploadedImageUrl && !entry.personaImageUrl && !entry.hasGeneratedPersonaImage && (
                   <div className="p-3 border-t border-[#358f80]/20 flex justify-center">
                     <Button 
@@ -2057,9 +2057,9 @@ const renderPopularView = () => {
                       disabled={isGeneratingPersonaImage[entry.id] || isUploadingImage[entry.id]}
                     >
                       {isGeneratingPersonaImage[entry.id] ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> 페르소나 이미지 생성 중...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> 매거진 이미지 생성 중...</>
                       ) : (
-                        '페르소나 이미지 생성'
+                        '매거진 이미지 생성'
                       )}
                     </Button>
                   </div>
@@ -2094,7 +2094,7 @@ const renderPopularView = () => {
         )}
       </div>
 
-      {/* 페르소나 엔트리 상세 다이얼로그 */}
+      {/* 매거진 엔트리 상세 다이얼로그 */}
       {renderPersonaDialog()}
       {renderEditDialog()}
       {renderPersonaUploadDialog()} {/* Add this line */}

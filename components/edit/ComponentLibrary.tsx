@@ -9,14 +9,9 @@ import Title from '../template/Title';
 import Description from '../template/Description';
 import Divider from '../template/Divider';
 import QuestBook2 from '../template/QuestBook2';
-import SkillProgress from '../template/SkillProgress';
-import DayOneBook from '../template/DayOneBook';
-import DayOneCalendarTemplate from '../template/DayOneCalendarTemplate';
 import PersonaFeed from '../template/PersonaFeed';
 
 export const ComponentLibrary: Record<string, React.FC<any>> = {
-  AI메모: DayOneBook,
-  AI캘린더: DayOneCalendarTemplate,
   제목: Title,
   설명: Description,
   구분선: Divider,
@@ -25,9 +20,8 @@ export const ComponentLibrary: Record<string, React.FC<any>> = {
   사진첩: ImageCarousel,
   링크카드: LinkCard,
   게스트북: QuestBook,
-  자유게시판:QuestBook2,
+  커뮤니티:QuestBook2,
   달력: CalendarComponent,
   오늘일기: TodayDiary,
-  포트폴리오: SkillProgress,
-  페르소나: PersonaFeed,
+  매거진: PersonaFeed,
 }; 

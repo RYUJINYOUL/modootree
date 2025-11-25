@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';  // Link 임포트 추가
 import useEmblaCarousel from 'embla-carousel-react';
 
 // 애니메이션 키프레임 스타일 추가
@@ -35,6 +36,7 @@ interface Sample {
   thumbnail: string;
   description: string;
   bgColor: string;
+  path: string
 }
 
 const sampleUsers: Sample[] = [
@@ -43,49 +45,56 @@ const sampleUsers: Sample[] = [
     username: '모두트리 AI 채팅창 메모 내용 입력 후 저장을 요청 하세요',
     thumbnail: '/samples/s1.png',
     description: 'AI 메모 저장',
-    bgColor: 'bg-[#358f80]'
+    bgColor: 'bg-[#358f80]',
+    path: '/profile'
   },
   {
     id: 2,
     username: '모두트리 AI와 대화한 내용으로 AI가 오늘 일기를 작성해 드립니다',
     thumbnail: '/samples/s2.png',
     description: 'AI 일기 작성',
-    bgColor: 'bg-[#469d89]'
+    bgColor: 'bg-[#469d89]',
+    path: '/profile'
   },
   {
     id: 3,
     username: '오늘 하루를 대화 해보세요 AI가 오늘 건강을 분석해 드립니다',
     thumbnail: '/samples/s3.png',
     description: 'AI 건강 분석',
-    bgColor: 'bg-[#56ab91]'
+    bgColor: 'bg-[#56ab91]',
+    path: '/profile'
   },
   {
     id: 4,
     username: '모두트리 AI와 오늘 일과를 대화 하세요 내 사이트에서 자동 저장 됩니다',
     thumbnail: '/samples/s4.png',
     description: 'AI 자동 저장',
-    bgColor: 'bg-[#67b99a]'
+    bgColor: 'bg-[#67b99a]',
+    path: '/profile'
   },
   {
     id: 5,
     username: '내 사이트 디자인 배경 스킨을 적용하세요, 내 사진도 배경 설정 가능합니다',
     thumbnail: '/samples/s5.png',
     description: '디자인 기능',
-    bgColor: 'bg-[#358f80]'
+    bgColor: 'bg-[#358f80]',
+    path: '/profile'
   },
   {
     id: 6,
     username: '회원가입 만으로 내 페이지는 자동 생성 됩니다, 내 페이지를 방문해 보세요',
     thumbnail: '/samples/s7.png',
     description: '자동 생성',
-    bgColor: 'bg-[#56ab91]'
+    bgColor: 'bg-[#56ab91]',
+    path: '/profile'
   },
   {
     id: 7,
-    username: '커플 일기, 응원게시판, 작은 커뮤니티, 작은 일정표 등의 공유 페이지',
+    username: '커플 일기, 응원게시판, 작은 커뮤니티, 매거진 등의 공유 페이지',
     thumbnail: '/samples/s6.png',
-    description: '공유페이지 - 준비중',
-    bgColor: 'bg-[#469d89]'
+    description: '공유페이지',
+    bgColor: 'bg-[#469d89]',
+    path: '/site'
   },
 ];
 
@@ -123,30 +132,30 @@ export default function UserSampleCarousel2() {
   }, []);
 
   // 카드 컴포넌트
-  const Card = ({ sample }: { sample: Sample }) => (
+  const Card = ({ sample }) => (
     <div className="flex-[0_0_280px] min-w-0 px-2">
       <div className="mx-2">
-        <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm`}>
-          <div className="absolute inset-0 flex flex-col p-1">
-            {/* 이미지 컨테이너 - 중앙 정렬 */}
-            <div className="w-[250px] h-[250px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
-              <div className="diagonal-floating">
+        <Link href={sample.path} className="block relative z-10">  {/* z-index 추가 */}
+          <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200`}>
+            <div className="absolute inset-0 flex flex-col">
+              {/* 이미지 컨테이너 - 중앙 정렬 */}
+              <div className="w-[250px] h-[250px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
                 <Image
                   src={sample.thumbnail}
                   alt={sample.description}
-                  width={136}
-                  height={136}
+                  width={100}
+                  height={100}
                   className="object-contain"
                 />
               </div>
-            </div>
-            {/* 설명 부분 */}
-            <div className="flex-1 p-4">
-              <h3 className="text-lg font-semibold mb-1 text-white">{sample.description}</h3>
-              <p className="text-sm text-white/70">{sample.username}</p>
+              {/* 설명 부분 */}
+              <div className="flex-1 p-4">
+                <h3 className="text-lg font-semibold mb-1 text-white">{sample.description}</h3>
+                <p className="text-sm text-white/70">{sample.username}</p>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   );

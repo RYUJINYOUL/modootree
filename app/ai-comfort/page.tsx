@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/firebase';
-import { Bot, Send, ArrowLeft, Search, User, Heart, MessageSquare, Mail, MessageCircle } from 'lucide-react';
+import { Bot, Send, ArrowLeft, Search, User, Heart, MessageSquare, Mail, MessageCircle, Book } from 'lucide-react';
 import { SearchResultCard } from '@/components/chat/SearchResultCard';
 import { loadFull } from "tsparticles";
 import Particles from "react-tsparticles";
@@ -427,6 +427,17 @@ export default function AiComfortPage() {
                                >
                                  <MessageCircle className="w-3 h-3" />
                                   열린게시판
+                               </Link>
+                                 )}
+
+                                      {/* 매거진 관련 */}
+                            {(msg.content.includes('매거진') || msg.content.includes('내매거진') || msg.content.includes('모두트리 매거진')) && (
+                               <Link 
+                                 href="/site" 
+                                 className="inline-flex items-center gap-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-2.5 py-1.5 rounded-md border border-yellow-600/30 transition text-xs font-medium"
+                               >
+                                 <Book className="w-3 h-3" />
+                                  매거진
                                </Link>
                                  )}
 
