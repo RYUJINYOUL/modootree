@@ -101,7 +101,7 @@ export default function UserSampleCarousel6() {
           ease: "power2.out",
           scrollTrigger: {
             trigger: carouselRef.current,
-            start: "top 80%",
+            start: "top bottom", // 뷰포트 하단에 닿으면 시작
             end: "bottom 20%",
             toggleActions: "play none none reverse"
           }
@@ -124,7 +124,7 @@ export default function UserSampleCarousel6() {
           ease: "back.out(1.7)",
           scrollTrigger: {
             trigger: carouselRef.current,
-            start: "top 70%",
+            start: "top bottom+=100", // 캐러셀이 화면에 들어온 후 100px 스크롤되면 시작
             end: "bottom 30%",
             toggleActions: "play none none reverse"
           }
