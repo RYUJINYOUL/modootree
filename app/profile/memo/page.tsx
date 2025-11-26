@@ -65,6 +65,7 @@ export default function MemoPage() {
   const [showImportantOnly, setShowImportantOnly] = useState(false);
   const [editingMemo, setEditingMemo] = useState<MemoItem | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<MemoItem | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null); // New state for selected image
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [writeForm, setWriteForm] = useState<{
@@ -861,7 +862,8 @@ export default function MemoPage() {
                         <img
                           src={imageUrl}
                           alt={`메모 이미지 ${index + 1}`}
-                          className="w-full h-full object-cover rounded-lg"
+                          className="w-full h-full object-cover rounded-lg cursor-pointer"
+                          onClick={() => setSelectedImage(imageUrl)} // 이미지 클릭 시 확대
                         />
                       </div>
                     ))}
@@ -873,6 +875,18 @@ export default function MemoPage() {
         </DialogContent>
       </Dialog>
 
+      {/* 이미지 확대 보기 다이얼로그 */}
+      <Dialog open={selectedImage !== null} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="max-w-full h-full flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          {selectedImage && (
+            <img
+              src={selectedImage}
+              alt="확대 이미지"
+              className="max-w-[90vw] max-h-[90vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
