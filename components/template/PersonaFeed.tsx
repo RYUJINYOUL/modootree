@@ -312,8 +312,8 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
 
     const collectActivities = async () => {
       setIsLoadingActivities(true); // 로딩 시작
-      
-      try {
+
+        try {
         // 🟢 모든 쿼리를 병렬로 생성
         const likesPromises = personaEntries.map(entry =>
           getDocs(query(
@@ -338,43 +338,43 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
         results.forEach(({ entry, type, snapshot }) => {
           if (type === 'likes') {
             snapshot.docs.forEach(doc => {
-              const likeData = doc.data();
+            const likeData = doc.data();
               if (likeData.userId !== currentUser.uid) {
-                allActivities.push({
+              allActivities.push({
                   id: `like_${entry.id}_${doc.id}`,
-                  type: 'like',
-                  userId: likeData.userId,
-                  userName: likeData.userName || '익명 사용자',
-                  entryId: entry.id,
-                  entryContent: entry.originalDiaryContent,
-                  entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
-                  createdAt: likeData.createdAt?.toDate() || new Date(),
-                });
-              }
-            });
+                type: 'like',
+                userId: likeData.userId,
+                userName: likeData.userName || '익명 사용자',
+                entryId: entry.id,
+                entryContent: entry.originalDiaryContent,
+                entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
+                createdAt: likeData.createdAt?.toDate() || new Date(),
+              });
+            }
+          });
           } else if (type === 'comments') {
             snapshot.docs.forEach(doc => {
-              const commentData = doc.data();
+            const commentData = doc.data();
               if (commentData.userId !== currentUser.uid) {
-                allActivities.push({
+              allActivities.push({
                   id: `comment_${entry.id}_${doc.id}`,
-                  type: 'comment',
-                  userId: commentData.userId,
-                  userName: commentData.userName || '익명 사용자',
-                  entryId: entry.id,
-                  entryContent: entry.originalDiaryContent,
-                  entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
-                  commentContent: commentData.content,
-                  createdAt: commentData.createdAt?.toDate() || new Date(),
-                });
-              }
-            });
-          }
+                type: 'comment',
+                userId: commentData.userId,
+                userName: commentData.userName || '익명 사용자',
+                entryId: entry.id,
+                entryContent: entry.originalDiaryContent,
+                entryImage: entry.personaImageUrl || entry.uploadedImageUrl,
+                commentContent: commentData.content,
+                createdAt: commentData.createdAt?.toDate() || new Date(),
+              });
+            }
+          });
+        }
         });
 
         // 시간순 정렬
-        allActivities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        setActivities(allActivities);
+      allActivities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      setActivities(allActivities);
       } catch (error) {
         console.error('활동 수집 실패:', error);
         setActivities([]);
@@ -383,7 +383,7 @@ export default function PersonaFeed({ userId }: PersonaFeedProps) {
       }
     };
 
-    collectActivities();
+      collectActivities();
   }, [personaEntries, currentUser?.uid, activeTab, userId]);
 
   // 안정적인 이미지 압축 함수 (browser-image-compression 사용, HEIC/HEIF 지원)
@@ -1682,7 +1682,7 @@ const renderPopularView = () => {
           <p className="text-sm" style={{ color: styleSettings.textColor }}>
             활동 피드 불러오는 중...
           </p>
-        </div>
+      </div>
       ) : activities.length === 0 ? (
         <div className="text-center py-12 backdrop-blur-sm rounded-lg" style={getCardStyle()}>
           <h4 className="text-lg font-medium mb-2" style={{ color: styleSettings.textColor }}>

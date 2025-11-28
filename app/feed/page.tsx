@@ -598,14 +598,14 @@ export default function FeedPage() {
                           </>
                         ) : (
                           <>
-                            <span className="flex items-center gap-1">
-                              <Heart className="w-4 h-4" />
-                              {item.likes || 0}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MessageCircle className="w-4 h-4" />
-                              {item.comments || 0}
-                            </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          {item.likes || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="w-4 h-4" />
+                          {item.comments || 0}
+                        </span>
                           </>
                         )}
                       </div>

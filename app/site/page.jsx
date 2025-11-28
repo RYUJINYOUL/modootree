@@ -11,7 +11,6 @@ import {
   collection,
   getDocs
 } from 'firebase/firestore';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -19,7 +18,7 @@ import { Dialog } from '@headlessui/react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser, clearUser } from '../../store/userSlice';
 import UserSampleCarousel6 from '@/components/UserSampleCarousel6';
-import UserSampleCarousel5 from '@/components/UserSampleCarousel5';
+import UserSampleCarousel7 from '@/components/UserSampleCarousel7';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp, X, Plus, Download, Loader2, Palette } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -208,7 +207,7 @@ export default function Page() {
       });
 
       await setDoc(doc(db, "users", currentUser.uid, "links", "page"), {
-        components: ["프로필카드", "페르소나"],
+        components: ["프로필카드", "매거진"],
         type: "community"
       });
       
@@ -308,7 +307,7 @@ export default function Page() {
 </div>
 
       {/* 모두트리 소개 섹션 */}
-      <section className="w-full py-8 md:py-12 my-8">
+      <section className="w-full py-12 md:py-12 my-8">
         <div className="w-full rounded-3xl relative overflow-hidden bg-white/10 backdrop-blur-sm">
           <div className="absolute inset-0 z-0">
             <ParticlesComponent />
@@ -323,33 +322,42 @@ export default function Page() {
                 color
               </button>
             </div>
-             <Tabs defaultValue="examples" className="w-full custom-home-tabs">
-             <TabsList className="w-full justify-center mb-4 bg-transparent border-none gap-2 custom-home-tabslist">
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">샘플</TabsTrigger>
-               <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내용</TabsTrigger>
-             </TabsList>
-
-
-                  <TabsContent value="features">
+             
+             
+                  <div value="features">
                     <div className="relative rounded-2xl py-4 overflow-hidden">
                       <div className="absolute inset-0 z-0">
                         <ParticlesComponent />
                       </div>
-                      <div className="relative z-10 py-4">
+                      <div className="relative z-10 py-0">
                         <div className="flex flex-col items-center justify-center text-center">
-                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                         모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-6 leading-relaxed">
+                         매거진 샘플을 방문 해보세요.<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
                         </h2>
-                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                        모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-6 leading-relaxed">
+                        매거진 샘플을 방문 해보세요<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
                         </h2>
                         </div>
-                        <UserSampleCarousel5 />
+                        <div className="pb-10">
+                          <UserSampleCarousel6 />
+                        </div>
                       </div>
                     </div>
-                  </TabsContent>
+                  </div>
+          </div>
+        </div>
+        </div>
+      </section>
 
-          <TabsContent value="examples">
+       {/* 모두트리 소개 섹션 */}
+       <section className="w-full py-4 md:py-2 my-8 pb-16 md:pb-24">
+        <div className="w-full rounded-3xl relative overflow-hidden bg-transparent">
+          <div className="absolute inset-0 z-0">
+            <ParticlesComponent />
+          </div>
+          <div className="relative z-20 py-8 px-4">
+          <div className="max-w-[1500px] mx-auto">
+          <div value="examples">
             <div className="relative rounded-2xl py-4 overflow-hidden">
               <div className="absolute inset-0 z-0">
                 <ParticlesComponent />
@@ -357,17 +365,16 @@ export default function Page() {
               <div className="relative z-10 py-4">
                 <div className="flex flex-col items-center justify-center text-center">
                   <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                    매거진 샘플을 방문 해보세요<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
+                  모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
                   </h2>
                   <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                  매거진 샘플을 방문 해보세요<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
+                  모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
                   </h2>
                 </div>
-                <UserSampleCarousel6 />
+                <UserSampleCarousel7 />
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
           </div>
         </div>
         </div>
