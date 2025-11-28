@@ -21,6 +21,7 @@ import UserSampleCarousel6 from '@/components/UserSampleCarousel6';
 import UserSampleCarousel7 from '@/components/UserSampleCarousel7';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp, X, Plus, Download, Loader2, Palette } from 'lucide-react';
+import FallingImagesEffect from '@/components/FallingImagesEffect'; // FallingImagesEffect 임포트
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import MainHeader from '@/components/MainHeader';
 import { loadSlim } from "tsparticles-slim";
@@ -106,7 +107,23 @@ export default function Page() {
   const { push } = useRouter();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [bgColorIndex, setBgColorIndex] = useState(0);
-  const bgColors = ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
+  const bgColors = [
+    '#282c34',
+    '#5b3c53',
+    '#1a535c',
+    '#e27d60',
+    '#7a4e61',
+    '#4c3a5e',
+    '#5c8d89',
+    '#b2c8d2',
+    '#c94a53',
+    '#6a0572',
+    '#99b898',
+    '#feceab',
+    '#ff847c',
+    '#e84a5f',
+    '#2a363b',
+  ];
 
   const changeBackgroundColor = () => {
     setBgColorIndex((prevIndex) => (prevIndex + 1) % bgColors.length);
@@ -269,7 +286,13 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: bgColors[bgColorIndex] }}>
+    <div
+      className="min-h-screen bg-cover bg-center"
+      style={{
+        backgroundImage: 'url(\'/back/back.png\')',
+      }}
+    >
+      <FallingImagesEffect /> {/* 여기에 FallingImagesEffect 컴포넌트 추가 */}
       <MainHeader />
   {/* 첫 번째 섹션 - 소개 및 버튼 */}
 <div className="w-full zinc-900 rounded-3xl">
@@ -308,7 +331,12 @@ export default function Page() {
 
       {/* 모두트리 소개 섹션 */}
       <section className="w-full py-12 md:py-12 my-8">
-        <div className="w-full rounded-3xl relative overflow-hidden bg-white/10 backdrop-blur-sm">
+        <div
+          className="w-full rounded-3xl relative overflow-hidden bg-transparent"
+          style={{
+            backgroundColor: `${bgColors[bgColorIndex]}D9`,
+          }}
+        >
           <div className="absolute inset-0 z-0">
             <ParticlesComponent />
           </div>
@@ -351,7 +379,12 @@ export default function Page() {
 
        {/* 모두트리 소개 섹션 */}
        <section className="w-full py-4 md:py-2 my-8 pb-16 md:pb-24">
-        <div className="w-full rounded-3xl relative overflow-hidden bg-transparent">
+        <div
+          className="w-full rounded-3xl relative overflow-hidden bg-transparent"
+          style={{
+            backgroundColor: `${bgColors[bgColorIndex]}D9`,
+          }}
+        >
           <div className="absolute inset-0 z-0">
             <ParticlesComponent />
           </div>
@@ -365,10 +398,10 @@ export default function Page() {
               <div className="relative z-10 py-4">
                 <div className="flex flex-col items-center justify-center text-center">
                   <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                  모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                  모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진으로 매거진을 만들어 드립니다.
                   </h2>
                   <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                  모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                  모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진으로 매거진을 만들어 드립니다.
                   </h2>
                 </div>
                 <UserSampleCarousel7 />

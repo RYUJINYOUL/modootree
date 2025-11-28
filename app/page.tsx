@@ -376,10 +376,10 @@ export default function Home() {
                     <div className="relative z-10 py-4">
                       <div className="flex flex-col items-center justify-center text-center">
                         <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                         모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                         모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진으로 매거진을 만들어 드립니다.
                         </h2>
                         <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                        모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진을 표지로 만들어 드립니다.
+                        모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진으로 매거진을 만들어 드립니다.
                         </h2>
                       </div>
                       <UserSampleCarousel5 />
