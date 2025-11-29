@@ -33,7 +33,7 @@ interface DiaryItem {
   date: Date;
   images?: string[];
   emotion?: EmotionAnalysis; // emotion 필드 추가
-  isPersonaGenerated?: boolean; // 페르소나 생성 여부 플래그 추가
+  isPersonaGenerated?: boolean; // 매거진 생성 여부 플래그 추가
 }
 
 interface PersonaEntry {
@@ -259,7 +259,7 @@ export default function DiaryPage() {
         date: writeForm.date,
         images: allImages,
         emotion: null, // undefined 대신 null 사용
-        isPersonaGenerated: false, // 페르소나 생성 여부 플래그 초기화
+        isPersonaGenerated: false, // 매거진 생성 여부 플래그 초기화
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -290,7 +290,7 @@ export default function DiaryPage() {
         date: new Date()
       });
       setIsWriting(false);
-      alert('일기가 성공적으로 저장되었습니다. 페르소나 피드에서 생성 버튼을 눌러보세요.');
+      alert('일기가 성공적으로 저장되었습니다. 매거진에서 사진업로드 감정분석 버튼을 눌러보세요.');
 
     } catch (error) {
       console.error('일기 추가 실패:', error);
@@ -778,7 +778,7 @@ export default function DiaryPage() {
                       date: writeForm.date,
                       images: allImages,
                       emotion: null, // undefined 대신 null 사용
-                      isPersonaGenerated: false, // 페르소나 생성 여부 플래그 업데이트
+                      isPersonaGenerated: false, // 매거진 생성 여부 플래그 업데이트
                       updatedAt: serverTimestamp()
                     });
 
@@ -798,7 +798,7 @@ export default function DiaryPage() {
                     });
                     setIsWriting(false);
                     setEditingDiary(null);
-                    alert('일기가 성공적으로 수정되었습니다. 페르소나 피드에서 다시 생성 버튼을 눌러보세요.');
+                    alert('일기가 성공적으로 수정되었습니다. 매거진 피드에서 다시 생성 버튼을 눌러보세요.');
 
                   } catch (error) {
                     console.error('일기 수정 실패:', error);

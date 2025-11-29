@@ -6,11 +6,17 @@ import QuestBook from '../template/QuestBook';
 import SnsButtons from '../template/SnsButtons';
 import TodayDiary from '../template/TodayDiary';
 import ImageCarousel from '../template/ImageCarousel';
+import Title from '../template/Title';
+import Description from '../template/Description';
+import Divider from '../template/Divider';
 import QuestBook2 from '../template/QuestBook2';
 import PersonaFeed from '../template/PersonaFeed';
 
 export type ComponentKey = 
-  '프로필카드'
+  '제목'
+  | '설명'
+  | '구분선'
+  | '프로필카드'
   | 'SNS카드'
   | '사진첩'
   | '링크카드'
@@ -21,6 +27,9 @@ export type ComponentKey =
   | '매거진';
 
 export const ComponentLibrary: Record<ComponentKey, React.FC<any>> = {
+  제목: Title,
+  설명: Description,
+  구분선: Divider,
   프로필카드: Gallery3,
   SNS카드: SnsButtons,
   사진첩: ImageCarousel,

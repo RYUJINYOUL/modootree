@@ -132,21 +132,23 @@ export default function UserSampleCarousel2() {
   }, []);
 
   // 카드 컴포넌트
-  const Card = ({ sample }) => (
-    <div className="flex-[0_0_280px] min-w-0 px-2">
-      <div className="mx-2">
-        <Link href={sample.path} className="block relative z-10">  {/* z-index 추가 */}
-          <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200`}>
-            <div className="absolute inset-0 flex flex-col">
+  const Card = ({ sample }: { sample: Sample }) => (
+    <Link href={sample.path} passHref>
+      <div className="flex-[0_0_280px] min-w-0 px-2">
+        <div className="mx-0.5">
+          <div className={`relative w-[260px] h-[320px] rounded-3xl overflow-hidden shadow-lg ${sample.bgColor} backdrop-blur-sm`}>
+            <div className="absolute inset-0 flex flex-col p-1">
               {/* 이미지 컨테이너 - 중앙 정렬 */}
               <div className="w-[250px] h-[250px] rounded-2xl overflow-hidden flex items-center justify-center bg-black/10">
-                <Image
-                  src={sample.thumbnail}
-                  alt={sample.description}
-                  width={100}
-                  height={100}
-                  className="object-contain"
-                />
+                <div className="diagonal-floating">
+                  <Image
+                    src={sample.thumbnail}
+                    alt={sample.description}
+                    width={136}
+                    height={136}
+                    className="object-contain"
+                  />
+                </div>
               </div>
               {/* 설명 부분 */}
               <div className="flex-1 p-4">
@@ -155,9 +157,9 @@ export default function UserSampleCarousel2() {
               </div>
             </div>
           </div>
-        </Link>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 
   const samples = isMobile ? [...sampleUsers, ...sampleUsers, ...sampleUsers] : sampleUsers;

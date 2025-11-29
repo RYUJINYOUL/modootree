@@ -294,9 +294,9 @@ export default function Page() {
     >
       <FallingImagesEffect /> {/* 여기에 FallingImagesEffect 컴포넌트 추가 */}
       <MainHeader />
-  {/* 첫 번째 섹션 - 소개 및 버튼 */}
-<div className="w-full zinc-900 rounded-3xl">
-  <div className="max-w-[2000px] mx-auto px-4">
+      {/* 첫 번째 섹션 - 소개 및 버튼 */}
+      <div className="w-full zinc-900 rounded-3xl">
+        <div className="max-w-[2000px] mx-auto px-4">
     <div className="flex flex-col items-center justify-center pt-6 pb-0 md:py-4 text-center mb-0">
       {/* 1. 상단 여백 pt-10을 pt-20으로 수정 */}
       <h1 className="text-3xl pt-15 font-bold text-white/90 mb-3">모두트리 매거진</h1>
@@ -304,30 +304,30 @@ export default function Page() {
 
       {/* 2. 하단 여백 mb-8을 mb-4로 수정 */}
       <div className="grid gap-3 w-full md:max-w-sm mx-auto">
-        {renderViewSiteButton('main')}
+              {renderViewSiteButton('main')}
         
-        <Link
-          href={`/${userData?.username || ''}`}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
-          onClick={(e) => {
-            if (!currentUser?.uid) {
-              e.preventDefault();
-              push('/login');
-              return;
-            }
-            if (!userData?.username) {
-              e.preventDefault();
-              setIsOpen(true);
-              return;
-            }
-          }}
-        >
+              <Link
+                href={`/${userData?.username || ''}`}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-[52px] rounded-2xl text-[15px] transition-colors flex items-center justify-center"
+                onClick={(e) => {
+                  if (!currentUser?.uid) {
+                    e.preventDefault();
+                    push('/login');
+                    return;
+                  }
+                  if (!userData?.username) {
+                    e.preventDefault();
+                    setIsOpen(true);
+                    return;
+                  }
+                }}
+              >
           매거진으로 이동합니다
-        </Link>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
       {/* 모두트리 소개 섹션 */}
       <section className="w-full py-12 md:py-12 my-8">
@@ -350,8 +350,8 @@ export default function Page() {
                 color
               </button>
             </div>
-             
-             
+
+
                   <div value="features">
                     <div className="relative rounded-2xl py-4 overflow-hidden">
                       <div className="absolute inset-0 z-0">
@@ -361,10 +361,10 @@ export default function Page() {
                         <div className="flex flex-col items-center justify-center text-center">
                         <h2 className="md:hidden text-xl font-medium text-white/90 mb-6 leading-relaxed">
                          매거진 샘플을 방문 해보세요.<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
-                        </h2>
+                          </h2>
                         <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-6 leading-relaxed">
                         매거진 샘플을 방문 해보세요<br /> AI 일기 감정 분석 · 업로드 사진 스타일 적용 · 공감 기능
-                        </h2>
+                          </h2>
                         </div>
                         <div className="pb-10">
                           <UserSampleCarousel6 />

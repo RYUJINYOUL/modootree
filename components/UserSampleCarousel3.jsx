@@ -11,7 +11,7 @@ const sampleUsers = [
     username: '퀴즈를 풀어야 볼 수 있는 편지를 만들어 소중한 사람에게 링크 편지를 보내 보세요, 다양한 테마를 지원합니다',
     thumbnail: '/samples/34.png',
     description: '링크편지',
-    bgColor: 'bg-[#E06B80]',
+    bgColor: 'bg-[#2a6f97]',
     path: '/link-letter'
   },
   {

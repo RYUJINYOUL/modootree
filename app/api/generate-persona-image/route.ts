@@ -322,12 +322,12 @@ Create a dramatic transformation that emotionally resonates with ${emotion} feel
     }
 
   } catch (error: any) {
-    console.error("페르소나 이미지 생성 중 오류:", error);
+    console.error("매거진 이미지 생성 중 오류:", error);
     
     // 안전 필터링 오류는 상세 메시지를 반환
     const errorMessage = error.message.includes('안전 정책을 위반')
       ? error.message
-      : "페르소나 이미지 생성 실패";
+      : "매거진 이미지 생성 실패";
     
     return NextResponse.json(
       { 

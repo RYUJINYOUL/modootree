@@ -26,6 +26,7 @@ import { useCallback } from 'react';
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { incrementVisitCount } from '@/lib/utils/visit-counter';
+import PersonaFallingImagesEffect from '@/components/PersonaFallingImagesEffect';
 
 interface TrendData {
   date: string;
@@ -525,6 +526,7 @@ export default function UserPublicPage() {
   return (
     <>
       <TranslateBanner />
+      <PersonaFallingImagesEffect userId={userData?.uid} username={username} /> {/* PersonaFeed 최신 이미지 7개로 떨어지는 효과 */}
        <div className="absolute top-4 left-0 right-0 z-50">
          <div className="w-full max-w-[1000px] mx-auto md:px-[24px]">
            <div className="flex justify-between px-[10px] md:px-0">
@@ -690,7 +692,7 @@ export default function UserPublicPage() {
           {showBottomButton && (
             <div className="fixed bottom-[25px] left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
               <Link
-                href="/"
+                href="/site"
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/70 transition-all shadow-lg whitespace-nowrap"
               >
                 <Image
@@ -700,7 +702,7 @@ export default function UserPublicPage() {
                   height={20}
                   className="w-5 h-5"
                 />
-                <span className="text-black text-sm">모두트리 무료페이지 만들기</span>
+                <span className="text-black text-sm">모두트리 무료매거진 만들기</span>
               </Link>
               <button
                 onClick={() => setShowBottomButton(false)}

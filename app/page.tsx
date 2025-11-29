@@ -229,7 +229,7 @@ export default function Home() {
             </Link>
 
             {/* 2. 말풍선 및 CTA 버튼 */}
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-48 md:w-60 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-pink-500/50 shadow-lg text-white before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:w-0 before:h-0 before:border-l-[10px] before:border-r-[10px] before:border-t-[10px] before:border-t-pink-500/50 before:border-transparent">
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-48 md:w-60 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-blue-500/50 shadow-lg text-white before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:w-0 before:h-0 before:border-l-[10px] before:border-r-[10px] before:border-t-[10px] before:border-t-pink-500/50 before:border-transparent">
                 {!showSecondButton ? (
                 <Link href="/pros-menu"> {/* 실제 링크 편지 생성 페이지 경로로 변경 */}
                     <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white text-xs md:text-sm h-8 md:h-9">

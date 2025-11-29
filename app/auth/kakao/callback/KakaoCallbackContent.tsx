@@ -115,7 +115,7 @@ export default function KakaoCallbackContent() {
 
         // 기본 템플릿으로 시작
         await setDoc(doc(db, "users", user.uid, "links", "page"), {
-          components: ["프로필카드", "페르소나"],
+          components: ["프로필카드", "매거진"],
           type: "community"
         });
       }
