@@ -74,8 +74,8 @@ export default function Gallery3({ username, uid }: LogoProps) {
 
   const [logoUrl, setLogoUrl] = useState<string>("/logos/m12.png");
   const [bgUrl, setBgUrl] = useState<string>("/Image/bg.jpeg");
-  const [name, setName] = useState("이름:+버튼 클릭 수정");
-  const [desc, setDesc] = useState("설명:오른쪽 +버튼 클릭 수정");
+  const [name, setName] = useState("이름을 작성해주세요");
+  const [desc, setDesc] = useState("설명을 작성해주세요");
   const [bgBaseColor, setBgBaseColor] = useState("transparent");
   const [bgOpacity, setBgOpacity] = useState(0.7);
   const [textColor, setTextColor] = useState("#FFFFFF");

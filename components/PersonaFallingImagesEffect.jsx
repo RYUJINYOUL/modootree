@@ -19,6 +19,7 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
   const router = useRouter();
   const containerRef = useRef(null);
   const imageRefs = useRef([]);
+  const rowAdjustments = useRef({}); // 행별 최종 X 시작 위치 조정값 저장
   const [loaded, setLoaded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [personaImages, setPersonaImages] = useState([]);
@@ -178,17 +179,17 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
   }, [personaImages, personaEntries, healthScores]);
 
   // 반응형 크기 설정을 컴포넌트 레벨로 이동
-  const imageSize = isMobile ? 60 : 90;
+  const imageSize = isMobile ? 50 : 90;
 
   // 화면 크기 감지
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -199,25 +200,100 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
     const container = containerRef.current;
     if (!container) return;
 
-    const bottomMargin = isMobile ? 5 : 5;
-    const imagesPerRow = isMobile ? Math.floor(window.innerWidth / (imageSize + 10)) : combinedItems.length;
+    const bottomMargin = isMobile ? 10 : 30;
+    const gap = 5; // 간격 고정
+    // 회전 애니메이션 시 모서리가 잘리지 않도록 안전 여백 대폭 증가 (모바일 25px, PC 40px)
+    const minScreenMargin = isMobile ? 25 : 40;
+    const itemSizeWithGap = imageSize + gap;
+
+    // 1. 화면 너비에 순수하게 들어갈 수 있는 최대 아이템 개수 계산
+    const availableWidthForItems = window.innerWidth - (minScreenMargin * 2);
+    let maxItemsPerLine = Math.floor((availableWidthForItems + gap) / itemSizeWithGap);
+
+    // 2. 최종 imagesPerRow 결정
+    let imagesPerRow = maxItemsPerLine;
+
+    // 최소 3개는 보장 (디자인 요구사항)
+    imagesPerRow = Math.max(3, imagesPerRow);
+
+    // 전체 아이템 수보다 클 수 없음
+    imagesPerRow = Math.min(combinedItems.length, imagesPerRow);
+
+    // 모바일 2줄 제한 제거 - 이 제한이 오버플로우를 유발할 수 있음
+
     const totalRows = Math.ceil(combinedItems.length / imagesPerRow);
+    const newAdjustments = {}; // 현재 애니메이션 프레임의 조정값
+
+    for (let r = 0; r < totalRows; r++) {
+      const startIndex = r * imagesPerRow;
+      const imagesInCurrentRow = Math.min(imagesPerRow, combinedItems.length - startIndex);
+
+      // 현재 행의 실제 너비
+      const totalRowWidth = (imagesInCurrentRow * imageSize) + ((imagesInCurrentRow > 0 ? imagesInCurrentRow - 1 : 0) * gap);
+
+      // 1. 중앙 정렬 시작 위치 (이상적인 위치)
+      let rowStartX = (window.innerWidth - totalRowWidth) / 2;
+
+      // 2. 왼쪽 오버플로우 방지: 왼쪽 안전 여백 보장
+      let finalRowStartX = Math.max(minScreenMargin, rowStartX);
+
+      // 3. 오른쪽 오버플로우 최종 검증: 
+      // 마지막 아이템의 오른쪽 끝 위치
+      const finalRowXEnd = finalRowStartX + totalRowWidth;
+      const maxRightPosition = window.innerWidth - minScreenMargin;
+
+      // 오른쪽 여백이 부족하면 (오버플로우 발생 시)
+      const overflow = finalRowXEnd - maxRightPosition;
+      if (overflow > 0) {
+        // 오버플로우된 만큼 행 전체를 왼쪽으로 밀어줍니다.
+        finalRowStartX -= overflow;
+      }
+
+      newAdjustments[r] = finalRowStartX;
+
+      console.log(`Row ${r}: StartX=${newAdjustments[r]}, Width=${totalRowWidth}`); // 디버깅
+    }
+
+    rowAdjustments.current = newAdjustments; // 조정값 업데이트
+
+    console.log('Layout Debug:', {
+      isMobile,
+      windowWidth: window.innerWidth,
+      minScreenMargin,
+      availableWidth: availableWidthForItems,
+      imageSize,
+      gap,
+      totalItems: combinedItems.length,
+      maxItemsPerLine,
+      imagesPerRow,
+      totalRows,
+    });
 
     imageRefs.current.forEach((image, index) => {
       if (!image) return;
 
       const startY = -Math.random() * 200 - 100;
       const startX = Math.random() * (window.innerWidth * 0.8) + (window.innerWidth * 0.1);
-      
+
       const rowIndex = Math.floor(index / imagesPerRow);
       const colIndex = index % imagesPerRow;
-      
-      const imagesInCurrentRow = Math.min(imagesPerRow, combinedItems.length - rowIndex * imagesPerRow);
-      const rowStartX = (window.innerWidth / 2) - (imagesInCurrentRow * imageSize / 2);
-      
-      const finalX = rowStartX + (colIndex * imageSize);
-      const finalY = window.innerHeight - bottomMargin - imageSize - (rowIndex * (imageSize + 10));
-      
+
+      // **미리 계산된 행의 시작 X 위치 사용**
+      const finalRowStartX = rowAdjustments.current[rowIndex] || minScreenMargin;
+
+      const finalX = finalRowStartX + (colIndex * (imageSize + gap));
+
+      // 디버그 로그 (첫/마지막 아이템만)
+      if (index === 0 || index === combinedItems.length - 1) {
+        console.log(`Item ${index}:`, {
+          rowIndex,
+          colIndex,
+          finalX,
+          windowWidth: window.innerWidth,
+        });
+      }
+      const finalY = window.innerHeight - bottomMargin - imageSize - (rowIndex * (imageSize + gap));
+
       const duration = Math.random() * 2 + 1;
       const delay = index * 0.2;
 
@@ -293,10 +369,10 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
   // 답글 로드
   const loadComments = (entry) => {
     if (!entry || !userId) return;
-    
+
     const commentsCollectionRef = collection(db, `users/${userId}/persona_entries/${entry.id}/comments`);
     const q = query(commentsCollectionRef, orderBy('createdAt', 'asc'));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const loadedComments = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -305,20 +381,20 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
       }));
       setComments(loadedComments);
     });
-    
+
     return unsubscribe;
   };
 
   // 좋아요 상태 확인
   const checkLikedStatus = async (entry) => {
     if (!entry || !currentUser?.uid || !userId) return;
-    
+
     try {
       const postAuthorId = entry.authorId || userId;
       const likeDocRef = doc(db, `users/${postAuthorId}/persona_entries/${entry.id}/likes`, currentUser.uid);
       const likeDocSnap = await getDocs(collection(db, `users/${postAuthorId}/persona_entries/${entry.id}/likes`));
       const hasLiked = likeDocSnap.docs.some(d => d.id === currentUser.uid);
-      
+
       setLikedEntries(prev => ({
         ...prev,
         [entry.id]: hasLiked
@@ -335,7 +411,7 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
   // 좋아요 개수 로드
   const loadLikesCount = async (entry) => {
     if (!entry || !userId) return;
-    
+
     try {
       const postAuthorId = entry.authorId || userId;
       const likesCollectionRef = collection(db, `users/${postAuthorId}/persona_entries/${entry.id}/likes`);
@@ -353,13 +429,13 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
   const handleLike = async (e, entry) => {
     e.stopPropagation();
     if (!currentUser?.uid || !userId) return;
-    
+
     const currentUserId = currentUser.uid;
     const entryId = entry.id;
     const postAuthorId = entry.authorId || userId;
     const likeDocRef = doc(db, `users/${postAuthorId}/persona_entries/${entryId}/likes`, currentUserId);
     const entryRef = doc(db, `users/${postAuthorId}/persona_entries`, entryId);
-    
+
     try {
       if (likedEntries[entryId]) {
         // 이미 좋아요를 눌렀다면 좋아요 취소
@@ -369,10 +445,10 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
         setEntryLikesCount(prev => ({ ...prev, [entryId]: (prev[entryId] || 1) - 1 }));
       } else {
         // 좋아요 추가
-        await setDoc(likeDocRef, { 
-          userId: currentUserId, 
+        await setDoc(likeDocRef, {
+          userId: currentUserId,
           userName: currentUser.displayName || currentUser.email || '익명 사용자',
-          createdAt: new Date() 
+          createdAt: new Date()
         });
         await updateDoc(entryRef, { likesCount: (entry.likesCount || 0) + 1 });
         setLikedEntries(prev => ({ ...prev, [entryId]: true }));
@@ -387,7 +463,7 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
   const handleSubmitComment = async (e) => {
     e.preventDefault();
     if (!currentUser?.uid || !selectedEntry || !commentContent.trim() || !userId) return;
-    
+
     setIsSubmittingComment(true);
     try {
       const commentsCollectionRef = collection(db, `users/${userId}/persona_entries/${selectedEntry.id}/comments`);
@@ -423,7 +499,7 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
         >
           {item.type === 'close' ? (
             // X 닫기 버튼 아이템 렌더링
-            <div 
+            <div
               className="relative p-1 rounded-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 shadow-lg hover:scale-110 transition-transform duration-200 cursor-pointer flex items-center justify-center"
               style={{ width: imageSize, height: imageSize }}
               onClick={() => handleItemClick(item, index)}
@@ -437,7 +513,7 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
             </div>
           ) : item.type === 'image' ? (
             // 이미지 아이템 렌더링
-            <div 
+            <div
               className="relative p-1 rounded-full bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 shadow-lg hover:scale-110 transition-transform duration-200 cursor-pointer"
               style={{ width: imageSize, height: imageSize }}
               onClick={() => handleItemClick(item, index)}
@@ -467,13 +543,13 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
             </div>
           ) : (
             // 건강 점수 아이템 렌더링 (텍스트)
-            <div 
+            <div
               className="relative p-1 rounded-full bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 shadow-lg hover:scale-110 transition-transform duration-200 cursor-pointer flex items-center justify-center"
               style={{ width: imageSize, height: imageSize }}
               onClick={() => handleItemClick(item, index)}
             >
               <div className="w-full h-full rounded-full bg-white border-2 border-white flex items-center justify-center">
-                <span className="text-lg font-bold text-gray-800 text-center">
+                <span className="text-sm md:text-lg font-bold text-gray-800 text-center">
                   {item.content}
                 </span>
               </div>
@@ -481,7 +557,7 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
           )}
         </div>
       ))}
-      
+
       {/* 게시물 상세 다이얼로그 */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         setIsDialogOpen(open);
@@ -513,9 +589,9 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
               {/* 이미지 섹션 - 전체 너비로 최대 크기 */}
               <div className="relative flex justify-center px-4">
                 {selectedEntry.personaImageUrl ? (
-                  <img 
-                    src={selectedEntry.personaImageUrl} 
-                    alt="Persona Image" 
+                  <img
+                    src={selectedEntry.personaImageUrl}
+                    alt="Persona Image"
                     className="w-auto max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
                     onError={(e) => {
                       const target = e.target;
@@ -532,9 +608,9 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
                     }}
                   />
                 ) : selectedEntry.uploadedImageUrl ? (
-                  <img 
-                    src={selectedEntry.uploadedImageUrl} 
-                    alt="Uploaded Image" 
+                  <img
+                    src={selectedEntry.uploadedImageUrl}
+                    alt="Uploaded Image"
                     className="w-auto max-w-full max-h-[60vh] object-contain rounded-lg opacity-60"
                     onError={(e) => {
                       const target = e.target;
@@ -578,8 +654,8 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
 
                 {/* 상호작용 버튼들 */}
                 <div className="flex gap-2 pt-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className={`flex items-center gap-2 ${likedEntries[selectedEntry.id] ? 'text-red-500 border-red-300' : 'text-gray-600 border-gray-300 hover:bg-red-50'}`}
                     onClick={(e) => handleLike(e, selectedEntry)}
                   >
@@ -597,14 +673,14 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
               <div className="px-4 pb-6 border-t border-gray-100 pt-4">
                 <div className="mb-4">
                   <h4 className="text-lg font-semibold text-gray-900 mb-3">답글 {comments.length > 0 && `(${comments.length})`}</h4>
-                  
+
                   {/* 답글 입력 필드 - Apple 스타일 */}
                   {currentUser?.uid ? (
                     <form onSubmit={handleSubmitComment} className="mb-4">
                       <div className="flex items-start gap-3">
-                        <img 
-                          src={currentUser.photoURL || '/default-avatar.png'} 
-                          alt="User Avatar" 
+                        <img
+                          src={currentUser.photoURL || '/default-avatar.png'}
+                          alt="User Avatar"
                           className="w-8 h-8 rounded-full flex-shrink-0"
                         />
                         <div className="flex-1">
@@ -618,10 +694,10 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
                           />
                           {commentContent.trim() && (
                             <div className="flex justify-end mt-2">
-                              <Button 
-                                type="submit" 
+                              <Button
+                                type="submit"
                                 size="sm"
-                                className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-4 py-1 text-sm font-medium" 
+                                className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-4 py-1 text-sm font-medium"
                                 disabled={isSubmittingComment}
                               >
                                 {isSubmittingComment ? <Loader2 className="w-3 h-3 animate-spin" /> : '게시'}
@@ -647,9 +723,9 @@ export default function PersonaFallingImagesEffect({ userId, username }) {
                     ) : (
                       comments.map(comment => (
                         <div key={comment.id} className="flex items-start gap-3">
-                          <img 
-                            src={comment.userPhotoURL || '/default-avatar.png'} 
-                            alt="User Avatar" 
+                          <img
+                            src={comment.userPhotoURL || '/default-avatar.png'}
+                            alt="User Avatar"
                             className="w-8 h-8 rounded-full flex-shrink-0"
                           />
                           <div className="flex-1 min-w-0">
