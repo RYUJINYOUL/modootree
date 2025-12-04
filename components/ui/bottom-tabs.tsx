@@ -15,8 +15,8 @@ export function BottomTabs() {
 
 
   // 특정 페이지에서는 bottom tabs를 숨김
-  const hiddenPaths = ['/editor/', '/ai-comfort', '/profile', '/link-letter/', '/search', '/anonymous-chat'];
-  const exactHiddenPaths = ['/ai-chat-simple', '/', '/search', '/pros-menu', '/anonymous-chat'];
+  const hiddenPaths = ['/editor/', '/ai-comfort', '/profile', '/link-letter/', '/search', '/anonymous-chat', '/admin-request'];
+  const exactHiddenPaths = ['/ai-chat-simple', '/', '/search', '/pros-menu', '/anonymous-chat', '/admin-request'];
 
   // 현재 경로가 유저 사이트인지 확인
   useEffect(() => {

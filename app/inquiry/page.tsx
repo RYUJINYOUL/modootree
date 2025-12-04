@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where } from 'firebase/firestore';
-import { MessageCircle, Send } from 'lucide-react';
+import { MessageCircle, Send, Lock } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
@@ -81,11 +81,14 @@ interface Inquiry {
   email: string;
   createdAt: any;
   status: string;
+  isPrivate?: boolean; // 비공개 글 여부 추가
+  authorUid?: string; // 작성자 UID 추가 (비공개 글 권한 확인용)
 }
 
 export default function InquiryPage() {
   const [content, setContent] = useState('');
   const [email, setEmail] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false); // 비공개 글 상태 추가
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -106,7 +109,14 @@ export default function InquiryPage() {
         id: doc.id,
         ...doc.data()
       })) as Inquiry[];
-      setInquiries(inquiriesList);
+      
+      // 비공개 글 필터링: 공개 글이거나 본인이 작성한 비공개 글만 표시
+      const filteredInquiries = inquiriesList.filter(inquiry => {
+        if (!inquiry.isPrivate) return true; // 공개 글은 모두 표시
+        return currentUser && inquiry.authorUid === currentUser.uid; // 비공개 글은 작성자만 표시
+      });
+      
+      setInquiries(filteredInquiries);
 
       // 각 문의에 대한 답글 가져오기
       inquiriesList.forEach(inquiry => {
@@ -147,7 +157,9 @@ export default function InquiryPage() {
         content: content.trim(),
         email: email.trim(),
         createdAt: serverTimestamp(),
-        status: 'pending'
+        status: 'pending',
+        isPrivate: isPrivate,
+        authorUid: currentUser?.uid || null // 로그인한 사용자의 UID 저장
       };
 
       await addDoc(collection(db, 'inquiries'), inquiryData);
@@ -155,6 +167,7 @@ export default function InquiryPage() {
       setSubmitMessage('문의가 성공적으로 등록되었습니다.');
       setContent('');
       setEmail('');
+      setIsPrivate(false); // 비공개 상태도 초기화
     } catch (error) {
       console.error('문의 제출 중 오류:', error);
       setSubmitMessage('문의 등록 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -240,6 +253,20 @@ export default function InquiryPage() {
               />
             </div>
 
+            {/* 비공개 글 체크박스 */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPrivate"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <label htmlFor="isPrivate" className="text-white/80 text-sm cursor-pointer">
+                비공개 글로 작성 (본인만 볼 수 있습니다)
+              </label>
+            </div>
+
             <div className="flex justify-end gap-3">
               <button
                 type="submit"
@@ -267,8 +294,16 @@ export default function InquiryPage() {
               className="bg-white/10 backdrop-blur-sm rounded-xl p-6"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="text-white/70 text-sm">
-                  {inquiry.email.split('@')[0]}
+                <div className="flex items-center gap-2">
+                  <div className="text-white/70 text-sm">
+                    {inquiry.email.split('@')[0]}
+                  </div>
+                  {inquiry.isPrivate && (
+                    <span className="flex items-center gap-1 px-2 py-1 text-xs bg-red-500/20 text-red-300 rounded-full border border-red-500/30">
+                      <Lock className="w-3 h-3" />
+                      비공개
+                    </span>
+                  )}
                 </div>
                 <div className="text-white/50 text-xs">
                   {formatDate(inquiry.createdAt)}

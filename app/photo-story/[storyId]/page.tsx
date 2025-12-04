@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, increment, collection, addDoc, query, where, getDocs, orderBy, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
@@ -31,6 +31,25 @@ interface PhotoStory {
 
 import { Toaster } from 'react-hot-toast';
 
+// 데이터 처리 함수들을 컴포넌트 외부로 분리
+const processAiStories = (aiStories: any): string[] => {
+  if (!aiStories) return [];
+  
+  if (Array.isArray(aiStories)) {
+    return aiStories.map((story: any) => 
+      typeof story === 'string' ? story : story.content || ''
+    );
+  }
+  
+  if (typeof aiStories === 'object') {
+    return Object.values(aiStories).map((story: any) => 
+      typeof story === 'string' ? story : story.content || ''
+    );
+  }
+  
+  return [];
+};
+
 export default function StoryPage({ params }: { params: Promise<{ storyId: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -46,22 +65,28 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
 
-  // 답글 목록 가져오기
+  // 총 투표수 계산 (useMemo로 최적화)
+  const totalVotes = useMemo(() => 
+    Object.values(voteResults).reduce((sum, count) => sum + count, 0),
+    [voteResults]
+  );
+
+  // 답글 목록 가져오기 (Firebase에서 정렬하도록 최적화)
   const fetchComments = async () => {
     try {
       const q = query(
         collection(db, 'photo-story-comments'),
-        where('storyId', '==', resolvedParams.storyId)
+        where('storyId', '==', resolvedParams.storyId),
+        orderBy('createdAt', 'desc') // Firebase에서 정렬
       );
       
       const querySnapshot = await getDocs(q);
-      const commentList = querySnapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date()
-        }))
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // JavaScript에서 정렬
+      const commentList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      }));
+      // JavaScript 정렬 제거로 성능 향상
       setComments(commentList);
     } catch (error) {
       console.error('답글 목록 로드 실패:', error);
@@ -147,9 +172,9 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
   useEffect(() => {
     const fetchStory = async () => {
       try {
+        // 1. 메인 스토리 데이터 먼저 가져오기
         const storyDoc = await getDoc(doc(db, 'photo-stories', resolvedParams.storyId));
         if (!storyDoc.exists()) {
-          // 뒤로 가기 (브라우저 히스토리 사용)
           if (window.history.length > 1) {
             window.history.back();
           } else {
@@ -161,24 +186,11 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
         const data = storyDoc.data();
         console.log('Fetched story data:', data);
 
-        // aiStories 데이터 처리
-        let processedStories: string[] = [];
-        if (data.aiStories) {
-          if (Array.isArray(data.aiStories)) {
-            processedStories = data.aiStories.map((story: any) => {
-              return typeof story === 'string' ? story : story.content || '';
-            });
-          } else if (typeof data.aiStories === 'object') {
-            processedStories = Object.values(data.aiStories).map((story: any) => {
-              return typeof story === 'string' ? story : story.content || '';
-            });
-          }
-        }
-
-        setStory({
+        // 2. 스토리 상태 즉시 설정 (빠른 UI 표시)
+        const storyData = {
           id: storyDoc.id,
           photo: data.photo || '',
-          aiStories: processedStories,
+          aiStories: processAiStories(data.aiStories), // 분리된 함수 사용
           selectedStoryId: data.selectedStoryId || '0',
           author: {
             uid: data.author?.uid || '',
@@ -192,38 +204,46 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
           },
           createdAt: data.createdAt?.toDate() || new Date(),
           votes: data.votes || {}
-        });
+        };
 
-        // 조회수 증가
-        await updateDoc(doc(db, 'photo-stories', resolvedParams.storyId), {
-          'stats.viewCount': increment(1)
-        });
-
-        // 좋아요 수 설정
+        // 즉시 상태 업데이트로 빠른 렌더링
+        setStory(storyData);
         setLikeCount(data.likeCount || 0);
+        setVoteResults(data.votes || {});
+        setLoading(false); // 여기서 먼저 로딩 완료
 
-        // 사용자의 투표 여부 확인
+        // 3. 나머지 작업들을 병렬로 실행
+        const backgroundTasks = [
+          // 조회수 증가
+          updateDoc(doc(db, 'photo-stories', resolvedParams.storyId), {
+            'stats.viewCount': increment(1)
+          }),
+          // 답글 목록 가져오기
+          fetchComments()
+        ];
+
+        // 로그인 사용자만 필요한 작업들
         if (currentUser) {
+          // 투표 여부 확인
           const votesQuery = query(
             collection(db, 'photo-story-votes'),
             where('storyId', '==', resolvedParams.storyId),
             where('userId', '==', currentUser.uid)
           );
-          const votesSnapshot = await getDocs(votesQuery);
-          setHasVoted(!votesSnapshot.empty);
-
-          // 좋아요 상태 확인
-          await checkLikeStatus();
+          
+          backgroundTasks.push(
+            getDocs(votesQuery).then(votesSnapshot => {
+              setHasVoted(!votesSnapshot.empty);
+            }),
+            checkLikeStatus()
+          );
         }
 
-        // 답글 목록 가져오기
-        await fetchComments();
-
-        // 투표 결과 설정
-        setVoteResults(data.votes || {});
+        // 모든 백그라운드 작업을 병렬로 실행 (UI 블로킹 없음)
+        await Promise.allSettled(backgroundTasks);
+        
       } catch (error) {
         console.error('스토리 로드 실패:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -295,9 +315,6 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
     return null;
   }
 
-  // 총 투표수 계산
-  const totalVotes = Object.values(voteResults).reduce((sum, count) => sum + count, 0);
-
   return (
     <>
       <Toaster position="top-center" />
@@ -336,6 +353,8 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
                   src={story.photo} 
                   alt="Story" 
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
                 />
               </div>
             </div>

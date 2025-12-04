@@ -303,15 +303,15 @@ export default function Home() {
       { icon: "/logos/news.png", path: "/news-vote" },
       { icon: "/logos/ai1.png", path: "/health" },
       { icon: "/logos/ai4.png", path: "/inquiry" },
-      { icon: "/logos/m1.png", path: "/profile" },
+      { icon: "/logos/ai5.png", path: "/anonymous-chat" },
     ].filter(item => item).map((item, index) => (
       <Link key={index} href={item.path || '#'}>
         <div 
           className={`
             flex flex-col items-center justify-center p-3 rounded-xl transition-colors w-[50px] h-[50px] flex-shrink-0
             ${
-              index === 0 // ⬅️ 여기! 첫 번째 버튼(index가 0)일 때만 핑크색 적용
-                ? "bg-pink-600/30 hover:bg-pink-500/50" 
+              index === 4 // ⬅️ 여기! 첫 번째 버튼(index가 0)일 때만 핑크색 적용
+                ? "bg-pink-600/30 hover:bg-red" 
                 : "bg-gray-800/50 hover:bg-gray-700/50"
             }
           `}

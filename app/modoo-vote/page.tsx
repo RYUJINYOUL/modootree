@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, getDocs, where, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where, startAfter, QueryDocumentSnapshot, DocumentData, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import CategoryCarousel from '@/components/CategoryCarousel';
 import Link from 'next/link';
@@ -36,6 +36,29 @@ export default function ModooVotePage() {
 
   const { user } = useAuth();
   const router = useRouter();
+
+  // 관리자 UID 확인
+  const isAdmin = user?.uid === 'vW1OuC6qMweyOqu73N0558pv4b03';
+
+  // 삭제 함수
+  const handleDelete = async (modooId: string, title: string) => {
+    if (!isAdmin) return;
+    
+    const confirmed = window.confirm(`"${title}" 게시물을 정말 삭제하시겠습니까?`);
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(db, 'modoo-vote-articles', modooId));
+      
+      // 로컬 상태에서도 제거
+      setModooList(prevList => prevList.filter(item => item.id !== modooId));
+      
+      alert('게시물이 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      alert('삭제 중 오류가 발생했습니다.');
+    }
+  };
 
   // 페이지 로드 시 저장된 상태 복원
   useEffect(() => {
@@ -243,20 +266,34 @@ export default function ModooVotePage() {
                 </div>
               ) : (
                 modooList.map(modooItem => (
-                  <Link href={`/modoo-vote/${modooItem.id}`} key={modooItem.id} className="block">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/20 shadow-lg cursor-pointer hover:bg-white/20 transition-all">
-                      <h2 className="text-xl font-bold mb-2">{
-                        modooItem.category && MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label ? 
-                        `[${MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label}] ${modooItem.title}` : 
-                        modooItem.title
-                      }</h2>
-                      <p className="text-gray-300 text-sm mb-4">{modooItem.story}</p>
-                      <div className="mt-6 flex justify-between items-center text-xs text-gray-500">
-                        <span>총 {modooItem.totalVotes}명 참여</span>
-                        <span>조회수 {modooItem.viewCount}</span>
+                  <div key={modooItem.id} className="relative">
+                    <Link href={`/modoo-vote/${modooItem.id}`} className="block">
+                      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/20 shadow-lg cursor-pointer hover:bg-white/20 transition-all">
+                        <h2 className="text-xl font-bold mb-2">{
+                          modooItem.category && MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label ? 
+                          `[${MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label}] ${modooItem.title}` : 
+                          modooItem.title
+                        }</h2>
+                        <p className="text-gray-300 text-sm mb-4">{modooItem.story}</p>
+                        <div className="mt-6 flex justify-between items-center text-xs text-gray-500">
+                          <span>총 {modooItem.totalVotes}명 참여</span>
+                          <span>조회수 {modooItem.viewCount}</span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(modooItem.id, modooItem.title);
+                        }}
+                        className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded-md transition-colors z-10"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
                 ))
               )}
 
@@ -360,42 +397,56 @@ export default function ModooVotePage() {
                     </div>
                   ) : (
                     modooList.map(modooItem => (
-                      <Link href={`/modoo-vote/${modooItem.id}`} key={modooItem.id} className="block">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/20 shadow-lg cursor-pointer hover:bg-white/20 transition-all">
-                          <div className="flex items-start gap-3">
-                            {isFromFeed && (
-                              <div className="flex-shrink-0">
-                                <img
-                                  src={`/logos/${modooItem.category || 'worry'}.png`}
-                                  alt="감정 아이콘"
-                                  className="w-8 h-8 object-contain"
-                                />
-                              </div>
-                            )}
-                            <h2 className="text-xl font-bold mb-2">{
-                              modooItem.category && MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label ? 
-                              `[${MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label}] ${modooItem.title}` : 
-                              modooItem.title
-                            }</h2>
+                      <div key={modooItem.id} className="relative">
+                        <Link href={`/modoo-vote/${modooItem.id}`} className="block">
+                          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/20 shadow-lg cursor-pointer hover:bg-white/20 transition-all">
+                            <div className="flex items-start gap-3">
+                              {isFromFeed && (
+                                <div className="flex-shrink-0">
+                                  <img
+                                    src={`/logos/${modooItem.category || 'worry'}.png`}
+                                    alt="감정 아이콘"
+                                    className="w-8 h-8 object-contain"
+                                  />
+                                </div>
+                              )}
+                              <h2 className="text-xl font-bold mb-2">{
+                                modooItem.category && MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label ? 
+                                `[${MODOO_CATEGORIES.find(cat => cat.id === modooItem.category)?.label}] ${modooItem.title}` : 
+                                modooItem.title
+                              }</h2>
+                            </div>
+                            <p className="text-gray-300 text-sm mb-4">
+                              <span className="hidden md:inline">
+                                {modooItem.story.length > 250 
+                                  ? `${modooItem.story.slice(0, 250)}...` 
+                                  : modooItem.story}
+                              </span>
+                              <span className="md:hidden">
+                                {modooItem.story.length > 100 
+                                  ? `${modooItem.story.slice(0, 100)}...` 
+                                  : modooItem.story}
+                              </span>
+                            </p>
+                            <div className="mt-6 flex justify-between items-center text-xs text-gray-500">
+                              <span>총 {modooItem.totalVotes}명 참여</span>
+                              <span>조회수 {modooItem.viewCount}</span>
+                            </div>
                           </div>
-                          <p className="text-gray-300 text-sm mb-4">
-                            <span className="hidden md:inline">
-                              {modooItem.story.length > 250 
-                                ? `${modooItem.story.slice(0, 250)}...` 
-                                : modooItem.story}
-                            </span>
-                            <span className="md:hidden">
-                              {modooItem.story.length > 100 
-                                ? `${modooItem.story.slice(0, 100)}...` 
-                                : modooItem.story}
-                            </span>
-                          </p>
-                          <div className="mt-6 flex justify-between items-center text-xs text-gray-500">
-                            <span>총 {modooItem.totalVotes}명 참여</span>
-                            <span>조회수 {modooItem.viewCount}</span>
-                          </div>
-                        </div>
-                      </Link>
+                        </Link>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDelete(modooItem.id, modooItem.title);
+                            }}
+                            className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded-md transition-colors z-10"
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </div>
                     ))
                   )}
 
