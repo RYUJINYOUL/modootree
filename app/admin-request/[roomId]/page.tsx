@@ -83,9 +83,9 @@ export default function AdminRequestRoomPage({ params }: { params: Promise<{ roo
   const sendWelcomeMessage = async () => {
     const welcomeMessage = `안녕하세요, 모두트리 입니다. 
 
-혹시 너무 바쁜 일 있어, 상담을 못할 수도 있어요^^
-
-아래 양식 작성 해주시면 진행 사항은 꼭 남겨 드립니다. 
+진행 사항만 알려드립니다.
+채팅방 같은 ui이지만, 채팅방 아닙니다. 
+아래 양식을 작성해주시면 생성하고 전송한 내역을 남겨 드립니다.
 
 행복한 하루 되세요, 찾아주셔서 감사합니다.  
 
