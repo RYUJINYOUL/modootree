@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { db } from '@/lib/firebase';
 
 interface LinkLetter {
   id: string;
@@ -29,11 +29,20 @@ const letterCategories = [
   { id: 'celebration', name: '축하' }
 ];
 
-export async function generateMetadata({ params }: { params: { letterId: string } }): Promise<Metadata> {
-  const { letterId } = params;
-  
+export async function generateMetadata({ params }: { params: Promise<{ letterId: string }> }): Promise<Metadata> {
   try {
-    // Firebase에서 편지 데이터 가져오기
+    const { letterId } = await params;
+    
+    if (!letterId) {
+      console.error('letterId가 없습니다:', letterId);
+      throw new Error('letterId가 제공되지 않았습니다');
+    }
+    
+    if (!db) {
+      console.error('Firebase db가 초기화되지 않았습니다');
+      throw new Error('Firebase db가 초기화되지 않았습니다');
+    }
+    
     const docRef = doc(db, 'linkLetters', letterId);
     const docSnap = await getDoc(docRef);
     
@@ -46,11 +55,10 @@ export async function generateMetadata({ params }: { params: { letterId: string 
       } as LinkLetter;
       
       const category = letterCategories.find(cat => cat.id === letter.category);
-      const description = letter.content.length > 150 
+      const description = letter.content && letter.content.length > 150 
         ? letter.content.substring(0, 150) + '...' 
-        : letter.content;
+        : letter.content || '특별한 링크 편지입니다.';
       
-      // 첫 번째 이미지를 OG 이미지로 사용 (있는 경우)
       const ogImage = letter.images && letter.images.length > 0 
         ? letter.images[0] 
         : '/icons/icon-192.png';
@@ -98,6 +106,11 @@ export async function generateMetadata({ params }: { params: { letterId: string 
     }
   } catch (error) {
     console.error('메타데이터 생성 실패:', error);
+    console.error('오류 상세 정보:', {
+      message: error instanceof Error ? error.message : '알 수 없는 오류',
+      stack: error instanceof Error ? error.stack : undefined,
+      params: params
+    });
   }
   
   // 기본 메타데이터 (편지를 찾을 수 없는 경우)
@@ -134,6 +147,14 @@ export async function generateMetadata({ params }: { params: { letterId: string 
     },
   };
 }
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#56ab91',
+};
 
 export default function LinkLetterDetailLayout({
   children,
