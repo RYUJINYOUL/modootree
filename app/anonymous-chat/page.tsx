@@ -131,7 +131,7 @@ export default function AdminRequestPage() {
           {isAdmin && (
             <span className="text-sm bg-yellow-500 text-black px-3 py-1 rounded-full font-medium flex items-center gap-1">
               <Shield className="w-3 h-3" />
-            
+              관리자
             </span>
           )}
         </h1>
@@ -179,7 +179,7 @@ export default function AdminRequestPage() {
             <div>
               <label className="block text-sm font-medium mb-2 text-indigo-600 flex items-center gap-2">
                 <Lock className="w-4 h-4" />
-                방 비밀번호 (4자리 이상)
+                비밀번호 (4자리 이상)
               </label>
               <input
                 type="password"
@@ -200,7 +200,7 @@ export default function AdminRequestPage() {
               disabled={isCreating}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50"
             >
-              {isCreating ? '생성 중...' : '🚀 신청방 만들기'}
+              {isCreating ? '생성 중...' : '🚀 신청하기'}
             </button>
           </form>
         </div>
@@ -238,7 +238,7 @@ export default function AdminRequestPage() {
                           <Shield className="w-3 h-3" />
                           진행중
                         </span>
-                        <span className="text-xs text-indigo-400">클릭하여 입장</span>
+                        <span className="text-xs text-indigo-400">진행사항 확인</span>
                       </div>
                     </div>
                   </Link>
