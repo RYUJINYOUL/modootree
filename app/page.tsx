@@ -1,480 +1,498 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Home as HomeIcon, ChevronRight, Menu, Phone, Copy, Check, ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Send, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { auth } from '@/firebase';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from '@/lib/utils';
-import Link from 'next/link';
-import Particles from "react-tsparticles"; // Particles 임포트
-import { loadFull } from "tsparticles"; // loadFull 임포트
-import LoginOutButton from '@/components/ui/LoginOutButton'; // LoginOutButton 임포트
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UserSampleCarousel2 from '@/components/UserSampleCarousel2';
-import UserSampleCarousel3 from '@/components/UserSampleCarousel3';
-import UserSampleCarousel5 from '@/components/UserSampleCarousel5';
-import UserSampleCarousel from '@/components/UserSampleCarousel';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { loadSlim } from "tsparticles-slim";
+import Particles from "react-tsparticles";
 
-export default function Home() {
-  const [inputMessage, setInputMessage] = useState('');
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [currentX, setCurrentX] = useState(0);
-  const router = useRouter();
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [showSecondButton, setShowSecondButton] = useState(false); // 두 번째 버튼 표시 상태 추가
+interface YoutubeVideo {
+  id: string;
+  title: string;
+  thumbnail: string;
+  youtubeUrl: string;
+}
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSecondButton(true);
-    }, 3000); // 3초 후에 두 번째 버튼 표시
+const dummyYoutubeVideos: YoutubeVideo[] = [
+  {
+    id: 'video1',
+    title: '퀴즈를 풀어야 볼 수 있는 편지',
+    thumbnail: '/youtube/youtube1.jpg',
+    youtubeUrl: 'https://youtube.com/shorts/1GmgcfZRoOU?si=OLZ6ihPXL-H1aLBz',
+  },
+  {
+    id: 'video2',
+    title: '모두트리 눈사람 산타가 되다',
+    thumbnail: '/youtube/youtube2.jpg',
+    youtubeUrl: 'https://youtube.com/shorts/KPNhNq7q7vA?si=z9YH1jDslFMw4Wqb',
+  },
+  {
+    id: 'video3',
+    title: '모두트리 응원송',
+    thumbnail: '/youtube/youtube3.jpg',
+    youtubeUrl: 'https://youtube.com/shorts/DxSfJI23bMU?si=QuuY4Q4VXZ8c1lD4',
+  },
+  {
+    id: 'video4',
+    title: '모두트리 공감송',
+    thumbnail: '/youtube/youtube4.jpg',
+    youtubeUrl: 'https://youtube.com/shorts/2ieKWOCIaIU?si=xVN2xjwhI88Vhn1Y',
+  },
+  {
+    id: 'video5',
+    title: '링크편지 대신 보내 드립니다',
+    thumbnail: '/youtube/youtube5.jpg',
+    youtubeUrl: 'https://youtube.com/shorts/-Zv4mvmlWpA?si=7NS98Xr5lXhCnea_',
+  },
+];
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  // FAQ 데이터
-  const faqs = [
-    {
-      question: '모두트리는 무료인가요?',
-      answer: '네, 모두트리의 모든 기능은 모두 무료로 제공됩니다.'
-    },
-    {
-      question: '모두트리 내 페이지는 어떤 의미 인가요?',
-      answer: '나만의 기록 페이지로 메모 · 일기 · 건강 · 링크 등 나의 기록을 저장하는 공간입니다.'
-    },
-    {
-      question: '내 기록 페이지에는 어떤 기능이 있나요?',
-      answer: 'AI 기능들이 적절하게 적용되어 있습니다. \nOCR스캔 · 링크 자동분류 저장 · 메모 자동 정리 · 건강 분석 및 일기 작성 등 여러 기능들이 탑재 되어 있습니다'
-    },
-    {
-      question: '모든 투표 생성은 익명으로 가능한가요?',
-      answer: '네 모두트리 모든 투표는 익명 필수 조건입니다, 하지만 투표나 게시물의 답글은 일부 익명은 아닙니다'
-    },
-    {
-      question: '나의 기록 페이지를 공유할 수 있나요?',
-      answer: '아니요 나의 기록페이지는 나만의 공간으로 공유할 수 없습니다.'
-    },
-    {
-      question: '추가 개선하고 싶은 기능은 있나요?',
-      answer: '열린게시판에 글 남겨주시면 최대한 반영하겠습니다.'
-    },
-    {
-      question: '모두트리 매거진은 어떤 서비스인가요?',
-      answer: '매거진은 공유 가능한 페이지로 내 페이지에서 일기를 작성하면 \nai가 자동으로 감정 분석하여 업로드된 사진을 감정에 맞게 스타일을 적용해 드립니다'
-    },
-    {
-      question: '링크 편지는 누구나 만들 수 있나요?',
-      answer: '회원가입 하시면 누구나 만들 수 있습니다, \n퀴즈는 주관식 · 객관식으로 설정할 수 있으며 최대 10개 질문 · 10개의 선택지로 구성되어 있습니다'
-    }
-  ];
-
-
-  const suggestedQueries = [
-    { text: "모두트리 내 페이지를 설명해줘" },
-    { text: "링크편지 설명해줘" },
-    { text: "오늘 대화 내용으로 일기 메모 건강 분석 가능해?" },
-    { text: "모투트리 문의 게시판은 어디에 있는거야?" },
-  ];
-
-
-
-  // 드래그/스와이프 핸들러
-  const handleStart = (clientX: number) => {
-    setIsDragging(true);
-    setStartX(clientX);
-    setCurrentX(clientX);
-  };
-
-  const handleMove = (clientX: number) => {
-    if (!isDragging) return;
-    setCurrentX(clientX);
-  };
-
-
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    const user = auth.currentUser;
-    if (!user) {
-      setShowLoginDialog(true);
-      return;
-    }
-
-    const targetUrl = `/ai-comfort?initialMessage=${encodeURIComponent(inputMessage)}`;
-    console.log('handleSendMessage - 이동할 URL:', targetUrl);
-    router.push(targetUrl);
-    setInputMessage('');
-  };
-
-  // Particles 초기화
+const ParticlesComponent = () => {
   const particlesInit = useCallback(async (engine: any) => {
-    await loadFull(engine);
+    await loadSlim(engine);
   }, []);
 
   return (
-    <main className={cn(
-      "flex flex-col min-h-screen text-white relative bg-gray-900 justify-center items-center overflow-hidden"
-    )}>
-      <Particles
-        className="fixed inset-0"
-        init={particlesInit}
-        options={{
-          fpsLimit: 120,
-          particles: {
-            color: {
-              value: ["#ffffff", "#87CEEB", "#FFD700"]
+    <Particles
+      className="absolute inset-0 pointer-events-none"
+      init={particlesInit}
+      options={{
+        background: {
+          color: "transparent"
+        },
+        fpsLimit: 120,
+        particles: {
+          color: {
+            value: ["#FFB6C1", "#FF69B4", "#FF1493", "#DC143C", "#FFF", "#FFD700", "#FF6347"]
+          },
+          collisions: {
+            enable: false
+          },
+          move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+              default: "out"
             },
-            links: {
-              color: "#ffffff",
-              distance: 150,
+            random: true,
+            speed: { min: 0.5, max: 2 },
+            straight: false,
+            attract: {
               enable: true,
-              opacity: 0.02,
-              width: 1,
-            },
-            collisions: {
-              enable: false,
-            },
-            move: {
-              direction: "none",
+              rotateX: 600,
+              rotateY: 1200
+            }
+          },
+          number: {
+            density: {
               enable: true,
-              outModes: {
-                default: "out"
-              },
-              random: true,
-              speed: { min: 0.05, max: 0.1 },
-              straight: false,
-              attract: {
-                enable: true,
-                rotate: {
-                  x: 600,
-                  y: 1200
-                }
-              }
+              area: 1000
             },
-            number: {
-              density: {
-                enable: true,
-                area: 800
-              },
-              value: 80
+            value: 60
+          },
+          opacity: {
+            animation: {
+              enable: true,
+              minimumValue: 0.2,
+              speed: 1.5,
+              sync: false
             },
-            opacity: {
-              animation: {
-                enable: true,
-                minimumValue: 0.1,
-                speed: 1,
-                sync: false
-              },
-              random: true,
-              value: { min: 0.1, max: 0.4 }
-            },
-            shape: {
-              type: "circle"
-            },
-            size: {
-              animation: {
-                enable: true,
-                minimumValue: 0.1,
-                speed: 2,
-                sync: false
-              },
-              random: true,
-              value: { min: 1, max: 2 }
-            },
-            twinkle: {
-              lines: {
-                enable: true,
-                frequency: 0.001,
-                opacity: 0.1,
-                color: {
-                  value: ["#ffffff", "#87CEEB"]
+            random: true,
+            value: { min: 0.3, max: 0.8 }
+          },
+          shape: {
+            type: ["heart", "star", "circle", "triangle"],
+            options: {
+              heart: {
+                particles: {
+                  size: {
+                    value: { min: 8, max: 16 }
+                  }
                 }
               },
-              particles: {
-                enable: true,
-                frequency: 0.02,
-                opacity: 0.3
+              star: {
+                sides: 5,
+                particles: {
+                  size: {
+                    value: { min: 6, max: 12 }
+                  }
+                }
               }
             }
           },
-          detectRetina: true
-        }}
-      />
+          size: {
+            animation: {
+              enable: true,
+              minimumValue: 2,
+              speed: 3,
+              sync: false
+            },
+            random: true,
+            value: { min: 3, max: 8 }
+          },
+          rotate: {
+            animation: {
+              enable: true,
+              speed: 2,
+              sync: false
+            },
+            direction: "random",
+            random: true,
+            value: { min: 0, max: 360 }
+          }
+        },
+        detectRetina: true,
+        interactivity: {
+          events: {
+            onHover: {
+              enable: true,
+              mode: "bubble"
+            },
+            onClick: {
+              enable: true,
+              mode: "push"
+            }
+          },
+          modes: {
+            bubble: {
+              distance: 150,
+              duration: 2,
+              opacity: 1,
+              size: 12
+            },
+            push: {
+              quantity: 3
+            }
+          }
+        }
+      }}
+    />
+  );
+};
 
-      {/* LoginOutButton을 고정된 헤더로 추가 */}
-      <div className="fixed top-0 left-0 right-0 z-50 w-full">
-        <LoginOutButton />
+export default function Home() {
+  const [isOpen, setIsOpen] = useState(true);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const router = useRouter();
+
+  if (!isOpen) return null;
+
+  const handleNavigateToLinkLetter = () => {
+    router.push('/link-letter');
+  };
+
+  return (
+    <div className="min-h-screen bg-[#e93e4a] overflow-y-auto cursor-penc relative">
+      {/* 파티클 배경 효과 */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <ParticlesComponent />
+      </div>
+      
+      {/* Header */}
+      <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
+      <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              router.push('/');
+            }}
+            className="text-white hover:opacity-80 transition flex items-center gap-2 cursor-penc-hover relative z-50 pointer-events-auto"
+          >
+            <HomeIcon className="w-4 h-4" />
+            <span className="font-bold">모두트리</span>
+          </button>
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-white text-sm">
+            퀴즈를 풀어야 볼 수 있는{' '}
+            <span className="font-bold">링크편지</span>
+          </p>
+          
+        </div>
+      </header>
+
+      {/* Main Menu Container */}
+      <div className="relative w-full flex items-center justify-center z-10 py-50 sm:py-55 md:py-60">
+        {/* Organic Blob Shape - More Distorted */}
+        <svg
+          className="absolute w-[90%] sm:w-[80%] md:w-[70%] h-[80%]"
+          viewBox="0 0 800 900"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+           d="M400 50C550 50 700 150 750 300C800 450 750 600 700 700C650 800 500 850 400 850C300 850 150 800 100 700C50 600 0 450 50 300C100 150 250 50 400 50Z"
+            fill="#F5F5F0"
+          />
+        </svg>
+
+         {/* Menu Items */}
+         <nav className="relative z-10 text-center">
+         <p className="text-black text-lg mb-1">
+             퀴즈를 풀어야 볼 수 있는{' '}
+             <span className="font-bold">링크편지</span>
+           </p>
+           <ul className="space-y-4">
+             <MenuItem text="모두트리" active={false} />
+             <MenuItem text="링크편지" active={true} />
+           </ul>
+
+         </nav>
+
+        {/* Penc Logo */}
+        <div className="absolute bottom-[20%] right-[20%] z-10">
+          <button onClick={() => router.push('/link-letter')} className="hover:scale-110 transition-transform duration-300 cursor-penc-hover">
+            <PencLogo />
+          </button>
+        </div>
+
       </div>
 
+      {/* 링크편지 설명 섹션 */}
+      <div className="relative z-20 px-6 pb-1">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-white text-lg md:text-2xl font-bold text-center mb-8" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+            링크편지로 특별한 마음을 전하세요
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {/* 카드 1: 퀴즈 기능 */}
+            <button 
+              onClick={() => router.push('/link-letter')}
+              className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 text-left cursor-penc-hover"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/>
+                    <path d="m6.2 5.3 3.1 3.9"/>
+                    <path d="m12.4 3.4 3.1 4"/>
+                    <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white text-lg font-bold mb-2" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+                    퀴즈 편지로 마음을 전달하세요
+                  </h3>
+                  <p className="text-white/80 text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+                    상대방만 알 수 있는 특별한 퀴즈를 만들어 진심을 담은 편지 링크를 전달하세요.
+                  </p>
+                </div>
+              </div>
+            </button>
 
-      {/* 로고 이미지 섹션 수정 */}
-      <div className="flex flex-col items-center flex-1 w-full relative z-10 pt-[18vh]"> 
-        
-        {/* === START: 링크편지 말풍선 컨테이너 추가 === */}
-        <div className="relative flex items-center justify-center">
-            {/* 1. 로고 이미지 */}
-            <Link href="/profile" className="transform hover:scale-105 transition-transform">
-                <img src="/logos/logohole.png" alt="Logo" className="w-32 h-32 object-contain" />
-            </Link>
+            {/* 카드 2: 카테고리별 */}
+            <button 
+              onClick={() => router.push('/link-letter')}
+              className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 text-left cursor-penc-hover"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+                    <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+                    <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" x2="12" y1="22.08" y2="12"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white text-lg font-bold mb-2" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+                    객관·주관식을 모두 지원합니다
+                  </h3>
+                  <p className="text-white/80 text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+                    객관식 주관식 혼합으로 받는 사람만 볼 수 있는 퀴즈편지로 만들어 보세요. 
+                  </p>
+                </div>
+              </div>
+            </button>
 
-            {/* 2. 말풍선 및 CTA 버튼 */}
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-48 md:w-60 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-blue-500/50 shadow-lg text-white before:content-[''] before:absolute before:bottom-[-10px] before:left-1/2 before:-translate-x-1/2 before:w-0 before:h-0 before:border-l-[10px] before:border-r-[10px] before:border-t-[10px] before:border-t-pink-500/50 before:border-transparent">
-                {!showSecondButton ? (
-                <Link href="/pros-menu"> {/* 실제 링크 편지 생성 페이지 경로로 변경 */}
-                    <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white text-xs md:text-sm h-8 md:h-9">
-                    링크 편지 작성하러 오셨나요?
-                    </Button>
-                </Link>
-                ) : (
-                    <Link href="/site">
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-8 md:h-9 border border-blue-400">
-                        나만의 매거진 만들기
-                        </Button>
-                    </Link>
-                )}
-            </div>
-        </div>
-        {/* === END: 링크편지 말풍선 컨테이너 추가 === */}
-        
-
-        <div className="text-center mt-[-1.7rem] mb-1">
-          <p className="text-2xl text-gray-400 md:block hidden">모두트리 AI로 기록하는 나만의 페이지</p>
-          <div className="md:hidden block">
-            <p className="text-[20px] text-gray-300">모두트리 AI로 기록, 나만의 페이지</p>
+            {/* 카드 3: 개인화 */}
+            <button 
+              onClick={() => router.push('/anonymous-chat')}
+              className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 text-left cursor-penc-hover"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 18a2 2 0 0 0-4 0"/>
+                    <path d="m19 11-2.11-6.657a2 2 0 0 0-2.752-1.148l-1.276.61A2 2 0 0 1 12 4H8.5a2 2 0 0 0-1.925 1.456L5 11"/>
+                    <path d="M2 11h20"/>
+                    <circle cx="17" cy="18" r="3"/>
+                    <circle cx="7" cy="18" r="3"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white text-base md:text-lg font-bold mb-0 md:mb-2" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+                    대신 보내 드립니다.
+                  </h3>
+                  <p className="text-white/80 text-xs md:text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
+                    익명으로 퀴즈 편지를 대신 보내 드립니다. 신청 게시판, 양식에 맞게 작성해 주세요.
+                  </p>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* 입력창과 버튼 영역 */}
-        <div className="flex items-center gap-2 w-full px-4 md:max-w-3xl mx-auto mt-4">
-          <div className="flex-1 relative">
-            <Textarea
-              placeholder="안녕하세요 모두트리 AI입니다, 요즘 어떠신가요?"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
-              className="flex-1 w-full bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 resize-none py-1 min-h-[55px] max-h-[120px] overflow-y-auto"
-            />
-            {isInputFocused && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden z-20">
-                {suggestedQueries.map((query, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setInputMessage(query.text);
-                      setIsInputFocused(false);
-                    }}
-                    className="flex items-center gap-2 w-full px-4 py-3 hover:bg-gray-700/50 transition-colors text-left"
-                  >
-                    <Search className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-300">{query.text}</span>
-                  </button>
+      {/* 유튜브 영상 캐러셀 섹션 */}
+      <section className="relative z-20 px-4 py-12 bg-white/10 backdrop-blur-sm rounded-3xl mt-12 mb-12 mx-4">
+        <div className="max-w-6xl mx-auto text-center">
+        <h2 className="md:hidden text-xl font-medium text-white/90 mb-6 leading-relaxed">
+                모두트리 SNS 영상<br />유튜브 쇼츠로 만나보세요
+              </h2>
+              <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-6 leading-relaxed">
+                모두트리 SNS 영상<br />유튜브 쇼츠로 만나보세요
+              </h2>
+
+          {/* 모바일: 단일 카드 캐러셀 */}
+          <div className="md:hidden relative max-w-sm mx-auto">
+            <div className="overflow-hidden rounded-xl shadow-xl border border-white/20">
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: `translateX(-${currentVideoIndex * 100}%)`,
+                }}
+              >
+                {dummyYoutubeVideos.map((video, index) => (
+                  <div key={video.id} className="w-full flex-shrink-0 px-2">
+                    <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden">
+                      <iframe
+                        className="absolute top-0 left-0 w-full h-full"
+                        src={`https://www.youtube.com/embed/${
+                          video.youtubeUrl.includes('youtube.com/watch?v=')
+                            ? video.youtubeUrl.split('v=')[1].split('&?')[0]
+                            : video.youtubeUrl.split('shorts/')[1].split('?')[0]
+                        }?autoplay=0&controls=1&showinfo=0&rel=0`}
+                        title={video.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                    <p className="mt-4 mb-4 md:mb-2 text-sm font-medium text-white/90 text-center px-2">{video.title}</p>
+                  </div>
                 ))}
               </div>
+            </div>
+
+            {/* 모바일 네비게이션 버튼 */}
+            {dummyYoutubeVideos.length > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentVideoIndex((prev) => (prev - 1 + dummyYoutubeVideos.length) % dummyYoutubeVideos.length)}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 transition-all duration-300 z-10"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentVideoIndex((prev) => (prev + 1) % dummyYoutubeVideos.length)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 transition-all duration-300 z-10"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
             )}
+
+            {/* 모바일 인디케이터 */}
+            <div className="flex justify-center gap-2 mt-6">
+              {dummyYoutubeVideos.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentVideoIndex(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    currentVideoIndex === index ? 'bg-white shadow-lg' : 'bg-white/40 hover:bg-white/70'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim()}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold !py-7 !px-5 rounded-lg"
-          >
-            <Send className="!w-6 !h-6" />
-          </Button>
-        </div>
 
-
-       {/* 하단 아이콘 버튼들 */}
-<div className="w-full flex justify-center mt-3 mb-30 px-[10px] md:px-[100px] relative z-10">
-  <div className="flex flex-row overflow-x-auto gap-4 py-2 scrollbar-hide">
-    {[
-      // ... 기존 아이템 목록 ...
-      { icon: "/logos/m12.png", path: "/pros-menu" },
-      { icon: "/logos/news.png", path: "/news-vote" },
-      { icon: "/logos/ai1.png", path: "/health" },
-      { icon: "/logos/ai4.png", path: "/inquiry" },
-      { icon: "/logos/ai5.png", path: "/anonymous-chat" },
-    ].filter(item => item).map((item, index) => (
-      <Link key={index} href={item.path || '#'}>
-        <div 
-          className={`
-            flex flex-col items-center justify-center p-3 rounded-xl transition-colors w-[50px] h-[50px] flex-shrink-0
-            ${
-              index === 4 // ⬅️ 여기! 첫 번째 버튼(index가 0)일 때만 핑크색 적용
-                ? "bg-pink-600/30 hover:bg-red" 
-                : "bg-gray-800/50 hover:bg-gray-700/50"
-            }
-          `}
-        >
-          <img src={item.icon} alt="icon" className="w-8 h-8 object-contain" />
-        </div>
-      </Link>
-    ))}
-  </div>
-</div>
-
-
-      </div>
-
-      {/* 모두트리 소개 섹션 */}
-      <section className="w-[97%] py-8 md:py-12 my-8 mx-5 mb-10">
-        <div className="w-full bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 rounded-3xl relative overflow-hidden">
-          <div className="relative z-20 py-8 px-4">
-            <div className="max-w-[1500px] mx-auto">
-              <Tabs defaultValue="examples" className="w-full custom-home-tabs">
-                <TabsList className="w-full justify-center mb-4 mt-10 bg-transparent border-none gap-2 custom-homeTabslist">
-                  <TabsTrigger className="px-6 py-3 text-[15px]" value="examples">커뮤니티</TabsTrigger>
-                  <TabsTrigger className="px-6 py-3 text-[15px]" value="features">내페이지</TabsTrigger>
-                  <TabsTrigger className="px-6 py-3 text-[15px]" value="magazine">내매거진</TabsTrigger>
-                  
-                </TabsList>
-
-                <TabsContent value="features">
-                  <div className="relative rounded-2xl py-4 overflow-hidden">
-                    <div className="relative z-10 py-4">
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          나만의 기록 페이지로 하루를 정리하세요.<br /> AI가 하루 분석 · 일기 메모 건강 상태 등 내 페이지에 자동 저장 합니다 
-                        </h2>
-                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 기록 페이지로 하루를 정리 하세요.<br /> AI가 하루 분석 · 일기 메모 건강 상태 등 내 페이지 자동 저장  
-                        </h2>
-                      </div>
-                      <UserSampleCarousel2 />
-                    </div>
+          {/* PC: 다중 카드 그리드 */}
+          <div className="hidden md:block">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {dummyYoutubeVideos.map((video, index) => (
+                <div key={video.id} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-300">
+                  <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden">
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/${
+                        video.youtubeUrl.includes('youtube.com/watch?v=')
+                          ? video.youtubeUrl.split('v=')[1].split('&?')[0]
+                          : video.youtubeUrl.split('shorts/')[1].split('?')[0]
+                      }?autoplay=0&controls=1&showinfo=0&rel=0`}
+                      title={video.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
                   </div>
-                </TabsContent>
-
-                <TabsContent value="examples">
-                  <div className="relative rounded-2xl py-4 overflow-hidden">
-                    <div className="relative z-10 py-4">
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
-                        </h2>
-                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                          모두트리 커뮤니티에 초대합니다<br /> 링크편지 · 뉴스투표 · 사연투표 · 사진투표 · 건강분석 · 열린게시판
-                        </h2>
-                      </div>
-                      <UserSampleCarousel3 />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="magazine">
-                  <div className="relative rounded-2xl py-4 overflow-hidden">
-                    <div className="relative z-10 py-4">
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <h2 className="md:hidden text-xl font-medium text-white/90 mb-12 leading-relaxed">
-                         모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진으로 매거진을 만들어 드립니다.
-                        </h2>
-                        <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-12 leading-relaxed">
-                        모두트리 매거진을 만들어 보세요.<br /> AI가 내 감성 기록 분석 · 내 사진으로 매거진을 만들어 드립니다.
-                        </h2>
-                      </div>
-                      <UserSampleCarousel5 />
-                    </div>
-                  </div>
-                </TabsContent>
-
-              </Tabs>
+                  <h3 className="mt-4 text-lg font-medium text-white/90 text-center leading-relaxed">
+                    {video.title}
+                  </h3>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* 문의하기 섹션 */}
-      <div className="w-[97%] bg-[#415a77] backdrop-blur-sm rounded-3xl mb-12 relative overflow-hidden mx-5">
-        <div className="max-w-[800px] mx-auto px-4 py-16 relative z-10">
-          <div className="flex flex-col items-center justify-center text-center">
-            <h2 className="text-2xl font-bold text-white mb-6 mt-2">
-              자주 묻는 질문
-            </h2>
-            <div className="w-full max-[800px] space-y-2 mb-12">
-              {faqs.map((faq, index) => (
-                <div
-                  key={index}
-                  className="bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden"
-                >
-                  <button
-                    onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                    className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
-                  >
-                    <h3 className="text-white font-medium">{faq.question}</h3>
-                    {openFaqIndex === index ? (
-                      <ChevronUp className="w-5 h-5 text-white flex-shrink-0 ml-4" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-white flex-shrink-0 ml-4" />
-                    )}
-                  </button>
-                  {openFaqIndex === index && (
-                    <div className="px-6 py-4 border-t border-white/10">
-                      <p className="text-white/70 text-sm whitespace-pre-line">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <p className="text-white/80 mb-6">
-              저희 모두트리에게 하실 말씀 있으신가요?
-            </p>
-            <Link
-              href="/inquiry"
-              className="inline-flex items-center px-6 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-white font-medium rounded-xl transition-colors border-2 border-blue-500/50 hover:border-blue-500/70"
-            >
-              의견 작성하기
-            </Link>
-          </div>
-        </div>
+      {/* Google AdSense */}
+      <div className="mt-12 text-center">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6697023128093217"
+             crossOrigin="anonymous"></script>
+        {/* 모두트리 */}
+        <ins className="adsbygoogle"
+             style={{ display: 'block' }}
+             data-ad-client="ca-pub-6697023128093217"
+             data-ad-slot="5076482687"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
       </div>
 
-      {/* 프로필 플로팅 버튼 */}
-      <Link
-        href="/profile"
-        className="fixed bottom-4 right-4 z-[40] w-10 h-10 bg-[#56ab91]/60 rounded-full flex items-center justify-center shadow-lg hover:bg-[#56ab91]/80 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50"
-      >
-        <img src="/logos/m1.png" alt="Profile" className="w-6 h-6 object-contain" />
-        <span className="absolute right-full mr-3 px-2 py-1 bg-gray-900/80 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          내 페이지
-        </span>
-      </Link>
+    </div>
+  );
+}
 
-      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="bg-gray-900 text-white border-gray-800">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-center">모두트리에 오신 것을 환영합니다!</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 mt-4">
-            <Link href="/news-vote" className="w-full">
-              <Button variant="outline" className="w-full bg-gray-800 hover:bg-gray-700 text-white border-gray-700">
-                회원가입 없이 둘러보기
-              </Button>
-            </Link>
-            <Link href="/register" className="w-full">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                5초 회원가입
-              </Button>
-            </Link>
-            <Link href="/login" className="w-full">
-              <Button variant="secondary" className="w-full bg-green-600 hover:bg-green-700 text-white">
-                3초 로그인
-              </Button>
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </main>
+function MenuItem({ text, active }: { text: string; active: boolean }) {
+  return (
+    <li>
+      <a
+        href="#"
+        className={`
+          inline-block text-7xl sm:text-8xl md:text-9xl font-bold tracking-tight
+          transition-all duration-300 hover:scale-110
+          ${
+            active
+              ? 'text-[#EF3340]'
+              : 'text-gray-900 hover:text-[#EF3340]'
+          }
+        `}
+        style={{
+          fontFamily: '"Noto Sans KR", system-ui, -apple-system, sans-serif',
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {text}
+      </a>
+    </li>
+  );
+}
+
+function PencLogo() {
+  return (
+    <div className="animate-float">
+      <img
+        src="/logos/penc.png"
+        alt="Penc Logo"
+        width={100}
+        height={100}
+        className="w-20 h-20 object-contain"
+      />
+    </div>
   );
 }

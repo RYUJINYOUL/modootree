@@ -12,10 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Heart, Gift, Users, Baby, MessageCircle, Plus, Eye, Share2, Upload, X, ImageIcon, Trash2, ChevronLeft, ChevronRight, Info, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { useSelector } from 'react-redux';
-import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { useSelector, useDispatch } from 'react-redux';
+import { collection, query, orderBy, getDocs, where, addDoc, onSnapshot, serverTimestamp, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebase';
+import app from '@/firebase';
+import { getAuth, GoogleAuthProvider, signInWithPopup, browserLocalPersistence } from 'firebase/auth';
+import { setUser } from '@/store/userSlice';
+import KakaoAuthButton from '@/components/auth/KakaoAuthButton';
 import imageCompression from 'browser-image-compression';
 
 export interface LinkLetter {
@@ -215,11 +219,13 @@ export const letterCategories = [
 
 export default function LinkLetterPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const currentUser = useSelector((state: any) => state.user.currentUser);
   const [letters, setLetters] = useState<LinkLetter[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showMyLetters, setShowMyLetters] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: 기본정보, 2: 퀴즈, 3: 사진, 4: 내용, 5: 배경
@@ -1121,9 +1127,13 @@ export default function LinkLetterPage() {
                 편지 쓰기
               </Button>
             ) : (
-              <p className="text-sm text-gray-400 flex-shrink-0">
-                편지를 쓰려면 로그인이 필요해요 ✨
-              </p>
+              <Button
+                onClick={() => setShowLoginModal(true)}
+                className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg transition-all hover:scale-105 flex-shrink-0"
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                로그인하고 편지 쓰기
+              </Button>
             )}
           </div>
 
@@ -1680,6 +1690,15 @@ export default function LinkLetterPage() {
     </div>
   </DialogContent>
 </Dialog>
+
+{/* 플로팅 버튼 */}
+<button
+  onClick={() => router.push('/anonymous-chat')}
+  className="fixed bottom-24 right-6 md:bottom-12 md:right-12 z-50 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-penc-hover"
+  aria-label="익명채팅 바로가기"
+>
+  <img src="/logos/m1.png" alt="M1 Logo" className="w-10 h-10 object-contain" />
+</button>
     </>
   );
 }

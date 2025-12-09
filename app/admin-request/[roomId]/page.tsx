@@ -82,42 +82,21 @@ export default function AdminRequestRoomPage({ params }: { params: Promise<{ roo
   // 자동 환영 메시지 전송
   const sendWelcomeMessage = async () => {
     const welcomeMessage = `안녕하세요, 모두트리 입니다. 
+채팅방 같은 ui이지만, 
+채팅방 아닙니다.
 
 진행 사항만 알려드립니다.
-채팅방 같은 ui이지만, 채팅방 아닙니다.
-아래 양식을 작성해주시면 생성하고 전송한 내역을 남겨 드립니다.
 
-행복한 하루 되세요, 찾아주셔서 감사합니다.
+찾아주셔서 감사드립니다.
 
-
-
-■ 편지 제목 : 
-
-■ 카테고리 선택 : 사랑 · 감사 · 우정 · 가족 · 사과 · 축하
-
-■ 작성자 : (편지 받는 사람이 볼 이름)
+■ 편지링크 주소 :
 
 ■ 발송일자 : 
 
 ■ 받는분 : (sns 또는 모바일 또는 이메일 등등) - 희망선택
 
-★ 질문 아래 형식으로 10개 까지 생성 가능합니다. 
+■ 전송 시 전하고 싶은 말 : 희망 선택`;
 
-■ 질문 1. ( 객관식 · 주관식 - 선택 가능 ) 
-
-□ 선택지 (10개 가능) 
-
-□ 주관식 (정답 1개) 
-
-■ 질문 2. ( 객관식 · 주관식 - 선택 가능 ) 
-
-□ 선택지 (10개 가능) 
-
-□ 주관식 (정답 1개) 
-
-■ 편지 내용
-
-(자유 형식으로 작성해 주세요)`;
 
     try {
       await addDoc(collection(db, 'admin-request-messages'), {
@@ -208,7 +187,7 @@ export default function AdminRequestRoomPage({ params }: { params: Promise<{ roo
       setNewMessage('');
     } catch (error) {
       console.error('메시지 전송 실패:', error);
-      alert('메시지 전송에 실패했습니다: ' + error.message);
+      alert('메시지 전송에 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
     } finally {
       setIsSending(false);
     }

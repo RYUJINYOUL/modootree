@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MessageCircle, Lock, Users, Shield, Trash2, Home } from 'lucide-react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
+import { loadSlim } from "tsparticles-slim";
+import Particles from "react-tsparticles";
 
 interface AdminRoom {
   id: string;
@@ -17,6 +19,129 @@ interface AdminRoom {
   isActive: boolean;
   adminUid: string;
 }
+
+const ParticlesComponent = () => {
+  const particlesInit = useCallback(async (engine: any) => {
+    await loadSlim(engine);
+  }, []);
+
+  return (
+    <Particles
+      className="absolute inset-0 pointer-events-none"
+      init={particlesInit}
+      options={{
+        background: {
+          color: "transparent"
+        },
+        fpsLimit: 120,
+        particles: {
+          color: {
+            value: ["#FFB6C1", "#FF69B4", "#FF1493", "#DC143C", "#FFF", "#FFD700", "#FF6347"]
+          },
+          collisions: {
+            enable: false
+          },
+          move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+              default: "out"
+            },
+            random: true,
+            speed: { min: 0.5, max: 2 },
+            straight: false,
+            attract: {
+              enable: true,
+              rotateX: 600,
+              rotateY: 1200
+            }
+          },
+          number: {
+            density: {
+              enable: true,
+              area: 1000
+            },
+            value: 60
+          },
+          opacity: {
+            animation: {
+              enable: true,
+              minimumValue: 0.2,
+              speed: 1.5,
+              sync: false
+            },
+            random: true,
+            value: { min: 0.3, max: 0.8 }
+          },
+          shape: {
+            type: ["heart", "star", "circle", "triangle"],
+            options: {
+              heart: {
+                particles: {
+                  size: {
+                    value: { min: 8, max: 16 }
+                  }
+                }
+              },
+              star: {
+                sides: 5,
+                particles: {
+                  size: {
+                    value: { min: 6, max: 12 }
+                  }
+                }
+              }
+            }
+          },
+          size: {
+            animation: {
+              enable: true,
+              minimumValue: 2,
+              speed: 3,
+              sync: false
+            },
+            random: true,
+            value: { min: 3, max: 8 }
+          },
+          rotate: {
+            animation: {
+              enable: true,
+              speed: 2,
+              sync: false
+            },
+            direction: "random",
+            random: true,
+            value: { min: 0, max: 360 }
+          }
+        },
+        detectRetina: true,
+        interactivity: {
+          events: {
+            onHover: {
+              enable: true,
+              mode: "bubble"
+            },
+            onClick: {
+              enable: true,
+              mode: "push"
+            }
+          },
+          modes: {
+            bubble: {
+              distance: 150,
+              duration: 2,
+              opacity: 1,
+              size: 12
+            },
+            push: {
+              quantity: 3
+            }
+          }
+        }
+      }}
+    />
+  );
+};
 
 export default function AdminRequestPage() {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
@@ -113,7 +238,7 @@ export default function AdminRequestPage() {
 
   return (
     <div 
-      className="min-h-screen px-4 py-8 md:py-12"
+      className="min-h-screen px-4 py-8 md:py-12 relative"
       style={{
         backgroundImage: 'url(/back/back.png)',
         backgroundSize: 'cover',
@@ -122,35 +247,40 @@ export default function AdminRequestPage() {
         backgroundAttachment: 'fixed'
       }}
     >
+      {/* 파티클 배경 효과 */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <ParticlesComponent />
+      </div>
+      
       {/* 배경 오버레이 */}
-      <div className="absolute inset-0 bg-black/20"></div>
+      <div className="absolute inset-0 bg-black/20 z-1"></div>
       
       <div className="max-w-4xl mx-auto relative z-10">
         <h1 className="text-3xl font-bold mb-6 text-white text-center drop-shadow-lg flex items-center justify-center gap-3">
-          🌳 모두트리 링크편지 신청하세요
+          링크편지 대신 전해 드립니다.
           {isAdmin && (
             <span className="text-sm bg-yellow-500 text-black px-3 py-1 rounded-full font-medium flex items-center gap-1">
               <Shield className="w-3 h-3" />
-              관리자
+            
             </span>
           )}
         </h1>
         
         <p className="text-center text-white/90 mb-8 drop-shadow-md">
-          링크편지 생성 부터 전송까지 진행사항을 알려 드립니다
+          링크편지 전송의 진행사항을 알려 드립니다
         </p>
 
         {/* 신청방 생성 폼 */}
         <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl mb-8 border border-white/30">
           <h2 className="text-xl font-semibold mb-4 text-indigo-800 flex items-center gap-2">
             <MessageCircle className="w-5 h-5" />
-            비로그인으로 신청 가능합니다.
+            링크 편지 전송 신청 하세요
           </h2>
           
           <form onSubmit={handleCreateRoom} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-indigo-600">
-                신청자 이름
+                닉네임
               </label>
               <input
                 type="text"
