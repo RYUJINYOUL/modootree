@@ -171,7 +171,7 @@ export default function ProsMenu() {
       </header>
 
       {/* Main Menu Container */}
-      <div className="relative w-full h-screen flex items-center justify-center z-10">
+      <div className="relative w-full flex items-center justify-center z-10 py-45 sm:py-55 md:py-60">
         {/* Organic Blob Shape - More Distorted */}
         <svg
           className="absolute w-[90%] sm:w-[80%] md:w-[70%] h-[80%]"
@@ -186,24 +186,10 @@ export default function ProsMenu() {
         </svg>
 
          {/* Speech Bubbles - Top */}
-         <SpeechBubble 
-           title="사랑" 
-           description="마음 먼저 링크편지" 
-           position="top-left"
-           initialPosition={{ x: 0, y: 30 }}
-           containerClass="absolute top-[20%] left-[5%] sm:left-[10%] md:left-[25%] z-10"
-         />
-         <SpeechBubble 
-           title="감사" 
-           description="퀴즈로 만든 감사표현" 
-           position="top-right"
-           initialPosition={{ x: 0, y: 0 }}
-           containerClass="absolute top-[10%] right-[5%] sm:right-[10%] md:right-[30%] z-10"
-         />
 
          {/* Menu Items */}
          <nav className="relative z-10 text-center">
-         <p className="text-black text-lg mb-3">
+         <p className="text-black text-lg mb-1">
              퀴즈를 풀어야 볼 수 있는{' '}
              <span className="font-bold">링크편지</span>
            </p>
@@ -215,24 +201,10 @@ export default function ProsMenu() {
          </nav>
 
          {/* Speech Bubbles - Bottom */}
-         <SpeechBubble 
-           title="가족" 
-           description="부담 없는 사랑 퀴즈" 
-           position="bottom-left"
-           initialPosition={{ x: 0, y: 0 }}
-           containerClass="absolute bottom-[15%] left-[5%] sm:left-[15%] md:left-[28%] z-10"
-         />
-         <SpeechBubble 
-           title="우정" 
-           description="퀴즈로 만든 친구 동행" 
-           position="bottom-right"
-           initialPosition={{ x: 0, y: 0 }}
-           containerClass="absolute bottom-[25%] right-[5%] sm:right-[15%] md:right-[25%] z-10"
-         />
         
 
         {/* Penc Logo */}
-        <div className="absolute bottom-[15%] right-[20%] z-10">
+        <div className="absolute bottom-[20%] right-[20%] z-10">
           <button onClick={() => router.push('/link-letter')} className="hover:scale-110 transition-transform duration-300 cursor-penc-hover">
             <PencLogo />
           </button>
@@ -243,7 +215,7 @@ export default function ProsMenu() {
       
 
       {/* 링크편지 설명 섹션 */}
-      <div className="relative z-20 px-6 pt-2 pb-12">
+      <div className="relative z-20 px-6 pb-12">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-white text-lg md:text-2xl font-bold text-center mb-8" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
             링크편지로 특별한 마음을 전하세요
@@ -331,6 +303,22 @@ export default function ProsMenu() {
         </div>
       </div>
 
+      {/* Google AdSense */}
+      <div className="mt-12 text-center">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6697023128093217"
+             crossOrigin="anonymous"></script>
+        {/* 모두트리 */}
+        <ins className="adsbygoogle"
+             style={{ display: 'block' }}
+             data-ad-client="ca-pub-6697023128093217"
+             data-ad-slot="5076482687"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+      </div>
+
     </div>
   );
 }
@@ -358,211 +346,6 @@ function MenuItem({ text, active }: { text: string; active: boolean }) {
         {text}
       </a>
     </li>
-  );
-}
-
-function SpeechBubble({ 
-  title, 
-  description, 
-  position, 
-  initialPosition, 
-  containerClass 
-}: { 
-  title: string; 
-  description: string; 
-  position: string;
-  initialPosition: { x: number; y: number };
-  containerClass: string;
-}) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragPosition, setDragPosition] = useState(initialPosition);
-  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
-  const bubbleRef = useRef<HTMLDivElement>(null);
-  
-  // 컴포넌트가 리렌더링되어도 dragPosition 유지
-  const currentPosition = useRef(initialPosition);
-  
-  useEffect(() => {
-    currentPosition.current = dragPosition;
-  }, [dragPosition]);
-
-  // 드래그 시작
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-    setStartPosition({
-      x: e.clientX - dragPosition.x,
-      y: e.clientY - dragPosition.y
-    });
-  };
-
-  // 드래그 중
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    
-    setDragPosition({
-      x: e.clientX - startPosition.x,
-      y: e.clientY - startPosition.y
-    });
-  };
-
-  // 드래그 끝
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // 터치 이벤트 (모바일)
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    setIsDragging(true);
-    setStartPosition({
-      x: touch.clientX - dragPosition.x,
-      y: touch.clientY - dragPosition.y
-    });
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    
-    const touch = e.touches[0];
-    setDragPosition({
-      x: touch.clientX - startPosition.x,
-      y: touch.clientY - startPosition.y
-    });
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  // 전역 마우스 이벤트 (드래그 중 마우스가 요소 밖으로 나가도 추적)
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      
-      const newPosition = {
-        x: e.clientX - startPosition.x,
-        y: e.clientY - startPosition.y
-      };
-      setDragPosition(newPosition);
-    };
-
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-    };
-  }, [isDragging, startPosition.x, startPosition.y]);
-
-  const getBubbleShape = () => {
-    // 각 말풍선마다 다른 찌그러진 모양
-    const shapes = {
-      'top-left': 'M20,10 C5,5 2,15 8,25 L15,40 C18,45 25,42 30,38 L45,35 C55,30 52,20 45,15 L35,8 C30,5 25,8 20,10 Z',
-      'top-right': 'M15,8 C8,12 5,20 12,28 L18,42 C22,48 28,45 35,40 L48,32 C58,25 55,15 48,10 L38,5 C32,2 25,5 15,8 Z',
-      'bottom-left': 'M18,12 C10,8 5,18 10,30 L20,45 C25,50 32,47 38,42 L50,38 C60,32 58,22 50,18 L40,10 C35,7 28,9 18,12 Z',
-      'bottom-right': 'M22,15 C12,10 8,22 15,32 L25,48 C30,53 38,50 45,45 L58,40 C68,35 65,25 58,20 L48,12 C42,8 32,12 22,15 Z'
-    };
-    return shapes[position as keyof typeof shapes] || shapes['top-left'];
-  };
-
-  const getTailPath = () => {
-    switch (position) {
-      case 'top-left':
-        return 'M25,45 L20,55 L30,50 Z';
-      case 'top-right':
-        return 'M35,45 L40,55 L30,50 Z';
-      case 'bottom-left':
-        return 'M25,10 L20,0 L30,5 Z';
-      case 'bottom-right':
-        return 'M35,10 L40,0 L30,5 Z';
-      default:
-        return 'M25,45 L20,55 L30,50 Z';
-    }
-  };
-
-  const getTextPosition = () => {
-    switch (position) {
-      case 'top-left':
-        return 'top-[40%] left-[40%]';
-      case 'top-right':
-        return 'top-[35%] left-[45%]';
-      case 'bottom-left':
-        return 'top-[45%] left-[45%]';
-      case 'bottom-right':
-        return 'top-[47%] left-[55%]';
-      default:
-        return 'top-[30%] left-[45%]';
-    }
-  };
-
-  return (
-    <div 
-      className={`${containerClass} select-none`} 
-      style={{ 
-        transform: `translate(${dragPosition.x}px, ${dragPosition.y}px)`,
-        transition: isDragging ? 'none' : 'transform 0.3s ease',
-        willChange: 'transform'
-      }}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div 
-        ref={bubbleRef}
-        className={`relative max-w-[200px] sm:max-w-[250px] md:max-w-[300px] ${
-          isDragging ? 'cursor-penc-hover scale-110' : 'cursor-penc-hover hover:scale-105'
-        }`}
-        style={{
-          transition: 'transform 0.3s ease',
-          animation: isDragging ? 'none' : `float 3s ease-in-out infinite`,
-          animationDelay: `${Math.random() * 2}s`
-        }}
-      >
-        {/* 찌그러진 말풍선 SVG */}
-        <svg 
-          viewBox="0 0 70 60" 
-          className="w-full h-auto drop-shadow-lg"
-          style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))' }}
-        >
-          {/* 메인 말풍선 모양 */}
-          <path
-            d={getBubbleShape()}
-            fill="white"
-            stroke="#f0f0f0"
-            strokeWidth="0.5"
-          />
-          {/* 말풍선 꼬리 */}
-          <path
-            d={getTailPath()}
-            fill="white"
-            stroke="#f0f0f0"
-            strokeWidth="0.5"
-          />
-        </svg>
-        
-        {/* 텍스트 콘텐츠 */}
-        <div className={`absolute ${getTextPosition()} transform -translate-x-1/2 -translate-y-1/2 pointer-events-none`}>
-          <div className="text-center w-20">
-            <div className="font-bold text-red-500 mb-1 text-lg leading-tight">
-              {title}
-            </div>
-            <div className="text-gray-700 text-[15px] leading-tight">
-              {description}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 

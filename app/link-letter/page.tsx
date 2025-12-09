@@ -1133,7 +1133,21 @@ export default function LinkLetterPage() {
           {/* 하단 여백 */}
           <div className="h-20 md:h-32"></div>
         </div>
-
+        {/* Google AdSense */}
+        <div className="mt-12 text-center">
+          <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6697023128093217"
+               crossOrigin="anonymous"></script>
+          {/* 모두트리 */}
+          <ins className="adsbygoogle"
+               style={{ display: 'block' }}
+               data-ad-client="ca-pub-6697023128093217"
+               data-ad-slot="5076482687"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>
+               (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>
       </main>
 
    {/* 편지 작성 모달 - 색상 수정 버전 */}

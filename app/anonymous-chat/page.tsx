@@ -144,7 +144,7 @@ export default function AdminRequestPage() {
         <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl mb-8 border border-white/30">
           <h2 className="text-xl font-semibold mb-4 text-indigo-800 flex items-center gap-2">
             <MessageCircle className="w-5 h-5" />
-            새 신청방 만들기
+            비로그인으로 신청 가능합니다.
           </h2>
           
           <form onSubmit={handleCreateRoom} className="space-y-4">
