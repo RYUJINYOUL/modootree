@@ -56,7 +56,7 @@ export default function TranslateBanner() {
       new window.google.translate.TranslateElement(
         {
           pageLanguage: 'ko',
-          includedLanguages: 'ko,en,ja,zh-CN,vi,th,id,mn,my,uz,km,tl',
+          includedLanguages: 'ko,en,ja,zh-CN,vi,th,id,tl,de,fr,es,it,ru',
           layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
           autoDisplay: false,
         },

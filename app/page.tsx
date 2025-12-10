@@ -9,40 +9,87 @@ import Particles from "react-tsparticles";
 interface YoutubeVideo {
   id: string;
   title: string;
-  thumbnail: string;
+  thumbnail: string; // 실제 썸네일 URL로 업데이트
   youtubeUrl: string;
 }
+
+// 유튜브 영상 ID 추출 함수
+const getYoutubeVideoId = (url: string): string | null => {
+  const watchMatch = url.match(/(?:\?v=|\/embed\/|\.be\/)([^&\n?#]+)/);
+  if (watchMatch && watchMatch[1]) {
+    return watchMatch[1];
+  }
+  const shortsMatch = url.match(/shorts\/([^?\n&]+)/);
+  if (shortsMatch && shortsMatch[1]) {
+    return shortsMatch[1];
+  }
+  return null;
+};
+
+const YoutubeVideoPlayer: React.FC<{ video: YoutubeVideo }> = ({ video }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoId = getYoutubeVideoId(video.youtubeUrl);
+
+  if (!videoId) {
+    return <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 flex items-center justify-center text-red-400">Invalid video URL</div>;
+  }
+
+  return (
+    <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden cursor-pointer" onClick={() => setIsPlaying(true)}>
+      {!isPlaying ? (
+        <>
+          <img
+            src={video.thumbnail}
+            alt={video.title}
+            className="absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-300"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/60 transition-all duration-300">
+            <img src="/Image/sns/youtube.png" alt="Play Video" className="w-16 h-16 object-contain" />
+          </div>
+        </>
+      ) : (
+        <iframe
+          className="absolute top-0 left-0 w-full h-full"
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&showinfo=0&rel=0`}
+          title={video.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        ></iframe>
+      )}
+    </div>
+  );
+};
 
 const dummyYoutubeVideos: YoutubeVideo[] = [
   {
     id: 'video1',
     title: '퀴즈를 풀어야 볼 수 있는 편지',
-    thumbnail: '/youtube/youtube1.jpg',
     youtubeUrl: 'https://youtube.com/shorts/1GmgcfZRoOU?si=OLZ6ihPXL-H1aLBz',
+    thumbnail: 'https://img.youtube.com/vi/1GmgcfZRoOU/hqdefault.jpg',
   },
   {
     id: 'video2',
     title: '모두트리 눈사람 산타가 되다',
-    thumbnail: '/youtube/youtube2.jpg',
     youtubeUrl: 'https://youtube.com/shorts/KPNhNq7q7vA?si=z9YH1jDslFMw4Wqb',
+    thumbnail: 'https://img.youtube.com/vi/KPNhNq7q7vA/hqdefault.jpg',
   },
   {
     id: 'video3',
     title: '모두트리 응원송',
-    thumbnail: '/youtube/youtube3.jpg',
     youtubeUrl: 'https://youtube.com/shorts/DxSfJI23bMU?si=QuuY4Q4VXZ8c1lD4',
+    thumbnail: 'https://img.youtube.com/vi/DxSfJI23bMU/hqdefault.jpg',
   },
   {
     id: 'video4',
     title: '모두트리 공감송',
-    thumbnail: '/youtube/youtube4.jpg',
     youtubeUrl: 'https://youtube.com/shorts/2ieKWOCIaIU?si=xVN2xjwhI88Vhn1Y',
+    thumbnail: 'https://img.youtube.com/vi/2ieKWOCIaIU/hqdefault.jpg',
   },
   {
     id: 'video5',
     title: '링크편지 대신 보내 드립니다',
-    thumbnail: '/youtube/youtube5.jpg',
     youtubeUrl: 'https://youtube.com/shorts/-Zv4mvmlWpA?si=7NS98Xr5lXhCnea_',
+    thumbnail: 'https://img.youtube.com/vi/-Zv4mvmlWpA/hqdefault.jpg',
   },
 ];
 
@@ -358,19 +405,7 @@ export default function Home() {
               >
                 {dummyYoutubeVideos.map((video, index) => (
                   <div key={video.id} className="w-full flex-shrink-0 px-2">
-                    <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden">
-                      <iframe
-                        className="absolute top-0 left-0 w-full h-full"
-                        src={`https://www.youtube.com/embed/${
-                          video.youtubeUrl.includes('youtube.com/watch?v=')
-                            ? video.youtubeUrl.split('v=')[1].split('&?')[0]
-                            : video.youtubeUrl.split('shorts/')[1].split('?')[0]
-                        }?autoplay=0&controls=1&showinfo=0&rel=0`}
-                        title={video.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
-                    </div>
+                    <YoutubeVideoPlayer video={video} />
                     <p className="mt-4 mb-4 md:mb-2 text-sm font-medium text-white/90 text-center px-2">{video.title}</p>
                   </div>
                 ))}
@@ -414,19 +449,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {dummyYoutubeVideos.map((video, index) => (
                 <div key={video.id} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-300">
-                  <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden">
-                    <iframe
-                      className="absolute top-0 left-0 w-full h-full"
-                      src={`https://www.youtube.com/embed/${
-                        video.youtubeUrl.includes('youtube.com/watch?v=')
-                          ? video.youtubeUrl.split('v=')[1].split('&?')[0]
-                          : video.youtubeUrl.split('shorts/')[1].split('?')[0]
-                      }?autoplay=0&controls=1&showinfo=0&rel=0`}
-                      title={video.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
-                  </div>
+                  <YoutubeVideoPlayer video={video} />
                   <h3 className="mt-4 text-lg font-medium text-white/90 text-center leading-relaxed">
                     {video.title}
                   </h3>

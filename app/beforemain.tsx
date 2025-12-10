@@ -457,7 +457,7 @@ export default function Home() {
             <DialogTitle className="text-xl font-bold text-center">모두트리에 오신 것을 환영합니다!</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 mt-4">
-            <Link href="/news-vote" className="w-full">
+            <Link href="/link-letter" className="w-full">
               <Button variant="outline" className="w-full bg-gray-800 hover:bg-gray-700 text-white border-gray-700">
                 회원가입 없이 둘러보기
               </Button>

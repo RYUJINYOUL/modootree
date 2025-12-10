@@ -174,7 +174,7 @@ const LoginPage = () => {
           <span>Google로 로그인</span>
         </button>
         <KakaoAuthButton />
-        <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+        {/* <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
           <input
             className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 placeholder-gray-500 text-black text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
             type="email" 
@@ -200,10 +200,10 @@ const LoginPage = () => {
           >
             로그인
           </button>
-        </form>
+        </form> */}
         <div className="w-full flex flex-col gap-4 items-center mt-4">
           <button
-            onClick={() => push("/news-vote")}
+            onClick={() => push("/link-letter")}
             className="text-gray-300 hover:text-white text-sm transition-colors"
           >
             회원가입 없이 먼저 둘러보기

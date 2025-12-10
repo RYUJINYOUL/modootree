@@ -10,7 +10,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [showMobileChat, setShowMobileChat] = useState(false);
   
   // AI 플로팅 버튼을 숨길 페이지 목록
-  const hideAiButton = ['/ai-comfort', '/', '/anonymous-chat'];
+  const hideAiButton = ['/ai-comfort', '/', '/anonymous-chat', '/login', '/register' ];
 
   // AI 플로팅 버튼을 숨길 페이지 목록 (동적 경로 포함)
   const shouldHideAiButton = hideAiButton.includes(pathname) ||
