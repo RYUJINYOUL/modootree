@@ -91,6 +91,12 @@ const dummyYoutubeVideos: YoutubeVideo[] = [
     youtubeUrl: 'https://youtube.com/shorts/-Zv4mvmlWpA?si=7NS98Xr5lXhCnea_',
     thumbnail: 'https://img.youtube.com/vi/-Zv4mvmlWpA/hqdefault.jpg',
   },
+  {
+    id: 'video6',
+    title: '문 앞, 가족의 속마음',
+    youtubeUrl: 'https://youtube.com/shorts/4cxJ-fKORnw?si=t1W2AkSwCFyZLzZ9',
+    thumbnail: 'https://img.youtube.com/vi/4cxJ-fKORnw/hqdefault.jpg',
+  },
 ];
 
 const ParticlesComponent = () => {
