@@ -1030,13 +1030,13 @@ export default function LinkLetterPage() {
               <Button
                 variant={selectedCategory === 'all' ? 'default' : 'outline'}
                 onClick={() => setSelectedCategory('all')}
-                className={`text-sm transition-all cursor-penc-hover ${
+                className={`text-sm transition-all cursor-penc-hover rounded-full ${
                   selectedCategory === 'all' 
                     ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
                     : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
                 }`}
               >
-                전체 ({letters.length})
+                전체
               </Button>
               {letterCategories.map((category) => {
                 const count = letters.filter(letter => letter.category === category.id).length;
@@ -1045,7 +1045,7 @@ export default function LinkLetterPage() {
                     key={category.id}
                     variant={selectedCategory === category.id ? 'default' : 'outline'}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`text-sm transition-all flex items-center gap-2 ${
+                    className={`text-sm transition-all flex items-center gap-2 rounded-full ${
                       selectedCategory === category.id 
                         ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
                         : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
@@ -1056,7 +1056,7 @@ export default function LinkLetterPage() {
                       alt={category.name}
                       className="w-4 h-4 object-contain"
                     />
-                    {category.name} ({count})
+                    {category.name}
                   </Button>
                 );
               })}
@@ -1068,7 +1068,7 @@ export default function LinkLetterPage() {
                 <Button
                   variant={selectedCategory === 'all' ? 'default' : 'outline'}
                   onClick={() => setSelectedCategory('all')}
-                  className={`text-sm transition-all flex-shrink-0 ${
+                  className={`text-sm transition-all flex-shrink-0 cursor-penc-hover rounded-full ${
                     selectedCategory === 'all' 
                       ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
                       : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
@@ -1083,7 +1083,7 @@ export default function LinkLetterPage() {
                       key={category.id}
                       variant={selectedCategory === category.id ? 'default' : 'outline'}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`text-sm transition-all flex-shrink-0 flex items-center gap-2 ${
+                      className={`text-sm transition-all flex-shrink-0 flex items-center gap-2 rounded-full ${
                         selectedCategory === category.id 
                           ? 'bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm border-white/70' 
                           : 'border-white/60 text-white/90 hover:bg-white/60 hover:text-black hover:border-white/60'
@@ -1459,7 +1459,7 @@ export default function LinkLetterPage() {
       {currentStep === 3 && (
         <div className="space-y-4">
           <div>
-            <Label className="text-gray-900 font-semibold">편지 사진 (최대 5장)</Label>
+            <Label className="text-gray-900 font-semibold">편지 사진 (최대 3장)</Label>
             <div className="mt-2">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
                 <input
@@ -1469,24 +1469,24 @@ export default function LinkLetterPage() {
                   onChange={(e) => handleImageUpload(e.target.files)}
                   className="hidden"
                   id="imageUpload"
-                  disabled={letterForm.images.length >= 5}
+                  disabled={letterForm.images.length >= 3}
                 />
                 <label
                   htmlFor="imageUpload"
-                  className={`cursor-pointer ${letterForm.images.length >= 5 ? 'cursor-not-allowed opacity-50' : ''}`}
+                  className={`cursor-pointer ${letterForm.images.length >= 3 ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-700">
-                    {letterForm.images.length >= 5 
-                      ? '최대 5장까지 업로드 가능합니다' 
-                      : '클릭하여 사진을 업로드하세요'
+                    {letterForm.images.length >= 3 
+                      ? '최대 3장까지 업로드 가능합니다' 
+                      : '캡쳐 사진을 권장합니다'
                     }
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    * 이미지는 캡쳐 사진 사용 권장
+                    * 클릭하여 사진을 업로드 하세요
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    {letterForm.images.length}/5 장 업로드됨
+                    {letterForm.images.length}/3 장 업로드됨
                   </p>
                 </label>
               </div>
@@ -1599,8 +1599,8 @@ export default function LinkLetterPage() {
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="w-6 h-6 text-gray-400" />
-                    <span className="text-sm">이미지 선택하기</span>
-                    <span className="text-xs text-gray-600">고품질 이미지 지원 (최대 20MB)</span>
+                    <span className="text-sm">이미지 등록(캡쳐사진권장)</span>
+                    <span className="text-xs text-gray-600">이미지 지원 (최대 20MB)</span>
                   </div>
                 </button>
               </div>
@@ -1788,7 +1788,7 @@ export default function LinkLetterPage() {
 {/* 플로팅 버튼 */}
 <button
   onClick={() => router.push('/anonymous-chat')}
-  className="fixed bottom-24 right-6 md:bottom-12 md:right-12 z-50 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-penc-hover"
+  className="fixed bottom-3 right-2 md:bottom-12 md:right-12 z-50 w-13 h-13 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-penc-hover"
   aria-label="익명채팅 바로가기"
 >
   <img src="/logos/m1.png" alt="M1 Logo" className="w-10 h-10 object-contain" />
