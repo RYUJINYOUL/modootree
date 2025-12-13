@@ -15,7 +15,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // AI 플로팅 버튼을 숨길 페이지 목록 (동적 경로 포함)
   const shouldHideAiButton = hideAiButton.includes(pathname) ||
     pathname.startsWith('/admin-request/') ||
-    pathname.startsWith('/link-letter/');
+    pathname.startsWith('/link-letter/') ||
+    pathname.startsWith('/news-vote') ||
+    pathname.startsWith('/modoo-vote') ||
+    pathname.startsWith('/photo-story');
 
   // 하단 탭을 숨길 페이지 목록 추가
   const hideBottomTabs = ['/ai-chat-simple', '/ai-comfort', '/', '/anonymous-chat']; // ai-comfort와 메인 페이지도 추가

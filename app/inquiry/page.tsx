@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where } from 'firebase/firestore';
-import { MessageCircle, Send, Lock } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { MessageCircle, Send, Lock, Trash2 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
@@ -97,6 +97,7 @@ export default function InquiryPage() {
   const [showReplyForm, setShowReplyForm] = useState<string | null>(null);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const { currentUser } = useSelector((state: any) => state.user);
+  const ADMIN_UID = 'vW1OuC6qMweyOqu73N0558pv4b03'; // 관리자 UID
 
   useEffect(() => {
     const q = query(
@@ -110,13 +111,14 @@ export default function InquiryPage() {
         ...doc.data()
       })) as Inquiry[];
       
-      // 비공개 글 필터링: 공개 글이거나 본인이 작성한 비공개 글만 표시
-      const filteredInquiries = inquiriesList.filter(inquiry => {
-        if (!inquiry.isPrivate) return true; // 공개 글은 모두 표시
-        return currentUser && inquiry.authorUid === currentUser.uid; // 비공개 글은 작성자만 표시
-      });
+      // // 비공개 글 필터링: 공개 글이거나 본인이 작성한 비공개 글만 표시
+      // const filteredInquiries = inquiriesList.filter(inquiry => {
+      //   if (!inquiry.isPrivate) return true; // 공개 글은 모두 표시
+      //   return currentUser && inquiry.authorUid === currentUser.uid; // 비공개 글은 작성자만 표시
+      // });
       
-      setInquiries(filteredInquiries);
+      // setInquiries(filteredInquiries);
+      setInquiries(inquiriesList); // 비공개 필터링 주석 처리로 모든 글 표시
 
       // 각 문의에 대한 답글 가져오기
       inquiriesList.forEach(inquiry => {
@@ -158,8 +160,9 @@ export default function InquiryPage() {
         email: email.trim(),
         createdAt: serverTimestamp(),
         status: 'pending',
-        isPrivate: isPrivate,
-        authorUid: currentUser?.uid || null // 로그인한 사용자의 UID 저장
+        // // / / 비공개
+        // isPrivate: isPrivate,
+        // authorUid: currentUser?.uid || null // 로그인한 사용자의 UID 저장
       };
 
       await addDoc(collection(db, 'inquiries'), inquiryData);
@@ -167,7 +170,7 @@ export default function InquiryPage() {
       setSubmitMessage('문의가 성공적으로 등록되었습니다.');
       setContent('');
       setEmail('');
-      setIsPrivate(false); // 비공개 상태도 초기화
+      // setIsPrivate(false); // 비공개 상태도 초기화
     } catch (error) {
       console.error('문의 제출 중 오류:', error);
       setSubmitMessage('문의 등록 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -205,6 +208,26 @@ export default function InquiryPage() {
       alert('답글 등록 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsSubmittingReply(false);
+    }
+  };
+
+  const handleDeleteInquiry = async (inquiryId: string) => {
+    if (!window.confirm('이 문의를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'inquiries', inquiryId));
+      // 연관된 답글들도 삭제 (선택 사항)
+      const repliesQuery = query(collection(db, 'replies'), where('inquiryId', '==', inquiryId));
+      const repliesSnapshot = await getDocs(repliesQuery);
+      const deleteReplyPromises = repliesSnapshot.docs.map(replyDoc => deleteDoc(doc(db, 'replies', replyDoc.id)));
+      await Promise.all(deleteReplyPromises);
+      
+      alert('문의가 삭제되었습니다.');
+    } catch (error) {
+      console.error('문의 삭제 중 오류:', error);
+      alert('문의 삭제 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -254,7 +277,7 @@ export default function InquiryPage() {
             </div>
 
             {/* 비공개 글 체크박스 */}
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="isPrivate"
@@ -265,7 +288,7 @@ export default function InquiryPage() {
               <label htmlFor="isPrivate" className="text-white/80 text-sm cursor-pointer">
                 비공개 글로 작성 (본인만 볼 수 있습니다)
               </label>
-            </div>
+            </div> */}
 
             <div className="flex justify-end gap-3">
               <button
@@ -305,8 +328,19 @@ export default function InquiryPage() {
                     </span>
                   )}
                 </div>
-                <div className="text-white/50 text-xs">
-                  {formatDate(inquiry.createdAt)}
+                <div className="flex items-center gap-2">
+                  <div className="text-white/50 text-xs">
+                    {formatDate(inquiry.createdAt)}
+                  </div>
+                  {currentUser && currentUser.uid === ADMIN_UID && (
+                    <button
+                      onClick={() => handleDeleteInquiry(inquiry.id)}
+                      className="text-red-400 hover:text-red-300 transition-colors p-1 rounded-full hover:bg-white/10"
+                      aria-label="문의 삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               <p className="text-white whitespace-pre-wrap mb-4">{inquiry.content}</p>

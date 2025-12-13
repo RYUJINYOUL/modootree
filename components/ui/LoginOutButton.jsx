@@ -90,17 +90,17 @@ export default function LoginOutButton() {
                
 
                 {[
-                  {
-                    title: "내 기록 페이지",
-                    description: "AI와 함께 작성하는 나만의 기록 페이지",
-                    icon: "/logos/m1.png",
-                    path: "/profile"
-                  },
+                  // {
+                  //   title: "내 기록 페이지",
+                  //   description: "AI와 함께 작성하는 나만의 기록 페이지",
+                  //   icon: "/logos/m1.png",
+                  //   path: "/profile"
+                  // },
                   {
                     title: "링크 편지",
                     description: "퀴즈를 풀어야만 읽을 수 있는 링크 편지",
                     icon: "/logos/m12.png",
-                    path: "/link-letter"
+                    path: "/pros-menu"
                   },
                   // {
                   //   title: "AI 건강 기록",

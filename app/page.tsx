@@ -885,7 +885,7 @@ export default function FeedPage() {
             
             <button
               onClick={() => {
-                router.push('/link-letter');
+                router.push('/pros-menu');
                 setShowWriteMenu(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
