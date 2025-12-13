@@ -108,7 +108,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
       console.error("댓글 실시간 업데이트 실패:", err);
     });
 
-    fetchArticle();
+      fetchArticle();
     return () => unsubscribe();
   }, [articleId]);
 

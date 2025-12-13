@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where, startAfter } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Image from 'next/image';
-import { Heart, MessageCircle, Gift, Users, Baby, Plus, Eye, Edit3, Copy } from 'lucide-react';
+import { Heart, MessageCircle, Gift, Users, Baby, Plus, Eye, Edit3, FilePen } from 'lucide-react';
 import { LinkLetter, letterCategories } from './link-letter/page';
 import { useRouter } from 'next/navigation';
 import CategoryCarousel from '../components/CategoryCarousel';
@@ -60,6 +60,14 @@ export default function FeedPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [displayCount, setDisplayCount] = useState(28); // PC에서 초기에 보여줄 아이템 수
   const [showWriteMenu, setShowWriteMenu] = useState(false);
+  const [lastVisibleDocs, setLastVisibleDocs] = useState<{[key: string]: any}>({});
+  const [hasMoreData, setHasMoreData] = useState<{[key: string]: boolean}>({
+    all: true,
+    news: true,
+    'link-letter': true,
+    'photo-story': true,
+    'modoo-vote-articles': true
+  });
 
   const particlesInit = useCallback(async (engine: any) => {
     await loadSlim(engine);
@@ -74,57 +82,66 @@ export default function FeedPage() {
     try {
       console.log('피드 데이터 로딩 시작...');
       console.log('데이터 로딩 시작...');
-      const [newsData, linkLetterData, photoStoryData, modooVoteData, healthData] = await Promise.all([
-        fetchFromCollection('articles', 10).then(data => {
+      const [newsResult, linkLetterResult, photoStoryResult, modooVoteResult] = await Promise.all([
+        fetchFromCollection('articles', 10).then(result => {
           console.log('뉴스 투표 데이터 로드:', {
             collectionName: 'articles',
-            dataLength: data.length,
-            sampleData: data[0]
+            dataLength: result.data.length,
+            sampleData: result.data[0]
           });
-          return data;
+          return result;
         }),
-        fetchFromCollection('linkLetters', 10).then(data => {
-          console.log('링크편지 데이터:', data.length);
-          return data;
+        fetchFromCollection('linkLetters', 10).then(result => {
+          console.log('링크편지 데이터:', result.data.length);
+          return result;
         }),
-        fetchFromCollection('photo-stories', 10).then(data => {
-          console.log('사진 스토리 데이터:', data.length);
-          return data;
+        fetchFromCollection('photo-stories', 10).then(result => {
+          console.log('사진 스토리 데이터:', result.data.length);
+          return result;
         }),
-        fetchFromCollection('modoo-vote-articles', 10).then(data => {
-          console.log('공감 투표 데이터:', data.length);
-          return data;
-        }),
-        fetchFromCollection('health_records', 10).then(data => {
-          console.log('건강 기록 데이터:', data.length);
-          return data;
+        fetchFromCollection('modoo-vote-articles', 10).then(result => {
+          console.log('공감 투표 데이터:', result.data.length);
+          return result;
         })
       ]);
 
+      // lastVisible 문서들 저장
+      setLastVisibleDocs({
+        news: newsResult.lastVisible,
+        'link-letter': linkLetterResult.lastVisible,
+        'photo-story': photoStoryResult.lastVisible,
+        'modoo-vote-articles': modooVoteResult.lastVisible
+      });
+
+      // 더 가져올 데이터가 있는지 확인
+      setHasMoreData({
+        all: true, // 전체는 개별 카테고리에 따라 결정
+        news: newsResult.data.length === 10,
+        'link-letter': linkLetterResult.data.length === 10,
+        'photo-story': photoStoryResult.data.length === 10,
+        'modoo-vote-articles': modooVoteResult.data.length === 10
+      });
+
       console.log('데이터 포맷팅 시작...');
-      const [formattedNews, formattedLinkLetter, formattedPhotoStory, formattedModooVote, formattedHealth] = await Promise.all([
-        formatData(newsData, 'news').then(data => {
+      const [formattedNews, formattedLinkLetter, formattedPhotoStory, formattedModooVote] = await Promise.all([
+        formatData(newsResult.data, 'news').then(data => {
           console.log('뉴스 데이터 포맷팅:', {
-            originalLength: newsData.length,
+            originalLength: newsResult.data.length,
             formattedLength: data.length,
             sampleFormattedData: data[0]
           });
           return data;
         }),
-        formatData(linkLetterData, 'link-letter').then(data => {
+        formatData(linkLetterResult.data, 'link-letter').then(data => {
           console.log('링크편지 데이터 포맷팅 완료:', data.length);
           return data;
         }),
-        formatData(photoStoryData, 'photo-story').then(data => {
+        formatData(photoStoryResult.data, 'photo-story').then(data => {
           console.log('사진 스토리 데이터 포맷팅 완료:', data.length);
           return data;
         }),
-        formatData(modooVoteData, 'modoo-vote-articles').then(data => {
+        formatData(modooVoteResult.data, 'modoo-vote-articles').then(data => {
           console.log('사연 투표 데이터 포맷팅 완료:', data.length);
-          return data;
-        }),
-        formatData(healthData, 'health').then(data => {
-          console.log('건강 기록 데이터 포맷팅 완료:', data.length);
           return data;
         })
       ]);
@@ -134,8 +151,7 @@ export default function FeedPage() {
         ...formattedNews,
         ...formattedLinkLetter,
         ...formattedPhotoStory,
-        ...formattedModooVote,
-        ...formattedHealth
+        ...formattedModooVote
       ].sort((a: any, b: any) => b.createdAt - a.createdAt);
 
       console.log('최종 데이터 개수:', combinedData.length);
@@ -156,7 +172,7 @@ export default function FeedPage() {
     }
   };
 
-  const fetchFromCollection = async (collectionName: string, itemLimit: number = 10): Promise<any[]> => {
+  const fetchFromCollection = async (collectionName: string, itemLimit: number = 10, lastDoc: any = null): Promise<{data: any[], lastVisible: any}> => {
     try {
       console.log(`${collectionName} 컬렉션에서 데이터 가져오기 시작...`);
       
@@ -167,11 +183,21 @@ export default function FeedPage() {
         orderByField = 'createdAt'; // linkLetters 컬렉션의 정렬 기준은 createdAt
       }
       
-      const q = query(
+      let q = query(
         collection(db, collectionName),
         orderBy(orderByField, 'desc'),
         limit(itemLimit)
       );
+
+      // 페이지네이션을 위해 마지막 문서 이후부터 가져오기
+      if (lastDoc) {
+        q = query(
+          collection(db, collectionName),
+          orderBy(orderByField, 'desc'),
+          startAfter(lastDoc),
+          limit(itemLimit)
+        );
+      }
       
       const snapshot = await getDocs(q);
       console.log(`${collectionName} 컬렉션 데이터 개수:`, snapshot.size);
@@ -196,11 +222,13 @@ export default function FeedPage() {
         };
       });
       
+      const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+      
       console.log(`${collectionName} 데이터 처리 완료:`, data);
-      return data;
+      return { data, lastVisible };
     } catch (error) {
       console.error(`${collectionName} 데이터 가져오기 실패:`, error);
-      return [];  // 에러 발생 시 빈 배열 반환
+      return { data: [], lastVisible: null };  // 에러 발생 시 빈 배열 반환
     }
   };
 
@@ -261,7 +289,7 @@ export default function FeedPage() {
         formattedItem = {
           id: item.id,
           type,
-          displayType: '링크 투표',
+          displayType: '뉴스 투표',
           title: item.title || '',
           summary: item.summary || '',
           category: item.category || '',
@@ -327,9 +355,100 @@ export default function FeedPage() {
     return formattedData;
   };
 
+  const loadMoreData = async () => {
+    if (!hasMoreData[activeFilter]) return;
+
+    try {
+      let result: {data: any[], lastVisible: any} = {data: [], lastVisible: null};
+      let formattedData: FeedItem[] = [];
+
+      if (activeFilter === 'all') {
+        // 전체 카테고리의 경우 모든 카테고리에서 추가 데이터 로드
+        const [newsResult, linkLetterResult, photoStoryResult, modooVoteResult] = await Promise.all([
+          fetchFromCollection('articles', 10, lastVisibleDocs.news),
+          fetchFromCollection('linkLetters', 10, lastVisibleDocs['link-letter']),
+          fetchFromCollection('photo-stories', 10, lastVisibleDocs['photo-story']),
+          fetchFromCollection('modoo-vote-articles', 10, lastVisibleDocs['modoo-vote-articles'])
+        ]);
+
+        // lastVisible 문서들 업데이트
+        setLastVisibleDocs(prev => ({
+          ...prev,
+          news: newsResult.lastVisible,
+          'link-letter': linkLetterResult.lastVisible,
+          'photo-story': photoStoryResult.lastVisible,
+          'modoo-vote-articles': modooVoteResult.lastVisible
+        }));
+
+        // 더 가져올 데이터가 있는지 확인
+        const hasMore = newsResult.data.length === 10 || 
+                       linkLetterResult.data.length === 10 || 
+                       photoStoryResult.data.length === 10 || 
+                       modooVoteResult.data.length === 10;
+
+        setHasMoreData(prev => ({
+          ...prev,
+          all: hasMore,
+          news: newsResult.data.length === 10,
+          'link-letter': linkLetterResult.data.length === 10,
+          'photo-story': photoStoryResult.data.length === 10,
+          'modoo-vote-articles': modooVoteResult.data.length === 10
+        }));
+
+        // 데이터 포맷팅
+        const [formattedNews, formattedLinkLetter, formattedPhotoStory, formattedModooVote] = await Promise.all([
+          formatData(newsResult.data, 'news'),
+          formatData(linkLetterResult.data, 'link-letter'),
+          formatData(photoStoryResult.data, 'photo-story'),
+          formatData(modooVoteResult.data, 'modoo-vote-articles')
+        ]);
+
+        formattedData = [
+          ...formattedNews,
+          ...formattedLinkLetter,
+          ...formattedPhotoStory,
+          ...formattedModooVote
+        ].sort((a: any, b: any) => b.createdAt - a.createdAt);
+
+      } else {
+        // 개별 카테고리의 경우
+        let collectionName = '';
+        if (activeFilter === 'news') collectionName = 'articles';
+        else if (activeFilter === 'link-letter') collectionName = 'linkLetters';
+        else if (activeFilter === 'photo-story') collectionName = 'photo-stories';
+        else if (activeFilter === 'modoo-vote-articles') collectionName = 'modoo-vote-articles';
+
+        if (collectionName) {
+          result = await fetchFromCollection(collectionName, 10, lastVisibleDocs[activeFilter]);
+          
+          // lastVisible 문서 업데이트
+          setLastVisibleDocs(prev => ({
+            ...prev,
+            [activeFilter]: result.lastVisible
+          }));
+
+          // 더 가져올 데이터가 있는지 확인
+          setHasMoreData(prev => ({
+            ...prev,
+            [activeFilter]: result.data.length === 10
+          }));
+
+          // 데이터 포맷팅
+          formattedData = await formatData(result.data, activeFilter);
+        }
+      }
+
+      // 기존 데이터에 새 데이터 추가
+      setFeedItems(prev => [...prev, ...formattedData]);
+
+    } catch (error) {
+      console.error('추가 데이터 로드 실패:', error);
+    }
+  };
+
   const FILTERS = [
     { id: 'all', label: '전체' },
-    { id: 'news', label: '링크', path: '/news-vote', fullLabel: '링크 투표' },
+    { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' },
     { id: 'link-letter', label: '편지', path: '/link-letter', fullLabel: '퀴즈 편지' },
     { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
     { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' }
@@ -576,7 +695,7 @@ export default function FeedPage() {
                                 className="p-1 rounded-full hover:bg-gray-700/50 transition-colors"
                                 aria-label="링크 복사"
                               >
-                                <Copy className="w-4 h-4" />
+                                <FilePen className="w-4 h-4 text-white" />
                               </button>
                             </>
                           ) : (
@@ -615,7 +734,7 @@ export default function FeedPage() {
                             className="p-1 rounded-full hover:bg-gray-700/50 transition-colors"
                             aria-label="링크 복사"
                           >
-                            <Copy className="w-4 h-4" />
+                            <FilePen className="w-4 h-4 text-white" />
                           </button>
                             </>
                           )}
@@ -703,10 +822,10 @@ export default function FeedPage() {
             </div>
             
             {/* 더보기 버튼 */}
-            {feedItems.filter(item => activeFilter === 'all' || item.type === activeFilter).length > displayCount && (
+            {hasMoreData[activeFilter] && (
               <div className="flex justify-center">
                 <button
-                  onClick={() => setDisplayCount(prev => prev + 28)}
+                  onClick={loadMoreData}
                   className="px-6 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-white rounded-lg transition-colors backdrop-blur-sm"
                 >
                   더보기
@@ -730,22 +849,22 @@ export default function FeedPage() {
               className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
             >
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                📰
+                <FilePen className="w-4 h-4 text-white" />
               </div>
-              <span>링크 등록</span>
+              <span>뉴스 투표</span>
             </button>
             
             <button
               onClick={() => {
-                router.push('/pros-menu');
+                router.push('/link-letter');
                 setShowWriteMenu(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
             >
               <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                💌
+                <FilePen className="w-4 h-4 text-white" />
               </div>
-              <span>편지 쓰기</span>
+              <span>퀴즈 편지</span>
             </button>
             
             <button
@@ -756,9 +875,9 @@ export default function FeedPage() {
               className="w-full flex items-center gap-3 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors text-white text-left"
             >
               <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                📸
+                <FilePen className="w-4 h-4 text-white" />
               </div>
-              <span>사진 업로드</span>
+              <span>사진 투표</span>
             </button>
             
             <button
@@ -769,9 +888,9 @@ export default function FeedPage() {
               className="w-full flex items-center gap-3 px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 rounded-lg transition-colors text-white text-left"
             >
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                💭
+                <FilePen className="w-4 h-4 text-white" />
               </div>
-              <span>사연 작성</span>
+              <span>사연 투표</span>
             </button>
             
           </div>

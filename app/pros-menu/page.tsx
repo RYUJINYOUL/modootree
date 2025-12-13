@@ -298,7 +298,7 @@ export default function Home() {
             <PencLogo />
           </button>
         </div>
-
+        
       </div>
 
       {/* 링크편지 설명 섹션 */}
