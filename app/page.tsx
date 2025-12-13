@@ -504,10 +504,10 @@ export default function FeedPage() {
                       <div className="text-sm text-white/70 mb-3 line-clamp-2">
                         {item.type === 'news' && item.summary ? (
                           <p>{item.summary}</p>
-                        ) : item.type === 'link-letter' && item.content ? (
-                          <p>{item.content.slice(0, 100)}...</p>
-                        ) : item.type === 'modoo-vote-articles' && item.content ? (
-                          <p>{item.content.slice(0, 100)}...</p>
+                        ) : item.type === 'link-letter' ? (
+                          <p>퀴즈를 풀어야 볼 수 있는 편지입니다.</p>
+                        ) : item.type === 'modoo-vote-articles' ? (
+                          <p>{item.story ? item.story.slice(0, 100) + '...' : '투표 선택지를 확인하세요.'}</p>
                         ) : item.type === 'photo-story' && Array.isArray(item.aiStories) ? (
                           <p>{item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content?.slice(0, 100) || ''}...</p>
                         ) : item.type === 'health' && item.analysis?.dailySummary?.overallComment ? (
@@ -518,6 +518,39 @@ export default function FeedPage() {
                           <p className="text-white/50">설명이 없습니다.</p>
                         )}
                       </div>
+
+                      {/* 사연 투표 선택지 디자인 */}
+                      {item.type === 'modoo-vote-articles' && item.questions?.[0]?.options && (
+                        <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                          {item.questions[0].options.slice(0, 4).map((option: any, optIndex: number) => (
+                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30">
+                              {option.text}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 사진 투표 선택지 디자인 */}
+                      {item.type === 'photo-story' && item.aiStories && item.aiStories.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                          {item.aiStories.slice(0, 4).map((story: any, storyIndex: number) => (
+                            <span key={storyIndex} className="bg-green-600/20 text-green-300 text-xs px-2.5 py-1 rounded-full border border-green-500/30">
+                              {story.content.slice(0, 20)}...
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 뉴스 투표 선택지 디자인 */}
+                      {item.type === 'news' && item.vote_options && item.vote_options.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2 mb-3">
+                          {item.vote_options.slice(0, 4).map((option: any, optIndex: number) => (
+                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30">
+                              {option.content.slice(0, 20)}...
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between text-gray-400">
                         <div className="flex items-center gap-3">
@@ -655,7 +688,7 @@ export default function FeedPage() {
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                 📰
               </div>
-              <span>링크 투표</span>
+              <span>링크 등록</span>
             </button>
             
             <button
@@ -668,7 +701,7 @@ export default function FeedPage() {
               <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
                 💌
               </div>
-              <span>퀴즈 편지</span>
+              <span>편지 쓰기</span>
             </button>
             
             <button
@@ -681,7 +714,7 @@ export default function FeedPage() {
               <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                 📸
               </div>
-              <span>사진 투표</span>
+              <span>사진 업로드</span>
             </button>
             
             <button
@@ -694,7 +727,7 @@ export default function FeedPage() {
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                 💭
               </div>
-              <span>사연 투표</span>
+              <span>사연 작성</span>
             </button>
             
           </div>

@@ -9,12 +9,12 @@ import ClientLayout from '@/components/ClientLayout';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '모두트리 - 퀴즈 링크 편지',
-  description: '누구나 쉽게 만들어 공유하는 퀴즈 링크 편지',
-  keywords: '모두트리, 링크편지, 퀴즈링크편지',
+  title: '모두트리 - 퀴즈 투표 서비스',
+  description: '내 일상이 투표 퀴즈가 되는 모두트리',
+  keywords: '모두트리, 링크편지, 퀴즈링크편지, 사연투표, 사진투표, 링크푸표',
   openGraph: {
-    title: '모두트리 - 퀴즈 링크 편지',
-    description: '누구나 쉽게 만들어 공유하는 퀴즈 링크 편지',
+    title: '모두트리 - 퀴즈 투표 서비스',
+    description: '내 일상이 투표 퀴즈가 되는 모두트리',
     locale: 'ko_KR',
     type: 'website',
   },

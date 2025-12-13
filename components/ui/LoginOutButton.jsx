@@ -102,15 +102,15 @@ export default function LoginOutButton() {
                     icon: "/logos/m12.png",
                     path: "/link-letter"
                   },
-                  {
-                    title: "AI 건강 기록",
-                    description: "당신의 건강한 하루를 AI가 분석해 드립니다",
-                    icon: "/logos/ai1.png",
-                    path: "/health"
-                  },
+                  // {
+                  //   title: "AI 건강 기록",
+                  //   description: "당신의 건강한 하루를 AI가 분석해 드립니다",
+                  //   icon: "/logos/ai1.png",
+                  //   path: "/health"
+                  // },
                   {
                     title: "AI 투표",
-                    description: "AI가 만들어 주는 뉴스 사연 사진 투표 당신의 선택은?",
+                    description: "AI가 만들어 주는 사연 사진 투표 당신의 선택은?",
                     icon: "/logos/news.png",
                     path: "/modoo-vote"
                   },
