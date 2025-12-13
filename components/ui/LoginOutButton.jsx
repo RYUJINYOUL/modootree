@@ -143,6 +143,56 @@ export default function LoginOutButton() {
                   </Link>
                 ))}
               </nav>
+
+              <div className="mt-8">
+                <h3 className="text-white/80 text-md font-semibold mb-3 text-center">모두트리 SNS</h3>
+                <div className="flex justify-center gap-3">
+                  <a 
+                    href="https://www.youtube.com/@%EB%AA%A8%EB%91%90%ED%8A%B8%EB%A6%AC"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 hover:opacity-80 transition-opacity"
+                    aria-label="YouTube"
+                  >
+                    <Image
+                      src="/Image/sns/youtube.png"
+                      alt="YouTube"
+                      width={40}
+                      height={40}
+                    />
+                  </a>
+
+                  <a 
+                    href="https://www.instagram.com/modootree"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 hover:opacity-80 transition-opacity"
+                    aria-label="Instagram"
+                  >
+                    <Image
+                      src="/Image/sns/instagram.png"
+                      alt="Instagram"
+                      width={40}
+                      height={40}
+                    />
+                  </a>
+
+                  <a 
+                    href="https://www.tiktok.com/@modootree"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 hover:opacity-80 transition-opacity"
+                    aria-label="TikTok"
+                  >
+                    <Image
+                      src="/Image/sns/tiktok.png"
+                      alt="TikTok"
+                      width={40}
+                      height={40}
+                    />
+                  </a>
+                </div>
+              </div>
             </SheetContent>
           </Sheet>
           <Link 

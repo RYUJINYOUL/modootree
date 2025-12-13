@@ -363,48 +363,42 @@ export default function FeedPage() {
       let formattedData: FeedItem[] = [];
 
       if (activeFilter === 'all') {
-        // 전체 카테고리의 경우 모든 카테고리에서 추가 데이터 로드
-        const [newsResult, linkLetterResult, photoStoryResult, modooVoteResult] = await Promise.all([
-          fetchFromCollection('articles', 10, lastVisibleDocs.news),
+        // 전체 카테고리의 경우 news 제외하고 나머지 3개 카테고리에서만 추가 데이터 로드
+        const [linkLetterResult, photoStoryResult, modooVoteResult] = await Promise.all([
           fetchFromCollection('linkLetters', 10, lastVisibleDocs['link-letter']),
           fetchFromCollection('photo-stories', 10, lastVisibleDocs['photo-story']),
           fetchFromCollection('modoo-vote-articles', 10, lastVisibleDocs['modoo-vote-articles'])
         ]);
 
-        // lastVisible 문서들 업데이트
+        // lastVisible 문서들 업데이트 (news 제외)
         setLastVisibleDocs(prev => ({
           ...prev,
-          news: newsResult.lastVisible,
           'link-letter': linkLetterResult.lastVisible,
           'photo-story': photoStoryResult.lastVisible,
           'modoo-vote-articles': modooVoteResult.lastVisible
         }));
 
-        // 더 가져올 데이터가 있는지 확인
-        const hasMore = newsResult.data.length === 10 || 
-                       linkLetterResult.data.length === 10 || 
+        // 더 가져올 데이터가 있는지 확인 (news 제외)
+        const hasMore = linkLetterResult.data.length === 10 || 
                        photoStoryResult.data.length === 10 || 
                        modooVoteResult.data.length === 10;
 
         setHasMoreData(prev => ({
           ...prev,
           all: hasMore,
-          news: newsResult.data.length === 10,
           'link-letter': linkLetterResult.data.length === 10,
           'photo-story': photoStoryResult.data.length === 10,
           'modoo-vote-articles': modooVoteResult.data.length === 10
         }));
 
-        // 데이터 포맷팅
-        const [formattedNews, formattedLinkLetter, formattedPhotoStory, formattedModooVote] = await Promise.all([
-          formatData(newsResult.data, 'news'),
+        // 데이터 포맷팅 (news 제외)
+        const [formattedLinkLetter, formattedPhotoStory, formattedModooVote] = await Promise.all([
           formatData(linkLetterResult.data, 'link-letter'),
           formatData(photoStoryResult.data, 'photo-story'),
           formatData(modooVoteResult.data, 'modoo-vote-articles')
         ]);
 
         formattedData = [
-          ...formattedNews,
           ...formattedLinkLetter,
           ...formattedPhotoStory,
           ...formattedModooVote
@@ -440,6 +434,9 @@ export default function FeedPage() {
 
       // 기존 데이터에 새 데이터 추가
       setFeedItems(prev => [...prev, ...formattedData]);
+      
+      // displayCount도 증가시켜서 새로운 데이터가 화면에 표시되도록 함
+      setDisplayCount(prev => prev + formattedData.length);
 
     } catch (error) {
       console.error('추가 데이터 로드 실패:', error);
@@ -448,10 +445,10 @@ export default function FeedPage() {
 
   const FILTERS = [
     { id: 'all', label: '전체' },
-    { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' },
     { id: 'link-letter', label: '편지', path: '/link-letter', fullLabel: '퀴즈 편지' },
     { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
-    { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' }
+    { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' },
+    { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' } // 뉴스를 마지막으로 이동
   ];
 
   return (
@@ -567,6 +564,11 @@ export default function FeedPage() {
         {/* 카테고리별 설명 */}
         {!loading && (
           <div className="text-center mb-6">
+            {activeFilter === 'all' && (
+              <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
+                모든 일상을 익명 투표 · 퀴즈로 만들어 드립니다.
+              </p>
+            )}
             {activeFilter === 'news' && (
               <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
                 뉴스 링크를 올리시면 자동 투표가 됩니다.
@@ -872,20 +874,7 @@ export default function FeedPage() {
           <div className="absolute bottom-16 right-0 bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3 min-w-48">
             <button
               onClick={() => {
-                router.push('/news-vote/submit');
-                setShowWriteMenu(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
-            >
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <FilePen className="w-4 h-4 text-white" />
-              </div>
-              <span>뉴스 투표</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                router.push('/pros-menu');
+                router.push('/link-letter');
                 setShowWriteMenu(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
@@ -920,6 +909,19 @@ export default function FeedPage() {
                 <FilePen className="w-4 h-4 text-white" />
               </div>
               <span>사연 투표</span>
+            </button>
+
+            <button
+              onClick={() => {
+                router.push('/news-vote');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <FilePen className="w-4 h-4 text-white" />
+              </div>
+              <span>뉴스 투표</span>
             </button>
             
           </div>

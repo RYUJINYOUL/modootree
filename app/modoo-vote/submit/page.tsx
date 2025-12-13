@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase'; // auth 추가
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, Upload, Camera, Image } from 'lucide-react';
 import { AIGenerationProgress } from '@/components/AIGenerationProgress';
 import { useSelector } from 'react-redux';
 import useAuth from '@/hooks/useAuth';
@@ -36,6 +36,76 @@ export default function SubmitModooVotePage() {
   const [loading, setLoading] = useState(false);
   const [isSummarizingChat, setIsSummarizingChat] = useState(false); // 채팅 요약 로딩 상태
   const [isGeneratingAiVote, setIsGeneratingAiVote] = useState(false); // AI 투표 생성 로딩 상태 추가
+  
+  // 이미지 업로드 & OCR 관련 상태
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isOCRProcessing, setIsOCRProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 이미지 업로드 함수
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setUploadedImages(prev => [...prev, result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 이미지 제거 함수
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // OCR 처리 함수
+  const handleOCR = async () => {
+    if (uploadedImages.length === 0) {
+      alert('먼저 이미지를 업로드해주세요.');
+      return;
+    }
+
+    setIsOCRProcessing(true);
+    try {
+      // Gemini OCR API 호출 (freememo에서 사용하는 것과 동일)
+      const response = await fetch('/api/gemini-ocr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images: uploadedImages 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('OCR 처리 실패');
+      }
+
+      const data = await response.json();
+      
+      if (data.text) {
+        // OCR로 추출된 텍스트를 사연 내용에 추가
+        setStory(prev => prev + (prev ? '\n\n' : '') + data.text);
+        
+        const { imageCount, extractedCount, failedCount } = data;
+        if (failedCount > 0) {
+          alert(`OCR 완료! ${imageCount}개 중 ${extractedCount}개 성공, ${failedCount}개 실패\n\n실패 원인을 확인하려면 개발자 도구 콘솔을 확인하세요.`);
+        } else {
+          alert(`OCR 완료! ${imageCount}개 이미지 모두 성공적으로 처리되었습니다.`);
+        }
+      }
+    } catch (error) {
+      console.error('OCR 처리 중 오류:', error);
+      alert('텍스트 추출 중 오류가 발생했습니다.');
+    } finally {
+      setIsOCRProcessing(false);
+    }
+  };
 
   // 사연 생성 시 채팅 내용 요약 함수
   const handleSummarizeChat = async () => {
@@ -279,6 +349,74 @@ export default function SubmitModooVotePage() {
           >
             {isSummarizingChat ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}오늘 대화 내용으로 사연 생성
           </Button>
+          
+          {/* 이미지 업로드 & OCR 기능 */}
+          <div className="border-t border-gray-600 pt-4 mt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+              <h4 className="text-white font-medium flex items-center gap-2">
+                <Image className="w-5 h-5 text-blue-400" />
+                이미지 업로드 & OCR
+              </h4>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-blue-500/60 hover:bg-blue-500/80 text-white px-4 py-2 text-sm flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  <Upload className="w-4 h-4" />
+                  이미지 선택
+                </Button>
+                {uploadedImages.length > 0 && (
+                  <Button
+                    onClick={handleOCR}
+                    disabled={isOCRProcessing}
+                    className="bg-green-500/60 hover:bg-green-500/80 text-white px-4 py-2 text-sm flex items-center justify-center gap-2 w-full sm:w-auto"
+                  >
+                    {isOCRProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        OCR 처리 중...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4" />
+                        텍스트 추출
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* 업로드된 이미지 미리보기 */}
+            {uploadedImages.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+                {uploadedImages.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={image}
+                      alt={`업로드된 이미지 ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg border border-gray-600"
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
           <Button
             onClick={handleGenerateAiVote}
             disabled={isGeneratingAiVote || !story.trim()}
