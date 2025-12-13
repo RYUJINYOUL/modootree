@@ -564,6 +564,32 @@ export default function FeedPage() {
           </div>
         )}
 
+        {/* 카테고리별 설명 */}
+        {!loading && (
+          <div className="text-center mb-6">
+            {activeFilter === 'news' && (
+              <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
+                뉴스 링크를 올리시면 자동 투표가 됩니다.
+              </p>
+            )}
+            {activeFilter === 'link-letter' && (
+              <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
+                퀴즈 편지를 작성하시고, 링크로 전송 하세요
+              </p>
+            )}
+            {activeFilter === 'photo-story' && (
+              <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
+                내 사진을 업로드 하시면 자동 투표가 됩니다.
+              </p>
+            )}
+            {activeFilter === 'modoo-vote-articles' && (
+              <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
+                내 스토리를 작성하시면 자동 투표가 됩니다.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* 피드 리스트 */}
         {!loading && (
           <div className="space-y-6">
@@ -604,19 +630,19 @@ export default function FeedPage() {
                       {/* 제목 영역 */}
                       <h3 className="text-lg font-semibold text-white mb-2 line-clamp-1">
                         {item.type === 'news' ? (
-                          item.title
+                          item.title.replace(/[:,\]]/g, '')
                         ) : item.type === 'modoo-vote-articles' ? (
-                          item.title
+                          item.title.replace(/[:,\]]/g, '')
                         ) : item.type === 'link-letter' ? (
-                          item.title || item.content || '퀴즈 편지'
+                          (item.title || item.content || '퀴즈 편지').replace(/[:,\]]/g, '')
                         ) :
                          item.type === 'photo-story' ? 
                            (Array.isArray(item.aiStories) 
-                             ? item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content 
+                             ? (item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content || '').slice(6).replace(/[:,\]]/g, '')
                              : '') : // 사진 투표는 AI 스토리 내용을 제목으로 사용합니다.
                          item.type === 'health' ?
-                           item.analysis?.dailySummary?.overallComment || '건강 기록' :
-                         (item.content || '').slice(0, 50)}
+                           (item.analysis?.dailySummary?.overallComment || '건강 기록').replace(/[:,\]]/g, '') :
+                         (item.content || '').slice(0, 50).replace(/[:,\]]/g, '')}
                       </h3>
 
                       {/* 요약 또는 내용 미리보기 */}
@@ -642,9 +668,10 @@ export default function FeedPage() {
                       {item.type === 'modoo-vote-articles' && item.questions?.[0]?.options && (
                         <div className="flex flex-wrap gap-2 mt-2 mb-3">
                           {item.questions[0].options.slice(0, 4).map((option: any, optIndex: number) => (
-                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto">
-                              {option.text}
-                            </span>
+                            <div key={optIndex} className="bg-blue-600/30 hover:bg-blue-600/50 text-blue-100 text-xs px-3 py-2 rounded-lg border-2 border-blue-500/50 hover:border-blue-400 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full border border-blue-300 bg-transparent"></div>
+                              <span className="font-medium">{(option.text.replace(/[:,\]]/g, '') || '').slice(0, 12)}...</span>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -653,9 +680,10 @@ export default function FeedPage() {
                       {item.type === 'photo-story' && item.aiStories && item.aiStories.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2 mb-3">
                           {item.aiStories.slice(0, 4).map((story: any, storyIndex: number) => (
-                            <span key={storyIndex} className="bg-green-600/20 text-green-300 text-xs px-2.5 py-1 rounded-full border border-green-500/30 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto">
-                              {story.content.slice(0, 20)}...
-                            </span>
+                            <div key={storyIndex} className="bg-green-600/30 hover:bg-green-600/50 text-green-100 text-xs px-3 py-2 rounded-lg border-2 border-green-500/50 hover:border-green-400 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md flex items-center gap-1.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                              <div className="w-2 h-2 rounded-full border border-green-300 bg-transparent flex-shrink-0"></div>
+                              <span className="font-medium truncate">{(story.content.slice(6).replace(/[:,\]]/g, '') || '').slice(0, 12)}...</span>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -664,9 +692,10 @@ export default function FeedPage() {
                       {item.type === 'news' && item.vote_options && item.vote_options.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2 mb-3">
                           {item.vote_options.slice(0, 4).map((option: any, optIndex: number) => (
-                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto">
-                              {option.content.slice(0, 20)}...
-                            </span>
+                            <div key={optIndex} className="bg-orange-600/30 hover:bg-orange-600/50 text-orange-100 text-xs px-3 py-2 rounded-lg border-2 border-orange-500/50 hover:border-orange-400 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full border border-orange-300 bg-transparent"></div>
+                              <span className="font-medium">{(option.content.replace(/[:,\]]/g, '') || '').slice(0, 12)}...</span>
+                            </div>
                           ))}
                         </div>
                       )}
