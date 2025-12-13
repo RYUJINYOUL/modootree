@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { useSelector } from 'react-redux';
 import LoginOutButton from '@/components/ui/LoginOutButton';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Copy } from 'lucide-react';
 
 interface PhotoStory {
   id: string;
@@ -320,8 +320,8 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
       <Toaster position="top-center" />
       <LoginOutButton />
       <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-cyan-900 text-white/90">
-        <div className="container mx-auto px-4 py-20 pb-20 md:pb-40 max-w-3xl">
-          <div className="mb-6">
+        <div className="container mx-auto px-4 py-5 pb-20 md:pb-40 max-w-3xl">
+          <div className="mb-6 flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => {
@@ -338,6 +338,20 @@ export default function StoryPage({ params }: { params: Promise<{ storyId: strin
               <ChevronLeft className="w-5 h-5 mr-1" />
               목록으로
             </Button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (typeof window !== 'undefined') {
+                  navigator.clipboard.writeText(window.location.href)
+                    .then(() => toast.success('링크가 복사되었습니다!'))
+                    .catch(() => toast.error('링크 복사에 실패했습니다'));
+                }
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+              aria-label="링크 복사"
+            >
+              <span>링크 복사</span>
+            </button>
           </div>
 
           <div className="space-y-6">

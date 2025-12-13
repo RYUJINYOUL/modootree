@@ -9,11 +9,11 @@ import ClientLayout from '@/components/ClientLayout';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '모두트리 - 내 일상이 퀴즈 투표가 되다',
+  title: '모두트리 - 내 일상 퀴즈 투표가 되다',
   description: '모든 일상이 투표 퀴즈가 되는 모두트리',
   keywords: '모두트리, 링크편지, 퀴즈링크편지, 사연투표, 사진투표, 링크푸표',
   openGraph: {
-    title: '모두트리 - 내 일상이 퀴즈 투표가 되다',
+    title: '모두트리 - 내 일상 퀴즈 투표가 되다',
     description: '모든 일상이 투표 퀴즈가 되는 모두트리',
     locale: 'ko_KR',
     type: 'website',

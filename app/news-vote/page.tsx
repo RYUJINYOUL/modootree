@@ -196,10 +196,17 @@ export default function NewsVotePage({ isActive = true }: { isActive?: boolean }
 
             {/* 새 뉴스 제안하기 버튼 (로그인 시에만 노출) 및 정렬 기준 선택 UI */}
             <div className="flex justify-between items-center mb-6">
-              {user && ( // user가 있을 때만 버튼 노출
+              {user?.uid ? ( // user가 있을 때만 버튼 노출
                 <Link href="/news-vote/submit" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs"> {/* 크기 조정 */}
                   투표 등록
                 </Link>
+              ) : (
+                <button
+                  onClick={() => router.push('/login')}
+                  className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs"
+                >
+                  로그인 투표 등록
+                </button>
               )}
               <div className="flex gap-2 ml-auto"> {/* text-sm 제거, 버튼 개별 text-xs 적용 */}
                 <button 
@@ -316,10 +323,17 @@ export default function NewsVotePage({ isActive = true }: { isActive?: boolean }
 
                 {/* 새 뉴스 제안하기 버튼 (로그인 시에만 노출) 및 정렬 기준 선택 UI */}
                 <div className="flex justify-between items-center mb-6">
-                  {user && ( // user가 있을 때만 버튼 노출
+                  {user?.uid ? ( // user가 있을 때만 버튼 노출
                     <Link href="/news-vote/submit" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs"> {/* 크기 조정 */}
                       투표 등록
                     </Link>
+                  ) : (
+                    <button
+                      onClick={() => router.push('/login')}
+                      className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs"
+                    >
+                      로그인 투표 등록
+                    </button>
                   )}
                   <div className="flex gap-2 ml-auto"> {/* text-sm 제거, 버튼 개별 text-xs 적용 */}
                     <button 

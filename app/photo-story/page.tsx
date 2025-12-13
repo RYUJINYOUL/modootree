@@ -609,8 +609,8 @@ export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean
 
           <TabsContent value="photo-story" className="w-full">
             <div className="mb-10">
-              {currentUser?.uid && (
-                <div className="flex justify-end mb-4">
+              <div className="flex justify-end mb-4">
+                {currentUser?.uid ? (
                   <Button
                     onClick={() => setShowWriteForm(true)}
                     variant="default"
@@ -618,13 +618,21 @@ export default function PhotoStoryPage({ isActive = true }: { isActive?: boolean
                   >
                     만들기
                   </Button>
-                </div>
-              )}
-              {!currentUser && (
+                ) : (
+                  <Button
+                    onClick={() => router.push('/login')}
+                    variant="default"
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    로그인 만들기
+                  </Button>
+                )}
+              </div>
+              {/* {!currentUser && (
                 <p className="text-sm text-gray-400 text-center mt-4">
                   * 제작은 로그인이 필요합니다
                 </p>
-              )}
+              )} */}
 
               {renderStoryList()}
             </div>

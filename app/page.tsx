@@ -566,7 +566,7 @@ export default function FeedPage() {
           <div className="text-center mb-6">
             {activeFilter === 'all' && (
               <p className="text-white/80 text-sm bg-white/10 rounded-lg px-4 py-3 backdrop-blur-sm">
-                모든 일상을 익명 투표 · 퀴즈로 만들어 드립니다.
+                모든 일상을 AI가 투표로 만들어 드립니다.
               </p>
             )}
             {activeFilter === 'news' && (
@@ -867,14 +867,13 @@ export default function FeedPage() {
         )}
       </div>
 
-      {/* 플로팅 글쓰기 버튼 */}
-      <div className="fixed bottom-6 right-6 z-50">
-        {/* 카테고리 메뉴 */}
+      {/* 플로팅 글쓰기 버튼 (ClientLayout으로 이동) */}
+      {/* <div className="fixed bottom-6 right-6 z-50">
         {showWriteMenu && (
           <div className="absolute bottom-16 right-0 bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3 min-w-48">
             <button
               onClick={() => {
-                router.push('/link-letter');
+                router.push('/pros-menu');
                 setShowWriteMenu(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
@@ -923,11 +922,23 @@ export default function FeedPage() {
               </div>
               <span>뉴스 투표</span>
             </button>
+
+            <button
+              onClick={() => {
+                router.push('/inquiry');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-500/20 hover:bg-gray-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                <FilePen className="w-4 h-4 text-white" />
+              </div>
+              <span>불편 신고</span>
+            </button>
             
           </div>
         )}
         
-        {/* 메인 글쓰기 버튼 */}
         <button
           onClick={() => setShowWriteMenu(!showWriteMenu)}
           className={`w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
@@ -936,7 +947,7 @@ export default function FeedPage() {
         >
           <Edit3 className="w-6 h-6" />
         </button>
-      </div>
+      </div> */}
     </main>
     </>
   );

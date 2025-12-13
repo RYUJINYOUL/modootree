@@ -228,10 +228,17 @@ export default function ModooVotePage() {
             </div>
 
             <div className="flex justify-between items-center mb-6">
-              {user && (
+              {user?.uid ? (
                 <Link href="/modoo-vote/submit" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs">
                   공감 등록
                 </Link>
+              ) : (
+                <button
+                  onClick={() => router.push('/login')}
+                  className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs"
+                >
+                  로그인 공감 등록
+                </button>
               )}
               <div className="flex gap-2 ml-auto">
                 <button 
@@ -359,10 +366,17 @@ export default function ModooVotePage() {
                 </div>
 
                 <div className="flex justify-between items-center mb-6">
-                  {user && (
+                  {user?.uid ? (
                     <Link href="/modoo-vote/submit" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs">
                       공감 등록
                     </Link>
+                  ) : (
+                    <button
+                      onClick={() => router.push('/login')}
+                      className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg shadow-md transition-colors text-xs"
+                    >
+                      로그인 공감 등록
+                    </button>
                   )}
                   <div className="flex gap-2 ml-auto">
                     <button 

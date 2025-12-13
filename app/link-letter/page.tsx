@@ -1788,7 +1788,7 @@ export default function LinkLetterPage() {
 {/* 플로팅 버튼 */}
 <button
   onClick={() => router.push('/anonymous-chat')}
-  className="fixed bottom-3 right-2 md:bottom-12 md:right-12 z-50 w-13 h-13 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-penc-hover"
+  className="fixed bottom-85 right-0 md:bottom-85 md:right-0 z-50 w-13 h-13 bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-penc-hover"
   aria-label="익명채팅 바로가기"
 >
   <img src="/logos/m1.png" alt="M1 Logo" className="w-10 h-10 object-contain" />
