@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Image from 'next/image';
-import { Heart, MessageCircle, Gift, Users, Baby, Plus, Eye, Edit3 } from 'lucide-react';
+import { Heart, MessageCircle, Gift, Users, Baby, Plus, Eye, Edit3, Copy } from 'lucide-react';
 import { LinkLetter, letterCategories } from './link-letter/page';
 import { useRouter } from 'next/navigation';
 import CategoryCarousel from '../components/CategoryCarousel';
@@ -483,7 +483,7 @@ export default function FeedPage() {
                       </div>
                       
                       {/* 제목 영역 */}
-                      <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2">
+                      <h3 className="text-lg font-semibold text-white mb-2 line-clamp-1">
                         {item.type === 'news' ? (
                           item.title
                         ) : item.type === 'modoo-vote-articles' ? (
@@ -494,7 +494,7 @@ export default function FeedPage() {
                          item.type === 'photo-story' ? 
                            (Array.isArray(item.aiStories) 
                              ? item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content 
-                             : '') :
+                             : '') : // 사진 투표는 AI 스토리 내용을 제목으로 사용합니다.
                          item.type === 'health' ?
                            item.analysis?.dailySummary?.overallComment || '건강 기록' :
                          (item.content || '').slice(0, 50)}
@@ -508,8 +508,8 @@ export default function FeedPage() {
                           <p>퀴즈를 풀어야 볼 수 있는 편지입니다.</p>
                         ) : item.type === 'modoo-vote-articles' ? (
                           <p>{item.story ? item.story.slice(0, 100) + '...' : '투표 선택지를 확인하세요.'}</p>
-                        ) : item.type === 'photo-story' && Array.isArray(item.aiStories) ? (
-                          <p>{item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content?.slice(0, 100) || ''}...</p>
+                        ) : item.type === 'photo-story' ? (
+                          '' // 사진 투표는 설명을 제외합니다.
                         ) : item.type === 'health' && item.analysis?.dailySummary?.overallComment ? (
                           <p>{item.analysis.dailySummary.overallComment.slice(0, 100)}...</p>
                         ) : item.previewContent ? (
@@ -523,7 +523,7 @@ export default function FeedPage() {
                       {item.type === 'modoo-vote-articles' && item.questions?.[0]?.options && (
                         <div className="flex flex-wrap gap-2 mt-2 mb-3">
                           {item.questions[0].options.slice(0, 4).map((option: any, optIndex: number) => (
-                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30">
+                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto">
                               {option.text}
                             </span>
                           ))}
@@ -534,7 +534,7 @@ export default function FeedPage() {
                       {item.type === 'photo-story' && item.aiStories && item.aiStories.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2 mb-3">
                           {item.aiStories.slice(0, 4).map((story: any, storyIndex: number) => (
-                            <span key={storyIndex} className="bg-green-600/20 text-green-300 text-xs px-2.5 py-1 rounded-full border border-green-500/30">
+                            <span key={storyIndex} className="bg-green-600/20 text-green-300 text-xs px-2.5 py-1 rounded-full border border-green-500/30 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto">
                               {story.content.slice(0, 20)}...
                             </span>
                           ))}
@@ -545,7 +545,7 @@ export default function FeedPage() {
                       {item.type === 'news' && item.vote_options && item.vote_options.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2 mb-3">
                           {item.vote_options.slice(0, 4).map((option: any, optIndex: number) => (
-                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30">
+                            <span key={optIndex} className="bg-blue-600/20 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/30 flex-grow-0 flex-shrink-0 w-[calc(50%-0.25rem)] md:w-auto">
                               {option.content.slice(0, 20)}...
                             </span>
                           ))}
@@ -564,6 +564,20 @@ export default function FeedPage() {
                                 <Eye className="w-4 h-4" />
                                 {item.viewCount || 0}
                               </span>
+                              {/* 링크 복사 버튼 */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const itemUrl = `${window.location.origin}/link-letter/${item.id}`;
+                                  navigator.clipboard.writeText(itemUrl)
+                                    .then(() => alert('링크가 복사되었습니다!'))
+                                    .catch(err => console.error('링크 복사 실패:', err));
+                                }}
+                                className="p-1 rounded-full hover:bg-gray-700/50 transition-colors"
+                                aria-label="링크 복사"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
                             </>
                           ) : (
                             <>
@@ -575,6 +589,34 @@ export default function FeedPage() {
                             <MessageCircle className="w-4 h-4" />
                             {item.comments || 0}
                           </span>
+                          {/* 링크 복사 버튼 */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              let itemUrl = '';
+                              if (item.type === 'news') {
+                                itemUrl = `${window.location.origin}/news-vote/${item.id}`;
+                              } else if (item.type === 'modoo-vote-articles') {
+                                itemUrl = `${window.location.origin}/modoo-vote/${item.id}`;
+                              } else if (item.type === 'photo-story') {
+                                itemUrl = `${window.location.origin}/photo-story/${item.id}`;
+                              } else if (item.type === 'health') {
+                                itemUrl = `${window.location.origin}/health/results/${item.id}`;
+                              } else {
+                                itemUrl = `${window.location.origin}`;
+                              }
+
+                              if (itemUrl) {
+                                navigator.clipboard.writeText(itemUrl)
+                                  .then(() => alert('링크가 복사되었습니다!'))
+                                  .catch(err => console.error('링크 복사 실패:', err));
+                              }
+                            }}
+                            className="p-1 rounded-full hover:bg-gray-700/50 transition-colors"
+                            aria-label="링크 복사"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
                             </>
                           )}
                         </div>
@@ -589,70 +631,72 @@ export default function FeedPage() {
                     </div>
 
                     {/* 오른쪽 썸네일 영역 */}
-                    <div className="w-20 h-20 md:w-24 md:h-24 relative bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center rounded-lg flex-shrink-0">
-                      {item.type === 'news' ? (
-                        // 뉴스 투표인 경우
-                        <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-blue-500/20">
-                          <div className="text-center p-2">
-                            <div className="text-xs text-white/70">
-                              {NEWS_CATEGORIES.find(cat => cat.id === item.category)?.label || '뉴스'}
+                    {item.type !== 'news' && item.type !== 'modoo-vote-articles' && (
+                      <div className="w-20 h-20 md:w-24 md:h-24 relative bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center rounded-lg flex-shrink-0">
+                        {item.type === 'news' ? (
+                          // 뉴스 투표인 경우 (이제 이 블록은 렌더링되지 않음)
+                          <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-blue-500/20">
+                            <div className="text-center p-2">
+                              <div className="text-xs text-white/70">
+                                {NEWS_CATEGORIES.find(cat => cat.id === item.category)?.label || '뉴스'}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : item.type === 'modoo-vote-articles' ? (
-                        // 공감 투표인 경우 이모티콘 표시
-                        <div className="relative w-full h-full flex items-center justify-center">
-                          <img
-                            src={EMOTION_ICONS[item.category as keyof typeof EMOTION_ICONS] || EMOTION_ICONS.default}
-                            alt="감정 아이콘"
-                            className="w-12 h-12 md:w-16 md:h-16 object-contain"
+                        ) : item.type === 'modoo-vote-articles' ? (
+                          // 공감 투표인 경우 이모티콘 표시 (이제 이 블록은 렌더링되지 않음)
+                          <div className="relative w-full h-full flex items-center justify-center">
+                            <img
+                              src={EMOTION_ICONS[item.category as keyof typeof EMOTION_ICONS] || EMOTION_ICONS.default}
+                              alt="감정 아이콘"
+                              className="w-12 h-12 md:w-16 md:h-16 object-contain"
+                            />
+                          </div>
+                        ) : item.type === 'health' ? (
+                          // 건강 기록인 경우 식사/운동 이미지 표시
+                          <Image
+                            src={item.mealPhotos?.[0] || item.exercisePhotos?.[0] || '/music/hb.png'}
+                            alt="건강 기록"
+                            fill
+                            className="object-cover rounded-lg"
                           />
-                        </div>
-                      ) : item.type === 'health' ? (
-                        // 건강 기록인 경우 식사/운동 이미지 표시
-                        <Image
-                          src={item.mealPhotos?.[0] || item.exercisePhotos?.[0] || '/music/hb.png'}
-                          alt="건강 기록"
-                          fill
-                          className="object-cover rounded-lg"
-                        />
-                      ) : item.type === 'photo-story' ? (
-                        // 포토 스토리인 경우
-                        <Image
-                          src={item.photo}
-                          alt="포토 스토리"
-                          fill
-                          className="object-cover rounded-lg"
-                        />
-                      ) : item.type === 'link-letter' ? (
-                        // 링크편지인 경우
-                        <>
-                          {item.images && item.images.length > 0 ? (
-                            <Image
-                              src={item.images[0]}
-                              alt="링크 편지 이미지"
-                              fill
-                              className="object-cover rounded-lg"
-                            />
-                          ) : (
-                            <Image
-                              src="/samples/linklett.png"
-                              alt="기본 링크 편지 이미지"
-                              fill
-                              className="object-cover opacity-70 rounded-lg"
-                            />
-                          )}
-                        </>
-                      ) : (
-                        // 이미지가 있는 경우 또는 기본 이미지
-                        <Image
-                          src={item.images?.[0] || '/music/jb.png'}
-                          alt="썸네일"
-                          fill
-                          className="object-cover rounded-lg"
-                        />
-                      )}
-                    </div>
+                        ) : item.type === 'photo-story' ? (
+                          // 포토 스토리인 경우
+                          <Image
+                            src={item.photo}
+                            alt="포토 스토리"
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                        ) : item.type === 'link-letter' ? (
+                          // 링크편지인 경우
+                          <>
+                            {item.images && item.images.length > 0 ? (
+                              <Image
+                                src={item.images[0]}
+                                alt="링크 편지 이미지"
+                                fill
+                                className="object-cover rounded-lg"
+                              />
+                            ) : (
+                              <Image
+                                src="/samples/linklett.png"
+                                alt="기본 링크 편지 이미지"
+                                fill
+                                className="object-cover opacity-70 rounded-lg"
+                              />
+                            )}
+                          </>
+                        ) : (
+                          // 이미지가 있는 경우 또는 기본 이미지
+                          <Image
+                            src={item.images?.[0] || '/music/jb.png'}
+                            alt="썸네일"
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
               </div>
             ))}
@@ -693,7 +737,7 @@ export default function FeedPage() {
             
             <button
               onClick={() => {
-                router.push('/link-letter');
+                router.push('/pros-menu');
                 setShowWriteMenu(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
