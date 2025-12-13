@@ -57,19 +57,29 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
   const [commentLoading, setCommentLoading] = useState(false);
 
   useEffect(() => {
+    if (!articleId) {
+      console.log('ArticleClient: articleId가 없습니다');
+      return;
+    }
+
+    console.log('ArticleClient: articleId =', articleId);
+
     const fetchArticle = async () => {
       setLoading(true);
       setError(null);
       try {
+        console.log('Firebase에서 기사 로드 시작:', articleId);
         const articleRef = doc(db, 'articles', articleId);
         const articleSnap = await getDoc(articleRef);
 
         if (!articleSnap.exists()) {
+          console.log('기사를 찾을 수 없습니다:', articleId);
           notFound();
           return;
         }
 
         const data = { id: articleSnap.id, ...articleSnap.data() } as Article;
+        console.log('기사 로드 성공:', data);
         setNewsItem(data);
 
         await updateDoc(articleRef, {
@@ -78,7 +88,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
 
       } catch (err) {
         console.error('뉴스 기사 로드 실패:', err);
-        setError('뉴스 기사를 불러오는 데 실패했습니다.');
+        setError(`뉴스 기사를 불러오는 데 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
       } finally {
         setLoading(false);
       }
@@ -98,9 +108,7 @@ export default function ArticleClient({ articleId }: { articleId: string }) {
       console.error("댓글 실시간 업데이트 실패:", err);
     });
 
-    if (articleId) {
-      fetchArticle();
-    }
+    fetchArticle();
     return () => unsubscribe();
   }, [articleId]);
 

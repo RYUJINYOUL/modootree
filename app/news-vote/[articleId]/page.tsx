@@ -6,10 +6,11 @@ export const metadata: Metadata = {
   description: '모두트리에서 뉴스에 대한 의견을 투표로 표현해보세요.',
 };
 
-export default function ArticlePage({
+export default async function ArticlePage({
   params,
 }: {
-  params: { articleId: string };
+  params: Promise<{ articleId: string }>;
 }) {
-  return <ArticleClient articleId={params.articleId} />;
+  const { articleId } = await params;
+  return <ArticleClient articleId={articleId} />;
 }

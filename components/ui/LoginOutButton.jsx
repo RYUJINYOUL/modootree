@@ -90,38 +90,38 @@ export default function LoginOutButton() {
                
 
                 {[
-                  // {
-                  //   title: "내 기록 페이지",
-                  //   description: "AI와 함께 작성하는 나만의 기록 페이지",
-                  //   icon: "/logos/m1.png",
-                  //   path: "/profile"
-                  // },
+                  {
+                    title: "내 기록 페이지",
+                    description: "AI와 함께 작성하는 나만의 기록 페이지",
+                    icon: "/logos/m1.png",
+                    path: "/profile"
+                  },
                   {
                     title: "링크 편지",
                     description: "퀴즈를 풀어야만 읽을 수 있는 링크 편지",
                     icon: "/logos/m12.png",
                     path: "/link-letter"
                   },
-                  // {
-                  //   title: "AI 건강 기록",
-                  //   description: "당신의 건강한 하루를 AI가 분석해 드립니다",
-                  //   icon: "/logos/ai1.png",
-                  //   path: "/health"
-                  // },
-                  // {
-                  //   title: "AI 투표",
-                  //   description: "AI가 만들어 주는 뉴스 사연 사진 투표 당신의 선택은?",
-                  //   icon: "/logos/news.png",
-                  //   path: "/modoo-vote"
-                  // },
+                  {
+                    title: "AI 건강 기록",
+                    description: "당신의 건강한 하루를 AI가 분석해 드립니다",
+                    icon: "/logos/ai1.png",
+                    path: "/health"
+                  },
+                  {
+                    title: "AI 투표",
+                    description: "AI가 만들어 주는 뉴스 사연 사진 투표 당신의 선택은?",
+                    icon: "/logos/news.png",
+                    path: "/modoo-vote"
+                  },
                   
                  
-                  // {
-                  //   title: "열린 게시판",
-                  //   description: "모두트리의 열린 게시판과 1:1 채팅 문의",
-                  //   icon: "/logos/ai4.png",
-                  //   path: "/inquiry"
-                  // }
+                  {
+                    title: "열린 게시판",
+                    description: "모두트리의 열린 게시판과 1:1 채팅 문의",
+                    icon: "/logos/ai4.png",
+                    path: "/inquiry"
+                  }
                 ].map((item) => (
                   <Link 
                     key={item.path}

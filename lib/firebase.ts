@@ -12,6 +12,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+// Firebase 설정 디버깅
+console.log('Firebase Config:', {
+  apiKey: firebaseConfig.apiKey ? '설정됨' : '누락',
+  authDomain: firebaseConfig.authDomain ? '설정됨' : '누락',
+  projectId: firebaseConfig.projectId ? '설정됨' : '누락',
+  storageBucket: firebaseConfig.storageBucket ? '설정됨' : '누락',
+  messagingSenderId: firebaseConfig.messagingSenderId ? '설정됨' : '누락',
+  appId: firebaseConfig.appId ? '설정됨' : '누락'
+});
+
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

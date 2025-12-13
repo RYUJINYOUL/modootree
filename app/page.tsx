@@ -1,527 +1,716 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Home as HomeIcon, ChevronRight, Menu, Phone, Copy, Check, ChevronLeft } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { useSelector } from 'react-redux';
+import { Button } from '@/components/ui/button';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { db } from '@/firebase';
+import Image from 'next/image';
+import { Heart, MessageCircle, Gift, Users, Baby, Plus, Eye, Edit3 } from 'lucide-react';
+import { LinkLetter, letterCategories } from './link-letter/page';
 import { useRouter } from 'next/navigation';
+import CategoryCarousel from '../components/CategoryCarousel';
 import { loadSlim } from "tsparticles-slim";
 import Particles from "react-tsparticles";
+import LoginOutButton from '@/components/ui/LoginOutButton';
+import Header from '@/components/Header';
 
-interface YoutubeVideo {
-  id: string;
-  title: string;
-  thumbnail: string; // 실제 썸네일 URL로 업데이트
-  youtubeUrl: string;
-}
-
-// 유튜브 영상 ID 추출 함수
-const getYoutubeVideoId = (url: string): string | null => {
-  const watchMatch = url.match(/(?:\?v=|\/embed\/|\.be\/)([^&\n?#]+)/);
-  if (watchMatch && watchMatch[1]) {
-    return watchMatch[1];
-  }
-  const shortsMatch = url.match(/shorts\/([^?\n&]+)/);
-  if (shortsMatch && shortsMatch[1]) {
-    return shortsMatch[1];
-  }
-  return null;
-};
-
-const YoutubeVideoPlayer: React.FC<{ video: YoutubeVideo }> = ({ video }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoId = getYoutubeVideoId(video.youtubeUrl);
-
-  if (!videoId) {
-    return <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 flex items-center justify-center text-red-400">Invalid video URL</div>;
-  }
-
-  return (
-    <div className="relative w-full h-0 pb-[56.25%] bg-gray-900 rounded-lg overflow-hidden cursor-pointer" onClick={() => setIsPlaying(true)}>
-      {!isPlaying ? (
-        <>
-          <img
-            src={video.thumbnail}
-            alt={video.title}
-            className="absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-300"
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/60 transition-all duration-300">
-            <img src="/Image/sns/youtube.png" alt="Play Video" className="w-16 h-16 object-contain" />
-          </div>
-        </>
-      ) : (
-        <iframe
-          className="absolute top-0 left-0 w-full h-full"
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&showinfo=0&rel=0`}
-          title={video.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        ></iframe>
-      )}
-    </div>
-  );
-};
-
-const dummyYoutubeVideos: YoutubeVideo[] = [
-  {
-    id: 'video1',
-    title: '퀴즈를 풀어야 볼 수 있는 편지',
-    youtubeUrl: 'https://youtube.com/shorts/1GmgcfZRoOU?si=OLZ6ihPXL-H1aLBz',
-    thumbnail: 'https://img.youtube.com/vi/1GmgcfZRoOU/hqdefault.jpg',
-  },
-  {
-    id: 'video2',
-    title: '모두트리 눈사람 산타가 되다',
-    youtubeUrl: 'https://youtube.com/shorts/KPNhNq7q7vA?si=z9YH1jDslFMw4Wqb',
-    thumbnail: 'https://img.youtube.com/vi/KPNhNq7q7vA/hqdefault.jpg',
-  },
-  {
-    id: 'video3',
-    title: '모두트리 응원송',
-    youtubeUrl: 'https://youtube.com/shorts/DxSfJI23bMU?si=QuuY4Q4VXZ8c1lD4',
-    thumbnail: 'https://img.youtube.com/vi/DxSfJI23bMU/hqdefault.jpg',
-  },
-  {
-    id: 'video4',
-    title: '모두트리 공감송',
-    youtubeUrl: 'https://youtube.com/shorts/2ieKWOCIaIU?si=xVN2xjwhI88Vhn1Y',
-    thumbnail: 'https://img.youtube.com/vi/2ieKWOCIaIU/hqdefault.jpg',
-  },
-  {
-    id: 'video5',
-    title: '링크편지 대신 보내 드립니다',
-    youtubeUrl: 'https://youtube.com/shorts/-Zv4mvmlWpA?si=7NS98Xr5lXhCnea_',
-    thumbnail: 'https://img.youtube.com/vi/-Zv4mvmlWpA/hqdefault.jpg',
-  },
-  {
-    id: 'video6',
-    title: '문 앞, 가족의 속마음',
-    youtubeUrl: 'https://youtube.com/shorts/4cxJ-fKORnw?si=t1W2AkSwCFyZLzZ9',
-    thumbnail: 'https://img.youtube.com/vi/4cxJ-fKORnw/hqdefault.jpg',
-  },
+// 감정별 이모티콘 매핑
+const MODOO_CATEGORIES = [
+  { id: 'all', label: '전체' },
+  { id: 'happy', label: '행복' },
+  { id: 'sad', label: '슬픔' },
+  { id: 'angry', label: '화남' },
+  { id: 'anxious', label: '불안' },
+  { id: 'comfort', label: '편안' },
+  { id: 'worry', label: '고민' },
 ];
 
-const ParticlesComponent = () => {
+const NEWS_CATEGORIES = [
+  { id: 'all', label: '전체' },
+  { id: 'current_affairs', label: '시사' },
+  { id: 'economy_it', label: '경제' },
+  { id: 'entertainment', label: '연예' },
+];
+
+const EMOTION_ICONS = {
+  happy: '/logos/m1.png',    // 행복
+  sad: '/logos/m6.png',      // 슬픔
+  angry: '/logos/m9.png',    // 분노
+  anxious: '/logos/m5.png',  // 불안
+  comfort: '/logos/m8.png', // 편안
+  worry: '/logos/m14.png', // 고민
+  default: '/logos/m1.png'   // 기본
+};
+
+interface FeedItem extends Partial<LinkLetter> {
+  id: string;
+  type: 'link-letter' | 'joy' | 'modoo-ai' | 'health' | 'news';
+  displayType: string;
+  // LinkLetter에서 이미 정의된 속성들은 Partial로 확장하여 중복을 피하고 선택적으로 사용
+  // 추가적으로 필요한 FeedItem만의 속성을 여기에 정의
+  previewContent?: string; // 미리보기 콘텐츠 (optional)
+}
+
+export default function FeedPage() {
+  const router = useRouter();
+  const currentUser = useSelector((state: any) => state.user.currentUser);
+  const [loading, setLoading] = useState(true);
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [displayCount, setDisplayCount] = useState(28); // PC에서 초기에 보여줄 아이템 수
+  const [showWriteMenu, setShowWriteMenu] = useState(false);
+
   const particlesInit = useCallback(async (engine: any) => {
     await loadSlim(engine);
   }, []);
 
+  useEffect(() => {
+    loadInitialFeed();
+  }, []);
+
+  const loadInitialFeed = async () => {
+    setLoading(true);
+    try {
+      console.log('피드 데이터 로딩 시작...');
+      console.log('데이터 로딩 시작...');
+      const [newsData, linkLetterData, photoStoryData, modooVoteData, healthData] = await Promise.all([
+        fetchFromCollection('articles', 10).then(data => {
+          console.log('뉴스 투표 데이터 로드:', {
+            collectionName: 'articles',
+            dataLength: data.length,
+            sampleData: data[0]
+          });
+          return data;
+        }),
+        fetchFromCollection('linkLetters', 10).then(data => {
+          console.log('링크편지 데이터:', data.length);
+          return data;
+        }),
+        fetchFromCollection('photo-stories', 10).then(data => {
+          console.log('사진 스토리 데이터:', data.length);
+          return data;
+        }),
+        fetchFromCollection('modoo-vote-articles', 10).then(data => {
+          console.log('공감 투표 데이터:', data.length);
+          return data;
+        }),
+        fetchFromCollection('health_records', 10).then(data => {
+          console.log('건강 기록 데이터:', data.length);
+          return data;
+        })
+      ]);
+
+      console.log('데이터 포맷팅 시작...');
+      const [formattedNews, formattedLinkLetter, formattedPhotoStory, formattedModooVote, formattedHealth] = await Promise.all([
+        formatData(newsData, 'news').then(data => {
+          console.log('뉴스 데이터 포맷팅:', {
+            originalLength: newsData.length,
+            formattedLength: data.length,
+            sampleFormattedData: data[0]
+          });
+          return data;
+        }),
+        formatData(linkLetterData, 'link-letter').then(data => {
+          console.log('링크편지 데이터 포맷팅 완료:', data.length);
+          return data;
+        }),
+        formatData(photoStoryData, 'photo-story').then(data => {
+          console.log('사진 스토리 데이터 포맷팅 완료:', data.length);
+          return data;
+        }),
+        formatData(modooVoteData, 'modoo-vote-articles').then(data => {
+          console.log('사연 투표 데이터 포맷팅 완료:', data.length);
+          return data;
+        }),
+        formatData(healthData, 'health').then(data => {
+          console.log('건강 기록 데이터 포맷팅 완료:', data.length);
+          return data;
+        })
+      ]);
+
+      console.log('데이터 병합 시작...');
+      const combinedData = [
+        ...formattedNews,
+        ...formattedLinkLetter,
+        ...formattedPhotoStory,
+        ...formattedModooVote,
+        ...formattedHealth
+      ].sort((a: any, b: any) => b.createdAt - a.createdAt);
+
+      console.log('최종 데이터 개수:', combinedData.length);
+      console.log('데이터 샘플:', combinedData[0]);
+
+      setFeedItems(combinedData);
+    } catch (error: any) {
+      console.error('피드 로딩 실패:', error);
+      console.error('에러 상세:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      // 에러 발생해도 빈 배열로 설정
+      setFeedItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFromCollection = async (collectionName: string, itemLimit: number = 10): Promise<any[]> => {
+    try {
+      console.log(`${collectionName} 컬렉션에서 데이터 가져오기 시작...`);
+      
+      let orderByField = 'createdAt';
+      if (collectionName === 'articles') {
+        orderByField = 'created_at';
+      } else if (collectionName === 'linkLetters') {
+        orderByField = 'createdAt'; // linkLetters 컬렉션의 정렬 기준은 createdAt
+      }
+      
+      const q = query(
+        collection(db, collectionName),
+        orderBy(orderByField, 'desc'),
+        limit(itemLimit)
+      );
+      
+      const snapshot = await getDocs(q);
+      console.log(`${collectionName} 컬렉션 데이터 개수:`, snapshot.size);
+      
+      const data = snapshot.docs.map(doc => {
+        const docData = doc.data();
+        console.log(`${collectionName} 문서 데이터:`, { id: doc.id, ...docData });
+        
+        // 뉴스 데이터의 경우 created_at 필드를 createdAt으로 정규화
+        if (collectionName === 'articles') {
+          return {
+            id: doc.id,
+            ...docData,
+            createdAt: docData.created_at?.toDate() || docData.createdAt?.toDate() || new Date()
+          };
+        }
+        
+        return {
+          id: doc.id,
+          ...docData,
+          createdAt: docData.createdAt?.toDate() || new Date()
+        };
+      });
+      
+      console.log(`${collectionName} 데이터 처리 완료:`, data);
+      return data;
+    } catch (error) {
+      console.error(`${collectionName} 데이터 가져오기 실패:`, error);
+      return [];  // 에러 발생 시 빈 배열 반환
+    }
+  };
+
+  const formatData = async (data: any[], type: string): Promise<FeedItem[]> => {
+    const formattedData = await Promise.all(data.map(async (item) => {
+      // 댓글 수 가져오기 (링크편지는 댓글 기능 없음)
+      let commentCount = 0;
+      if (type === 'photo-story') {
+        const commentsQuery = query(
+          collection(db, 'photo-story-comments'),
+          where('storyId', '==', item.id)
+        );
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentCount = commentsSnapshot.size;
+      } else if (type === 'news' || type === 'modoo-vote-articles') {
+        const commentsQuery = query(
+          collection(db, type === 'news' ? 'news-vote-articles' : 'modoo-vote-articles', item.id, 'comments')
+        );
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentCount = commentsSnapshot.size;
+      } else if (type === 'health') {
+        commentCount = 0;
+      } else if (type === 'modoo-ai') {
+        const commentsQuery = query(
+          collection(db, 'modoo-ai-comments'),
+          where('testId', '==', item.id)
+        );
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentCount = commentsSnapshot.size;
+      }
+
+      // 좋아요 수 가져오기 (링크편지는 좋아요 기능 없음)
+      let likeCount = 0;
+      if (type === 'news') {
+        likeCount = item.total_votes || 0;
+      } else if (type === 'modoo-ai') {
+        likeCount = item.stats?.likeCount || 0;
+      } else if (type === 'photo-story') {
+        likeCount = item.likeCount || 0;
+      } else if (type === 'health') {
+        likeCount = 0;
+      } else if (type === 'link-letter') { // 링크편지 좋아요 수 처리 추가
+        likeCount = item.likeCount || 0; // LinkLetter 인터페이스에 likeCount가 존재
+      } else {
+        // 그 외 기본 좋아요 처리 (현재는 필요 없으므로 제거 또는 주석 처리)
+        // const likesQuery = query(
+        //   collection(db, 'likesReactions'),
+        //   where('likeId', '==', item.id)
+        // );
+        // const likesSnapshot = await getDocs(likesQuery);
+        // likeCount = likesSnapshot.size;
+        likeCount = 0; // 기본값 0으로 설정
+      }
+
+      let formattedItem;
+      
+      if (type === 'news') {
+        formattedItem = {
+          id: item.id,
+          type,
+          displayType: '링크 투표',
+          title: item.title || '',
+          summary: item.summary || '',
+          category: item.category || '',
+          total_votes: item.total_votes || 0,
+          view_count: item.view_count || 0,
+          vote_options: item.vote_options || [],
+          createdAt: item.createdAt,
+          comments: commentCount,
+          likes: likeCount
+        };
+      } else if (type === 'link-letter') {
+        formattedItem = {
+          id: item.id,
+          type,
+          displayType: '퀴즈 편지',
+          title: item.title || '',
+          content: item.content || '',
+          images: item.images || [],
+          category: item.category || '',
+          author: item.author || { uid: '', displayName: '익명', email: '' },
+          viewCount: item.viewCount || 0,
+          likeCount: item.likeCount || 0,
+          createdAt: item.createdAt,
+          comments: commentCount, // 링크편지는 댓글 기능이 없지만 FeedItem 형식에 맞춤
+          likes: likeCount // FeedItem 형식에 맞춤
+        };
+      } else {
+        formattedItem = {
+          ...item,
+          type,
+          displayType: 
+            type === 'link-letter' ? '퀴즈 편지' :
+            type === 'photo-story' ? '사진 투표' :
+            type === 'health' ? 'AI 건강기록' :
+            type === 'modoo-vote-articles' ? '사연 투표' :
+            '사연 한조각',
+          previewContent: item.content || item.description || '',
+          emotionIcon: type === 'modoo-vote-articles' ? 
+                   EMOTION_ICONS[item.category as keyof typeof EMOTION_ICONS] || EMOTION_ICONS.default : null,
+          comments: commentCount,
+          likes: likeCount
+        };
+      }
+
+      // 건강 기록인 경우 추가 데이터 포맷팅
+      if (type === 'health') {
+        formattedItem = {
+          ...formattedItem,
+          date: item.date || new Date(item.createdAt).toLocaleDateString(),
+          mealPhotos: [
+            item.meals?.breakfast?.imageUrl,
+            item.meals?.lunch?.imageUrl,
+            item.meals?.dinner?.imageUrl
+          ].filter(Boolean),
+          exercisePhotos: item.exercise?.imageUrl ? [item.exercise.imageUrl] : [],
+          content: item.analysis?.dailySummary?.overallComment || '건강 기록'
+        };
+      }
+
+      return formattedItem;
+    }));
+
+    return formattedData;
+  };
+
+  const FILTERS = [
+    { id: 'all', label: '전체' },
+    { id: 'news', label: '링크', path: '/news-vote', fullLabel: '링크 투표' },
+    { id: 'link-letter', label: '편지', path: '/link-letter', fullLabel: '퀴즈 편지' },
+    { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
+    { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' }
+  ];
+
   return (
-    <Particles
-      className="absolute inset-0 pointer-events-none"
-      init={particlesInit}
-      options={{
-        background: {
-          color: "transparent"
-        },
-        fpsLimit: 120,
-        particles: {
-          color: {
-            value: ["#FFB6C1", "#FF69B4", "#FF1493", "#DC143C", "#FFF", "#FFD700", "#FF6347"]
-          },
-          collisions: {
-            enable: false
-          },
-          move: {
-            direction: "none",
-            enable: true,
-            outModes: {
-              default: "out"
+    <>
+      <LoginOutButton />
+      <Header />
+      <main className="min-h-screen bg-black text-white/90 relative">
+      <Particles
+        className="absolute inset-0 z-0 pointer-events-none"
+        init={particlesInit}
+        options={{
+          fpsLimit: 120,
+          particles: {
+            color: {
+              value: ["#ffffff", "#87CEEB", "#FFD700"]
             },
-            random: true,
-            speed: { min: 0.5, max: 2 },
-            straight: false,
-            attract: {
+            links: {
+              color: "#ffffff",
+              distance: 120,
               enable: true,
-              rotateX: 600,
-              rotateY: 1200
-            }
-          },
-          number: {
-            density: {
-              enable: true,
-              area: 1000
+              opacity: 0.08,
+              width: 1.2,
             },
-            value: 60
-          },
-          opacity: {
-            animation: {
-              enable: true,
-              minimumValue: 0.2,
-              speed: 1.5,
-              sync: false
+            collisions: {
+              enable: false,
             },
-            random: true,
-            value: { min: 0.3, max: 0.8 }
-          },
-          shape: {
-            type: ["heart", "star", "circle", "triangle"],
-            options: {
-              heart: {
-                particles: {
-                  size: {
-                    value: { min: 8, max: 16 }
-                  }
+            move: {
+              direction: "none",
+              enable: true,
+              outModes: {
+                default: "out"
+              },
+              random: true,
+              speed: { min: 0.1, max: 0.4 },
+              straight: false,
+              attract: {
+                enable: true,
+                rotate: {
+                  x: 600,
+                  y: 1200
+                }
+              }
+            },
+            number: {
+              density: {
+                enable: true,
+                area: 800
+              },
+              value: 100
+            },
+            opacity: {
+              animation: {
+                enable: true,
+                minimumValue: 0.1,
+                speed: 1.2,
+                sync: false
+              },
+              random: true,
+              value: { min: 0.1, max: 0.4 }
+            },
+            shape: {
+              type: "circle"
+            },
+            size: {
+              animation: {
+                enable: true,
+                minimumValue: 0.1,
+                speed: 1,
+                sync: false
+              },
+              random: true,
+              value: { min: 1, max: 3 }
+            },
+            twinkle: {
+              lines: {
+                enable: true,
+                frequency: 0.01,
+                opacity: 0.3,
+                color: {
+                  value: ["#ffffff", "#87CEEB"]
                 }
               },
-              star: {
-                sides: 5,
-                particles: {
-                  size: {
-                    value: { min: 6, max: 12 }
-                  }
-                }
+              particles: {
+                enable: true,
+                frequency: 0.08,
+                opacity: 0.3
               }
             }
           },
-          size: {
-            animation: {
-              enable: true,
-              minimumValue: 2,
-              speed: 3,
-              sync: false
-            },
-            random: true,
-            value: { min: 3, max: 8 }
-          },
-          rotate: {
-            animation: {
-              enable: true,
-              speed: 2,
-              sync: false
-            },
-            direction: "random",
-            random: true,
-            value: { min: 0, max: 360 }
-          }
-        },
-        detectRetina: true,
-        interactivity: {
-          events: {
-            onHover: {
-              enable: true,
-              mode: "bubble"
-            },
-            onClick: {
-              enable: true,
-              mode: "push"
-            }
-          },
-          modes: {
-            bubble: {
-              distance: 150,
-              duration: 2,
-              opacity: 1,
-              size: 12
-            },
-            push: {
-              quantity: 3
-            }
-          }
-        }
-      }}
-    />
-  );
-};
-
-export default function Home() {
-  const [isOpen, setIsOpen] = useState(true);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const router = useRouter();
-
-  if (!isOpen) return null;
-
-  const handleNavigateToLinkLetter = () => {
-    router.push('/link-letter');
-  };
-
-  return (
-    <div className="min-h-screen bg-[#e93e4a] overflow-y-auto cursor-penc relative">
-      {/* 파티클 배경 효과 */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <ParticlesComponent />
-      </div>
-      
-      {/* Header */}
-      <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
-      <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              router.push('/');
-            }}
-            className="text-white hover:opacity-80 transition flex items-center gap-2 cursor-penc-hover relative z-50 pointer-events-auto"
-          >
-            <HomeIcon className="w-4 h-4" />
-            <span className="font-bold">모두트리</span>
-          </button>
-        <div className="flex flex-col items-end gap-2">
-          <p className="text-white text-sm">
-            퀴즈를 풀어야 볼 수 있는{' '}
-            <span className="font-bold">링크편지</span>
-          </p>
-          
-        </div>
-      </header>
-
-      {/* Main Menu Container */}
-      <div className="relative w-full flex items-center justify-center z-10 py-50 sm:py-55 md:py-60">
-        {/* Organic Blob Shape - More Distorted */}
-        <svg
-          className="absolute w-[90%] sm:w-[80%] md:w-[70%] h-[80%]"
-          viewBox="0 0 800 900"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-           d="M400 50C550 50 700 150 750 300C800 450 750 600 700 700C650 800 500 850 400 850C300 850 150 800 100 700C50 600 0 450 50 300C100 150 250 50 400 50Z"
-            fill="#F5F5F0"
-          />
-        </svg>
-
-         {/* Menu Items */}
-         <nav className="relative z-10 text-center">
-         <p className="text-black text-lg mb-1">
-             퀴즈를 풀어야 볼 수 있는{' '}
-             <span className="font-bold">링크편지</span>
-           </p>
-           <ul className="space-y-4">
-             <MenuItem text="모두트리" active={false} />
-             <MenuItem text="링크편지" active={true} />
-           </ul>
-
-         </nav>
-
-        {/* Penc Logo */}
-        <div className="absolute bottom-[20%] right-[20%] z-10">
-          <button onClick={() => router.push('/link-letter')} className="hover:scale-110 transition-transform duration-300 cursor-penc-hover">
-            <PencLogo />
-          </button>
-        </div>
-
-      </div>
-
-      {/* 링크편지 설명 섹션 */}
-      <div className="relative z-20 px-6 pb-1">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-white text-lg md:text-2xl font-bold text-center mb-8" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-            링크편지로 특별한 마음을 전하세요
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            {/* 카드 1: 퀴즈 기능 */}
-            <button 
-              onClick={() => router.push('/link-letter')}
-              className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 text-left cursor-penc-hover"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/>
-                    <path d="m6.2 5.3 3.1 3.9"/>
-                    <path d="m12.4 3.4 3.1 4"/>
-                    <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white text-lg font-bold mb-2" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    퀴즈 편지로 마음을 전달하세요
-                  </h3>
-                  <p className="text-white/80 text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    상대방만 알 수 있는 특별한 퀴즈를 만들어 진심을 담은 편지 링크를 전달하세요.
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            {/* 카드 2: 카테고리별 */}
-            <button 
-              onClick={() => router.push('/link-letter')}
-              className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 text-left cursor-penc-hover"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
-                    <polyline points="7.5 19.79 7.5 14.6 3 12"/>
-                    <polyline points="21 12 16.5 14.6 16.5 19.79"/>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                    <line x1="12" x2="12" y1="22.08" y2="12"/>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white text-lg font-bold mb-2" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    객관·주관식을 모두 지원합니다
-                  </h3>
-                  <p className="text-white/80 text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    객관식 주관식 혼합으로 받는 사람만 볼 수 있는 퀴즈편지로 만들어 보세요. 
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            {/* 카드 3: 개인화 */}
-            <button 
-              onClick={() => router.push('/anonymous-chat')}
-              className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 text-left cursor-penc-hover"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 18a2 2 0 0 0-4 0"/>
-                    <path d="m19 11-2.11-6.657a2 2 0 0 0-2.752-1.148l-1.276.61A2 2 0 0 1 12 4H8.5a2 2 0 0 0-1.925 1.456L5 11"/>
-                    <path d="M2 11h20"/>
-                    <circle cx="17" cy="18" r="3"/>
-                    <circle cx="7" cy="18" r="3"/>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white text-base md:text-lg font-bold mb-0 md:mb-2" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    대신 보내 드립니다.
-                  </h3>
-                  <p className="text-white/80 text-xs md:text-sm leading-relaxed" style={{ fontFamily: '"Noto Sans KR", sans-serif' }}>
-                    익명으로 퀴즈 편지를 대신 보내 드립니다. 신청 게시판, 양식에 맞게 작성해 주세요.
-                  </p>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 유튜브 영상 캐러셀 섹션 */}
-      <section className="relative z-20 px-4 py-12 bg-white/10 backdrop-blur-sm rounded-3xl mt-12 mb-12 mx-4">
-        <div className="max-w-6xl mx-auto text-center">
-        <h2 className="md:hidden text-xl font-medium text-white/90 mb-6 leading-relaxed">
-                모두트리 SNS 영상<br />유튜브 쇼츠로 만나보세요
-              </h2>
-              <h2 className="md:block hidden text-2xl font-medium text-white/90 mb-6 leading-relaxed">
-                모두트리 SNS 영상<br />유튜브 쇼츠로 만나보세요
-              </h2>
-
-          {/* 모바일: 단일 카드 캐러셀 */}
-          <div className="md:hidden relative max-w-sm mx-auto">
-            <div className="overflow-hidden rounded-xl shadow-xl border border-white/20">
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{
-                  transform: `translateX(-${currentVideoIndex * 100}%)`,
-                }}
-              >
-                {dummyYoutubeVideos.map((video, index) => (
-                  <div key={video.id} className="w-full flex-shrink-0 px-2">
-                    <YoutubeVideoPlayer video={video} />
-                    <p className="mt-4 mb-4 md:mb-2 text-sm font-medium text-white/90 text-center px-2">{video.title}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 모바일 네비게이션 버튼 */}
-            {dummyYoutubeVideos.length > 1 && (
-              <>
-                <button
-                  onClick={() => setCurrentVideoIndex((prev) => (prev - 1 + dummyYoutubeVideos.length) % dummyYoutubeVideos.length)}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 transition-all duration-300 z-10"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentVideoIndex((prev) => (prev + 1) % dummyYoutubeVideos.length)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 transition-all duration-300 z-10"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </>
-            )}
-
-            {/* 모바일 인디케이터 */}
-            <div className="flex justify-center gap-2 mt-6">
-              {dummyYoutubeVideos.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentVideoIndex(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    currentVideoIndex === index ? 'bg-white shadow-lg' : 'bg-white/40 hover:bg-white/70'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* PC: 다중 카드 그리드 */}
-          <div className="hidden md:block">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {dummyYoutubeVideos.map((video, index) => (
-                <div key={video.id} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-300">
-                  <YoutubeVideoPlayer video={video} />
-                  <h3 className="mt-4 text-lg font-medium text-white/90 text-center leading-relaxed">
-                    {video.title}
-                  </h3>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Google AdSense */}
-      <div className="mt-12 text-center">
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6697023128093217"
-             crossOrigin="anonymous"></script>
-        {/* 모두트리 */}
-        <ins className="adsbygoogle"
-             style={{ display: 'block' }}
-             data-ad-client="ca-pub-6697023128093217"
-             data-ad-slot="5076482687"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-      </div>
-
-    </div>
-  );
-}
-
-function MenuItem({ text, active }: { text: string; active: boolean }) {
-  return (
-    <li>
-      <a
-        href="#"
-        className={`
-          inline-block text-7xl sm:text-8xl md:text-9xl font-bold tracking-tight
-          transition-all duration-300 hover:scale-110
-          ${
-            active
-              ? 'text-[#EF3340]'
-              : 'text-gray-900 hover:text-[#EF3340]'
-          }
-        `}
-        style={{
-          fontFamily: '"Noto Sans KR", system-ui, -apple-system, sans-serif',
-          fontWeight: 700,
-          letterSpacing: '-0.02em',
+          detectRetina: true
         }}
-      >
-        {text}
-      </a>
-    </li>
-  );
-}
-
-function PencLogo() {
-  return (
-    <div className="animate-float">
-      <img
-        src="/logos/penc.png"
-        alt="Penc Logo"
-        width={100}
-        height={100}
-        className="w-20 h-20 object-contain"
       />
-    </div>
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-6 pb-20">
+        {/* 필터 캐러셀만 유지 */}
+        <div className="flex justify-center mb-4">
+          <div className="w-full max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl">
+                <CategoryCarousel
+                  categories={FILTERS}
+                  selectedCategory={activeFilter}
+                  onSelect={setActiveFilter}
+                />
+              </div>
+            </div>
+
+
+        {/* 로딩 상태 */}
+        {loading && (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* 피드 리스트 */}
+        {!loading && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {feedItems
+                .filter(item => (activeFilter === 'all' && item.type !== 'news') || item.type === activeFilter)
+                .slice(0, displayCount)
+                .map((item: any) => (
+                <div 
+                  key={item.id}
+                  onClick={() => {
+                    if (item.type === 'news') {
+                      router.push(`/news-vote/${item.id}`);
+                    } else if (item.type === 'modoo-vote-articles') {
+                      router.push(`/modoo-vote/${item.id}`);
+                    } else if (item.type === 'photo-story') {
+                      router.push(`/photo-story/${item.id}`);
+                    } else if (item.type === 'health') {
+                      router.push(`/health/results/${item.id}`);
+                    } else if (item.type === 'link-letter') {
+                      router.push(`/link-letter/${item.id}`);
+                    } else {
+                      router.push(`/link-letter`);
+                    }
+                    // 페이지 이동 후 스크롤 위치 초기화
+                    window.scrollTo(0, 0);
+                  }}
+                  className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors cursor-pointer p-4"
+                >
+                  {/* 리스트 형태 레이아웃 */}
+                  <div className="flex items-center gap-4">
+                    {/* 왼쪽 콘텐츠 영역 */}
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-blue-400">{item.displayType}</span>
+                      </div>
+                      
+                      {/* 제목 영역 */}
+                      <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2">
+                        {item.type === 'news' ? (
+                          item.title
+                        ) : item.type === 'modoo-vote-articles' ? (
+                          item.title
+                        ) : item.type === 'link-letter' ? (
+                          item.title || item.content || '퀴즈 편지'
+                        ) :
+                         item.type === 'photo-story' ? 
+                           (Array.isArray(item.aiStories) 
+                             ? item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content 
+                             : '') :
+                         item.type === 'health' ?
+                           item.analysis?.dailySummary?.overallComment || '건강 기록' :
+                         (item.content || '').slice(0, 50)}
+                      </h3>
+
+                      {/* 요약 또는 내용 미리보기 */}
+                      <div className="text-sm text-white/70 mb-3 line-clamp-2">
+                        {item.type === 'news' && item.summary ? (
+                          <p>{item.summary}</p>
+                        ) : item.type === 'link-letter' && item.content ? (
+                          <p>{item.content.slice(0, 100)}...</p>
+                        ) : item.type === 'modoo-vote-articles' && item.content ? (
+                          <p>{item.content.slice(0, 100)}...</p>
+                        ) : item.type === 'photo-story' && Array.isArray(item.aiStories) ? (
+                          <p>{item.aiStories.find((s: any) => s.id === item.selectedStoryId)?.content?.slice(0, 100) || ''}...</p>
+                        ) : item.type === 'health' && item.analysis?.dailySummary?.overallComment ? (
+                          <p>{item.analysis.dailySummary.overallComment.slice(0, 100)}...</p>
+                        ) : item.previewContent ? (
+                          <p>{item.previewContent.slice(0, 100)}...</p>
+                        ) : (
+                          <p className="text-white/50">설명이 없습니다.</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-gray-400">
+                        <div className="flex items-center gap-3">
+                          {item.type === 'link-letter' ? (
+                            <>
+                              <span className="flex items-center gap-1">
+                                <Heart className="w-4 h-4" />
+                                {item.likeCount || 0}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                {item.viewCount || 0}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-4 h-4" />
+                            {item.likes || 0}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="w-4 h-4" />
+                            {item.comments || 0}
+                          </span>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* 사연 한조각인 경우 참여자 수 표시 */}
+                        {item.type === 'modoo-ai' && (
+                          <span className="text-sm text-blue-400">
+                            {item.stats?.participantCount || 0}명
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 오른쪽 썸네일 영역 */}
+                    <div className="w-20 h-20 md:w-24 md:h-24 relative bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center rounded-lg flex-shrink-0">
+                      {item.type === 'news' ? (
+                        // 뉴스 투표인 경우
+                        <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-blue-500/20">
+                          <div className="text-center p-2">
+                            <div className="text-xs text-white/70">
+                              {NEWS_CATEGORIES.find(cat => cat.id === item.category)?.label || '뉴스'}
+                            </div>
+                          </div>
+                        </div>
+                      ) : item.type === 'modoo-vote-articles' ? (
+                        // 공감 투표인 경우 이모티콘 표시
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          <img
+                            src={EMOTION_ICONS[item.category as keyof typeof EMOTION_ICONS] || EMOTION_ICONS.default}
+                            alt="감정 아이콘"
+                            className="w-12 h-12 md:w-16 md:h-16 object-contain"
+                          />
+                        </div>
+                      ) : item.type === 'health' ? (
+                        // 건강 기록인 경우 식사/운동 이미지 표시
+                        <Image
+                          src={item.mealPhotos?.[0] || item.exercisePhotos?.[0] || '/music/hb.png'}
+                          alt="건강 기록"
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      ) : item.type === 'photo-story' ? (
+                        // 포토 스토리인 경우
+                        <Image
+                          src={item.photo}
+                          alt="포토 스토리"
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      ) : item.type === 'link-letter' ? (
+                        // 링크편지인 경우
+                        <>
+                          {item.images && item.images.length > 0 ? (
+                            <Image
+                              src={item.images[0]}
+                              alt="링크 편지 이미지"
+                              fill
+                              className="object-cover rounded-lg"
+                            />
+                          ) : (
+                            <Image
+                              src="/samples/linklett.png"
+                              alt="기본 링크 편지 이미지"
+                              fill
+                              className="object-cover opacity-70 rounded-lg"
+                            />
+                          )}
+                        </>
+                      ) : (
+                        // 이미지가 있는 경우 또는 기본 이미지
+                        <Image
+                          src={item.images?.[0] || '/music/jb.png'}
+                          alt="썸네일"
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      )}
+                    </div>
+                  </div>
+              </div>
+            ))}
+            </div>
+            
+            {/* 더보기 버튼 */}
+            {feedItems.filter(item => activeFilter === 'all' || item.type === activeFilter).length > displayCount && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setDisplayCount(prev => prev + 28)}
+                  className="px-6 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-white rounded-lg transition-colors backdrop-blur-sm"
+                >
+                  더보기
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 플로팅 글쓰기 버튼 */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {/* 카테고리 메뉴 */}
+        {showWriteMenu && (
+          <div className="absolute bottom-16 right-0 bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3 min-w-48">
+            <button
+              onClick={() => {
+                router.push('/news-vote/submit');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                📰
+              </div>
+              <span>링크 투표</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                router.push('/link-letter');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                💌
+              </div>
+              <span>퀴즈 편지</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                router.push('/photo-story');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                📸
+              </div>
+              <span>사진 투표</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                router.push('/modoo-vote');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                💭
+              </div>
+              <span>사연 투표</span>
+            </button>
+            
+          </div>
+        )}
+        
+        {/* 메인 글쓰기 버튼 */}
+        <button
+          onClick={() => setShowWriteMenu(!showWriteMenu)}
+          className={`w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
+            showWriteMenu ? 'rotate-45' : 'hover:scale-110'
+          }`}
+        >
+          <Edit3 className="w-6 h-6" />
+        </button>
+      </div>
+    </main>
+    </>
   );
 }
