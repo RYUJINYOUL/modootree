@@ -58,7 +58,8 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [displayCount, setDisplayCount] = useState(28); // PC에서 초기에 보여줄 아이템 수
+  const [displayCount, setDisplayCount] = useState(20); // PC에서 초기에 보여줄 아이템 수
+  const [isStateRestored, setIsStateRestored] = useState(false);
   const [showWriteMenu, setShowWriteMenu] = useState(false);
   const [lastVisibleDocs, setLastVisibleDocs] = useState<{[key: string]: any}>({});
   const [hasMoreData, setHasMoreData] = useState<{[key: string]: boolean}>({
@@ -73,17 +74,65 @@ export default function FeedPage() {
     await loadSlim(engine);
   }, []);
 
+  // 페이지 상태 복원
   useEffect(() => {
-    loadInitialFeed();
+    const restorePageState = () => {
+      try {
+        const savedState = sessionStorage.getItem('homePageState');
+        if (savedState) {
+          const { 
+            activeFilter: savedFilter, 
+            scrollPosition, 
+            displayCount: savedDisplayCount,
+            feedItemsCount: savedFeedItemsCount 
+          } = JSON.parse(savedState);
+          
+          // 상태 복원
+          if (savedFilter) setActiveFilter(savedFilter);
+          if (savedDisplayCount) setDisplayCount(savedDisplayCount);
+          
+          // 스크롤 위치 복원 (데이터 로드 후)
+          if (scrollPosition) {
+            setTimeout(() => {
+              window.scrollTo(0, scrollPosition);
+            }, 300); // 더 긴 지연시간으로 데이터 로드 완료 대기
+          }
+          
+          console.log('페이지 상태 복원됨:', { 
+            savedFilter, 
+            scrollPosition, 
+            savedDisplayCount, 
+            savedFeedItemsCount 
+          });
+        }
+      } catch (error) {
+        console.error('상태 복원 실패:', error);
+      } finally {
+        setIsStateRestored(true);
+      }
+    };
+
+    restorePageState();
   }, []);
+
+  useEffect(() => {
+    if (isStateRestored) {
+      loadInitialFeed();
+    }
+  }, [isStateRestored]);
 
   const loadInitialFeed = async () => {
     setLoading(true);
     try {
       console.log('피드 데이터 로딩 시작...');
       console.log('데이터 로딩 시작...');
+      
+      // displayCount에 따라 필요한 데이터량 계산 (각 컬렉션에서 균등하게)
+      const itemsPerCollection = Math.max(5, Math.ceil(displayCount / 4));
+      console.log('컬렉션당 로드할 아이템 수:', itemsPerCollection, '(displayCount:', displayCount, ')');
+      
       const [newsResult, linkLetterResult, photoStoryResult, modooVoteResult] = await Promise.all([
-        fetchFromCollection('articles', 10).then(result => {
+        fetchFromCollection('articles', itemsPerCollection).then(result => {
           console.log('뉴스 투표 데이터 로드:', {
             collectionName: 'articles',
             dataLength: result.data.length,
@@ -91,15 +140,15 @@ export default function FeedPage() {
           });
           return result;
         }),
-        fetchFromCollection('linkLetters', 10).then(result => {
+        fetchFromCollection('linkLetters', itemsPerCollection).then(result => {
           console.log('링크편지 데이터:', result.data.length);
           return result;
         }),
-        fetchFromCollection('photo-stories', 10).then(result => {
+        fetchFromCollection('photo-stories', itemsPerCollection).then(result => {
           console.log('사진 스토리 데이터:', result.data.length);
           return result;
         }),
-        fetchFromCollection('modoo-vote-articles', 10).then(result => {
+        fetchFromCollection('modoo-vote-articles', itemsPerCollection).then(result => {
           console.log('공감 투표 데이터:', result.data.length);
           return result;
         })
@@ -116,10 +165,10 @@ export default function FeedPage() {
       // 더 가져올 데이터가 있는지 확인
       setHasMoreData({
         all: true, // 전체는 개별 카테고리에 따라 결정
-        news: newsResult.data.length === 10,
-        'link-letter': linkLetterResult.data.length === 10,
-        'photo-story': photoStoryResult.data.length === 10,
-        'modoo-vote-articles': modooVoteResult.data.length === 10
+        news: newsResult.data.length === itemsPerCollection,
+        'link-letter': linkLetterResult.data.length === itemsPerCollection,
+        'photo-story': photoStoryResult.data.length === itemsPerCollection,
+        'modoo-vote-articles': modooVoteResult.data.length === itemsPerCollection
       });
 
       console.log('데이터 포맷팅 시작...');
@@ -165,6 +214,22 @@ export default function FeedPage() {
       console.log('데이터 샘플:', uniqueData[0]);
 
       setFeedItems(uniqueData);
+      
+      // 상태 복원 시 필요한 만큼 추가 데이터 로드
+      setTimeout(() => {
+        const currentItemCount = uniqueData.length;
+        if (displayCount > currentItemCount && displayCount > 20) {
+          console.log('추가 데이터 필요:', { currentItemCount, displayCount });
+          // 필요한 만큼 더보기 실행
+          const additionalLoadsNeeded = Math.ceil((displayCount - currentItemCount) / 15); // 더보기 1회당 약 15개
+          for (let i = 0; i < additionalLoadsNeeded; i++) {
+            setTimeout(() => {
+              loadMoreData();
+            }, i * 200); // 순차적으로 로드
+          }
+        }
+      }, 100);
+      
     } catch (error: any) {
       console.error('피드 로딩 실패:', error);
       console.error('에러 상세:', {
@@ -372,9 +437,9 @@ export default function FeedPage() {
       if (activeFilter === 'all') {
         // 전체 카테고리의 경우 news 제외하고 나머지 3개 카테고리에서만 추가 데이터 로드
         const [linkLetterResult, photoStoryResult, modooVoteResult] = await Promise.all([
-          fetchFromCollection('linkLetters', 10, lastVisibleDocs['link-letter']),
-          fetchFromCollection('photo-stories', 10, lastVisibleDocs['photo-story']),
-          fetchFromCollection('modoo-vote-articles', 10, lastVisibleDocs['modoo-vote-articles'])
+          fetchFromCollection('linkLetters', 5, lastVisibleDocs['link-letter']),
+          fetchFromCollection('photo-stories', 5, lastVisibleDocs['photo-story']),
+          fetchFromCollection('modoo-vote-articles', 5, lastVisibleDocs['modoo-vote-articles'])
         ]);
 
         // lastVisible 문서들 업데이트 (news 제외)
@@ -386,16 +451,16 @@ export default function FeedPage() {
         }));
 
         // 더 가져올 데이터가 있는지 확인 (news 제외)
-        const hasMore = linkLetterResult.data.length === 10 || 
-                       photoStoryResult.data.length === 10 || 
-                       modooVoteResult.data.length === 10;
+        const hasMore = linkLetterResult.data.length === 5 || 
+                       photoStoryResult.data.length === 5 || 
+                       modooVoteResult.data.length === 5;
 
         setHasMoreData(prev => ({
           ...prev,
           all: hasMore,
-          'link-letter': linkLetterResult.data.length === 10,
-          'photo-story': photoStoryResult.data.length === 10,
-          'modoo-vote-articles': modooVoteResult.data.length === 10
+          'link-letter': linkLetterResult.data.length === 5,
+          'photo-story': photoStoryResult.data.length === 5,
+          'modoo-vote-articles': modooVoteResult.data.length === 5
         }));
 
         // 데이터 포맷팅 (news 제외)
@@ -420,7 +485,7 @@ export default function FeedPage() {
         else if (activeFilter === 'modoo-vote-articles') collectionName = 'modoo-vote-articles';
 
         if (collectionName) {
-          result = await fetchFromCollection(collectionName, 10, lastVisibleDocs[activeFilter]);
+          result = await fetchFromCollection(collectionName, 5, lastVisibleDocs[activeFilter]);
           
           // lastVisible 문서 업데이트
           setLastVisibleDocs(prev => ({
@@ -431,7 +496,7 @@ export default function FeedPage() {
           // 더 가져올 데이터가 있는지 확인
           setHasMoreData(prev => ({
             ...prev,
-            [activeFilter]: result.data.length === 10
+            [activeFilter]: result.data.length === 5
           }));
 
           // 데이터 포맷팅
@@ -439,8 +504,21 @@ export default function FeedPage() {
         }
       }
 
-      // 기존 데이터에 새 데이터 추가
-      setFeedItems(prev => [...prev, ...formattedData]);
+      // 기존 데이터에 새 데이터 추가 (중복 제거 포함)
+      setFeedItems(prev => {
+        const combinedData = [...prev, ...formattedData];
+        
+        // 중복 제거: type과 id 조합으로 고유성 확보
+        const uniqueData = combinedData.filter((item, index, arr) => {
+          const uniqueKey = `${item.type}-${item.id}`;
+          return arr.findIndex(i => `${i.type}-${i.id}` === uniqueKey) === index;
+        });
+        
+        console.log('더보기 - 중복 제거 전 데이터 개수:', combinedData.length);
+        console.log('더보기 - 중복 제거 후 데이터 개수:', uniqueData.length);
+        
+        return uniqueData;
+      });
       
       // displayCount도 증가시켜서 새로운 데이터가 화면에 표시되도록 함
       setDisplayCount(prev => prev + formattedData.length);
@@ -449,6 +527,54 @@ export default function FeedPage() {
       console.error('추가 데이터 로드 실패:', error);
     }
   };
+
+  // 페이지 상태 저장 함수
+  const savePageState = useCallback(() => {
+    try {
+      const state = {
+        activeFilter,
+        scrollPosition: window.scrollY,
+        displayCount,
+        feedItemsCount: feedItems.length, // 실제 로드된 아이템 수
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('homePageState', JSON.stringify(state));
+      console.log('페이지 상태 저장됨:', state);
+    } catch (error) {
+      console.error('상태 저장 실패:', error);
+    }
+  }, [activeFilter, displayCount, feedItems.length]);
+
+  // 페이지 떠날 때 상태 저장
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      savePageState();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        savePageState();
+      }
+    };
+
+    // 다양한 이벤트에서 상태 저장
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [savePageState]);
+
+  // 필터 변경시에도 상태 저장
+  const handleFilterChange = useCallback((filterId: string) => {
+    setActiveFilter(filterId);
+    // 필터 변경 후 상태 저장
+    setTimeout(() => {
+      savePageState();
+    }, 100);
+  }, [savePageState]);
 
   const FILTERS = [
     { id: 'all', label: '전체' },
@@ -559,10 +685,11 @@ export default function FeedPage() {
                   onSelect={(categoryId) => {
                     // Only navigate for the '+' (notice) category
                     if (categoryId === 'notice') {
+                      savePageState(); // 네비게이션 전 상태 저장
                       router.push('/notice');
                     } else {
                       // For all other categories, just set the filter (no navigation)
-                      setActiveFilter(categoryId);
+                      handleFilterChange(categoryId);
                     }
                   }}
                 />
@@ -619,6 +746,9 @@ export default function FeedPage() {
                 <div 
                   key={`${item.type}-${item.id}-${index}`}
                   onClick={() => {
+                    // 페이지 이동 전 상태 저장
+                    savePageState();
+                    
                     if (item.type === 'news') {
                       router.push(`/news-vote/${item.id}`);
                     } else if (item.type === 'modoo-vote-articles') {
@@ -632,8 +762,6 @@ export default function FeedPage() {
                     } else {
                       router.push(`/link-letter`);
                     }
-                    // 페이지 이동 후 스크롤 위치 초기화
-                    window.scrollTo(0, 0);
                   }}
                   className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors cursor-pointer p-4"
                 >
@@ -872,7 +1000,13 @@ export default function FeedPage() {
             {hasMoreData[activeFilter] && (
               <div className="flex justify-center">
                 <button
-                  onClick={loadMoreData}
+                  onClick={() => {
+                    loadMoreData();
+                    // 더보기 후 상태 저장
+                    setTimeout(() => {
+                      savePageState();
+                    }, 500);
+                  }}
                   className="px-6 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-white rounded-lg transition-colors backdrop-blur-sm"
                 >
                   더보기

@@ -182,7 +182,13 @@ export default function HealthResultContent({ id }: { id: string }) {
       <main className="container mx-auto px-4 py-10 relative z-10 max-w-5xl">
         <div className="flex justify-between items-center mb-8">
           <button
-            onClick={() => router.push('/health')}
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/health');
+              }
+            }}
             className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />

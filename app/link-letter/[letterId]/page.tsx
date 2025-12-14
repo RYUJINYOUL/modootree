@@ -646,7 +646,13 @@ export default function LinkLetterDetailPage() {
           <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-medium text-gray-300 mb-2">편지를 찾을 수 없습니다</h2>
           <p className="text-gray-400 mb-6">삭제되었거나 존재하지 않는 편지입니다.</p>
-          <Button onClick={() => router.push('/link-letter')} className="bg-pink-500 hover:bg-pink-600">
+          <Button onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/link-letter');
+            }
+          }} className="bg-pink-500 hover:bg-pink-600">
             편지 목록으로 돌아가기
           </Button>
         </div>
@@ -1131,7 +1137,13 @@ export default function LinkLetterDetailPage() {
                 </Button>
                 
                 <Button
-                  onClick={() => router.push('/link-letter')}
+                  onClick={() => {
+                    if (window.history.length > 1) {
+                      router.back();
+                    } else {
+                      router.push('/link-letter');
+                    }
+                  }}
                   className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
                 >
                   다른 편지 보기
