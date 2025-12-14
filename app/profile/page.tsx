@@ -251,33 +251,33 @@ export default function ProfilePage() {
       iconColor: 'text-cyan-400',
       key: 'links' as keyof CategoryCounts
     },
-    { 
-      icon: ClipboardPlus, 
-      label: '건강', 
-      href: '/profile/health',
-      description: '건강 상태와 운동 기록',
-      color: 'bg-green-500/20 border-green-400/30',
-      iconColor: 'text-green-400',
-      key: 'health' as keyof CategoryCounts
-    },
-    { 
-      icon: Atom, 
-      label: '분석', 
-      href: '/profile/mind',
-      description: 'AI 대화 분석과 인사이트',
-      color: 'bg-orange-500/20 border-orange-400/30',
-      iconColor: 'text-orange-400',
-      key: 'mind' as keyof CategoryCounts
-    },
-    { 
-      icon: MessageSquare, 
-      label: '기록', 
-      href: '/profile/chats',
-      description: '대화 기록과 히스토리',
-      color: 'bg-pink-500/20 border-pink-400/30',
-      iconColor: 'text-pink-400',
-      key: 'chats' as keyof CategoryCounts
-    }
+    // { 
+    //   icon: ClipboardPlus, 
+    //   label: '건강', 
+    //   href: '/profile/health',
+    //   description: '건강 상태와 운동 기록',
+    //   color: 'bg-green-500/20 border-green-400/30',
+    //   iconColor: 'text-green-400',
+    //   key: 'health' as keyof CategoryCounts
+    // },
+    // { 
+    //   icon: Atom, 
+    //   label: '분석', 
+    //   href: '/profile/mind',
+    //   description: 'AI 대화 분석과 인사이트',
+    //   color: 'bg-orange-500/20 border-orange-400/30',
+    //   iconColor: 'text-orange-400',
+    //   key: 'mind' as keyof CategoryCounts
+    // },
+    // { 
+    //   icon: MessageSquare, 
+    //   label: '기록', 
+    //   href: '/profile/chats',
+    //   description: '대화 기록과 히스토리',
+    //   color: 'bg-pink-500/20 border-pink-400/30',
+    //   iconColor: 'text-pink-400',
+    //   key: 'chats' as keyof CategoryCounts
+    // }
   ];
 
   const formatTime = (date: Date) => {
@@ -741,7 +741,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-[#56ab91] transition-colors">
-                    링크편지
+                    퀴즈편지
                   </h3>
                   <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">
                     퀴즈를 풀어야만 편지를 읽을 수 있습니다

@@ -90,12 +90,12 @@ export default function LoginOutButton() {
                
 
                 {[
-                  // {
-                  //   title: "내 기록 페이지",
-                  //   description: "AI와 함께 작성하는 나만의 기록 페이지",
-                  //   icon: "/logos/m1.png",
-                  //   path: "/profile"
-                  // },
+                  {
+                    title: "내 기록 페이지",
+                    description: "OCR스캔 · 메모 · 링크 자동 분류 내 기록 페이지",
+                    icon: "/logos/m1.png",
+                    path: "/profile"
+                  },
                   {
                     title: "링크 편지",
                     description: "퀴즈를 풀어야만 읽을 수 있는 링크 편지",
@@ -110,7 +110,7 @@ export default function LoginOutButton() {
                   // },
                   {
                     title: "AI 투표",
-                    description: "AI가 만들어 주는 사연 사진 투표 당신의 선택은?",
+                    description: "AI가 만들어 주는 사연 · 사진 · 뉴스 투표",
                     icon: "/logos/news.png",
                     path: "/modoo-vote"
                   },

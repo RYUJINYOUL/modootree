@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { BottomTabs } from '@/components/ui/bottom-tabs';
-import { FilePen, Edit3 } from 'lucide-react';
+import { FilePen, Edit3, Home } from 'lucide-react';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,7 +14,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [showWriteMenu, setShowWriteMenu] = useState(false); // 플로팅 글쓰기 메뉴 상태 추가
   
   // AI 플로팅 버튼을 숨길 페이지 목록
-  const hideAiButton = ['/ai-comfort', '/', '/anonymous-chat', '/login', '/register' ];
+  const hideAiButton = ['/ai-comfort', '/', '/anonymous-chat', '/login', '/register', '/profile' ];
 
   // AI 플로팅 버튼을 숨길 페이지 목록 (동적 경로 포함)
   const shouldHideAiButton = hideAiButton.includes(pathname) ||
@@ -24,7 +25,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     pathname.startsWith('/photo-story');
 
   // 하단 탭을 숨길 페이지 목록 추가
-  const hideBottomTabs = ['/ai-chat-simple', '/ai-comfort', '/', '/anonymous-chat']; // ai-comfort와 메인 페이지도 추가
+  const hideBottomTabs = ['/ai-chat-simple', '/ai-comfort', '/', '/anonymous-chat', '/profile']; // ai-comfort와 메인 페이지도 추가
   
   // 동적 경로 체크 (예: /[username])
   const pathParts = pathname.split('/').filter(Boolean);
@@ -42,7 +43,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {!shouldHideBottomTabs && <BottomTabs />}
 
       {/* 플로팅 글쓰기 버튼 */}
-      <div className="fixed bottom-6 right-6 z-50">
+      {!pathname.startsWith('/profile') && (
+        <div className="fixed bottom-6 right-6 z-50">
         {/* 카테고리 메뉴 */}
         {showWriteMenu && (
           <div className="absolute bottom-16 right-0 bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3 min-w-48">
@@ -51,10 +53,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 router.push('/photo-story');
                 setShowWriteMenu(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors text-white text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
             >
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                <FilePen className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Image src="/logos/ai2.png" alt="사진 투표" width={24} height={24} className="w-6 h-6" />
               </div>
               <span>사진 투표</span>
             </button>
@@ -64,10 +66,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 router.push('/modoo-vote');
                 setShowWriteMenu(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 rounded-lg transition-colors text-white text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
             >
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                <FilePen className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Image src="/logos/ai3.png" alt="사연 투표" width={24} height={24} className="w-6 h-6" />
               </div>
               <span>사연 투표</span>
             </button>
@@ -77,10 +79,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 router.push('/pros-menu');
                 setShowWriteMenu(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors text-white text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
             >
-              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                <FilePen className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Image src="/logos/penc.png" alt="퀴즈 편지" width={24} height={24} className="w-6 h-6" />
               </div>
               <span>퀴즈 편지</span>
             </button>
@@ -92,8 +94,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               }}
               className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
             >
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <FilePen className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Image src="/logos/news.png" alt="뉴스 투표" width={24} height={24} className="w-6 h-6" />
               </div>
               <span>뉴스 투표</span>
             </button>
@@ -103,12 +105,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 router.push('/inquiry');
                 setShowWriteMenu(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-500/20 hover:bg-gray-500/30 rounded-lg transition-colors text-white text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
             >
-              <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                <FilePen className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Image src="/logos/ai4.png" alt="불편 신고" width={24} height={24} className="w-6 h-6" />
               </div>
               <span>불편 신고</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                router.push('/profile');
+                setShowWriteMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors text-white text-left"
+            >
+              <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <Image src="/logos/m1.png" alt="내 페이지" width={24} height={24} className="w-6 h-6" />
+              </div>
+              <span>내 페이지</span>
             </button>
             
           </div>
@@ -124,6 +139,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <Edit3 className="w-6 h-6" />
         </button>
       </div>
+      )}
 
       {/* 플로팅 채팅 버튼 */}
       {!shouldHideAiButton && !isDynamicUserPage && !pathname.startsWith('/profile') && (
@@ -132,6 +148,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           className="fixed bottom-[80px] right-4 z-[40] w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all group"
         >
           <span className="text-white font-medium text-base">AI</span>
+        </Link>
+      )}
+
+      {/* 프로필 페이지용 홈 버튼 */}
+      {pathname.startsWith('/profile') && (
+        <Link
+          href="/"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 hover:scale-110"
+        >
+          <Home className="w-6 h-6" />
         </Link>
       )}
     </div>

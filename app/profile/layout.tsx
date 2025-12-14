@@ -141,9 +141,9 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
   // Glasses 버튼 클릭 핸들러
   const handleGlassesClick = () => {
     if (username) {
-      router.push(`/${username}`);
+      router.push(`/`);
     } else {
-      router.push('/site');
+      router.push('/');
     }
   };
 
@@ -195,9 +195,9 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     { icon: Notebook, label: '메모', href: '/profile/memo' },
     { icon: Book, label: '일기', href: '/profile/diary' },
     { icon: LinkIcon, label: '링크', href: '/profile/links' },
-    { icon: ClipboardPlus, label: '건강', href: '/profile/health' },
-    { icon: Atom, label: '분석', href: '/profile/mind' },
-    { icon: MessageSquare, label: '기록', href: '/profile/chats' },
+    // { icon: ClipboardPlus, label: '건강', href: '/profile/health' }, // 건강 카테고리 미노출
+    // { icon: Atom, label: '분석', href: '/profile/mind' }, // 분석 카테고리 미노출
+    // { icon: MessageSquare, label: '기록', href: '/profile/chats' },
     { icon: Rocket, label: '문의', href: '/profile/inquiry' },
   ];
 
@@ -528,12 +528,12 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
       )}
 
       {/* AI 플로팅 버튼 */}
-      <button
+      {/* <button
         onClick={() => setIsAIChatOpen(true)}
         className="fixed bottom-4 right-4 z-[40] w-10 h-10 bg-[#56ab91]/60 rounded-full flex items-center justify-center shadow-lg hover:bg-[#56ab91]/80 transition-all group hover:scale-110 hover:shadow-xl active:scale-95 ring-2 ring-[#358f80]/50"
       >
         <span className="text-white font-medium text-base">AI</span>
-      </button>
+      </button> */}
 
       {/* AI 채팅 슬라이드 패널 */}
       {/* 데스크톱 패널 */}
