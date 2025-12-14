@@ -154,10 +154,17 @@ export default function FeedPage() {
         ...formattedModooVote
       ].sort((a: any, b: any) => b.createdAt - a.createdAt);
 
-      console.log('최종 데이터 개수:', combinedData.length);
-      console.log('데이터 샘플:', combinedData[0]);
+      // 중복 제거: type과 id 조합으로 고유성 확보
+      const uniqueData = combinedData.filter((item, index, arr) => {
+        const uniqueKey = `${item.type}-${item.id}`;
+        return arr.findIndex(i => `${i.type}-${i.id}` === uniqueKey) === index;
+      });
 
-      setFeedItems(combinedData);
+      console.log('중복 제거 전 데이터 개수:', combinedData.length);
+      console.log('중복 제거 후 데이터 개수:', uniqueData.length);
+      console.log('데이터 샘플:', uniqueData[0]);
+
+      setFeedItems(uniqueData);
     } catch (error: any) {
       console.error('피드 로딩 실패:', error);
       console.error('에러 상세:', {
@@ -448,7 +455,8 @@ export default function FeedPage() {
     { id: 'link-letter', label: '편지', path: '/link-letter', fullLabel: '퀴즈 편지' },
     { id: 'photo-story', label: '사진', path: '/photo-story', fullLabel: 'AI 사진 스토리' },
     { id: 'modoo-vote-articles', label: '사연', path: '/modoo-vote', fullLabel: '사연 투표' },
-    { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' } // 뉴스를 마지막으로 이동
+    { id: 'news', label: '뉴스', path: '/news-vote', fullLabel: '뉴스 투표' }, // 뉴스를 마지막으로 이동
+    { id: 'notice', label: '+', path: '/notice', fullLabel: '공지사항' }
   ];
 
   return (
@@ -548,7 +556,15 @@ export default function FeedPage() {
                 <CategoryCarousel
                   categories={FILTERS}
                   selectedCategory={activeFilter}
-                  onSelect={setActiveFilter}
+                  onSelect={(categoryId) => {
+                    // Only navigate for the '+' (notice) category
+                    if (categoryId === 'notice') {
+                      router.push('/notice');
+                    } else {
+                      // For all other categories, just set the filter (no navigation)
+                      setActiveFilter(categoryId);
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -599,9 +615,9 @@ export default function FeedPage() {
               {feedItems
                 .filter(item => (activeFilter === 'all' && item.type !== 'news') || item.type === activeFilter)
                 .slice(0, displayCount)
-                .map((item: any) => (
+                .map((item: any, index) => (
                 <div 
-                  key={item.id}
+                  key={`${item.type}-${item.id}-${index}`}
                   onClick={() => {
                     if (item.type === 'news') {
                       router.push(`/news-vote/${item.id}`);
