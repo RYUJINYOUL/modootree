@@ -59,7 +59,7 @@ export default function LoginOutButton() {
   if (!hasMounted) return null;
 
   return (
-    <nav className="bg-zinc-900 shadow-lg border-b border-zinc-800">
+    <nav className="bg-black-900 shadow-lg border-b border-zinc-800">
       <div className="md:w-[1100px] container mx-auto px-4 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Sheet>
@@ -72,7 +72,7 @@ export default function LoginOutButton() {
                 </div>
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] bg-zinc-900 border-r border-zinc-800 overflow-y-auto flex flex-col h-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-zinc-950">
+            <SheetContent side="left" className="w-[300px] bg-black-900 border-r border-zinc-800 overflow-y-auto flex flex-col h-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-zinc-950">
               <SheetHeader className="pb-4 border-b border-white/10 flex-shrink-0">
                 <div className="flex flex-col items-center text-center">
                   <Image
@@ -91,10 +91,10 @@ export default function LoginOutButton() {
 
                 {[
                   {
-                    title: "내 기록 페이지",
-                    description: "OCR스캔 · 메모 · 링크 자동 분류 내 기록 페이지",
-                    icon: "/logos/m1.png",
-                    path: "/profile"
+                    title: "AI 투표",
+                    description: "AI가 만들어 주는 사연 · 사진 · 뉴스 투표",
+                    icon: "/logos/news.png",
+                    path: "/modoo-vote"
                   },
                   {
                     title: "링크 편지",
@@ -108,11 +108,12 @@ export default function LoginOutButton() {
                   //   icon: "/logos/ai1.png",
                   //   path: "/health"
                   // },
+
                   {
-                    title: "AI 투표",
-                    description: "AI가 만들어 주는 사연 · 사진 · 뉴스 투표",
-                    icon: "/logos/news.png",
-                    path: "/modoo-vote"
+                    title: "내 기록 페이지",
+                    description: "OCR스캔 · 메모 · 링크 자동 분류 내 기록 페이지",
+                    icon: "/logos/m1.png",
+                    path: "/profile"
                   },
                   
                  
