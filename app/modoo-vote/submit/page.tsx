@@ -342,13 +342,13 @@ export default function SubmitModooVotePage() {
             placeholder="공감 투표를 만들 사연을 자세히 작성해주세요."
             className="bg-gray-700 border-gray-600 text-white min-h-[150px]"
           />
-          <Button
+          {/* <Button
             onClick={handleSummarizeChat}
             disabled={isSummarizingChat || !currentUser?.uid}
             className="w-full bg-blue-500 hover:bg-blue-600 h-10 text-base mt-2"
           >
             {isSummarizingChat ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}오늘 대화 내용으로 사연 생성
-          </Button>
+          </Button> */}
           
           {/* 이미지 업로드 & OCR 기능 */}
           <div className="border-t border-gray-600 pt-4 mt-4">
