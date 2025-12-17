@@ -44,7 +44,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       {/* 플로팅 글쓰기 버튼 */}
       {!pathname.startsWith('/profile') && (
-        <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50">
         {/* 카테고리 메뉴 */}
         {showWriteMenu && (
           <div className="absolute bottom-16 right-0 bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3 min-w-48">

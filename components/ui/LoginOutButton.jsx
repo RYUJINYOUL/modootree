@@ -59,7 +59,7 @@ export default function LoginOutButton() {
   if (!hasMounted) return null;
 
   return (
-    <nav className="bg-black-900 shadow-lg border-b border-zinc-800">
+    <nav className="bg-white/20 shadow-lg border-b border-white/30 backdrop-blur-md">
       <div className="md:w-[1100px] container mx-auto px-4 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Sheet>
@@ -72,8 +72,8 @@ export default function LoginOutButton() {
                 </div>
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] bg-black-900 border-r border-zinc-800 overflow-y-auto flex flex-col h-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-zinc-950">
-              <SheetHeader className="pb-4 border-b border-white/10 flex-shrink-0">
+            <SheetContent side="left" className="w-[300px] bg-gradient-to-b from-pink-300/90 to-rose-300/90 border-r border-pink-200/50 backdrop-blur-md overflow-y-auto flex flex-col h-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-pink-400 [&::-webkit-scrollbar-track]:bg-pink-900/10">
+              <SheetHeader className="pb-4 border-b border-pink-200/30 flex-shrink-0">
                 <div className="flex flex-col items-center text-center">
                   <Image
                     src="/Image/logo.png"
@@ -205,24 +205,24 @@ export default function LoginOutButton() {
         </div>
         <div className="flex gap-4 items-center">
           {currentUser?.uid && (
-            <Link href="/profile" className="flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200 transition-colors">
-              <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center">
+            <Link href="/profile" className="flex items-center gap-2 text-sm text-white font-bold hover:text-gray-200 transition-colors">
+              <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-100">
                 {currentUser.displayName?.[0]?.toUpperCase() || currentUser.email?.[0]?.toUpperCase()}
               </div>
-              <span className="font-semibold">{currentUser.displayName || currentUser.email}</span>
+              <span className="font-bold">{currentUser.displayName || currentUser.email}</span>
             </Link>
           )}
           {currentUser?.uid ? (
             <button
               onClick={handleLogout}
-              className="text-sm text-zinc-300 hover:text-white transition-colors"
+              className="text-sm text-white font-bold hover:text-gray-200 transition-colors"
             >
               로그아웃
             </button>
           ) : (
             <Link
               href="/login"
-              className="text-sm text-zinc-300 hover:text-white transition-colors"
+              className="text-sm text-white font-bold hover:text-gray-200 transition-colors"
             >
               로그인
             </Link>
@@ -230,7 +230,7 @@ export default function LoginOutButton() {
           {!currentUser?.uid && (
             <Link
               href="/register"
-              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors font-medium"
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors font-bold"
             >
               회원가입
             </Link>

@@ -587,27 +587,23 @@ export default function FeedPage() {
 
   return (
     <>
-      <LoginOutButton />
-      <Header />
-      <main className="min-h-screen bg-black text-white/90 relative">
+      <main className="min-h-screen bg-gradient-to-br from-rose-300 via-pink-300 to-fuchsia-300 text-white/90 relative overflow-hidden">
+        <LoginOutButton />
+        <Header />
       <Particles
         className="absolute inset-0 z-0 pointer-events-none"
         init={particlesInit}
         options={{
+          background: {
+            color: "transparent"
+          },
           fpsLimit: 120,
           particles: {
             color: {
-              value: ["#ffffff", "#87CEEB", "#FFD700"]
-            },
-            links: {
-              color: "#ffffff",
-              distance: 120,
-              enable: true,
-              opacity: 0.08,
-              width: 1.2,
+              value: ["#FFB6C1", "#FF69B4", "#FF1493", "#DC143C", "#FFF", "#FFD700", "#FF6347"]
             },
             collisions: {
-              enable: false,
+              enable: false
             },
             move: {
               direction: "none",
@@ -616,63 +612,96 @@ export default function FeedPage() {
                 default: "out"
               },
               random: true,
-              speed: { min: 0.1, max: 0.4 },
+              speed: { min: 0.5, max: 2 },
               straight: false,
               attract: {
                 enable: true,
-                rotate: {
-                  x: 600,
-                  y: 1200
-                }
+                rotateX: 600,
+                rotateY: 1200
               }
             },
             number: {
               density: {
                 enable: true,
-                area: 800
+                area: 1000
               },
-              value: 100
+              value: 60
             },
             opacity: {
               animation: {
                 enable: true,
-                minimumValue: 0.1,
-                speed: 1.2,
+                minimumValue: 0.2,
+                speed: 1.5,
                 sync: false
               },
               random: true,
-              value: { min: 0.1, max: 0.4 }
+              value: { min: 0.3, max: 0.8 }
             },
             shape: {
-              type: "circle"
+              type: ["heart", "star", "circle", "triangle"],
+              options: {
+                heart: {
+                  particles: {
+                    size: {
+                      value: { min: 8, max: 16 }
+                    }
+                  }
+                },
+                star: {
+                  sides: 5,
+                  particles: {
+                    size: {
+                      value: { min: 6, max: 12 }
+                    }
+                  }
+                }
+              }
             },
             size: {
               animation: {
                 enable: true,
-                minimumValue: 0.1,
-                speed: 1,
+                minimumValue: 2,
+                speed: 3,
                 sync: false
               },
               random: true,
-              value: { min: 1, max: 3 }
+              value: { min: 3, max: 8 }
             },
-            twinkle: {
-              lines: {
+            rotate: {
+              animation: {
                 enable: true,
-                frequency: 0.01,
-                opacity: 0.3,
-                color: {
-                  value: ["#ffffff", "#87CEEB"]
-                }
+                speed: 2,
+                sync: false
               },
-              particles: {
-                enable: true,
-                frequency: 0.08,
-                opacity: 0.3
-              }
+              direction: "random",
+              random: true,
+              value: { min: 0, max: 360 }
             }
           },
-          detectRetina: true
+          detectRetina: true,
+          interactivity: {
+            events: {
+              onHover: {
+                enable: true,
+                mode: "bubble"
+              },
+              onClick: {
+                enable: true,
+                mode: "push"
+              }
+            },
+            modes: {
+              bubble: {
+                distance: 150,
+                duration: 2,
+                opacity: 1,
+                size: 12
+              },
+              push: {
+                quantity: 3
+              }
+            }
+          }
         }}
       />
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-6 pb-20">
